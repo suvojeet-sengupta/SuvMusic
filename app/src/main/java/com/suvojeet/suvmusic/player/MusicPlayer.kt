@@ -102,16 +102,23 @@ class MusicPlayer @Inject constructor(
                 val controller = mediaController ?: return@let
                 val index = controller.currentMediaItemIndex
                 val song = _playerState.value.queue.getOrNull(index)
+                
                 _playerState.update { 
                     it.copy(
                         currentSong = song,
                         currentIndex = index,
                         currentPosition = 0L,
                         duration = controller.duration.coerceAtLeast(0L),
-                        // Reset metadata states on song change (will be updated by VM)
                         isLiked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED
                     )
+                }
+                
+                // If this is an automatic transition (song ended), resolve stream and play
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && song != null) {
+                    scope.launch {
+                        resolveAndPlayCurrentItem(song, index)
+                    }
                 }
             }
         }
@@ -123,6 +130,43 @@ class MusicPlayer @Inject constructor(
                     isLoading = false
                 )
             }
+        }
+    }
+    
+    private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int) {
+        try {
+            _playerState.update { it.copy(isLoading = true) }
+            
+            // Resolve stream URL for the song
+            val streamUrl = if (song.source == SongSource.LOCAL || song.source == SongSource.DOWNLOADED) {
+                song.localUri.toString()
+            } else {
+                youTubeRepository.getStreamUrl(song.id) ?: return
+            }
+            
+            val newMediaItem = MediaItem.Builder()
+                .setUri(streamUrl)
+                .setMediaId(song.id)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(song.title)
+                        .setArtist(song.artist)
+                        .setAlbumTitle(song.album)
+                        .setArtworkUri(song.thumbnailUrl?.let { android.net.Uri.parse(it) })
+                        .build()
+                )
+                .build()
+            
+            mediaController?.let { controller ->
+                // Replace current item with resolved stream and play
+                val currentPosition = controller.currentPosition
+                controller.removeMediaItem(index)
+                controller.addMediaItem(index, newMediaItem)
+                controller.seekTo(index, currentPosition)
+                controller.play()
+            }
+        } catch (e: Exception) {
+            _playerState.update { it.copy(error = e.message, isLoading = false) }
         }
     }
     
