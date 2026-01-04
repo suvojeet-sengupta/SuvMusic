@@ -82,6 +82,7 @@ import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
+import com.suvojeet.suvmusic.ui.components.SongCreditsSheet
 import com.suvojeet.suvmusic.ui.components.WaveformSeeker
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 
@@ -109,6 +110,7 @@ fun PlayerScreen(
     // UI States
     var showQueue by remember { mutableStateOf(false) }
     var showActionsSheet by remember { mutableStateOf(false) }
+    var showCreditsSheet by remember { mutableStateOf(false) }
     
     // High-res thumbnail
     val highResThumbnail = getHighResThumbnail(song?.thumbnailUrl)
@@ -245,7 +247,15 @@ fun PlayerScreen(
                 isVisible = showActionsSheet,
                 onDismiss = { showActionsSheet = false },
                 onToggleFavorite = onToggleLike,
-                onDownload = onDownload
+                onDownload = onDownload,
+                onViewCredits = { showCreditsSheet = true }
+            )
+            
+            // Song Credits Sheet
+            SongCreditsSheet(
+                song = song,
+                isVisible = showCreditsSheet,
+                onDismiss = { showCreditsSheet = false }
             )
         }
     }
