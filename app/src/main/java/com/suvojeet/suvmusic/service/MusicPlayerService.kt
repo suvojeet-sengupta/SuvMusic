@@ -3,13 +3,14 @@ package com.suvojeet.suvmusic.service
 import android.app.PendingIntent
 import android.content.Intent
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.suvojeet.suvmusic.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
 /**
  * Media3 MediaSessionService for background music playback.
@@ -19,14 +20,20 @@ class MusicPlayerService : MediaSessionService() {
     
     private var mediaSession: MediaSession? = null
     
-    @Inject
-    lateinit var exoPlayerProvider: dagger.Lazy<ExoPlayer>
-    
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
         
-        val player = ExoPlayer.Builder(this).build()
+        val player = ExoPlayer.Builder(this)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .setUsage(C.USAGE_MEDIA)
+                    .build(),
+                true
+            )
+            .setHandleAudioBecomingNoisy(true)
+            .build()
         
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this,
