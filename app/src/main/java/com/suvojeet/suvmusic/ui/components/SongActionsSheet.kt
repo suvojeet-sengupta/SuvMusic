@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.components
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -53,13 +55,37 @@ fun SongActionsSheet(
     onDownload: () -> Unit = {},
     onDeleteFromLibrary: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
-    onShare: () -> Unit = {},
     onViewCredits: () -> Unit = {},
     onCreateStation: () -> Unit = {},
     onSleepTimer: () -> Unit = {},
     onToggleFavorite: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState()
+    val context = LocalContext.current
+    
+    // Share function
+    val shareSong: () -> Unit = {
+        val shareText = buildString {
+            append("🎵 ${song.title}\n")
+            append("🎤 ${song.artist}\n")
+            if (!song.album.isNullOrBlank()) {
+                append("💿 ${song.album}\n")
+            }
+            append("\n")
+            append("Listen on YouTube Music:\n")
+            append("https://music.youtube.com/watch?v=${song.id}")
+        }
+        
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            putExtra(Intent.EXTRA_SUBJECT, "${song.title} - ${song.artist}")
+            type = "text/plain"
+        }
+        
+        val shareIntent = Intent.createChooser(sendIntent, "Share Song")
+        context.startActivity(shareIntent)
+    }
     
     if (isVisible) {
         ModalBottomSheet(
@@ -149,7 +175,7 @@ fun SongActionsSheet(
                 ActionItem(
                     icon = Icons.Default.Share,
                     title = "Share Song",
-                    onClick = { onShare(); onDismiss() }
+                    onClick = { shareSong(); onDismiss() }
                 )
                 
                 ActionItem(
