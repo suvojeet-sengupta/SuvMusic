@@ -330,6 +330,7 @@ class MusicPlayer @Inject constructor(
     
     fun getPlayer(): Player? = mediaController
     
+<<<<<<< HEAD
     fun toggleAutoplay() {
         _playerState.update { it.copy(isAutoplayEnabled = !it.isAutoplayEnabled) }
     }
@@ -375,6 +376,8 @@ class MusicPlayer @Inject constructor(
           }
      }
 
+=======
+>>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
     fun release() {
         positionUpdateJob?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }

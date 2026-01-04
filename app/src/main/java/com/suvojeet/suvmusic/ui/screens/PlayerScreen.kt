@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Downloading
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -264,8 +263,8 @@ fun PlayerScreen(
             exit = slideOutVertically { it }
         ) {
             QueueView(
-                queue = playerState.queue,
                 currentSong = song,
+<<<<<<< HEAD
                 currentIndex = playerState.currentIndex,
                 dominantColors = dominantColors,
                 isPlaying = playerState.isPlaying,
@@ -284,6 +283,12 @@ fun PlayerScreen(
                 onToggleRepeat = onRepeatToggle,
                 onToggleAutoplay = onToggleAutoplay,
                 onBack = { showQueue = false }
+=======
+                queue = playerState.queue,
+                onBack = { showQueue = false },
+                onSongClick = { /* Play from queue */ },
+                dominantColors = dominantColors
+>>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
             )
         }
         
@@ -702,73 +707,125 @@ private fun BottomActions(
 
 @Composable
 private fun QueueView(
-    queue: List<Song>,
     currentSong: Song?,
-    currentIndex: Int,
-    dominantColors: DominantColors,
-    isPlaying: Boolean,
-    isAutoplayEnabled: Boolean,
-    repeatMode: RepeatMode,
-    shuffleEnabled: Boolean,
+    queue: List<Song>,
+    onBack: () -> Unit,
     onSongClick: (Song) -> Unit,
-    onTogglePlayPause: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onToggleRepeat: () -> Unit,
-    onToggleAutoplay: () -> Unit,
-    onBack: () -> Unit
+    dominantColors: DominantColors
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+<<<<<<< HEAD
             .background(dominantColors.primary)
+=======
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        dominantColors.secondary,
+                        dominantColors.primary,
+                        Color.Black
+                    )
+                )
+            )
+>>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
             .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
-        // Drag handle for sheet feels
-        Box(
+        // Current song header
+        if (currentSong != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = currentSong.thumbnailUrl,
+                    contentDescription = currentSong.title,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = currentSong.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = dominantColors.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = currentSong.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = dominantColors.onBackground.copy(alpha = 0.7f),
+                        maxLines = 1
+                    )
+                }
+                
+                IconButton(onClick = { /* Favorite */ }) {
+                    Icon(
+                        imageVector = Icons.Default.StarOutline,
+                        contentDescription = "Favorite",
+                        tint = dominantColors.onBackground
+                    )
+                }
+                
+                IconButton(onClick = { /* More */ }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More",
+                        tint = dominantColors.onBackground
+                    )
+                }
+            }
+        }
+        
+        // Playback mode chips
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp, bottom = 24.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(dominantColors.onBackground.copy(alpha = 0.2f))
+            PlaybackChip(
+                text = "Shuffle",
+                icon = Icons.Default.Shuffle,
+                isSelected = false,
+                dominantColors = dominantColors,
+                onClick = { } 
+            )
+            PlaybackChip(
+                text = "Repeat",
+                icon = Icons.Default.Repeat,
+                isSelected = false,
+                dominantColors = dominantColors,
+                onClick = { } 
+            )
+            PlaybackChip(
+                text = "Autoplay",
+                icon = Icons.Default.PlayArrow,
+                isSelected = true,
+                dominantColors = dominantColors,
+                onClick = { } 
             )
         }
-
-        // Header: Current Song Small Info
-        if (currentSong != null) {
-            QueueHeader(currentSong, dominantColors, isPlaying, onTogglePlayPause)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Controls: Shuffle, Repeat, Autoplay
-        QueueControlsRow(
-            dominantColors = dominantColors,
-            shuffleEnabled = shuffleEnabled,
-            repeatMode = repeatMode,
-            isAutoplayEnabled = isAutoplayEnabled,
-            onToggleShuffle = onToggleShuffle,
-            onToggleRepeat = onToggleRepeat,
-            onToggleAutoplay = onToggleAutoplay
-        )
-
+        
         Spacer(modifier = Modifier.height(16.dp))
-
+        
+        // Queue header
         Text(
             text = "Continue Playing",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
             color = dominantColors.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
-        
         Text(
-            text = if (isAutoplayEnabled) "Autoplaying similar music" else "Autoplay is off",
+            text = "Autoplaying similar music",
             style = MaterialTheme.typography.bodySmall,
             color = dominantColors.onBackground.copy(alpha = 0.6f),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -777,25 +834,125 @@ private fun QueueView(
         // Queue list
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(queue) { index, song ->
-                // Highlight current song
-                val isCurrent = index == currentIndex
                 QueueItem(
                     song = song,
-                    isCurrent = isCurrent,
-                    isPlaying = isPlaying && isCurrent,
                     onClick = { onSongClick(song) },
                     dominantColors = dominantColors
                 )
             }
         }
+<<<<<<< HEAD
     }
 }
 
 
+=======
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        // Close button
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(bottom = 16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Close queue",
+                tint = dominantColors.onBackground,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaybackChip(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    dominantColors: DominantColors,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (isSelected) dominantColors.onBackground.copy(alpha = 0.2f) 
+               else dominantColors.onBackground.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = dominantColors.onBackground,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = dominantColors.onBackground
+            )
+        }
+    }
+}
+
+@Composable
+private fun QueueItem(
+    song: Song,
+    onClick: () -> Unit,
+    dominantColors: DominantColors
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = song.thumbnailUrl,
+            contentDescription = song.title,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(6.dp)),
+            contentScale = ContentScale.Crop
+        )
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = song.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = dominantColors.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = song.artist,
+                style = MaterialTheme.typography.bodySmall,
+                color = dominantColors.onBackground.copy(alpha = 0.6f),
+                maxLines = 1
+            )
+        }
+        
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+            contentDescription = "Drag",
+            tint = dominantColors.onBackground.copy(alpha = 0.4f),
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+>>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
 
 private fun getHighResThumbnail(url: String?): String? {
     return url?.let {

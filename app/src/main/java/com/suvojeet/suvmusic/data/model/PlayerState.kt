@@ -17,8 +17,7 @@ data class PlayerState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLiked: Boolean = false,
-    val downloadState: DownloadState = DownloadState.NOT_DOWNLOADED,
-    val isAutoplayEnabled: Boolean = false // New field for Autoplay
+    val downloadState: DownloadState = DownloadState.NOT_DOWNLOADED
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f
