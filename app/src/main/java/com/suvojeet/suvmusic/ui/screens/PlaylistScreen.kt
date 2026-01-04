@@ -146,13 +146,18 @@ fun PlaylistScreen(
             }
             
             // Fixed Header
+            // Fixed Header (Content)
             PlaylistHeader(
                 playlist = playlist,
-                onBackClick = onBackClick,
-                dominantColors = dominantColors,
-                isCollapsed = isScrolled,
                 onPlayAll = { onPlayAll(playlist.songs) },
                 onShufflePlay = { onShufflePlay(playlist.songs) }
+            )
+            
+            // Top Bar
+            TopBar(
+                title = playlist.title,
+                isScrolled = isScrolled,
+                onBackClick = onBackClick
             )
         }
     }

@@ -68,8 +68,8 @@ fun NavGraph(
         composable(Destination.Home.route) {
             HomeScreen(
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
-                onPlaylistClick = { 
-                    navController.navigate(Destination.Playlist(it.getPlaylistId()).route) 
+                onPlaylistClick = { playlist ->
+                    navController.navigate(Destination.Playlist(playlist.id).route)
                 }
             )
         }
@@ -83,8 +83,8 @@ fun NavGraph(
         composable(Destination.Library.route) {
             LibraryScreen(
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
-                onPlaylistClick = { 
-                     navController.navigate(Destination.Playlist(it.getPlaylistId()).route) 
+                onPlaylistClick = { playlist ->
+                    navController.navigate(Destination.Playlist(playlist.id).route)
                 }
             )
         }
@@ -166,7 +166,7 @@ fun NavGraph(
         ) {
             com.suvojeet.suvmusic.ui.screens.ArtistScreen(
                 onBackClick = { navController.popBackStack() },
-                onSongClick = { onPlaySong(it) },
+                onSongClick = { onPlaySong(listOf(it), 0) },
                 onAlbumClick = { albumId -> 
                     navController.navigate(Destination.Album(albumId).route)
                 }
@@ -181,7 +181,7 @@ fun NavGraph(
         ) {
             com.suvojeet.suvmusic.ui.screens.AlbumScreen(
                 onBackClick = { navController.popBackStack() },
-                onSongClick = { onPlaySong(it) }
+                onSongClick = { onPlaySong(listOf(it), 0) }
             )
         }
     }

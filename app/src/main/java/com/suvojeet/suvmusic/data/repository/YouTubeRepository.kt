@@ -540,11 +540,13 @@ class YouTubeRepository @Inject constructor(
                             val musicItem = item?.optJSONObject("musicTwoRowItemRenderer")
                                 ?: item?.optJSONObject("musicResponsiveListItemRenderer")
                             
-                            musicItem?.let { parsePlaylistItem(it) }?.let { playlist ->
+                            val playlist = musicItem?.let { parsePlaylistItem(it) }
+                            if (playlist != null) {
                                 // Filter out auto-generated playlists
-                                if (!playlist.id.startsWith("RDAMPL") && 
-                                    !playlist.id.startsWith("LM") &&
-                                    playlist.id.isNotEmpty()) {
+                                val playlistId = playlist.id
+                                if (!playlistId.startsWith("RDAMPL") && 
+                                    !playlistId.startsWith("LM") &&
+                                    playlistId.isNotEmpty()) {
                                     playlists.add(playlist)
                                 }
                             }

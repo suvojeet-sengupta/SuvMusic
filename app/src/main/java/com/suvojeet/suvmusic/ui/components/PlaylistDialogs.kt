@@ -186,7 +186,7 @@ fun AddToPlaylistSheet(
                             ListItem(
                                 headlineContent = { 
                                     Text(
-                                        text = playlist.title,
+                                        text = playlist.name,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     ) 
@@ -198,10 +198,10 @@ fun AddToPlaylistSheet(
                                     )
                                 },
                                 leadingContent = {
-                                    if (playlist.thumbnailUrl.isNotEmpty()) {
+                                    if (!playlist.thumbnailUrl.isNullOrEmpty()) {
                                         AsyncImage(
                                             model = playlist.thumbnailUrl,
-                                            contentDescription = playlist.title,
+                                            contentDescription = playlist.name,
                                             modifier = Modifier
                                                 .size(48.dp)
                                                 .clip(RoundedCornerShape(8.dp)),
