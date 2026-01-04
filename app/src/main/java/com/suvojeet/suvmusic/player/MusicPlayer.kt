@@ -2,6 +2,8 @@ package com.suvojeet.suvmusic.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.animation.ValueAnimator
+import android.view.animation.LinearInterpolator
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -12,6 +14,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
@@ -40,7 +43,8 @@ import javax.inject.Singleton
 @OptIn(UnstableApi::class)
 class MusicPlayer @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val youTubeRepository: YouTubeRepository
+    private val youTubeRepository: YouTubeRepository,
+    private val sessionManager: SessionManager
 ) {
     
     private val _playerState = MutableStateFlow(PlayerState())
@@ -52,6 +56,8 @@ class MusicPlayer @Inject constructor(
     private var mediaController: MediaController? = null
     
     private var positionUpdateJob: Job? = null
+    private var crossfadeJob: Job? = null
+    private var crossfadeAnimator: ValueAnimator? = null
     
     init {
         connectToService()
@@ -175,15 +181,112 @@ class MusicPlayer @Inject constructor(
         positionUpdateJob = scope.launch {
             while (true) {
                 mediaController?.let { controller ->
+                    val currentPos = controller.currentPosition.coerceAtLeast(0L)
+                    val duration = controller.duration.coerceAtLeast(0L)
+                    
                     _playerState.update { 
                         it.copy(
-                            currentPosition = controller.currentPosition.coerceAtLeast(0L),
-                            duration = controller.duration.coerceAtLeast(0L),
+                            currentPosition = currentPos,
+                            duration = duration,
                             bufferedPercentage = controller.bufferedPercentage
                         )
                     }
+                    
+                    // Check if we need to start crossfade
+                    checkCrossfade(currentPos, duration)
                 }
-                delay(500)
+                delay(250) // Check more frequently for smoother crossfade
+            }
+        }
+    }
+    
+    private var isCrossfading = false
+    
+    private fun checkCrossfade(currentPosition: Long, duration: Long) {
+        if (isCrossfading || duration <= 0) return
+        
+        val crossfadeDuration = sessionManager.getCrossfadeDuration()
+        if (crossfadeDuration <= 0) return // Crossfade disabled
+        
+        val crossfadeStartMs = duration - (crossfadeDuration * 1000L)
+        
+        // Start crossfade when we reach the crossfade start point
+        if (currentPosition >= crossfadeStartMs && currentPosition < duration - 500) {
+            val state = _playerState.value
+            val nextIndex = state.currentIndex + 1
+            
+            // Only crossfade if there's a next song
+            if (nextIndex in state.queue.indices || state.repeatMode == RepeatMode.ALL) {
+                executeCrossfade(crossfadeDuration)
+            }
+        }
+    }
+    
+    private fun executeCrossfade(durationSeconds: Int) {
+        if (isCrossfading) return
+        isCrossfading = true
+        
+        val durationMs = durationSeconds * 1000L
+        
+        scope.launch {
+            try {
+                // Prepare next song's stream URL in advance
+                val state = _playerState.value
+                var nextIndex = state.currentIndex + 1
+                
+                if (nextIndex >= state.queue.size) {
+                    if (state.repeatMode == RepeatMode.ALL) {
+                        nextIndex = 0
+                    } else {
+                        isCrossfading = false
+                        return@launch
+                    }
+                }
+                
+                val nextSong = state.queue.getOrNull(nextIndex)
+                if (nextSong == null) {
+                    isCrossfading = false
+                    return@launch
+                }
+                
+                // Resolve stream URL for next song
+                val streamUrl = if (nextSong.source == SongSource.LOCAL || nextSong.source == SongSource.DOWNLOADED) {
+                    nextSong.localUri.toString()
+                } else {
+                    youTubeRepository.getStreamUrl(nextSong.id)
+                }
+                
+                if (streamUrl == null) {
+                    isCrossfading = false
+                    return@launch
+                }
+                
+                // Start fade out animation on current track
+                crossfadeAnimator?.cancel()
+                crossfadeAnimator = ValueAnimator.ofFloat(1f, 0f).apply {
+                    this.duration = durationMs
+                    interpolator = LinearInterpolator()
+                    addUpdateListener { animator ->
+                        val volume = animator.animatedValue as Float
+                        mediaController?.volume = volume
+                    }
+                    start()
+                }
+                
+                // Wait for crossfade duration then switch to next track
+                delay(durationMs - 200) // Switch slightly before fade completes
+                
+                // Reset volume and play next
+                mediaController?.volume = 1f
+                crossfadeAnimator?.cancel()
+                
+                // Trigger next song play
+                playSong(nextSong, state.queue, nextIndex)
+                
+            } catch (e: Exception) {
+                mediaController?.volume = 1f
+            } finally {
+                isCrossfading = false
             }
         }
     }
@@ -192,6 +295,9 @@ class MusicPlayer @Inject constructor(
      * Play a single song.
      */
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0) {
+        // Cancel any ongoing crossfade
+        cancelCrossfade()
+        
         scope.launch {
             _playerState.update { 
                 it.copy(
@@ -211,6 +317,9 @@ class MusicPlayer @Inject constructor(
                     controller.stop()
                     controller.clearMediaItems()
                     
+                    // Reset volume in case crossfade was in progress
+                    controller.volume = 1f
+                    
                     controller.setMediaItems(mediaItems, startIndex, 0L)
                     controller.prepare()
                     controller.play()
@@ -221,6 +330,13 @@ class MusicPlayer @Inject constructor(
                 _playerState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
+    }
+    
+    private fun cancelCrossfade() {
+        isCrossfading = false
+        crossfadeJob?.cancel()
+        crossfadeAnimator?.cancel()
+        mediaController?.volume = 1f
     }
     
     private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true): MediaItem {
@@ -380,6 +496,8 @@ class MusicPlayer @Inject constructor(
     
     fun release() {
         positionUpdateJob?.cancel()
+        crossfadeJob?.cancel()
+        crossfadeAnimator?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         mediaController = null
     }

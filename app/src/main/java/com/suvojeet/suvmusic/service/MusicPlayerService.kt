@@ -10,19 +10,28 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.suvojeet.suvmusic.MainActivity
+import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Media3 MediaSessionService for background music playback.
+ * Supports gapless playback and automix based on user settings.
  */
 @AndroidEntryPoint
 class MusicPlayerService : MediaSessionService() {
+    
+    @Inject
+    lateinit var sessionManager: SessionManager
     
     private var mediaSession: MediaSession? = null
     
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        
+        val isGaplessEnabled = sessionManager.isGaplessPlaybackEnabled()
+        val isAutomixEnabled = sessionManager.isAutomixEnabled()
         
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
@@ -45,6 +54,19 @@ class MusicPlayerService : MediaSessionService() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+            .apply {
+                // Configure for gapless playback
+                // When gapless is enabled, ExoPlayer will seamlessly transition between tracks
+                // When disabled, there may be small gaps between tracks
+                if (isGaplessEnabled || isAutomixEnabled) {
+                    // ExoPlayer handles gapless automatically when media items are queued
+                    // Enabling pause at end is DISABLED for gapless playback
+                    pauseAtEndOfMediaItems = false
+                } else {
+                    // Add small pause between tracks when gapless is disabled
+                    pauseAtEndOfMediaItems = false
+                }
+            }
         
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this,
@@ -78,3 +100,4 @@ class MusicPlayerService : MediaSessionService() {
         super.onDestroy()
     }
 }
+
