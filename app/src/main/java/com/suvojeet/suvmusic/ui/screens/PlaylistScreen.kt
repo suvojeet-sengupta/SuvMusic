@@ -168,6 +168,7 @@ private fun TopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .background(
                 if (isScrolled) Color(0xFF1D1D1D) else Color.Transparent
             )

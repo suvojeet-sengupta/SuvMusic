@@ -12,10 +12,22 @@ sealed class Destination(val route: String) {
     data object YouTubeLogin : Destination("youtube_login")
     data object About : Destination("about")
     
-    data class Playlist(val playlistId: String) : Destination("playlist/$playlistId") {
+    data class Playlist(
+        val playlistId: String,
+        val name: String? = null,
+        val thumbnailUrl: String? = null
+    ) : Destination(buildRoute(playlistId, name, thumbnailUrl)) {
         companion object {
-            const val ROUTE = "playlist/{playlistId}"
+            const val ROUTE = "playlist/{playlistId}?name={name}&thumbnail={thumbnail}"
             const val ARG_PLAYLIST_ID = "playlistId"
+            const val ARG_NAME = "name"
+            const val ARG_THUMBNAIL = "thumbnail"
+            
+            fun buildRoute(playlistId: String, name: String?, thumbnailUrl: String?): String {
+                val encodedName = java.net.URLEncoder.encode(name ?: "", "UTF-8")
+                val encodedThumb = java.net.URLEncoder.encode(thumbnailUrl ?: "", "UTF-8")
+                return "playlist/$playlistId?name=$encodedName&thumbnail=$encodedThumb"
+            }
         }
     }
 

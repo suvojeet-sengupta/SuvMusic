@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 import javax.inject.Inject
 
 data class PlaylistUiState(
@@ -27,11 +28,32 @@ class PlaylistViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val playlistId: String = checkNotNull(savedStateHandle[Destination.Playlist.ARG_PLAYLIST_ID])
+    private val initialName: String? = savedStateHandle.get<String>(Destination.Playlist.ARG_NAME)?.let { 
+        try { URLDecoder.decode(it, "UTF-8").takeIf { decoded -> decoded.isNotBlank() } } catch (e: Exception) { null }
+    }
+    private val initialThumbnail: String? = savedStateHandle.get<String>(Destination.Playlist.ARG_THUMBNAIL)?.let {
+        try { URLDecoder.decode(it, "UTF-8").takeIf { decoded -> decoded.isNotBlank() } } catch (e: Exception) { null }
+    }
     
     private val _uiState = MutableStateFlow(PlaylistUiState())
     val uiState: StateFlow<PlaylistUiState> = _uiState.asStateFlow()
 
     init {
+        // Show initial data from navigation immediately
+        if (initialName != null || initialThumbnail != null) {
+            _uiState.update {
+                it.copy(
+                    playlist = Playlist(
+                        id = playlistId,
+                        title = initialName ?: "Loading...",
+                        author = "",
+                        thumbnailUrl = initialThumbnail,
+                        songs = emptyList()
+                    ),
+                    isLoading = true
+                )
+            }
+        }
         loadPlaylist()
     }
 
@@ -40,9 +62,16 @@ class PlaylistViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val playlist = youTubeRepository.getPlaylist(playlistId)
+                
+                // Merge with initial data - prefer API data but fallback to nav params
+                val finalPlaylist = playlist.copy(
+                    title = if (playlist.title == "Unknown Playlist" && initialName != null) initialName else playlist.title,
+                    thumbnailUrl = playlist.thumbnailUrl ?: initialThumbnail
+                )
+                
                 _uiState.update { 
                     it.copy(
-                        playlist = playlist,
+                        playlist = finalPlaylist,
                         isLoading = false
                     )
                 }
@@ -57,3 +86,4 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 }
+

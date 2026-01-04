@@ -70,7 +70,13 @@ fun NavGraph(
             HomeScreen(
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
                 onPlaylistClick = { playlist ->
-                    navController.navigate(Destination.Playlist(playlist.id).route)
+                    navController.navigate(
+                        Destination.Playlist(
+                            playlistId = playlist.id,
+                            name = playlist.name,
+                            thumbnailUrl = playlist.thumbnailUrl
+                        ).route
+                    )
                 }
             )
         }
@@ -85,7 +91,13 @@ fun NavGraph(
             LibraryScreen(
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
                 onPlaylistClick = { playlist ->
-                    navController.navigate(Destination.Playlist(playlist.id).route)
+                    navController.navigate(
+                        Destination.Playlist(
+                            playlistId = playlist.id,
+                            name = playlist.name,
+                            thumbnailUrl = playlist.thumbnailUrl
+                        ).route
+                    )
                 }
             )
         }
@@ -140,6 +152,16 @@ fun NavGraph(
             arguments = listOf(
                 navArgument(Destination.Playlist.ARG_PLAYLIST_ID) {
                     type = NavType.StringType
+                },
+                navArgument(Destination.Playlist.ARG_NAME) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument(Destination.Playlist.ARG_THUMBNAIL) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) { backStackEntry ->
