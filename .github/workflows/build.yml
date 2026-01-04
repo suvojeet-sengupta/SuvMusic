@@ -1,0 +1,109 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v3
+      with:
+        gradle-version: 8.11
+
+    - name: Decode Keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/release-keystore.jks
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+      env:
+        KEYSTORE_PATH: ${{ github.workspace }}/release-keystore.jks
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+    - name: Build Release AAB
+      run: ./gradlew bundleRelease
+      env:
+        KEYSTORE_PATH: ${{ github.workspace }}/release-keystore.jks
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+    - name: Find APK file
+      id: find_apk
+      run: |
+        APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+        echo "APK_PATH=$APK_FILE" >> $GITHUB_OUTPUT
+        echo "APK_NAME=$(basename $APK_FILE)" >> $GITHUB_OUTPUT
+
+    - name: Find AAB file
+      id: find_aab
+      run: |
+        AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
+        echo "AAB_PATH=$AAB_FILE" >> $GITHUB_OUTPUT
+        echo "AAB_NAME=$(basename $AAB_FILE)" >> $GITHUB_OUTPUT
+
+    - name: Extract version name
+      id: version
+      run: |
+        VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+        echo "VERSION_NAME=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: suvmusic-apk
+        path: ${{ steps.find_apk.outputs.APK_PATH }}
+
+    - name: Upload AAB Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: suvmusic-aab
+        path: ${{ steps.find_aab.outputs.AAB_PATH }}
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION_NAME }}
+        name: SuvMusic v${{ steps.version.outputs.VERSION_NAME }}
+        body: |
+          ## 🎵 SuvMusic v${{ steps.version.outputs.VERSION_NAME }}
+          
+          Beautiful Music App with Material Expressive Components
+          
+          ### Features:
+          - Stream music from YouTube/YouTube Music
+          - Play local offline audio files
+          - Material Design 3 Expressive UI
+          - High quality audio playback
+          
+          ### Downloads:
+          - **APK**: Direct install on Android devices
+          - **AAB**: For Google Play Store upload
+        draft: false
+        prerelease: false
+        files: |
+          ${{ steps.find_apk.outputs.APK_PATH }}
+          ${{ steps.find_aab.outputs.AAB_PATH }}
