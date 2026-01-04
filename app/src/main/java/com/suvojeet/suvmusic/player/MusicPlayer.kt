@@ -224,19 +224,71 @@ class MusicPlayer @Inject constructor(
     }
     
     fun seekToNext() {
-        mediaController?.let { controller ->
-            if (controller.hasNextMediaItem()) {
-                controller.seekToNextMediaItem()
-            }
+        val state = _playerState.value
+        val queue = state.queue
+        if (queue.isEmpty()) return
+
+        // Determine next index based on shuffle/repeat/order
+        val nextIndex = if (state.shuffleEnabled) {
+            // Ensure we don't pick the same song if queue > 1
+            if (queue.size > 1) {
+                var random = queue.indices.random()
+                while (random == state.currentIndex) {
+                    random = queue.indices.random()
+                }
+                random
+            } else 0
+        } else {
+            state.currentIndex + 1
+        }
+        
+        if (nextIndex in queue.indices) {
+            playSong(queue[nextIndex], queue, nextIndex)
+        } else {
+            // End of queue logic
+             if (state.repeatMode == RepeatMode.ALL) {
+                 playSong(queue[0], queue, 0)
+             } else if (state.isAutoplayEnabled) {
+                 // Mock Autoplay: Just pick a random song from queue to mimic 'radio'
+                 if (queue.isNotEmpty()) {
+                     val random = queue.indices.random()
+                     playSong(queue[random], queue, random)
+                 }
+             }
+             // Else: Stop or do nothing
         }
     }
     
     fun seekToPrevious() {
-        mediaController?.let { controller ->
-            if (controller.currentPosition > 3000) {
-                controller.seekTo(0)
-            } else if (controller.hasPreviousMediaItem()) {
-                controller.seekToPreviousMediaItem()
+        val state = _playerState.value
+        // If played more than 3 seconds, restart current song
+        if (state.currentPosition > 3000) {
+            seekTo(0)
+            return
+        }
+        
+        val queue = state.queue
+        if (queue.isEmpty()) return
+        
+        val prevIndex = if (state.shuffleEnabled) {
+            if (queue.size > 1) {
+                 var random = queue.indices.random() // Ideally we'd have a history stack
+                 while (random == state.currentIndex) {
+                     random = queue.indices.random()
+                 }
+                 random
+             } else 0
+        } else {
+            state.currentIndex - 1
+        }
+
+        if (prevIndex in queue.indices) {
+             playSong(queue[prevIndex], queue, prevIndex)
+        } else {
+            // If at start and repeat all is on, go to end? Or just stop.
+            if (state.repeatMode == RepeatMode.ALL && queue.isNotEmpty()) {
+                val lastIndex = queue.lastIndex
+                playSong(queue[lastIndex], queue, lastIndex)
             }
         }
     }
