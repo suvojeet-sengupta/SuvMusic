@@ -40,6 +40,7 @@ fun NavGraph(
     onLikeCurrentSong: () -> Unit,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
+    onToggleAutoplay: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -117,7 +118,8 @@ fun NavGraph(
                 onDownload = onDownloadCurrentSong,
                 onToggleLike = onLikeCurrentSong,
                 onShuffleToggle = onShuffleToggle,
-                onRepeatToggle = onRepeatToggle
+                onRepeatToggle = onRepeatToggle,
+                onToggleAutoplay = onToggleAutoplay
             )
         }
         

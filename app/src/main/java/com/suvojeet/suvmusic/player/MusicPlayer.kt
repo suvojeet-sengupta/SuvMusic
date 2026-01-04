@@ -362,12 +362,18 @@ class MusicPlayer @Inject constructor(
         }
     }
     
-    fun addToQueue(song: Song) {
-         val currentQueue = _playerState.value.queue.toMutableList()
-         currentQueue.add(song)
-         _playerState.update { it.copy(queue = currentQueue) }
-         mediaController?.addMediaItem(MediaItem.fromUri(song.url))
-    }
+     fun addToQueue(song: Song) {
+          val currentQueue = _playerState.value.queue.toMutableList()
+          currentQueue.add(song)
+          _playerState.update { it.copy(queue = currentQueue) }
+          
+          val uri = if (song.source == SongSource.LOCAL) song.localUri 
+                    else android.net.Uri.parse("https://youtube.com/watch?v=${song.id}")
+                    
+          if (uri != null) {
+              mediaController?.addMediaItem(MediaItem.fromUri(uri))
+          }
+     }
 
     fun release() {
         positionUpdateJob?.cancel()
