@@ -330,54 +330,6 @@ class MusicPlayer @Inject constructor(
     
     fun getPlayer(): Player? = mediaController
     
-<<<<<<< HEAD
-    fun toggleAutoplay() {
-        _playerState.update { it.copy(isAutoplayEnabled = !it.isAutoplayEnabled) }
-    }
-
-    /**
-     * Reorders the queue by moving a song from [fromIndex] to [toIndex].
-     */
-    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
-        val currentQueue = _playerState.value.queue.toMutableList()
-        if (fromIndex in currentQueue.indices && toIndex in currentQueue.indices) {
-            val item = currentQueue.removeAt(fromIndex)
-            currentQueue.add(toIndex, item)
-            
-            // Update media controller if needed
-             if (mediaController != null) {
-                 mediaController?.moveMediaItem(fromIndex, toIndex)
-             }
-             
-             // Update local state to reflect change immediately
-             _playerState.update { 
-                 it.copy(
-                     queue = currentQueue,
-                     // Simple index update - ideal logic would track current song ID
-                     currentIndex = if (it.currentIndex == fromIndex) toIndex 
-                                    else if (it.currentIndex in fromIndex..toIndex) it.currentIndex - 1
-                                    else if (it.currentIndex in toIndex..fromIndex) it.currentIndex + 1
-                                    else it.currentIndex
-                 ) 
-             }
-        }
-    }
-    
-     fun addToQueue(song: Song) {
-          val currentQueue = _playerState.value.queue.toMutableList()
-          currentQueue.add(song)
-          _playerState.update { it.copy(queue = currentQueue) }
-          
-          val uri = if (song.source == SongSource.LOCAL) song.localUri 
-                    else android.net.Uri.parse("https://youtube.com/watch?v=${song.id}")
-                    
-          if (uri != null) {
-              mediaController?.addMediaItem(MediaItem.fromUri(uri))
-          }
-     }
-
-=======
->>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
     fun release() {
         positionUpdateJob?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }

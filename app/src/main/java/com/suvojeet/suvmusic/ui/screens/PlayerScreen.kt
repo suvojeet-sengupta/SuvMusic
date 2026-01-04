@@ -264,31 +264,10 @@ fun PlayerScreen(
         ) {
             QueueView(
                 currentSong = song,
-<<<<<<< HEAD
-                currentIndex = playerState.currentIndex,
-                dominantColors = dominantColors,
-                isPlaying = playerState.isPlaying,
-                isAutoplayEnabled = playerState.isAutoplayEnabled,
-                repeatMode = playerState.repeatMode,
-                shuffleEnabled = playerState.shuffleEnabled,
-                onSongClick = { 
-                     // Play from queue
-                     val index = playerState.queue.indexOfFirst { it.id == it.id } // Ideally use ID check
-                     if (index != -1) {
-                         // Logic handled by onSongClick in list
-                     }
-                },
-                onTogglePlayPause = onPlayPause,
-                onToggleShuffle = onShuffleToggle,
-                onToggleRepeat = onRepeatToggle,
-                onToggleAutoplay = onToggleAutoplay,
-                onBack = { showQueue = false }
-=======
                 queue = playerState.queue,
                 onBack = { showQueue = false },
                 onSongClick = { /* Play from queue */ },
                 dominantColors = dominantColors
->>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
             )
         }
         
@@ -716,9 +695,6 @@ private fun QueueView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-<<<<<<< HEAD
-            .background(dominantColors.primary)
-=======
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -728,7 +704,6 @@ private fun QueueView(
                     )
                 )
             )
->>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -844,12 +819,6 @@ private fun QueueView(
                 )
             }
         }
-<<<<<<< HEAD
-    }
-}
-
-
-=======
         
         Spacer(modifier = Modifier.weight(1f))
         
@@ -952,7 +921,6 @@ private fun QueueItem(
         )
     }
 }
->>>>>>> parent of 6f6630d (feat(ui): Implement functional Queue/Now Playing screen - Added Queue Header and Controls Row (Shuffle, Repeat, Autoplay) - Updated QueueItem with drag handle visual - Added Autoplay logic placeholder)
 
 private fun getHighResThumbnail(url: String?): String? {
     return url?.let {
