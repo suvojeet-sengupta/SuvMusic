@@ -1,21 +1,24 @@
 package com.suvojeet.suvmusic.player
 
+import android.content.ComponentName
 import android.content.Context
 import androidx.annotation.OptIn
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.service.MusicPlayerService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +33,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Wrapper around ExoPlayer with queue management and state flow.
+ * Wrapper around MediaController connected to MusicPlayerService.
+ * This enables media notifications and proper audio focus handling.
  */
 @Singleton
 @OptIn(UnstableApi::class)
@@ -44,20 +48,35 @@ class MusicPlayer @Inject constructor(
     
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     
-    private val exoPlayer: ExoPlayer by lazy {
-        ExoPlayer.Builder(context)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .setUsage(C.USAGE_MEDIA)
-                    .build(),
-                true // Handle audio focus
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .build()
-            .apply {
-                addListener(playerListener)
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+    private var mediaController: MediaController? = null
+    
+    private var positionUpdateJob: Job? = null
+    
+    init {
+        connectToService()
+    }
+    
+    private fun connectToService() {
+        val sessionToken = SessionToken(
+            context,
+            ComponentName(context, MusicPlayerService::class.java)
+        )
+        
+        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        controllerFuture?.addListener({
+            try {
+                mediaController = controllerFuture?.get()
+                mediaController?.addListener(playerListener)
+                
+                // Restore state if player has media
+                if (mediaController?.mediaItemCount ?: 0 > 0) {
+                    startPositionUpdates()
+                }
+            } catch (e: Exception) {
+                _playerState.update { it.copy(error = "Failed to connect to music service") }
             }
+        }, MoreExecutors.directExecutor())
     }
     
     private val playerListener = object : Player.Listener {
@@ -80,14 +99,15 @@ class MusicPlayer @Inject constructor(
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             mediaItem?.let { item ->
-                val index = exoPlayer.currentMediaItemIndex
+                val controller = mediaController ?: return@let
+                val index = controller.currentMediaItemIndex
                 val song = _playerState.value.queue.getOrNull(index)
                 _playerState.update { 
                     it.copy(
                         currentSong = song,
                         currentIndex = index,
                         currentPosition = 0L,
-                        duration = exoPlayer.duration.coerceAtLeast(0L),
+                        duration = controller.duration.coerceAtLeast(0L),
                         // Reset metadata states on song change (will be updated by VM)
                         isLiked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED
@@ -106,18 +126,18 @@ class MusicPlayer @Inject constructor(
         }
     }
     
-    private var positionUpdateJob: Job? = null
-    
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
         positionUpdateJob = scope.launch {
             while (true) {
-                _playerState.update { 
-                    it.copy(
-                        currentPosition = exoPlayer.currentPosition.coerceAtLeast(0L),
-                        duration = exoPlayer.duration.coerceAtLeast(0L),
-                        bufferedPercentage = exoPlayer.bufferedPercentage
-                    )
+                mediaController?.let { controller ->
+                    _playerState.update { 
+                        it.copy(
+                            currentPosition = controller.currentPosition.coerceAtLeast(0L),
+                            duration = controller.duration.coerceAtLeast(0L),
+                            bufferedPercentage = controller.bufferedPercentage
+                        )
+                    }
                 }
                 delay(500)
             }
@@ -140,9 +160,13 @@ class MusicPlayer @Inject constructor(
             
             try {
                 val mediaItems = queue.mapIndexed { index, s -> createMediaItem(s, index == startIndex) }
-                exoPlayer.setMediaItems(mediaItems, startIndex, 0L)
-                exoPlayer.prepare()
-                exoPlayer.play()
+                mediaController?.let { controller ->
+                    controller.setMediaItems(mediaItems, startIndex, 0L)
+                    controller.prepare()
+                    controller.play()
+                } ?: run {
+                    _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
+                }
             } catch (e: Exception) {
                 _playerState.update { it.copy(error = e.message, isLoading = false) }
             }
@@ -176,37 +200,43 @@ class MusicPlayer @Inject constructor(
     }
     
     fun play() {
-        exoPlayer.play()
+        mediaController?.play()
     }
     
     fun pause() {
-        exoPlayer.pause()
+        mediaController?.pause()
     }
     
     fun togglePlayPause() {
-        if (exoPlayer.isPlaying) pause() else play()
+        mediaController?.let { controller ->
+            if (controller.isPlaying) pause() else play()
+        }
     }
     
     fun seekTo(position: Long) {
-        exoPlayer.seekTo(position)
+        mediaController?.seekTo(position)
     }
     
     fun seekToNext() {
-        if (exoPlayer.hasNextMediaItem()) {
-            exoPlayer.seekToNextMediaItem()
+        mediaController?.let { controller ->
+            if (controller.hasNextMediaItem()) {
+                controller.seekToNextMediaItem()
+            }
         }
     }
     
     fun seekToPrevious() {
-        if (exoPlayer.currentPosition > 3000) {
-            exoPlayer.seekTo(0)
-        } else if (exoPlayer.hasPreviousMediaItem()) {
-            exoPlayer.seekToPreviousMediaItem()
+        mediaController?.let { controller ->
+            if (controller.currentPosition > 3000) {
+                controller.seekTo(0)
+            } else if (controller.hasPreviousMediaItem()) {
+                controller.seekToPreviousMediaItem()
+            }
         }
     }
     
     fun setRepeatMode(mode: RepeatMode) {
-        exoPlayer.repeatMode = when (mode) {
+        mediaController?.repeatMode = when (mode) {
             RepeatMode.OFF -> Player.REPEAT_MODE_OFF
             RepeatMode.ALL -> Player.REPEAT_MODE_ALL
             RepeatMode.ONE -> Player.REPEAT_MODE_ONE
@@ -215,9 +245,11 @@ class MusicPlayer @Inject constructor(
     }
     
     fun toggleShuffle() {
-        val newShuffleState = !exoPlayer.shuffleModeEnabled
-        exoPlayer.shuffleModeEnabled = newShuffleState
-        _playerState.update { it.copy(shuffleEnabled = newShuffleState) }
+        mediaController?.let { controller ->
+            val newShuffleState = !controller.shuffleModeEnabled
+            controller.shuffleModeEnabled = newShuffleState
+            _playerState.update { it.copy(shuffleEnabled = newShuffleState) }
+        }
     }
     
     fun updateLikeStatus(isLiked: Boolean) {
@@ -228,10 +260,11 @@ class MusicPlayer @Inject constructor(
         _playerState.update { it.copy(downloadState = state) }
     }
     
-    fun getPlayer(): ExoPlayer = exoPlayer
+    fun getPlayer(): Player? = mediaController
     
     fun release() {
         positionUpdateJob?.cancel()
-        exoPlayer.release()
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        mediaController = null
     }
 }
