@@ -126,18 +126,34 @@ fun PlaylistScreen(
                 color = MaterialTheme.colorScheme.primary
             )
         } else if (playlist != null) {
-                        )
-                    }
-
-                    // Song List
-                    itemsIndexed(playlist.songs) { index, song ->
-                        SongListItem(
-                            song = song,
-                            onClick = { onSongClick(song) }
-                        )
-                    }
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(bottom = 100.dp), // Space for player bar
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Header (Transparent space for the fixed header)
+                item {
+                    Spacer(modifier = Modifier.height(300.dp))
+                }
+                
+                // Song List
+                itemsIndexed(playlist.songs) { index, song ->
+                    SongListItem(
+                        song = song,
+                        onClick = { onSongClick(playlist.songs, index) }
+                    )
                 }
             }
+            
+            // Fixed Header
+            PlaylistHeader(
+                playlist = playlist,
+                onBackClick = onBackClick,
+                dominantColors = dominantColors,
+                isCollapsed = isScrolled,
+                onPlayAll = { onPlayAll(playlist.songs) },
+                onShufflePlay = { onShufflePlay(playlist.songs) }
+            )
         }
     }
 }
