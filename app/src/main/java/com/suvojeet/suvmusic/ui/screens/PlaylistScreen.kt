@@ -1,9 +1,11 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,16 +15,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
@@ -34,9 +40,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -51,7 +62,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.ui.components.MusicCard
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 
@@ -68,35 +78,61 @@ fun PlaylistScreen(
     
     // Dynamic colors from playlist thumbnail
     val dominantColors = rememberDominantColors(playlist?.thumbnailUrl)
+    
+    // Track scroll position for collapsing header
+    val listState = rememberLazyListState()
+    val isScrolled by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100 }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        dominantColors.secondary,
-                        dominantColors.primary,
-                        Color.Black
-                    )
-                )
-            )
+            .background(Color(0xFF0D0D0D)) // Dark background
     ) {
+        // Blurred background image
+        if (playlist?.thumbnailUrl != null) {
+            AsyncImage(
+                model = playlist.thumbnailUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .blur(50.dp),
+                contentScale = ContentScale.Crop
+            )
+            // Gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color(0xFF0D0D0D).copy(alpha = 0.5f),
+                                Color(0xFF0D0D0D)
+                            )
+                        )
+                    )
+            )
+        }
+        
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = dominantColors.accent)
+                CircularProgressIndicator(color = Color.White)
             }
         } else if (uiState.error != null) {
-             Box(
+            Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = uiState.error ?: "Error loading playlist",
-                    color = dominantColors.onBackground
+                    color = Color.White
                 )
             }
         } else if (playlist != null) {
@@ -105,146 +141,308 @@ fun PlaylistScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                // Top Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = dominantColors.onBackground
-                        )
-                    }
-                }
+                // Top Bar with back button and actions
+                TopBar(
+                    title = playlist.title,
+                    isScrolled = isScrolled,
+                    onBackClick = onBackClick
+                )
 
                 LazyColumn(
-                    contentPadding = PaddingValues(bottom = 100.dp),
+                    state = listState,
+                    contentPadding = PaddingValues(bottom = 140.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     // Header Section
                     item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            // Artwork
-                            Box(
-                                modifier = Modifier
-                                    .size(250.dp)
-                                    .shadow(
-                                        elevation = 24.dp,
-                                        shape = RoundedCornerShape(12.dp),
-                                        spotColor = dominantColors.primary
-                                    )
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                            ) {
-                                if (playlist.thumbnailUrl != null) {
-                                    AsyncImage(
-                                        model = playlist.thumbnailUrl,
-                                        contentDescription = playlist.title,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // Title & Author
-                            Text(
-                                text = playlist.title,
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = dominantColors.onBackground,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            
-                            Spacer(modifier = Modifier.height(4.dp))
-                            
-                            Text(
-                                text = "Playlist • ${playlist.author} • ${playlist.songs.size} songs",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = dominantColors.accent,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // Action Buttons
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Button(
-                                    onClick = { onPlayAll(playlist.songs) },
-                                    modifier = Modifier.weight(1f).height(50.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = dominantColors.onBackground.copy(alpha = 0.1f),
-                                        contentColor = dominantColors.onBackground
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Play")
-                                }
-
-                                Button(
-                                    onClick = { onShufflePlay(playlist.songs) },
-                                    modifier = Modifier.weight(1f).height(50.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = dominantColors.onBackground.copy(alpha = 0.1f),
-                                        contentColor = dominantColors.onBackground
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Icon(Icons.Default.Shuffle, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Shuffle")
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(24.dp))
+                        PlaylistHeader(
+                            playlist = playlist,
+                            onPlayAll = { onPlayAll(playlist.songs) },
+                            onShufflePlay = { onShufflePlay(playlist.songs) }
+                        )
                     }
 
                     // Song List
                     itemsIndexed(playlist.songs) { index, song ->
-                        Row(
-                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                             verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${index + 1}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = dominantColors.onBackground.copy(alpha = 0.5f),
-                                modifier = Modifier.width(32.dp),
-                                textAlign = TextAlign.Center
-                            )
-                            
-                            MusicCard(
-                                song = song,
-                                onClick = { onSongClick(song) }, // In real app, might play context
-                                modifier = Modifier.weight(1f),
-                                backgroundColor = Color.Transparent,
-                                textColor = dominantColors.onBackground,
-                                subTextColor = dominantColors.onBackground.copy(alpha = 0.7f)
-                            )
-                        }
+                        SongListItem(
+                            song = song,
+                            onClick = { onSongClick(song) }
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TopBar(
+    title: String,
+    isScrolled: Boolean,
+    onBackClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (isScrolled) Color(0xFF1D1D1D) else Color.Transparent
+            )
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBackClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
+            )
+        }
+        
+        // Show title when scrolled
+        AnimatedVisibility(
+            visible = isScrolled,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        
+        if (!isScrolled) {
+            Spacer(modifier = Modifier.weight(1f))
+        }
+        
+        // Action buttons
+        IconButton(onClick = { }) {
+            Icon(
+                imageVector = Icons.Default.PersonAdd,
+                contentDescription = "Share",
+                tint = Color.White
+            )
+        }
+        IconButton(onClick = { }) {
+            Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = "Download",
+                tint = Color.White
+            )
+        }
+        IconButton(onClick = { }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "More",
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistHeader(
+    playlist: Playlist,
+    onPlayAll: () -> Unit,
+    onShufflePlay: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Large Title at top (YouTube Music style)
+        Text(
+            text = playlist.title,
+            style = MaterialTheme.typography.displaySmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 32.sp
+            ),
+            color = Color.White,
+            textAlign = TextAlign.Start,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+        )
+        
+        // Centered Artwork
+        Box(
+            modifier = Modifier
+                .size(200.dp)
+                .shadow(
+                    elevation = 16.dp,
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF2A2A2A))
+        ) {
+            if (playlist.thumbnailUrl != null) {
+                AsyncImage(
+                    model = playlist.thumbnailUrl,
+                    contentDescription = playlist.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Playlist Title (below artwork)
+        Text(
+            text = playlist.title,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        // Author
+        Text(
+            text = playlist.author,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+        
+        // Updated info (if you have it, otherwise show song count)
+        Text(
+            text = "${playlist.songs.size} songs",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.5f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Play & Shuffle Buttons (YouTube Music style)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Play Button
+            Button(
+                onClick = onPlayAll,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White.copy(alpha = 0.15f),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Play",
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            // Shuffle Button
+            Button(
+                onClick = onShufflePlay,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White.copy(alpha = 0.15f),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Shuffle,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Shuffle",
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun SongListItem(
+    song: Song,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Song Thumbnail
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0xFF2A2A2A))
+        ) {
+            if (song.thumbnailUrl != null) {
+                AsyncImage(
+                    model = song.thumbnailUrl,
+                    contentDescription = song.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        // Song Info
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = song.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Text(
+                text = song.artist,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        
+        // More Options
+        IconButton(onClick = { }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "More options",
+                tint = Color.White.copy(alpha = 0.7f)
+            )
         }
     }
 }
