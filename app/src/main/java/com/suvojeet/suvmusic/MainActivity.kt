@@ -169,7 +169,9 @@ fun SuvMusicApp() {
                 onPlayPause = { playerViewModel.togglePlayPause() },
                 onSeekTo = { playerViewModel.seekTo(it) },
                 onNext = { playerViewModel.seekToNext() },
-                onPrevious = { playerViewModel.seekToPrevious() }
+                onPrevious = { playerViewModel.seekToPrevious() },
+                onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
+                onLikeCurrentSong = { playerViewModel.likeCurrentSong() }
             )
         }
     }

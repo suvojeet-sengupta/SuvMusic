@@ -73,5 +73,6 @@ data class Song(
 enum class SongSource {
     YOUTUBE,
     YOUTUBE_MUSIC,
-    LOCAL
+    LOCAL,
+    DOWNLOADED
 }

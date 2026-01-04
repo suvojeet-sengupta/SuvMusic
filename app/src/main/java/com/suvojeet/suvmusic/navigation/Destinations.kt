@@ -17,4 +17,18 @@ sealed class Destination(val route: String) {
             const val ARG_PLAYLIST_ID = "playlistId"
         }
     }
+
+    data class Artist(val artistId: String) : Destination("artist/$artistId") {
+        companion object {
+            const val ROUTE = "artist/{artistId}"
+            const val ARG_ARTIST_ID = "artistId"
+        }
+    }
+
+    data class Album(val albumId: String) : Destination("album/{albumId}" ) {
+        companion object {
+            const val ROUTE = "album/{albumId}"
+            const val ARG_ALBUM_ID = "albumId"
+        }
+    }
 }

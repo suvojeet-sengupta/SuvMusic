@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
@@ -84,7 +85,8 @@ fun LibraryScreen(
                 onPlaylistClick = onPlaylistClick
             )
             1 -> OfflineTab(
-                songs = uiState.localSongs,
+                localSongs = uiState.localSongs,
+                downloadedSongs = uiState.downloadedSongs,
                 onSongClick = onSongClick
             )
             2 -> LikedTab(
@@ -115,7 +117,8 @@ private fun PlaylistsTab(
 
 @Composable
 private fun OfflineTab(
-    songs: List<Song>,
+    localSongs: List<Song>,
+    downloadedSongs: List<Song>,
     onSongClick: (Song) -> Unit
 ) {
     LazyColumn(
@@ -126,10 +129,10 @@ private fun OfflineTab(
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (songs.isEmpty()) {
+        if (localSongs.isEmpty() && downloadedSongs.isEmpty()) {
             item {
                 Text(
-                    text = "No offline songs yet.\nGrant storage permission to see local music.",
+                    text = "No offline songs yet.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 32.dp)
@@ -137,11 +140,40 @@ private fun OfflineTab(
             }
         }
         
-        items(songs) { song ->
-            MusicCard(
-                song = song,
-                onClick = { onSongClick(song) }
-            )
+        if (downloadedSongs.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Downloads",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+            items(downloadedSongs) { song ->
+                MusicCard(
+                    song = song,
+                    onClick = { onSongClick(song) }
+                )
+            }
+        }
+        
+        if (localSongs.isNotEmpty()) {
+             item {
+                Text(
+                    text = "Device Files",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+            items(localSongs) { song ->
+                MusicCard(
+                    song = song,
+                    onClick = { onSongClick(song) }
+                )
+            }
         }
     }
 }

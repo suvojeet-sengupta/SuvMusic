@@ -33,6 +33,8 @@ fun NavGraph(
     onSeekTo: (Long) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onDownloadCurrentSong: () -> Unit,
+    onLikeCurrentSong: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -93,7 +95,9 @@ fun NavGraph(
                 onSeekTo = onSeekTo,
                 onNext = onNext,
                 onPrevious = onPrevious,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onDownload = onDownloadCurrentSong,
+                onToggleLike = onLikeCurrentSong
             )
         }
         
@@ -119,6 +123,33 @@ fun NavGraph(
         ) { backStackEntry ->
             val playlistId = backStackEntry.arguments?.getString(Destination.Playlist.ARG_PLAYLIST_ID)
             // PlaylistScreen(playlistId = playlistId ?: "")
+        }
+
+        composable(
+            route = Destination.Artist.ROUTE,
+            arguments = listOf(
+                navArgument(Destination.Artist.ARG_ARTIST_ID) { type = NavType.StringType }
+            )
+        ) {
+            com.suvojeet.suvmusic.ui.screens.ArtistScreen(
+                onBackClick = { navController.popBackStack() },
+                onSongClick = { onPlaySong(it) },
+                onAlbumClick = { albumId -> 
+                    navController.navigate(Destination.Album(albumId).route)
+                }
+            )
+        }
+
+        composable(
+            route = Destination.Album.ROUTE,
+            arguments = listOf(
+                navArgument(Destination.Album.ARG_ALBUM_ID) { type = NavType.StringType }
+            )
+        ) {
+            com.suvojeet.suvmusic.ui.screens.AlbumScreen(
+                onBackClick = { navController.popBackStack() },
+                onSongClick = { onPlaySong(it) }
+            )
         }
     }
 }

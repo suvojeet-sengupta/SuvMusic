@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +18,7 @@ import javax.inject.Inject
 data class LibraryUiState(
     val playlists: List<PlaylistDisplayItem> = emptyList(),
     val localSongs: List<Song> = emptyList(),
+    val downloadedSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
@@ -25,7 +27,8 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val localAudioRepository: LocalAudioRepository
+    private val localAudioRepository: LocalAudioRepository,
+    private val downloadRepository: DownloadRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -33,6 +36,15 @@ class LibraryViewModel @Inject constructor(
     
     init {
         loadData()
+        observeDownloads()
+    }
+    
+    private fun observeDownloads() {
+        viewModelScope.launch {
+            downloadRepository.downloadedSongs.collect { downloads ->
+                _uiState.update { it.copy(downloadedSongs = downloads) }
+            }
+        }
     }
     
     private fun loadData() {

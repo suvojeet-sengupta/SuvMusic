@@ -1,16 +1,22 @@
 package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
-    private val musicPlayer: MusicPlayer
+    private val musicPlayer: MusicPlayer,
+    private val downloadRepository: DownloadRepository,
+    private val youTubeRepository: YouTubeRepository
 ) : ViewModel() {
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
@@ -45,6 +51,20 @@ class PlayerViewModel @Inject constructor(
     
     fun toggleShuffle() {
         musicPlayer.toggleShuffle()
+    }
+    
+    fun downloadCurrentSong() {
+        val song = playerState.value.currentSong ?: return
+        viewModelScope.launch {
+            downloadRepository.downloadSong(song)
+        }
+    }
+    
+    fun likeCurrentSong() {
+        val song = playerState.value.currentSong ?: return
+        viewModelScope.launch {
+            youTubeRepository.rateSong(song.id, "LIKE")
+        }
     }
     
     override fun onCleared() {

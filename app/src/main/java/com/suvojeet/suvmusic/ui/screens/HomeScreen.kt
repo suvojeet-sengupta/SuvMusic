@@ -77,10 +77,9 @@ fun HomeScreen(
         }
         
         // Quick Picks Section
-        item {
-            SectionHeader(title = "Quick Picks")
-        }
-        
+                    item {
+                        HomeSectionHeader(title = "Quick Picks")
+                    }        
         item {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 20.dp),
@@ -98,7 +97,7 @@ fun HomeScreen(
         // Playlists Section
         if (uiState.playlists.size > 1) {
             item {
-                SectionHeader(title = "Your Playlists")
+                HomeSectionHeader(title = "Your Playlists")
             }
             
             item {
@@ -119,7 +118,7 @@ fun HomeScreen(
         // Recently Played
         if (uiState.recommendations.isNotEmpty()) {
             item {
-                SectionHeader(title = "Recently Played")
+                HomeSectionHeader(title = "Recently Played")
             }
             
             items(uiState.recommendations.take(5)) { song ->
@@ -134,7 +133,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String) {
+private fun HomeSectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,

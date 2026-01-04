@@ -90,7 +90,9 @@ fun PlayerScreen(
     onSeekTo: (Long) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onDownload: () -> Unit,
+    onToggleLike: () -> Unit
 ) {
     val song = playerState.currentSong
     val context = LocalContext.current
@@ -160,7 +162,7 @@ fun PlayerScreen(
                 SongInfoSection(
                     song = song,
                     isFavorite = isFavorite,
-                    onFavoriteClick = { isFavorite = !isFavorite },
+                    onFavoriteClick = onToggleLike,
                     onMoreClick = { showActionsSheet = true },
                     dominantColors = dominantColors
                 )
@@ -235,7 +237,8 @@ fun PlayerScreen(
                 song = song,
                 isVisible = showActionsSheet,
                 onDismiss = { showActionsSheet = false },
-                onToggleFavorite = { isFavorite = !isFavorite }
+                onToggleFavorite = onToggleLike,
+                onDownload = onDownload
             )
         }
     }
@@ -643,21 +646,21 @@ private fun QueueView(
                 icon = Icons.Default.Shuffle,
                 isSelected = false,
                 dominantColors = dominantColors,
-                onClick = { }
+                onClick = { } 
             )
             PlaybackChip(
                 text = "Repeat",
                 icon = Icons.Default.Repeat,
                 isSelected = false,
                 dominantColors = dominantColors,
-                onClick = { }
+                onClick = { } 
             )
             PlaybackChip(
                 text = "Autoplay",
                 icon = Icons.Default.PlayArrow,
                 isSelected = true,
                 dominantColors = dominantColors,
-                onClick = { }
+                onClick = { } 
             )
         }
         
