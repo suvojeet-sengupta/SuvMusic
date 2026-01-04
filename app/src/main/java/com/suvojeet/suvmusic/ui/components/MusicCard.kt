@@ -38,13 +38,35 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.theme.AlbumArtShape
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import com.suvojeet.suvmusic.ui.theme.MusicCardShape
+
+/**
+ * Get high-resolution thumbnail URL.
+ */
+private fun getHighResThumbnail(url: String?): String? {
+    return url?.let {
+        when {
+            it.contains("ytimg.com") -> it
+                .replace("hqdefault", "maxresdefault")
+                .replace("mqdefault", "maxresdefault")
+                .replace("sddefault", "maxresdefault")
+                .replace("default", "maxresdefault")
+                .replace(Regex("w\\d+-h\\d+"), "w226-h226")
+            it.contains("lh3.googleusercontent.com") -> 
+                it.replace(Regex("=w\\d+-h\\d+"), "=w226-h226")
+                  .replace(Regex("=s\\d+"), "=s226")
+            else -> it
+        }
+    }
+}
 
 /**
  * Beautiful music card with glassmorphism effect.
@@ -60,6 +82,7 @@ fun MusicCard(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val context = LocalContext.current
     
     val elevation by animateDpAsState(
         targetValue = if (isPressed) 2.dp else 8.dp,
@@ -74,6 +97,8 @@ fun MusicCard(
             MaterialTheme.colorScheme.surfaceContainerHigh,
         label = "backgroundColor"
     )
+    
+    val highResThumbnail = getHighResThumbnail(song.thumbnailUrl)
     
     Surface(
         modifier = modifier
@@ -102,9 +127,13 @@ fun MusicCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (song.thumbnailUrl != null) {
+                if (highResThumbnail != null) {
                     AsyncImage(
-                        model = song.thumbnailUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(highResThumbnail)
+                            .crossfade(true)
+                            .size(112) // 2x for high DPI
+                            .build(),
                         contentDescription = song.title,
                         modifier = Modifier.size(56.dp),
                         contentScale = ContentScale.Crop
@@ -191,6 +220,9 @@ fun CompactMusicCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val highResThumbnail = getHighResThumbnail(song.thumbnailUrl)
+    
     Surface(
         modifier = modifier
             .width(140.dp)
@@ -207,9 +239,13 @@ fun CompactMusicCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (song.thumbnailUrl != null) {
+                if (highResThumbnail != null) {
                     AsyncImage(
-                        model = song.thumbnailUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(highResThumbnail)
+                            .crossfade(true)
+                            .size(280) // 2x for high DPI
+                            .build(),
                         contentDescription = song.title,
                         modifier = Modifier.size(140.dp),
                         contentScale = ContentScale.Crop

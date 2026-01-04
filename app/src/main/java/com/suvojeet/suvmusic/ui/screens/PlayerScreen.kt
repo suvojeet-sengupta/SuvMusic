@@ -1,7 +1,5 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,29 +30,30 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
+import com.suvojeet.suvmusic.ui.components.WaveformSeeker
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientStart
 
 /**
- * Full-screen player with album art, controls, and progress.
+ * Full-screen player with album art, waveform seeker, and controls.
  */
 @Composable
 fun PlayerScreen(
@@ -67,6 +65,25 @@ fun PlayerScreen(
     onBack: () -> Unit
 ) {
     val song = playerState.currentSong
+    val context = LocalContext.current
+    
+    // Get high-resolution thumbnail URL
+    val highResThumbnail = song?.thumbnailUrl?.let { url ->
+        // YouTube thumbnails: replace with maxresdefault for highest quality
+        when {
+            url.contains("ytimg.com") -> url
+                .replace("hqdefault", "maxresdefault")
+                .replace("mqdefault", "maxresdefault")
+                .replace("sddefault", "maxresdefault")
+                .replace("default", "maxresdefault")
+                .replace("w120-h120", "w544-h544")
+                .replace("w226-h226", "w544-h544")
+            url.contains("lh3.googleusercontent.com") -> 
+                url.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
+                   .replace(Regex("=s\\d+"), "=s544")
+            else -> url
+        }
+    }
     
     Box(
         modifier = Modifier
@@ -74,21 +91,31 @@ fun PlayerScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         // Blurred background from album art
-        if (song?.thumbnailUrl != null) {
+        if (highResThumbnail != null) {
             AsyncImage(
-                model = song.thumbnailUrl,
+                model = ImageRequest.Builder(context)
+                    .data(highResThumbnail)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(50.dp),
+                    .blur(60.dp),
                 contentScale = ContentScale.Crop
             )
             
-            // Dark overlay
+            // Dark overlay with gradient
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.5f),
+                                Color.Black.copy(alpha = 0.8f)
+                            )
+                        )
+                    )
             )
         }
         
@@ -121,25 +148,33 @@ fun PlayerScreen(
                     color = Color.White.copy(alpha = 0.7f)
                 )
                 
-                // Placeholder for symmetry
                 Spacer(modifier = Modifier.size(48.dp))
             }
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            // Album Art
+            // Album Art with shadow
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
                     .aspectRatio(1f)
+                    .shadow(
+                        elevation = 24.dp,
+                        shape = RoundedCornerShape(24.dp),
+                        spotColor = Color.Black.copy(alpha = 0.5f)
+                    )
                     .clip(RoundedCornerShape(24.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (song?.thumbnailUrl != null) {
+                if (highResThumbnail != null) {
                     AsyncImage(
-                        model = song.thumbnailUrl,
-                        contentDescription = song.title,
+                        model = ImageRequest.Builder(context)
+                            .data(highResThumbnail)
+                            .crossfade(true)
+                            .size(544) // High resolution
+                            .build(),
+                        contentDescription = song?.title,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -153,7 +188,7 @@ fun PlayerScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             
             // Song Info
             Text(
@@ -178,40 +213,34 @@ fun PlayerScreen(
             
             Spacer(modifier = Modifier.weight(1f))
             
-            // Progress Slider
-            val animatedProgress by animateFloatAsState(
-                targetValue = playerState.progress,
-                animationSpec = tween(500),
-                label = "progress"
-            )
-            
-            Slider(
-                value = animatedProgress,
-                onValueChange = { progress ->
+            // Waveform Seeker
+            WaveformSeeker(
+                progress = playerState.progress,
+                isPlaying = playerState.isPlaying,
+                onSeek = { progress ->
                     val newPosition = (progress * playerState.duration).toLong()
                     onSeekTo(newPosition)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = Color.White,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                )
+                modifier = Modifier.fillMaxWidth()
             )
+            
+            Spacer(modifier = Modifier.height(8.dp))
             
             // Time labels
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = formatDuration(playerState.currentPosition),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.7f)
                 )
                 Text(
                     text = formatDuration(playerState.duration),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.7f)
                 )
             }
@@ -242,14 +271,15 @@ fun PlayerScreen(
                         imageVector = Icons.Default.SkipPrevious,
                         contentDescription = "Previous",
                         tint = Color.White,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 }
                 
                 // Play/Pause
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
+                        .size(76.dp)
+                        .shadow(12.dp, CircleShape)
                         .clip(CircleShape)
                         .background(
                             Brush.horizontalGradient(
@@ -266,7 +296,7 @@ fun PlayerScreen(
                             Icons.Default.PlayArrow,
                         contentDescription = if (playerState.isPlaying) "Pause" else "Play",
                         tint = Color.White,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(44.dp)
                     )
                 }
                 
@@ -276,7 +306,7 @@ fun PlayerScreen(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
                         tint = Color.White,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 }
                 

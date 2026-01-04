@@ -90,7 +90,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun SuvMusicApp() {
+fun SuvMusicApp(sessionManager: SessionManager = hiltViewModel<com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel>().let { 
+    // Get SessionManager from SettingsViewModel - this is a workaround
+    // In a real app, you'd inject this properly
+    return@let null
+} ?: run {
+    // Create from application context
+    val context = androidx.compose.ui.platform.LocalContext.current
+    remember { SessionManager(context) }
+}) {
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val playerState by playerViewModel.playerState.collectAsState()
@@ -156,6 +164,7 @@ fun SuvMusicApp() {
             NavGraph(
                 navController = navController,
                 playerState = playerState,
+                sessionManager = sessionManager,
                 onPlaySong = { any ->
                     if (any is Song) {
                         playerViewModel.playSong(any)

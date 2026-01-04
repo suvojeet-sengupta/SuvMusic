@@ -58,7 +58,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onLoginClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showQualitySheet by remember { mutableStateOf(false) }
@@ -122,7 +123,7 @@ fun SettingsScreen(
                 icon = Icons.AutoMirrored.Filled.Login,
                 title = "Sign in to YouTube Music",
                 subtitle = "Access your playlists and recommendations",
-                onClick = { /* Open WebView login */ }
+                onClick = onLoginClick
             )
         }
         

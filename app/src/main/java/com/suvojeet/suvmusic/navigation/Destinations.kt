@@ -9,6 +9,7 @@ sealed class Destination(val route: String) {
     data object Library : Destination("library")
     data object Settings : Destination("settings")
     data object Player : Destination("player")
+    data object YouTubeLogin : Destination("youtube_login")
     
     data class Playlist(val playlistId: String) : Destination("playlist/$playlistId") {
         companion object {
