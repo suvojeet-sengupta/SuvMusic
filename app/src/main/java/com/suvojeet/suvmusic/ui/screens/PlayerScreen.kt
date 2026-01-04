@@ -300,6 +300,61 @@ fun PlayerScreen(
                 onBack = { showQueue = false }
             )
         }
+        
+        // Song Actions Bottom Sheet
+        if (song != null) {
+            SongActionsSheet(
+                song = song,
+                isVisible = showActionsSheet,
+                onDismiss = { showActionsSheet = false },
+                onToggleFavorite = onToggleLike,
+                onDownload = onDownload,
+                onViewCredits = { 
+                    showActionsSheet = false
+                    showCreditsSheet = true
+                },
+                onAddToPlaylist = {
+                    showActionsSheet = false
+                    playlistViewModel.showAddToPlaylistSheet(song)
+                }
+            )
+            
+            // Song Credits Sheet
+            SongCreditsSheet(
+                song = song,
+                isVisible = showCreditsSheet,
+                onDismiss = { showCreditsSheet = false }
+            )
+            
+            // Add to Playlist Sheet
+            if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {
+                AddToPlaylistSheet(
+                    song = playlistUiState.selectedSong!!,
+                    isVisible = true,
+                    playlists = playlistUiState.userPlaylists,
+                    isLoading = playlistUiState.isLoadingPlaylists,
+                    onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+                    onAddToPlaylist = { playlistId ->
+                        playlistViewModel.addSongToPlaylist(playlistId)
+                    },
+                    onCreateNewPlaylist = {
+                        playlistViewModel.showCreatePlaylistDialog()
+                    }
+                )
+            }
+            
+            // Create Playlist Dialog
+            CreatePlaylistDialog(
+                isVisible = playlistUiState.showCreatePlaylistDialog,
+                isCreating = playlistUiState.isCreatingPlaylist,
+                onDismiss = { playlistViewModel.hideCreatePlaylistDialog() },
+                onCreate = { title, description, isPrivate ->
+                    playlistViewModel.createPlaylist(title, description, isPrivate)
+                }
+            )
+        }
+    }
+}
     val song = playerState.currentSong
     val context = LocalContext.current
     val playlistUiState by playlistViewModel.uiState.collectAsState()
