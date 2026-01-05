@@ -1,6 +1,11 @@
 package com.suvojeet.suvmusic.data.repository
 
+import android.content.ContentValues
 import android.content.Context
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import com.google.gson.Gson
@@ -17,6 +22,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,11 +34,14 @@ class DownloadRepository @Inject constructor(
 ) {
     companion object {
         private const val TAG = "DownloadRepository"
+        private const val SUVMUSIC_FOLDER = "SuvMusic"
     }
     
     private val gson = Gson()
-    private val downloadsFile = File(context.filesDir, "downloads_meta.json")
-    private val downloadsDir = File(context.filesDir, "downloads")
+    private val downloadsMetaFile = File(context.filesDir, "downloads_meta.json")
+    
+    // Old internal storage location (for migration)
+    private val oldDownloadsDir = File(context.filesDir, "downloads")
     
     private val _downloadedSongs = MutableStateFlow<List<Song>>(emptyList())
     val downloadedSongs: StateFlow<List<Song>> = _downloadedSongs.asStateFlow()
@@ -43,7 +52,7 @@ class DownloadRepository @Inject constructor(
     // Dedicated HTTP client for downloads with longer timeouts
     private val downloadClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(5, TimeUnit.MINUTES) // 5 minutes for large files
+        .readTimeout(5, TimeUnit.MINUTES)
         .writeTimeout(5, TimeUnit.MINUTES)
         .followRedirects(true)
         .followSslRedirects(true)
@@ -51,19 +60,190 @@ class DownloadRepository @Inject constructor(
         .build()
 
     init {
-        if (!downloadsDir.exists()) downloadsDir.mkdirs()
         loadDownloads()
+        // Migrate old downloads from internal storage to public Downloads folder
+        migrateOldDownloads()
+    }
+
+    /**
+     * Get the public Downloads/SuvMusic folder
+     */
+    private fun getPublicDownloadsFolder(): File {
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val suvMusicDir = File(downloadsDir, SUVMUSIC_FOLDER)
+        if (!suvMusicDir.exists()) {
+            suvMusicDir.mkdirs()
+        }
+        return suvMusicDir
+    }
+
+    /**
+     * Migrate downloads from old internal storage to public Downloads folder
+     */
+    private fun migrateOldDownloads() {
+        if (!oldDownloadsDir.exists()) return
+        
+        val oldFiles = oldDownloadsDir.listFiles() ?: return
+        if (oldFiles.isEmpty()) return
+        
+        Log.d(TAG, "Found ${oldFiles.size} files to migrate from internal storage")
+        
+        val currentSongs = _downloadedSongs.value.toMutableList()
+        var migrated = false
+        
+        for (oldFile in oldFiles) {
+            try {
+                val songId = oldFile.nameWithoutExtension
+                val song = currentSongs.find { it.id == songId }
+                
+                if (song != null) {
+                    // Move file to public Downloads folder
+                    val newUri = saveFileToPublicDownloads(songId, song.artist, song.title, oldFile.inputStream())
+                    
+                    if (newUri != null) {
+                        // Update song with new URI
+                        val index = currentSongs.indexOfFirst { it.id == songId }
+                        if (index >= 0) {
+                            currentSongs[index] = song.copy(localUri = newUri)
+                            migrated = true
+                        }
+                        
+                        // Delete old file
+                        oldFile.delete()
+                        Log.d(TAG, "Migrated ${song.title} to public Downloads folder")
+                    }
+                } else {
+                    // No metadata, just delete old file
+                    oldFile.delete()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error migrating file: ${oldFile.name}", e)
+            }
+        }
+        
+        if (migrated) {
+            _downloadedSongs.value = currentSongs
+            saveDownloads()
+        }
+        
+        // Clean up old directory if empty
+        if (oldDownloadsDir.listFiles()?.isEmpty() == true) {
+            oldDownloadsDir.delete()
+        }
+    }
+
+    /**
+     * Save file to public Downloads/SuvMusic folder using appropriate API
+     */
+    private fun saveFileToPublicDownloads(songId: String, artist: String, title: String, inputStream: InputStream): Uri? {
+        val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.m4a"
+        
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Android 10+ use MediaStore
+            saveToMediaStore(songId, fileName, inputStream)
+        } else {
+            // Android 9 and below use direct file access
+            saveToPublicFolder(songId, fileName, inputStream)
+        }
+    }
+
+    /**
+     * Save to MediaStore for Android 10+ (Scoped Storage)
+     */
+    private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream): Uri? {
+        return try {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
+                put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
+                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$SUVMUSIC_FOLDER")
+                put(MediaStore.Audio.Media.IS_PENDING, 1)
+            }
+
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+            uri?.let { mediaUri ->
+                resolver.openOutputStream(mediaUri)?.use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+
+                // Mark as complete
+                contentValues.clear()
+                contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
+                resolver.update(mediaUri, contentValues, null, null)
+                
+                Log.d(TAG, "Saved to MediaStore: $fileName")
+            }
+            
+            uri
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving to MediaStore", e)
+            // Fallback to direct file access
+            saveToPublicFolder(songId, fileName, inputStream)
+        }
+    }
+
+    /**
+     * Save to public Downloads folder directly (Android 9 and below)
+     */
+    private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream): Uri? {
+        return try {
+            val folder = getPublicDownloadsFolder()
+            val file = File(folder, fileName)
+            
+            FileOutputStream(file).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+            
+            Log.d(TAG, "Saved to public folder: ${file.absolutePath}")
+            file.toUri()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving to public folder", e)
+            null
+        }
+    }
+
+    /**
+     * Sanitize filename to remove invalid characters
+     */
+    private fun sanitizeFileName(name: String): String {
+        return name.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
     }
 
     private fun loadDownloads() {
-        if (!downloadsFile.exists()) {
+        if (!downloadsMetaFile.exists()) {
             _downloadedSongs.value = emptyList()
             return
         }
         try {
-            val json = downloadsFile.readText()
+            val json = downloadsMetaFile.readText()
             val type = object : TypeToken<List<Song>>() {}.type
-            _downloadedSongs.value = gson.fromJson(json, type) ?: emptyList()
+            val songs: List<Song> = gson.fromJson(json, type) ?: emptyList()
+            
+            // Verify files still exist
+            val validSongs = songs.filter { song ->
+                song.localUri?.let { uri ->
+                    try {
+                        // Check if file exists (works for both file:// and content:// URIs)
+                        if (uri.scheme == "file") {
+                            File(uri.path ?: "").exists()
+                        } else {
+                            context.contentResolver.openInputStream(uri)?.close()
+                            true
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "File not found for ${song.title}, removing from list")
+                        false
+                    }
+                } ?: false
+            }
+            
+            _downloadedSongs.value = validSongs
+            
+            // If some songs were removed, save the updated list
+            if (validSongs.size != songs.size) {
+                saveDownloads()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error loading downloads", e)
             _downloadedSongs.value = emptyList()
@@ -73,7 +253,7 @@ class DownloadRepository @Inject constructor(
     private fun saveDownloads() {
         try {
             val json = gson.toJson(_downloadedSongs.value)
-            downloadsFile.writeText(json)
+            downloadsMetaFile.writeText(json)
         } catch (e: Exception) {
             Log.e(TAG, "Error saving downloads", e)
         }
@@ -104,7 +284,7 @@ class DownloadRepository @Inject constructor(
                 .url(streamUrl)
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 .header("Accept", "*/*")
-                .header("Accept-Encoding", "identity") // Disable compression for streaming
+                .header("Accept-Encoding", "identity")
                 .header("Connection", "keep-alive")
                 .build()
             
@@ -120,35 +300,25 @@ class DownloadRepository @Inject constructor(
             val contentLength = response.body?.contentLength() ?: -1L
             Log.d(TAG, "Content length: $contentLength bytes")
 
-            val file = File(downloadsDir, "${song.id}.m4a")
-            var totalBytesRead = 0L
-            
-            FileOutputStream(file).use { fos ->
-                response.body?.byteStream()?.use { input ->
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        fos.write(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
-                    }
-                }
+            // Save to public Downloads/SuvMusic folder
+            val downloadedUri = response.body?.byteStream()?.use { inputStream ->
+                saveFileToPublicDownloads(song.id, song.artist, song.title, inputStream)
             }
             
             response.close()
             
-            Log.d(TAG, "Download complete: $totalBytesRead bytes written to ${file.absolutePath}")
-            
-            // Verify file was actually created and has content
-            if (!file.exists() || file.length() == 0L) {
-                Log.e(TAG, "File not created or empty")
+            if (downloadedUri == null) {
+                Log.e(TAG, "Failed to save file")
                 _downloadingIds.value = _downloadingIds.value - song.id
                 return@withContext false
             }
+            
+            Log.d(TAG, "Download complete: saved to $downloadedUri")
 
             // Create downloaded song entry
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
-                localUri = file.toUri(),
+                localUri = downloadedUri,
                 streamUrl = null
             )
 
@@ -169,8 +339,21 @@ class DownloadRepository @Inject constructor(
         val song = _downloadedSongs.value.find { it.id == songId } ?: return@withContext
         
         try {
-            val file = File(downloadsDir, "${songId}.m4a")
-            if (file.exists()) file.delete()
+            song.localUri?.let { uri ->
+                when (uri.scheme) {
+                    "file" -> {
+                        val file = File(uri.path ?: "")
+                        if (file.exists()) file.delete()
+                    }
+                    "content" -> {
+                        try {
+                            context.contentResolver.delete(uri, null, null)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Could not delete via ContentResolver", e)
+                        }
+                    }
+                }
+            }
             
             _downloadedSongs.value = _downloadedSongs.value.filter { it.id != songId }
             saveDownloads()

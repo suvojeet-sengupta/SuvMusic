@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
         android:maxSdkVersion="32" />
+    <!-- Storage permission for downloads (Android 9 and below) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="28" />
     
     <!-- Foreground service for music playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
