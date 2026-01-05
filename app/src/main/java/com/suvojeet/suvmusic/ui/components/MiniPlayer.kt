@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -57,7 +58,8 @@ fun MiniPlayer(
     onPlayPauseClick: () -> Unit,
     onNextClick: () -> Unit,
     onPlayerClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCloseClick: (() -> Unit)? = null
 ) {
     val song = playerState.currentSong
     
@@ -188,6 +190,18 @@ fun MiniPlayer(
                                 contentDescription = "Next",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
+                        }
+
+                        // Close Button (Optional, for floating)
+                        if (onCloseClick != null) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(onClick = onCloseClick) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }

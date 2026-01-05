@@ -191,8 +191,19 @@ fun SuvMusicApp() {
         }
         
         // Floating MiniPlayer for detail screens (Playlist, Album, etc.)
-        if (!showBottomNav && showMiniPlayer) {
-            Box(
+        // Only show if bottom nav is hidden, it's not player screen, logic allows it, AND song is playing
+        var isFloatingMiniPlayerVisible by remember { mutableStateOf(true) }
+        
+        // Reset visibility when song changes or significant navigation happens? 
+        // For now, let's keep it simple: if song is playing and user hasn't closed it.
+        // But if a new song starts, maybe it should reappear?
+        // Let's rely on user explicitly closing it.
+        
+        if (!showBottomNav && showMiniPlayer && playerState.currentSong != null) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isFloatingMiniPlayerVisible,
+                enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 12.dp, vertical = 16.dp)
@@ -201,7 +212,8 @@ fun SuvMusicApp() {
                     playerState = playerState,
                     onPlayPauseClick = { playerViewModel.togglePlayPause() },
                     onNextClick = { playerViewModel.seekToNext() },
-                    onPlayerClick = { navController.navigate(Destination.Player.route) }
+                    onPlayerClick = { navController.navigate(Destination.Player.route) },
+                    onCloseClick = { isFloatingMiniPlayerVisible = false }
                 )
             }
         }
