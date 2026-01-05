@@ -70,6 +70,7 @@ fun HomeScreen(
                 // Profile Header with Greeting
                 item {
                     ProfileHeader(
+                        userAvatarUrl = uiState.userAvatarUrl,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
@@ -177,25 +178,39 @@ private fun getGreeting(): String {
 }
 
 @Composable
-private fun ProfileHeader(modifier: Modifier = Modifier) {
+private fun ProfileHeader(
+    userAvatarUrl: String?,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Profile Avatar
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(40.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = "S", 
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+        if (userAvatarUrl != null) {
+            AsyncImage(
+                model = userAvatarUrl,
+                contentDescription = "Profile",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "S", 
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         }
         

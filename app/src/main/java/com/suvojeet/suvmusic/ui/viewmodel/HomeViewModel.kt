@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,13 +16,15 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val homeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList(),
+    val userAvatarUrl: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val youTubeRepository: YouTubeRepository
+    private val youTubeRepository: YouTubeRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -29,6 +32,15 @@ class HomeViewModel @Inject constructor(
     
     init {
         loadData()
+        observeSession()
+    }
+    
+    private fun observeSession() {
+        viewModelScope.launch {
+            sessionManager.userAvatarFlow.collect { avatarUrl ->
+                _uiState.update { it.copy(userAvatarUrl = avatarUrl) }
+            }
+        }
     }
     
     private fun loadData() {

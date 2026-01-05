@@ -68,6 +68,10 @@ class SessionManager @Inject constructor(
             preferences[USER_AVATAR_KEY] = url
         }
     }
+
+    val userAvatarFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[USER_AVATAR_KEY]
+    }
     
     // --- Audio Quality ---
     
