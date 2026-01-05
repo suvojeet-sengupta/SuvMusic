@@ -184,17 +184,6 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getUserPlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<PlaylistDisplayItem>()
-        playlists.add(PlaylistDisplayItem(
-            name = "My Supermix",
-            url = "https://music.youtube.com/playlist?list=RTM",
-            uploaderName = "YouTube Music",
-            thumbnailUrl = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked_music_@576.png"
-        ))
-        playlists.add(PlaylistDisplayItem(
-            name = "Your Likes", 
-            url = "https://music.youtube.com/playlist?list=LM", 
-            uploaderName = "You"
-        ))
 
         if (sessionManager.isLoggedIn()) {
             try {
