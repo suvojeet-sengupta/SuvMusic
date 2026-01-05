@@ -21,12 +21,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.NorthWest
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -45,18 +47,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.ui.components.AnimatedSearchBar
+import com.suvojeet.suvmusic.ui.components.BrowseCategoryCard
 import com.suvojeet.suvmusic.ui.components.MusicCard
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
 
 /**
- * Search screen with real-time suggestions, filter chips, and results.
+ * Apple Music-inspired search screen with browse categories and search.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +71,7 @@ fun SearchScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
         Column(
@@ -78,13 +81,32 @@ fun SearchScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Title
-            Text(
-                text = "Search",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
-            )
+            // Header with back button when category is selected
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (uiState.selectedCategory != null || uiState.results.isNotEmpty()) {
+                    IconButton(
+                        onClick = { viewModel.clearCategorySelection() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                
+                Text(
+                    text = uiState.selectedCategory?.title ?: "Search",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -126,62 +148,102 @@ fun SearchScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Filter Chips
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChipItem(
-                    label = "Songs",
-                    selected = uiState.filter == YouTubeRepository.FILTER_SONGS,
-                    onClick = { viewModel.setFilter(YouTubeRepository.FILTER_SONGS) }
+            // Show browse categories when no search results and no category selected
+            if (uiState.query.isBlank() && uiState.selectedCategory == null) {
+                // Browse Categories Section
+                Text(
+                    text = "Browse All",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
-                FilterChipItem(
-                    label = "Albums",
-                    selected = uiState.filter == YouTubeRepository.FILTER_ALBUMS,
-                    onClick = { viewModel.setFilter(YouTubeRepository.FILTER_ALBUMS) }
-                )
-                FilterChipItem(
-                    label = "Artists",
-                    selected = uiState.filter == YouTubeRepository.FILTER_ARTISTS,
-                    onClick = { viewModel.setFilter(YouTubeRepository.FILTER_ARTISTS) }
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Loading indicator
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+                
+                if (uiState.isCategoriesLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(bottom = 140.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(uiState.browseCategories) { index, category ->
+                            BrowseCategoryCard(
+                                category = category,
+                                onClick = { viewModel.onCategoryClick(category) },
+                                index = index
+                            )
+                        }
+                    }
                 }
-            }
-            
-            // Results
-            LazyColumn(
-                contentPadding = PaddingValues(bottom = 140.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                itemsIndexed(uiState.results) { index, song ->
-                    MusicCard(
-                        song = song,
-                        onClick = { onSongClick(uiState.results, index) }
-                    )
+            } else {
+                // Filter Chips (show when searching or category selected)
+                if (uiState.selectedCategory == null && uiState.query.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChipItem(
+                            label = "Songs",
+                            selected = uiState.filter == YouTubeRepository.FILTER_SONGS,
+                            onClick = { viewModel.setFilter(YouTubeRepository.FILTER_SONGS) }
+                        )
+                        FilterChipItem(
+                            label = "Albums",
+                            selected = uiState.filter == YouTubeRepository.FILTER_ALBUMS,
+                            onClick = { viewModel.setFilter(YouTubeRepository.FILTER_ALBUMS) }
+                        )
+                        FilterChipItem(
+                            label = "Artists",
+                            selected = uiState.filter == YouTubeRepository.FILTER_ARTISTS,
+                            onClick = { viewModel.setFilter(YouTubeRepository.FILTER_ARTISTS) }
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
                 
-                if (uiState.results.isEmpty() && uiState.query.isNotBlank() && !uiState.isLoading) {
-                    item {
-                        Text(
-                            text = "No results found for \"${uiState.query}\"",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 32.dp)
+                // Loading indicator
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                
+                // Results
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(uiState.results) { index, song ->
+                        MusicCard(
+                            song = song,
+                            onClick = { onSongClick(uiState.results, index) }
                         )
+                    }
+                    
+                    if (uiState.results.isEmpty() && uiState.query.isNotBlank() && !uiState.isLoading) {
+                        item {
+                            Text(
+                                text = "No results found for \"${uiState.query}\"",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 32.dp)
+                            )
+                        }
                     }
                 }
             }

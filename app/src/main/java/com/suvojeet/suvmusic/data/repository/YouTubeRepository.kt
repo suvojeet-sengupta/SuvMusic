@@ -388,6 +388,135 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    /**
+     * Get moods and genres (browse categories) from YouTube Music.
+     * Used for the Apple Music-style search browse grid.
+     */
+    suspend fun getMoodsAndGenres(): List<com.suvojeet.suvmusic.data.model.BrowseCategory> = withContext(Dispatchers.IO) {
+        try {
+            val json = fetchInternalApi("FEmusic_moods_and_genres")
+            parseMoodsAndGenresFromJson(json)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
+     * Get songs/content for a specific mood/genre category.
+     */
+    suspend fun getCategoryContent(browseId: String, params: String? = null): List<Song> = withContext(Dispatchers.IO) {
+        try {
+            val json = if (params != null) {
+                fetchInternalApiWithParams(browseId, params)
+            } else {
+                fetchInternalApi(browseId)
+            }
+            parseSongsFromInternalJson(json)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    private fun fetchInternalApiWithParams(browseId: String, params: String): String {
+        val cookies = sessionManager.getCookies() ?: return ""
+        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+        
+        val jsonBody = """
+            {
+                "context": {
+                    "client": {
+                        "clientName": "WEB_REMIX",
+                        "clientVersion": "1.20230102.01.00",
+                        "hl": "en",
+                        "gl": "US"
+                    }
+                },
+                "browseId": "$browseId",
+                "params": "$params"
+            }
+        """.trimIndent()
+
+        val request = okhttp3.Request.Builder()
+            .url("https://music.youtube.com/youtubei/v1/browse")
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .addHeader("Cookie", cookies)
+            .addHeader("Authorization", authHeader)
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .addHeader("Origin", "https://music.youtube.com")
+            .addHeader("X-Goog-AuthUser", "0")
+            .build()
+
+        return try {
+            okHttpClient.newCall(request).execute().body?.string() ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun parseMoodsAndGenresFromJson(json: String): List<com.suvojeet.suvmusic.data.model.BrowseCategory> {
+        val categories = mutableListOf<com.suvojeet.suvmusic.data.model.BrowseCategory>()
+        try {
+            val root = JSONObject(json)
+            
+            // Navigate to the grid items
+            val contents = root.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+            
+            if (contents != null) {
+                for (i in 0 until contents.length()) {
+                    val section = contents.optJSONObject(i)
+                    
+                    // Look for grid renderer
+                    val gridItems = section?.optJSONObject("gridRenderer")?.optJSONArray("items")
+                    
+                    if (gridItems != null) {
+                        for (j in 0 until gridItems.length()) {
+                            val item = gridItems.optJSONObject(j)
+                            val categoryRenderer = item?.optJSONObject("musicNavigationButtonRenderer")
+                            
+                            if (categoryRenderer != null) {
+                                val title = getRunText(categoryRenderer.optJSONObject("buttonText"))
+                                    ?: continue
+                                
+                                val clickEndpoint = categoryRenderer.optJSONObject("clickCommand")
+                                    ?.optJSONObject("browseEndpoint")
+                                
+                                val browseId = clickEndpoint?.optString("browseId") ?: continue
+                                val params = clickEndpoint.optString("params").takeIf { it.isNotEmpty() }
+                                
+                                // Extract color from solid background
+                                val colorValue = categoryRenderer.optJSONObject("solid")
+                                    ?.optJSONObject("leftStripeColor")
+                                    ?.optLong("value")
+                                
+                                categories.add(
+                                    com.suvojeet.suvmusic.data.model.BrowseCategory(
+                                        title = title,
+                                        browseId = browseId,
+                                        params = params,
+                                        thumbnailUrl = null,
+                                        color = colorValue
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return categories
+    }
+
     // ============================================================================================
     // Mutating Actions (Library Management)
     // ============================================================================================

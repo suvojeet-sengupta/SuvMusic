@@ -2,13 +2,13 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.data.model.BrowseCategory
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,8 +24,11 @@ data class SearchUiState(
     val filter: String = YouTubeRepository.FILTER_SONGS,
     val results: List<Song> = emptyList(),
     val suggestions: List<String> = emptyList(),
+    val browseCategories: List<BrowseCategory> = emptyList(),
+    val selectedCategory: BrowseCategory? = null,
     val showSuggestions: Boolean = false,
     val isLoading: Boolean = false,
+    val isCategoriesLoading: Boolean = true,
     val isSuggestionsLoading: Boolean = false,
     val error: String? = null
 )
@@ -45,6 +48,9 @@ class SearchViewModel @Inject constructor(
     private var searchJob: Job? = null
     
     init {
+        // Load browse categories on init
+        loadBrowseCategories()
+        
         // Observe query changes for debounced suggestions
         viewModelScope.launch {
             _searchQuery
@@ -57,11 +63,73 @@ class SearchViewModel @Inject constructor(
         }
     }
     
+    private fun loadBrowseCategories() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCategoriesLoading = true) }
+            try {
+                val categories = youTubeRepository.getMoodsAndGenres()
+                _uiState.update { 
+                    it.copy(
+                        browseCategories = categories,
+                        isCategoriesLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isCategoriesLoading = false) }
+            }
+        }
+    }
+    
+    fun onCategoryClick(category: BrowseCategory) {
+        _uiState.update { 
+            it.copy(
+                selectedCategory = category,
+                query = category.title,
+                showSuggestions = false
+            )
+        }
+        
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val results = youTubeRepository.getCategoryContent(
+                    browseId = category.browseId,
+                    params = category.params
+                )
+                _uiState.update { 
+                    it.copy(
+                        results = results,
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { 
+                    it.copy(
+                        error = e.message,
+                        isLoading = false
+                    )
+                }
+            }
+        }
+    }
+    
+    fun clearCategorySelection() {
+        _uiState.update { 
+            it.copy(
+                selectedCategory = null,
+                query = "",
+                results = emptyList()
+            )
+        }
+    }
+    
     fun onQueryChange(query: String) {
         _uiState.update { 
             it.copy(
                 query = query,
-                showSuggestions = query.isNotBlank()
+                showSuggestions = query.isNotBlank(),
+                selectedCategory = null // Clear category when typing
             )
         }
         _searchQuery.value = query
@@ -71,7 +139,8 @@ class SearchViewModel @Inject constructor(
             _uiState.update { 
                 it.copy(
                     suggestions = emptyList(),
-                    showSuggestions = false
+                    showSuggestions = false,
+                    results = emptyList()
                 )
             }
         }
