@@ -14,8 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
-    val recommendations: List<Song> = emptyList(),
-    val playlists: List<PlaylistDisplayItem> = emptyList(),
+    val homeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -37,13 +36,11 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             
             try {
-                val recommendations = youTubeRepository.getRecommendations()
-                val playlists = youTubeRepository.getUserPlaylists()
+                val sections = youTubeRepository.getHomeSections()
                 
                 _uiState.update { 
                     it.copy(
-                        recommendations = recommendations,
-                        playlists = playlists,
+                        homeSections = sections,
                         isLoading = false
                     )
                 }

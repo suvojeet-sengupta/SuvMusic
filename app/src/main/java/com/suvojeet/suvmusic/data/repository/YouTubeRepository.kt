@@ -182,6 +182,27 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+        if (!sessionManager.isLoggedIn()) {
+            // Fallback for non-logged in users: specific search queries simulating sections
+            val trending = search("trending music", FILTER_SONGS).map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+            val newReleases = search("new music", FILTER_SONGS).map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+            
+            return@withContext listOf(
+                com.suvojeet.suvmusic.data.model.HomeSection("Trending", trending),
+                com.suvojeet.suvmusic.data.model.HomeSection("New Releases", newReleases)
+            )
+        }
+
+        try {
+            val jsonResponse = fetchInternalApi("FEmusic_home")
+            return@withContext parseHomeSectionsFromInternalJson(jsonResponse)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext emptyList()
+        }
+    }
+
     suspend fun getUserPlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<PlaylistDisplayItem>()
 
@@ -927,6 +948,145 @@ class YouTubeRepository @Inject constructor(
              description = description,
              songs = songs
          )
+    }
+
+    private fun parseHomeSectionsFromInternalJson(json: String): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+        val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+        try {
+            val root = JSONObject(json)
+            val contents = root.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+
+            if (contents != null) {
+                for (i in 0 until contents.length()) {
+                    val sectionObj = contents.optJSONObject(i)
+                    val shelf = sectionObj?.optJSONObject("musicCarouselShelfRenderer")
+                        ?: sectionObj?.optJSONObject("musicImmersiveCarouselShelfRenderer")
+
+                    if (shelf != null) {
+                        val title = getRunText(shelf.optJSONObject("header")?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
+                            ?: getRunText(shelf.optJSONObject("header")?.optJSONObject("musicImmersiveCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
+                            ?: ""
+
+                        val itemsArray = shelf.optJSONArray("contents")
+                        val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+
+                        if (itemsArray != null) {
+                            for (j in 0 until itemsArray.length()) {
+                                val itemObj = itemsArray.optJSONObject(j)
+                                parseHomeItem(itemObj)?.let { items.add(it) }
+                            }
+                        }
+
+                        if (items.isNotEmpty() && title.isNotEmpty()) {
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return sections
+    }
+
+    private fun parseHomeItem(itemObj: JSONObject?): com.suvojeet.suvmusic.data.model.HomeItem? {
+        if (itemObj == null) return null
+
+        val responsiveItem = itemObj.optJSONObject("musicResponsiveListItemRenderer")
+        if (responsiveItem != null) {
+            // Usually a song or video
+            val videoId = extractValueFromRuns(responsiveItem, "videoId") ?: responsiveItem.optString("videoId")
+            if (videoId.isNotEmpty()) {
+                val title = extractTitle(responsiveItem)
+                val artist = extractArtist(responsiveItem)
+                val thumbnail = extractThumbnail(responsiveItem)
+                
+                // Check if it's a playlist or something else based on navigation endpoint
+                val navEndpoint = responsiveItem.optJSONObject("navigationEndpoint")
+                val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId")
+                
+                if (browseId != null && (browseId.startsWith("VL") || browseId.startsWith("PL"))) {
+                     // It's a playlist masquerading as a list item? Rare but possible.
+                     // Treat as song for now as responsive items are usually tracks.
+                }
+
+                val song = Song.fromYouTube(
+                    videoId = videoId,
+                    title = title,
+                    artist = artist,
+                    album = "", // Hard to get album from here reliably without parsing more flex columns
+                    duration = 0L, // Duration often not available in simple home view or needs parsing
+                    thumbnailUrl = thumbnail
+                )
+                return song?.let { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+            }
+        }
+
+        val twoRowItem = itemObj.optJSONObject("musicTwoRowItemRenderer")
+        if (twoRowItem != null) {
+            val title = getRunText(twoRowItem.optJSONObject("title")) ?: "Unknown"
+            val subtitle = getRunText(twoRowItem.optJSONObject("subtitle")) ?: ""
+            val thumbnail = extractThumbnail(twoRowItem)
+            
+            val navEndpoint = twoRowItem.optJSONObject("navigationEndpoint")
+            val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId")
+            val watchId = navEndpoint?.optJSONObject("watchEndpoint")?.optString("videoId")
+
+            if (browseId != null) {
+                if (browseId.startsWith("VL") || browseId.startsWith("PL") || 
+                    browseId.startsWith("RD") || browseId.startsWith("RTM") || browseId == "LM") {
+                    // Playlist or Mix
+                    val cleanId = if (browseId.startsWith("VL")) browseId.removePrefix("VL") else browseId
+                    val playlist = PlaylistDisplayItem(
+                        id = cleanId,
+                        name = title,
+                        url = "https://music.youtube.com/playlist?list=$cleanId",
+                        uploaderName = subtitle,
+                        thumbnailUrl = thumbnail
+                    )
+                    return com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(playlist)
+                } else if (browseId.startsWith("MPRE") || browseId.startsWith("OLAK")) {
+                    // Album
+                    val album = Album(
+                        id = browseId,
+                        title = title,
+                        artist = subtitle, // Usually "Artist • Year" or just Artist
+                        thumbnailUrl = thumbnail
+                    )
+                    return com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(album)
+                } else if (browseId.startsWith("UC")) {
+                    // Artist
+                     val artist = Artist(
+                        id = browseId,
+                        name = title,
+                        thumbnailUrl = thumbnail,
+                        description = null,
+                        subscribers = subtitle
+                    )
+                    return com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(artist)
+                }
+            } else if (watchId != null) {
+                 // It's a video/song but in a card format
+                 val song = Song.fromYouTube(
+                    videoId = watchId,
+                    title = title,
+                    artist = subtitle,
+                    album = "",
+                    duration = 0L,
+                    thumbnailUrl = thumbnail
+                )
+                return song?.let { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+            }
+        }
+        
+        return null
     }
 
     // --- JSON Helpers ---
