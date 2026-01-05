@@ -192,7 +192,7 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "© 2018–2026 SuvMusic",
+                text = "© 2026 SuvMusic",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                 color = Color.White.copy(alpha = 0.3f)
             )
