@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AudioQuality
+import com.suvojeet.suvmusic.data.model.DownloadQuality
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ data class SettingsUiState(
     val isLoggedIn: Boolean = false,
     val userAvatarUrl: String? = null,
     val audioQuality: AudioQuality = AudioQuality.HIGH,
+    val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
     val dynamicColorEnabled: Boolean = true,
     val gaplessPlaybackEnabled: Boolean = true,
     val automixEnabled: Boolean = true,
@@ -46,6 +48,7 @@ class SettingsViewModel @Inject constructor(
                 isLoggedIn = sessionManager.isLoggedIn(),
                 userAvatarUrl = sessionManager.getUserAvatar(),
                 audioQuality = sessionManager.getAudioQuality(),
+                downloadQuality = sessionManager.getDownloadQuality(),
                 gaplessPlaybackEnabled = sessionManager.isGaplessPlaybackEnabled(),
                 automixEnabled = sessionManager.isAutomixEnabled(),
                 crossfadeDuration = sessionManager.getCrossfadeDuration()
@@ -57,6 +60,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAudioQuality(quality)
             _uiState.update { it.copy(audioQuality = quality) }
+        }
+    }
+    
+    fun setDownloadQuality(quality: DownloadQuality) {
+        viewModelScope.launch {
+            sessionManager.setDownloadQuality(quality)
+            _uiState.update { it.copy(downloadQuality = quality) }
         }
     }
     

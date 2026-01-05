@@ -164,6 +164,33 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    /**
+     * Get stream URL for downloading with the user's download quality preference.
+     */
+    suspend fun getStreamUrlForDownload(videoId: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+                ?: return@withContext null
+            
+            val streamExtractor = ytService.getStreamExtractor(streamUrl)
+            streamExtractor.fetchPage()
+            
+            val audioStreams = streamExtractor.audioStreams
+            val targetBitrate = sessionManager.getDownloadQuality().maxBitrate
+            
+            val bestAudioStream = audioStreams
+                .filter { it.averageBitrate <= targetBitrate || targetBitrate == Int.MAX_VALUE }
+                .maxByOrNull { it.averageBitrate }
+                ?: audioStreams.maxByOrNull { it.averageBitrate }
+            
+            bestAudioStream?.content
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     // ============================================================================================
     // Browsing (Internal API)
     // ============================================================================================

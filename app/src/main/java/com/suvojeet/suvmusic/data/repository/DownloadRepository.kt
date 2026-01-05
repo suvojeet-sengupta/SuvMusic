@@ -270,8 +270,8 @@ class DownloadRepository @Inject constructor(
         Log.d(TAG, "Starting download for: ${song.title} (${song.id})")
         
         try {
-            // Get stream URL
-            val streamUrl = youTubeRepository.getStreamUrl(song.id)
+            // Get stream URL with download quality preference
+            val streamUrl = youTubeRepository.getStreamUrlForDownload(song.id)
             if (streamUrl == null) {
                 Log.e(TAG, "Failed to get stream URL for ${song.id}")
                 _downloadingIds.value = _downloadingIds.value - song.id

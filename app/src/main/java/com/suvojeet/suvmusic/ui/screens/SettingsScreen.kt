@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -57,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.model.AudioQuality
+import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Slider
@@ -75,8 +77,10 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showQualitySheet by remember { mutableStateOf(false) }
+    var showDownloadQualitySheet by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    val downloadSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     
     Column(
@@ -187,9 +191,25 @@ fun SettingsScreen(
         
         SettingsItem(
             icon = Icons.Default.HighQuality,
-            title = "Audio Quality",
+            title = "Streaming Quality",
             subtitle = uiState.audioQuality.label,
             onClick = { showQualitySheet = true }
+        )
+        
+        // Download Quality
+        ListItem(
+            headlineContent = { Text("Download Quality") },
+            supportingContent = { Text(uiState.downloadQuality.label) },
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = null
+                )
+            },
+            modifier = Modifier.clickable { showDownloadQualitySheet = true },
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent
+            )
         )
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
@@ -399,6 +419,56 @@ fun SettingsScreen(
                     ) {
                         RadioButton(
                             selected = uiState.audioQuality == quality,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(text = quality.label)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    // Download Quality Bottom Sheet
+    if (showDownloadQualitySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showDownloadQualitySheet = false },
+            sheetState = downloadSheetState
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Download Quality",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Text(
+                    text = "Lower quality = smaller file size",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                DownloadQuality.entries.forEach { quality ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setDownloadQuality(quality)
+                                scope.launch {
+                                    downloadSheetState.hide()
+                                    showDownloadQualitySheet = false
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.downloadQuality == quality,
                             onClick = null
                         )
                         Spacer(modifier = Modifier.width(16.dp))

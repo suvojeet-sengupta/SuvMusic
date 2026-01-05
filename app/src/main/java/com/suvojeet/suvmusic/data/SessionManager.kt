@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.suvojeet.suvmusic.data.model.AudioQuality
+import com.suvojeet.suvmusic.data.model.DownloadQuality
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -33,6 +34,7 @@ class SessionManager @Inject constructor(
         private val GAPLESS_PLAYBACK_KEY = booleanPreferencesKey("gapless_playback")
         private val AUTOMIX_KEY = booleanPreferencesKey("automix")
         private val CROSSFADE_DURATION_KEY = intPreferencesKey("crossfade_duration")
+        private val DOWNLOAD_QUALITY_KEY = stringPreferencesKey("download_quality")
     }
     
     // --- Cookies ---
@@ -117,6 +119,27 @@ class SessionManager @Inject constructor(
     suspend fun setCrossfadeDuration(seconds: Int) {
         context.dataStore.edit { preferences ->
             preferences[CROSSFADE_DURATION_KEY] = seconds
+        }
+    }
+    
+    // --- Download Quality ---
+    
+    fun getDownloadQuality(): DownloadQuality = runBlocking {
+        val qualityName = context.dataStore.data.first()[DOWNLOAD_QUALITY_KEY]
+        qualityName?.let { 
+            try { DownloadQuality.valueOf(it) } catch (e: Exception) { DownloadQuality.HIGH }
+        } ?: DownloadQuality.HIGH
+    }
+    
+    val downloadQualityFlow: Flow<DownloadQuality> = context.dataStore.data.map { preferences ->
+        preferences[DOWNLOAD_QUALITY_KEY]?.let {
+            try { DownloadQuality.valueOf(it) } catch (e: Exception) { DownloadQuality.HIGH }
+        } ?: DownloadQuality.HIGH
+    }
+    
+    suspend fun setDownloadQuality(quality: DownloadQuality) {
+        context.dataStore.edit { preferences ->
+            preferences[DOWNLOAD_QUALITY_KEY] = quality.name
         }
     }
 }
