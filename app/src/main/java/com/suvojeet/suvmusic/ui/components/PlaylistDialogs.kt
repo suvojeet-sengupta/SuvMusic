@@ -1,11 +1,13 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -14,32 +16,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,17 +40,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
 
+// Library UI Colors (Apple Music Dark Theme)
+private val DarkBackground = Color(0xFF1C1C1E)
+private val DarkSurface = Color(0xFF2C2C2E)
+private val AccentRed = Color(0xFFFA2D48)
+private val AccentGradient = listOf(Color(0xFFFA2D48), Color(0xFFFF6B6B))
+private val TextPrimary = Color.White
+private val TextSecondary = Color.White.copy(alpha = 0.5f)
+
 /**
  * Bottom sheet to add a song to an existing playlist or create a new one.
+ * Styled to match Apple Music dark theme.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +81,8 @@ fun AddToPlaylistSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = DarkBackground,
+            contentColor = TextPrimary
         ) {
             Column(
                 modifier = Modifier
@@ -88,6 +94,7 @@ fun AddToPlaylistSheet(
                     text = "Add to Playlist",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
                 )
                 
@@ -113,47 +120,72 @@ fun AddToPlaylistSheet(
                         Text(
                             text = song.title,
                             style = MaterialTheme.typography.bodyLarge,
+                            color = TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = song.artist,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = TextSecondary,
                             maxLines = 1
                         )
                     }
                 }
                 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = TextSecondary.copy(alpha = 0.2f)
+                )
                 
-                // Create new playlist button
-                ListItem(
-                    headlineContent = { 
-                        Text(
-                            text = "Create new playlist",
-                            fontWeight = FontWeight.Medium
-                        ) 
-                    },
-                    leadingContent = {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(48.dp)
+                // Create new playlist button with gradient
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.Transparent,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clickable { onCreateNewPlaylist() }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Brush.linearGradient(AccentGradient)),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(12.dp)
+                                tint = TextPrimary,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
-                    },
-                    modifier = Modifier.clickable { onCreateNewPlaylist() },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Column {
+                            Text(
+                                text = "New Playlist",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Create a new playlist",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 // Playlists list
                 if (isLoading) {
@@ -163,20 +195,20 @@ fun AddToPlaylistSheet(
                             .padding(32.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = AccentRed)
                     }
                 } else if (playlists.isEmpty()) {
                     Text(
                         text = "No playlists found. Create one!",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = TextSecondary,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
                     )
                 } else {
                     Text(
-                        text = "Your Playlists",
+                        text = "YOUR PLAYLISTS",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = TextSecondary,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                     
@@ -184,49 +216,56 @@ fun AddToPlaylistSheet(
                         modifier = Modifier.height(300.dp)
                     ) {
                         items(playlists) { playlist ->
-                            ListItem(
-                                headlineContent = { 
-                                    Text(
-                                        text = playlist.name,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    ) 
-                                },
-                                supportingContent = {
-                                    Text(
-                                        text = "${playlist.songCount} songs",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                leadingContent = {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onAddToPlaylist(playlist.getPlaylistId()) }
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Thumbnail
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(DarkSurface)
+                                ) {
                                     if (!playlist.thumbnailUrl.isNullOrEmpty()) {
                                         AsyncImage(
                                             model = playlist.thumbnailUrl,
                                             contentDescription = playlist.name,
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(RoundedCornerShape(8.dp)),
+                                            modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Crop
                                         )
                                     } else {
-                                        Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant,
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.MusicNote,
-                                                contentDescription = null,
-                                                modifier = Modifier.padding(12.dp)
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.MusicNote,
+                                            contentDescription = null,
+                                            tint = TextSecondary,
+                                            modifier = Modifier
+                                                .align(Alignment.Center)
+                                                .size(24.dp)
+                                        )
                                     }
-                                },
-                                modifier = Modifier.clickable { 
-                                    onAddToPlaylist(playlist.getPlaylistId())
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                            )
+                                }
+                                
+                                Spacer(modifier = Modifier.width(16.dp))
+                                
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = playlist.name,
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${playlist.songCount} songs",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -237,6 +276,7 @@ fun AddToPlaylistSheet(
 
 /**
  * Dialog to create a new playlist on YouTube Music.
+ * Styled to match Apple Music dark theme.
  */
 @Composable
 fun CreatePlaylistDialog(
@@ -250,14 +290,12 @@ fun CreatePlaylistDialog(
         var description by remember { mutableStateOf("") }
         var isPrivate by remember { mutableStateOf(true) }
         
-        // Use standard Dialog for custom styling
-        androidx.compose.ui.window.Dialog(
+        Dialog(
             onDismissRequest = { if (!isCreating) onDismiss() }
         ) {
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
+                color = DarkBackground,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -270,39 +308,36 @@ fun CreatePlaylistDialog(
                         text = "New Playlist",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
 
-                    // Artwork Placeholder (Apple Music Style)
-                    Surface(
+                    // Artwork Placeholder
+                    Box(
                         modifier = Modifier
-                            .size(180.dp)
-                            .padding(bottom = 24.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shadowElevation = 0.dp
+                            .size(160.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(DarkSurface),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.Add, // Using Add as a verified safe icon
-                                    contentDescription = "Add Artwork",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(48.dp)
-                                )
-                            }
-                            // Overlay a subtle border or effect if needed
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Artwork",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(48.dp)
+                        )
                     }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     // Title Input
-                    androidx.compose.foundation.text.BasicTextField(
+                    BasicTextField(
                         value = title,
                         onValueChange = { title = it },
                         textStyle = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
                         ),
                         singleLine = true,
                         enabled = !isCreating,
@@ -312,7 +347,7 @@ fun CreatePlaylistDialog(
                                     Text(
                                         text = "Playlist Name",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        color = TextSecondary,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
@@ -324,27 +359,29 @@ fun CreatePlaylistDialog(
                             .padding(bottom = 16.dp)
                     )
                     
-                    HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+                    HorizontalDivider(color = TextSecondary.copy(alpha = 0.2f))
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Description Input
-                    androidx.compose.foundation.text.BasicTextField(
+                    BasicTextField(
                         value = description,
                         onValueChange = { description = it },
                         textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 24.dp),
                         enabled = !isCreating,
-                         decorationBox = { innerTextField ->
+                        decorationBox = { innerTextField ->
                             Box(contentAlignment = Alignment.Center) {
                                 if (description.isEmpty()) {
                                     Text(
                                         text = "Description",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        color = TextSecondary
                                     )
                                 }
                                 innerTextField()
@@ -365,7 +402,7 @@ fun CreatePlaylistDialog(
                         ) {
                             Text(
                                 "Cancel", 
-                                color = MaterialTheme.colorScheme.primary,
+                                color = TextSecondary,
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -378,20 +415,20 @@ fun CreatePlaylistDialog(
                             },
                             enabled = title.isNotBlank() && !isCreating,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                containerColor = AccentRed,
+                                disabledContainerColor = AccentRed.copy(alpha = 0.5f)
                             ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             if (isCreating) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = TextPrimary,
                                     strokeWidth = 2.dp
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
-                            Text("Create", fontWeight = FontWeight.Bold)
+                            Text("Create", fontWeight = FontWeight.Bold, color = TextPrimary)
                         }
                     }
                 }
@@ -402,6 +439,7 @@ fun CreatePlaylistDialog(
 
 /**
  * Dialog to rename a playlist.
+ * Styled to match Apple Music dark theme.
  */
 @Composable
 fun RenamePlaylistDialog(
@@ -414,56 +452,104 @@ fun RenamePlaylistDialog(
     if (isVisible) {
         var title by remember(currentName) { mutableStateOf(currentName) }
         
-        AlertDialog(
-            onDismissRequest = { if (!isRenaming) onDismiss() },
-            title = {
-                Text(
-                    text = "Rename Playlist",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
-                    OutlinedTextField(
+        Dialog(
+            onDismissRequest = { if (!isRenaming) onDismiss() }
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = DarkBackground,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Rename Playlist",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+
+                    // Title Input
+                    BasicTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("Playlist name") },
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
+                        ),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isRenaming
+                        enabled = !isRenaming,
+                        decorationBox = { innerTextField ->
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(DarkSurface, RoundedCornerShape(8.dp))
+                                    .padding(16.dp)
+                            ) {
+                                innerTextField()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp)
                     )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { 
-                        if (title.isNotBlank() && title != currentName) {
-                            onRename(title)
-                        } else {
-                            onDismiss()
+
+                    // Action Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = onDismiss,
+                            enabled = !isRenaming
+                        ) {
+                            Text(
+                                "Cancel",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
                         }
-                    },
-                    enabled = title.isNotBlank() && !isRenaming
-                ) {
-                    if (isRenaming) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Button(
+                            onClick = { 
+                                if (title.isNotBlank() && title != currentName) {
+                                    onRename(title)
+                                } else {
+                                    onDismiss()
+                                }
+                            },
+                            enabled = title.isNotBlank() && !isRenaming,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentRed,
+                                disabledContainerColor = AccentRed.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            if (isRenaming) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = TextPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text(
+                                if (isRenaming) "Renaming..." else "Rename",
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
                     }
-                    Text(if (isRenaming) "Renaming..." else "Rename")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = onDismiss,
-                    enabled = !isRenaming
-                ) {
-                    Text("Cancel")
                 }
             }
-        )
+        }
     }
 }
