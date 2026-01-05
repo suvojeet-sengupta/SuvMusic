@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -38,15 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.PlayerState
-import com.suvojeet.suvmusic.ui.theme.GradientEnd
-import com.suvojeet.suvmusic.ui.theme.GradientStart
 
 /**
  * Mini player that appears at the bottom of the screen.
@@ -157,18 +153,10 @@ fun MiniPlayer(
                         
                         Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Play/Pause Button
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(GradientStart, GradientEnd)
-                                    )
-                                )
-                                .clickable(onClick = onPlayPauseClick),
-                            contentAlignment = Alignment.Center
+                        // Play/Pause Button - Apple Music style
+                        IconButton(
+                            onClick = onPlayPauseClick,
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Icon(
                                 imageVector = if (playerState.isPlaying) 
@@ -176,8 +164,8 @@ fun MiniPlayer(
                                 else 
                                     Icons.Default.PlayArrow,
                                 contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(24.dp)
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                         
