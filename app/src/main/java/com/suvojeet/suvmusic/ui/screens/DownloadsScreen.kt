@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
@@ -332,14 +333,29 @@ private fun DownloadedSongItem(
         )
         
         // Thumbnail
-        AsyncImage(
-            model = song.thumbnailUrl,
-            contentDescription = null,
+        Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(6.dp)),
-            contentScale = ContentScale.Crop
-        )
+                .clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            if (song.thumbnailUrl != null) {
+                AsyncImage(
+                    model = song.thumbnailUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         
         Spacer(modifier = Modifier.width(12.dp))
         

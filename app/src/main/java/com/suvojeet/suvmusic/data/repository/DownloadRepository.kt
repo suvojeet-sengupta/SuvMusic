@@ -378,10 +378,37 @@ class DownloadRepository @Inject constructor(
             
             Log.d(TAG, "Download complete: saved to $downloadedUri")
 
+            // Download thumbnail if available
+            var localThumbnailUrl = song.thumbnailUrl
+            if (!song.thumbnailUrl.isNullOrEmpty() && song.thumbnailUrl.startsWith("http")) {
+                try {
+                    val thumbRequest = Request.Builder().url(song.thumbnailUrl).build()
+                    val thumbResponse = downloadClient.newCall(thumbRequest).execute()
+                    if (thumbResponse.isSuccessful) {
+                        val thumbnailsDir = File(context.filesDir, "thumbnails")
+                        if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
+                        
+                        val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
+                        thumbResponse.body?.byteStream()?.use { input ->
+                            FileOutputStream(thumbFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        localThumbnailUrl = thumbFile.absolutePath
+                        Log.d(TAG, "Downloaded thumbnail to $localThumbnailUrl")
+                    }
+                    thumbResponse.close()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to download thumbnail", e)
+                    // Keep original URL if download fails, so it might work if online
+                }
+            }
+
             // Create downloaded song entry
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
                 localUri = downloadedUri,
+                thumbnailUrl = localThumbnailUrl,
                 streamUrl = null
             )
 
@@ -416,6 +443,13 @@ class DownloadRepository @Inject constructor(
                         }
                     }
                 }
+            }
+            
+            // Delete local thumbnail if exists
+            val thumbnailsDir = File(context.filesDir, "thumbnails")
+            val thumbFile = File(thumbnailsDir, "${songId}.jpg")
+            if (thumbFile.exists()) {
+                thumbFile.delete()
             }
             
             _downloadedSongs.value = _downloadedSongs.value.filter { it.id != songId }
