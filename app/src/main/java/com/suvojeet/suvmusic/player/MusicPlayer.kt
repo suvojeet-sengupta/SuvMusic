@@ -127,6 +127,25 @@ class MusicPlayer @Inject constructor(
                 
                 // If this is an automatic transition (song ended), resolve stream and play
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && song != null) {
+                    // Check if current item already has a resolved stream URL (from preloading)
+                    val currentItem = controller.currentMediaItem
+                    val currentUri = currentItem?.localConfiguration?.uri?.toString()
+                    
+                    // If URI is valid stream (not placeholder), skip resolution
+                    // Placeholders are "https://youtube.com/watch?v=..."
+                    val isPlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+                    
+                    if (!isPlaceholder && currentUri != null) {
+                        // Already has valid stream, just ensure UI state is correct
+                        _playerState.update { it.copy(isLoading = false) }
+                        
+                        // Reset preload state as we've seemingly consumed it
+                        preloadedNextSongId = null
+                        preloadedStreamUrl = null
+                        isPreloading = false
+                        return@let
+                    }
+                    
                     scope.launch {
                         resolveAndPlayCurrentItem(song, index)
                     }
