@@ -19,8 +19,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -122,64 +124,85 @@ fun SuvMusicApp() {
         Destination.Settings.route
     )
     
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            if (showBottomNav) {
-                Column {
-                    // Mini player
-                    MiniPlayer(
-                        playerState = playerState,
-                        onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                        onNextClick = { playerViewModel.seekToNext() },
-                        onPlayerClick = { navController.navigate(Destination.Player.route) }
-                    )
-                    
-                    // Bottom navigation
-                    ExpressiveBottomNav(
-                        currentDestination = currentDestination,
-                        onDestinationChange = { destination ->
-                            navController.navigate(destination.route) {
-                                popUpTo(Destination.Home.route) {
-                                    saveState = true
+    // Don't show MiniPlayer on Player screen itself
+    val showMiniPlayer = currentRoute != Destination.Player.route
+    
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+                if (showBottomNav) {
+                    Column {
+                        // Mini player on main screens
+                        MiniPlayer(
+                            playerState = playerState,
+                            onPlayPauseClick = { playerViewModel.togglePlayPause() },
+                            onNextClick = { playerViewModel.seekToNext() },
+                            onPlayerClick = { navController.navigate(Destination.Player.route) }
+                        )
+                        
+                        // Bottom navigation
+                        ExpressiveBottomNav(
+                            currentDestination = currentDestination,
+                            onDestinationChange = { destination ->
+                                navController.navigate(destination.route) {
+                                    popUpTo(Destination.Home.route) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    bottom = if (showBottomNav) innerPadding.calculateBottomPadding() else innerPadding.calculateBottomPadding()
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        bottom = if (showBottomNav) innerPadding.calculateBottomPadding() else innerPadding.calculateBottomPadding()
+                    )
+            ) {
+                NavGraph(
+                    navController = navController,
+                    playerState = playerState,
+                    sessionManager = sessionManager,
+                    onPlaySong = { songs, index ->
+                        if (songs.isNotEmpty() && index in songs.indices) {
+                            playerViewModel.playSong(songs[index], songs, index)
+                        }
+                    },
+                    onPlayPause = { playerViewModel.togglePlayPause() },
+                    onSeekTo = { playerViewModel.seekTo(it) },
+                    onNext = { playerViewModel.seekToNext() },
+                    onPrevious = { playerViewModel.seekToPrevious() },
+                    onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
+                    onLikeCurrentSong = { playerViewModel.likeCurrentSong() },
+                    onShuffleToggle = { playerViewModel.toggleShuffle() },
+                    onRepeatToggle = { playerViewModel.toggleRepeat() },
+                    onToggleAutoplay = { playerViewModel.toggleAutoplay() },
+                    lyrics = lyrics,
+                    isFetchingLyrics = isFetchingLyrics
                 )
-        ) {
-            NavGraph(
-                navController = navController,
-                playerState = playerState,
-                sessionManager = sessionManager,
-                onPlaySong = { songs, index ->
-                    if (songs.isNotEmpty() && index in songs.indices) {
-                        playerViewModel.playSong(songs[index], songs, index)
-                    }
-                },
-                onPlayPause = { playerViewModel.togglePlayPause() },
-                onSeekTo = { playerViewModel.seekTo(it) },
-                onNext = { playerViewModel.seekToNext() },
-                onPrevious = { playerViewModel.seekToPrevious() },
-                onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
-                onLikeCurrentSong = { playerViewModel.likeCurrentSong() },
-                onShuffleToggle = { playerViewModel.toggleShuffle() },
-                onRepeatToggle = { playerViewModel.toggleRepeat() },
-                onToggleAutoplay = { playerViewModel.toggleAutoplay() },
-                lyrics = lyrics,
-                isFetchingLyrics = isFetchingLyrics
-            )
+            }
+        }
+        
+        // Floating MiniPlayer for detail screens (Playlist, Album, etc.)
+        if (!showBottomNav && showMiniPlayer) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 12.dp, vertical = 16.dp)
+            ) {
+                MiniPlayer(
+                    playerState = playerState,
+                    onPlayPauseClick = { playerViewModel.togglePlayPause() },
+                    onNextClick = { playerViewModel.seekToNext() },
+                    onPlayerClick = { navController.navigate(Destination.Player.route) }
+                )
+            }
         }
     }
 }
