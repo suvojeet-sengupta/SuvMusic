@@ -235,7 +235,18 @@ fun NavGraph(
         ) {
             com.suvojeet.suvmusic.ui.screens.AlbumScreen(
                 onBackClick = { navController.popBackStack() },
-                onSongClick = { onPlaySong(listOf(it), 0) }
+                onSongClick = { onPlaySong(listOf(it), 0) },
+                onPlayAll = { songs ->
+                    if (songs.isNotEmpty()) {
+                        onPlaySong(songs, 0)
+                    }
+                },
+                onShufflePlay = { songs ->
+                    if (songs.isNotEmpty()) {
+                        val shuffled = songs.shuffled()
+                        onPlaySong(shuffled, 0)
+                    }
+                }
             )
         }
     }
