@@ -1,6 +1,8 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -260,11 +262,10 @@ fun IntroPage() {
         color = MaterialTheme.colorScheme.primaryContainer
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = "S",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+            Image(
+                painter = painterResource(id = com.suvojeet.suvmusic.R.drawable.logo),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
@@ -300,11 +301,12 @@ fun IntroPage() {
 
 @Composable
 fun FeaturesPageOne() {
-    Icon(
-        imageVector = Icons.Default.MusicNote,
+    Image(
+        painter = painterResource(id = com.suvojeet.suvmusic.R.drawable.logo),
         contentDescription = null,
-        modifier = Modifier.size(80.dp),
-        tint = MaterialTheme.colorScheme.primary
+        modifier = Modifier
+            .size(80.dp)
+            .clip(RoundedCornerShape(16.dp))
     )
     
     Spacer(modifier = Modifier.height(40.dp))

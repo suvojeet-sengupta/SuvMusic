@@ -1,6 +1,8 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,25 +76,14 @@ fun AboutScreen(
             
             Spacer(modifier = Modifier.height(20.dp))
             
-            // App Icon with subtle shadow
-            Surface(
-                modifier = Modifier.size(100.dp),
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xFFFA233B), // Apple Music Red-ish/Brand Color
-                shadowElevation = 12.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(50.dp)
-                    )
-                }
-            }
+            // App Icon
+            Image(
+                painter = painterResource(id = com.suvojeet.suvmusic.R.drawable.logo),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(22.dp))
+            )
             
             Spacer(modifier = Modifier.height(24.dp))
             
