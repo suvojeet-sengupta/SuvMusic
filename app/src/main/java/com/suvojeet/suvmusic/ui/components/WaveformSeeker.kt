@@ -45,12 +45,10 @@ fun WaveformSeeker(
     progress: Float,
     isPlaying: Boolean,
     onSeek: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeColor: Color = MaterialTheme.colorScheme.primary,
+    inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
-    val waveColor = MaterialTheme.colorScheme.primary
-    val playedColor = GradientStart
-    val unplayedColor = MaterialTheme.colorScheme.surfaceVariant
-    
     // Animation for wave movement when playing
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
     val wavePhase by infiniteTransition.animateFloat(
@@ -132,15 +130,15 @@ fun WaveformSeeker(
                 // Gradient for played portion
                 val barColor = if (isPast) {
                     Brush.verticalGradient(
-                        colors = listOf(GradientStart, GradientMiddle, GradientEnd),
+                        colors = listOf(activeColor.copy(alpha = 0.7f), activeColor, activeColor.copy(alpha = 0.7f)),
                         startY = topY,
                         endY = topY + barHeight
                     )
                 } else {
                     Brush.verticalGradient(
                         colors = listOf(
-                            unplayedColor.copy(alpha = 0.5f),
-                            unplayedColor.copy(alpha = 0.3f)
+                            inactiveColor.copy(alpha = 0.5f),
+                            inactiveColor.copy(alpha = 0.3f)
                         )
                     )
                 }
@@ -161,7 +159,7 @@ fun WaveformSeeker(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        waveColor.copy(alpha = 0.4f),
+                        activeColor.copy(alpha = 0.4f),
                         Color.Transparent
                     ),
                     center = Offset(progressX, centerY),
@@ -180,7 +178,7 @@ fun WaveformSeeker(
             
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(GradientStart, GradientEnd),
+                    colors = listOf(activeColor, activeColor),
                     center = Offset(progressX, centerY)
                 ),
                 radius = indicatorRadius - 2.dp.toPx(),

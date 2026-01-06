@@ -222,7 +222,9 @@ fun PlayerScreen(
                         val newPosition = (progress * playerState.duration).toLong()
                         onSeekTo(newPosition)
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    activeColor = dominantColors.accent,
+                    inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f)
                 )
                 
                 // Time labels with quality badge
