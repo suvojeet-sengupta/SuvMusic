@@ -833,32 +833,58 @@ class YouTubeRepository @Inject constructor(
         val contents = json.optJSONObject("contents")
             ?.optJSONObject("sectionListRenderer")
             ?.optJSONArray("contents")
-            ?.optJSONObject(0)
-            ?.optJSONObject("musicDescriptionShelfRenderer")
-            
         if (contents != null) {
-            // Plain text lyrics
-            val description = getRunText(contents.optJSONObject("description"))
-            val footer = getRunText(contents.optJSONObject("footer"))
+            var timedLyrics: JSONObject? = null
+            var descriptionShelf: JSONObject? = null
             
-            if (description != null) {
-                // Split by newlines
-                val lines = description.split("\r\n", "\n").map { com.suvojeet.suvmusic.data.model.LyricsLine(it) }
-                return com.suvojeet.suvmusic.data.model.Lyrics(lines, footer, false)
+            for (i in 0 until contents.length()) {
+                val item = contents.optJSONObject(i)
+                if (timedLyrics == null) {
+                    timedLyrics = item.optJSONObject("musicTimedLyricsRenderer")
+                }
+                if (descriptionShelf == null) {
+                    descriptionShelf = item.optJSONObject("musicDescriptionShelfRenderer")
+                }
+            }
+            
+            // 1. Try Synced Lyrics
+            if (timedLyrics != null) {
+                val lyricData = timedLyrics.optJSONArray("timedLyricsData")
+                if (lyricData != null) {
+                    val lines = mutableListOf<com.suvojeet.suvmusic.data.model.LyricsLine>()
+                    for (i in 0 until lyricData.length()) {
+                        val lineObj = lyricData.optJSONObject(i)
+                        val text = lineObj?.optString("lyricLine") ?: ""
+                        val startTime = lineObj?.optLong("cueRangeStartMillis") ?: 0L
+                        
+                        if (text.isNotBlank()) {
+                            lines.add(com.suvojeet.suvmusic.data.model.LyricsLine(
+                                text = text,
+                                startTimeMs = startTime
+                            ))
+                        }
+                    }
+                    
+                    val footer = getRunText(timedLyrics.optJSONObject("footer")) 
+                        ?: getRunText(descriptionShelf?.optJSONObject("footer"))
+                    
+                    if (lines.isNotEmpty()) {
+                        return com.suvojeet.suvmusic.data.model.Lyrics(lines, footer, true)
+                    }
+                }
+            }
+            
+            // 2. Fallback to Plain Text
+            if (descriptionShelf != null) {
+                val description = getRunText(descriptionShelf.optJSONObject("description"))
+                val footer = getRunText(descriptionShelf.optJSONObject("footer"))
+                
+                if (description != null) {
+                    val lines = description.split("\r\n", "\n").map { com.suvojeet.suvmusic.data.model.LyricsLine(it) }
+                    return com.suvojeet.suvmusic.data.model.Lyrics(lines, footer, false)
+                }
             }
         }
-        
-        // Check for synced lyrics (MusicTimedLyricsRenderer) - hypothetical structure based on observation
-        // Usually found in similar location
-        /* 
-           Note: Internal API timed lyrics structure is complex and varies. 
-           It might be in 'musicTimedLyricsRenderer'. 
-           For this implementation, we will prioritize finding this.
-        */
-        
-        // Note: Currently simple implementation for basic lyrics. 
-        // Sync lyrics implementation would require inspecting a live response payload for 'musicTimedLyricsRenderer'
-        // which appears in some versions of the API.
         
         return null
     }
