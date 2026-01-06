@@ -50,21 +50,31 @@ import com.suvojeet.suvmusic.ui.theme.MusicCardShape
 
 /**
  * Get high-resolution thumbnail URL.
+ * Handles both remote URLs and local file paths.
  */
-private fun getHighResThumbnail(url: String?): String? {
-    return url?.let {
-        when {
-            it.contains("ytimg.com") -> it
-                .replace("hqdefault", "maxresdefault")
-                .replace("mqdefault", "maxresdefault")
-                .replace("sddefault", "maxresdefault")
-                .replace("default", "maxresdefault")
-                .replace(Regex("w\\d+-h\\d+"), "w226-h226")
-            it.contains("lh3.googleusercontent.com") -> 
-                it.replace(Regex("=w\\d+-h\\d+"), "=w226-h226")
-                  .replace(Regex("=s\\d+"), "=s226")
-            else -> it
-        }
+private fun getHighResThumbnail(url: String?): Any? {
+    if (url == null) return null
+    
+    // Handle local file paths (for downloaded songs)
+    if (url.startsWith("/") || url.startsWith("file://")) {
+        // Return as File object for Coil to load from disk
+        val path = url.removePrefix("file://")
+        val file = java.io.File(path)
+        return if (file.exists()) file else null
+    }
+    
+    // Handle remote URLs
+    return when {
+        url.contains("ytimg.com") -> url
+            .replace("hqdefault", "maxresdefault")
+            .replace("mqdefault", "maxresdefault")
+            .replace("sddefault", "maxresdefault")
+            .replace("default", "maxresdefault")
+            .replace(Regex("w\\d+-h\\d+"), "w226-h226")
+        url.contains("lh3.googleusercontent.com") -> 
+            url.replace(Regex("=w\\d+-h\\d+"), "=w226-h226")
+              .replace(Regex("=s\\d+"), "=s226")
+        else -> url
     }
 }
 
