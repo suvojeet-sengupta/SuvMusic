@@ -152,9 +152,12 @@ fun SuvMusicApp(initialDeepLink: String? = null) {
                 navController.navigate(Destination.Player.route)
             }
         } else if (!restoreAttempted && initialDeepLink == null) {
-            // Try to restore last playback if no deep link
             restoreAttempted = true
-            playerViewModel.restoreLastPlayback()
+            // Only restore if no song is currently playing (i.e., app was force-stopped/crashed)
+            // If app is running normally in background, currentSong will not be null
+            if (playerState.currentSong == null) {
+                playerViewModel.restoreLastPlayback()
+            }
         }
     }
     

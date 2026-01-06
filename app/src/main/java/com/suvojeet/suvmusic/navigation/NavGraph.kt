@@ -160,7 +160,31 @@ fun NavGraph(
             )
         }
         
-        composable(Destination.Player.route) {
+        composable(
+            route = Destination.Player.route,
+            enterTransition = {
+                // Slide up from bottom when opening
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                    animationSpec = tween(400)
+                )
+            },
+            exitTransition = {
+                // Fade out when navigating away (not back)
+                fadeOut(animationSpec = tween(300))
+            },
+            popEnterTransition = {
+                // Fade in when returning to player
+                fadeIn(animationSpec = tween(300))
+            },
+            popExitTransition = {
+                // Slide down to bottom when closing (back)
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                    animationSpec = tween(400)
+                )
+            }
+        ) {
             PlayerScreen(
                 playerState = playerState,
                 onPlayPause = onPlayPause,
