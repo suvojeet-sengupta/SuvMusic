@@ -378,24 +378,42 @@ class DownloadRepository @Inject constructor(
             
             Log.d(TAG, "Download complete: saved to $downloadedUri")
 
-            // Download thumbnail if available
+            // Download high-quality thumbnail if available
             var localThumbnailUrl = song.thumbnailUrl
             if (!song.thumbnailUrl.isNullOrEmpty() && song.thumbnailUrl.startsWith("http")) {
                 try {
-                    val thumbRequest = Request.Builder().url(song.thumbnailUrl).build()
+                    // Upgrade to high-res thumbnail URL
+                    val highResThumbnailUrl = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
+                    
+                    val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
                     val thumbResponse = downloadClient.newCall(thumbRequest).execute()
                     if (thumbResponse.isSuccessful) {
+                        // Save to app's internal thumbnails folder
                         val thumbnailsDir = File(context.filesDir, "thumbnails")
                         if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
                         
                         val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        thumbResponse.body?.byteStream()?.use { input ->
+                        val thumbBytes = thumbResponse.body?.bytes()
+                        if (thumbBytes != null) {
                             FileOutputStream(thumbFile).use { output ->
-                                input.copyTo(output)
+                                output.write(thumbBytes)
+                            }
+                            localThumbnailUrl = thumbFile.absolutePath
+                            Log.d(TAG, "Downloaded high-res thumbnail to $localThumbnailUrl")
+                            
+                            // Also save to public Downloads/SuvMusic folder as "{Title} - {Artist}.jpg"
+                            // Some external players use this for album art
+                            try {
+                                val publicFolder = getPublicDownloadsFolder()
+                                val publicThumbFile = File(publicFolder, "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.jpg")
+                                FileOutputStream(publicThumbFile).use { output ->
+                                    output.write(thumbBytes)
+                                }
+                                Log.d(TAG, "Also saved thumbnail to public folder: ${publicThumbFile.name}")
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Could not save thumbnail to public folder", e)
                             }
                         }
-                        localThumbnailUrl = thumbFile.absolutePath
-                        Log.d(TAG, "Downloaded thumbnail to $localThumbnailUrl")
                     }
                     thumbResponse.close()
                 } catch (e: Exception) {
@@ -484,5 +502,27 @@ class DownloadRepository @Inject constructor(
         val songs = _downloadedSongs.value
         val totalDuration = songs.sumOf { it.duration }
         return Pair(songs.size, totalDuration)
+    }
+    
+    /**
+     * Get high resolution thumbnail URL.
+     * Handles various YouTube thumbnail URL formats.
+     */
+    private fun getHighResThumbnailUrl(originalUrl: String, videoId: String): String {
+        return when {
+            // Handle lh3.googleusercontent.com URLs (YT Music style)
+            originalUrl.contains("lh3.googleusercontent.com") || originalUrl.contains("yt3.ggpht.com") -> {
+                originalUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w544-h544")
+                    .replace(Regex("=s\\d+.*"), "=s544")
+            }
+            // Handle ytimg.com URLs
+            originalUrl.contains("ytimg.com") || originalUrl.contains("youtube.com") -> {
+                val ytVideoId = if (originalUrl.contains("/vi/")) {
+                    originalUrl.substringAfter("/vi/").substringBefore("/")
+                } else videoId
+                "https://img.youtube.com/vi/$ytVideoId/maxresdefault.jpg"
+            }
+            else -> originalUrl
+        }
     }
 }
