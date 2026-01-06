@@ -191,6 +191,39 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    /**
+     * Get song details from a video ID.
+     * Used for deep linking to play songs from YouTube/YouTube Music URLs.
+     */
+    suspend fun getSongDetails(videoId: String): Song? = withContext(Dispatchers.IO) {
+        try {
+            val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+                ?: return@withContext null
+            
+            val streamExtractor = ytService.getStreamExtractor(streamUrl)
+            streamExtractor.fetchPage()
+            
+            val title = streamExtractor.name ?: "Unknown Title"
+            val artist = streamExtractor.uploaderName ?: "Unknown Artist"
+            val thumbnailUrl = streamExtractor.thumbnails.maxByOrNull { it.width * it.height }?.url
+            val duration = streamExtractor.length * 1000 // Convert to milliseconds
+            
+            Song(
+                id = videoId,
+                title = title,
+                artist = artist,
+                album = "", // Not available from stream extractor
+                thumbnailUrl = thumbnailUrl,
+                duration = duration,
+                source = com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     // ============================================================================================
     // Browsing (Internal API)
     // ============================================================================================

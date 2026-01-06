@@ -139,6 +139,25 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.toggleAutoplay()
     }
     
+    /**
+     * Play a song from a deep link (YouTube/YouTube Music URL).
+     * Fetches song details from YouTube and starts playback.
+     */
+    fun playFromDeepLink(videoId: String) {
+        viewModelScope.launch {
+            try {
+                // Fetch song details from YouTube
+                val song = youTubeRepository.getSongDetails(videoId)
+                if (song != null) {
+                    playSong(song)
+                }
+            } catch (e: Exception) {
+                // Handle error - could show a toast or error state
+                e.printStackTrace()
+            }
+        }
+    }
+    
     fun downloadCurrentSong() {
         val song = playerState.value.currentSong ?: return
         if (downloadRepository.isDownloaded(song.id) || downloadRepository.isDownloading(song.id)) return

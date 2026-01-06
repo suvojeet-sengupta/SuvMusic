@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -54,6 +56,9 @@ class MainActivity : ComponentActivity() {
         
         requestPermissions()
         
+        // Handle deep link from intent
+        val deepLinkUrl = intent?.data?.toString()
+        
         setContent {
             val sessionManager = remember { SessionManager(this) }
             val themeMode by sessionManager.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
@@ -67,9 +72,16 @@ class MainActivity : ComponentActivity() {
             }
             
             SuvMusicTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
-                SuvMusicApp()
+                SuvMusicApp(initialDeepLink = deepLinkUrl)
             }
         }
+    }
+    
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // For deep links when app is already running, recreate to handle new URL
+        recreate()
     }
     
     private fun requestPermissions() {
@@ -106,7 +118,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun SuvMusicApp() {
+fun SuvMusicApp(initialDeepLink: String? = null) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     
@@ -120,6 +132,22 @@ fun SuvMusicApp() {
     val currentRoute = navBackStackEntry?.destination?.route
     
     var currentDestination by remember { mutableStateOf<Destination>(Destination.Home) }
+    
+    // Handle deep link on first composition
+    var deepLinkHandled by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(initialDeepLink) {
+        if (initialDeepLink != null && !deepLinkHandled) {
+            deepLinkHandled = true
+            val videoId = extractVideoId(initialDeepLink)
+            if (videoId != null) {
+                // Create a song from the video ID and play it
+                playerViewModel.playFromDeepLink(videoId)
+                // Navigate to player screen
+                navController.navigate(Destination.Player.route)
+            }
+        }
+    }
     
     // Update current destination based on route
     currentDestination = when (currentRoute) {
@@ -230,5 +258,35 @@ fun SuvMusicApp() {
                 )
             }
         }
+    }
+}
+
+/**
+ * Extracts video ID from various YouTube/YouTube Music URL formats.
+ * Supports:
+ * - https://music.youtube.com/watch?v=VIDEO_ID
+ * - https://www.youtube.com/watch?v=VIDEO_ID
+ * - https://youtu.be/VIDEO_ID
+ * - https://youtube.com/shorts/VIDEO_ID
+ */
+private fun extractVideoId(url: String): String? {
+    return try {
+        when {
+            // youtu.be/VIDEO_ID format
+            url.contains("youtu.be/") -> {
+                url.substringAfter("youtu.be/").substringBefore("?").substringBefore("&")
+            }
+            // youtube.com/shorts/VIDEO_ID format
+            url.contains("/shorts/") -> {
+                url.substringAfter("/shorts/").substringBefore("?").substringBefore("&")
+            }
+            // Standard watch?v= format
+            url.contains("v=") -> {
+                url.substringAfter("v=").substringBefore("&").substringBefore("#")
+            }
+            else -> null
+        }?.takeIf { it.isNotBlank() && it.length == 11 }
+    } catch (e: Exception) {
+        null
     }
 }
