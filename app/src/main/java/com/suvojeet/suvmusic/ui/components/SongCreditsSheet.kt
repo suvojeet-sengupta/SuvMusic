@@ -378,6 +378,7 @@ private fun formatDurationForCredits(duration: Long): String {
 /**
  * Get high resolution thumbnail URL for YouTube videos.
  * Converts low-res thumbnails to maxresdefault quality.
+ * Handles both ytimg.com and lh3.googleusercontent.com formats.
  */
 private fun getHighResThumbnailUrl(originalUrl: String?, videoId: String): String {
     // If no URL, try to construct from video ID
@@ -385,7 +386,15 @@ private fun getHighResThumbnailUrl(originalUrl: String?, videoId: String): Strin
         return "https://img.youtube.com/vi/$videoId/maxresdefault.jpg"
     }
     
-    // If it's already a YouTube thumbnail URL, upgrade to maxresdefault
+    // Handle lh3.googleusercontent.com URLs (YT Music style)
+    // These URLs have size parameters like =w60-h60 or =w120-h120
+    if (originalUrl.contains("lh3.googleusercontent.com") || originalUrl.contains("yt3.ggpht.com")) {
+        // Remove size constraints to get full resolution
+        return originalUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w544-h544")
+            .replace(Regex("=s\\d+.*"), "=s544")
+    }
+    
+    // If it's a YouTube thumbnail URL, upgrade to maxresdefault
     if (originalUrl.contains("ytimg.com") || originalUrl.contains("youtube.com")) {
         // Extract video ID from various YouTube thumbnail URL formats
         val ytVideoId = when {
