@@ -253,14 +253,13 @@ class PlayerViewModel @Inject constructor(
             
             if (queue.isNotEmpty() && lastState.index in queue.indices) {
                 val song = queue[lastState.index]
-                // Play song at saved position
-                musicPlayer.playSong(song, queue, lastState.index)
+                // Load song without auto-playing (user can resume manually)
+                musicPlayer.playSong(song, queue, lastState.index, autoPlay = false)
                 
-                // Seek to saved position after a delay (allow playback to start)
+                // Seek to saved position after a delay (allow media to load)
                 viewModelScope.launch {
                     kotlinx.coroutines.delay(1000)
                     musicPlayer.seekTo(lastState.position)
-                    musicPlayer.pause() // Start paused so user can choose to resume
                 }
                 return true
             }

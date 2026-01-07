@@ -475,8 +475,9 @@ class MusicPlayer @Inject constructor(
     
     /**
      * Play a single song.
+     * @param autoPlay If true, playback starts immediately. If false, song is loaded but paused.
      */
-    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0) {
+    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true) {
         // Cancel any ongoing crossfade
         cancelCrossfade()
         
@@ -509,7 +510,9 @@ class MusicPlayer @Inject constructor(
                     
                     controller.setMediaItems(mediaItems, startIndex, 0L)
                     controller.prepare()
-                    controller.play()
+                    if (autoPlay) {
+                        controller.play()
+                    }
                 } ?: run {
                     _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
                 }
