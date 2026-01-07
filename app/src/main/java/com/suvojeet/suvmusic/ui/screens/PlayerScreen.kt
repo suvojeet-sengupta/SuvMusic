@@ -99,6 +99,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import android.widget.Toast
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.suvojeet.suvmusic.ui.utils.isLandscape
 
 /**
  * Premium full-screen player with Apple Music-style design.
@@ -179,99 +183,230 @@ fun PlayerScreen(
             }
     ) {
         // Main Player Content
+        val isLandscapeMode = isLandscape()
+        
         AnimatedVisibility(
             visible = !showQueue,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Top Bar
-                PlayerTopBar(
-                    onBack = onBack,
-                    onShowQueue = { showQueue = true },
-                    dominantColors = dominantColors
-                )
-                
-                Spacer(modifier = Modifier.weight(0.5f))
-                
-                // Album Art with shadow - swipeable
-                AlbumArtwork(
-                    imageUrl = highResThumbnail,
-                    title = song?.title,
-                    dominantColors = dominantColors,
-                    isLoading = playerState.isLoading,
-                    onSwipeLeft = onNext,
-                    onSwipeRight = onPrevious
-                )
-                
-                Spacer(modifier = Modifier.height(32.dp))
-                
-                // Song Info with actions
-                SongInfoSection(
-                    song = song,
-                    isFavorite = playerState.isLiked,
-                    downloadState = playerState.downloadState,
-                    onFavoriteClick = onToggleLike,
-                    onDownloadClick = onDownload,
-                    onMoreClick = { showActionsSheet = true },
-                    dominantColors = dominantColors
-                )
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                // Progress & Waveform
-                WaveformSeeker(
-                    progress = playerState.progress,
-                    isPlaying = playerState.isPlaying,
-                    onSeek = { progress ->
-                        val newPosition = (progress * playerState.duration).toLong()
-                        onSeekTo(newPosition)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    activeColor = dominantColors.accent,
-                    inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f)
-                )
-                
-                // Time labels with quality badge
-                TimeLabelsWithQuality(
-                    currentPosition = playerState.currentPosition,
-                    duration = playerState.duration,
-                    dominantColors = dominantColors
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Playback Controls
-                PlaybackControls(
-                    isPlaying = playerState.isPlaying,
-                    shuffleEnabled = playerState.shuffleEnabled,
-                    repeatMode = playerState.repeatMode,
-                    onPlayPause = onPlayPause,
-                    onNext = onNext,
-                    onPrevious = onPrevious,
-                    onShuffleToggle = onShuffleToggle,
-                    onRepeatToggle = onRepeatToggle,
-                    dominantColors = dominantColors
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Bottom Actions
-                BottomActions(
-                    onLyricsClick = { showLyrics = true },
-                    onCastClick = { /* TODO */ },
-                    onQueueClick = { showQueue = true },
-                    dominantColors = dominantColors
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
+            if (isLandscapeMode) {
+                // Landscape Layout - Side by side
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left side - Album Artwork
+                    Box(
+                        modifier = Modifier
+                            .weight(0.45f)
+                            .fillMaxHeight()
+                            .padding(end = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AlbumArtwork(
+                            imageUrl = highResThumbnail,
+                            title = song?.title,
+                            dominantColors = dominantColors,
+                            isLoading = playerState.isLoading,
+                            onSwipeLeft = onNext,
+                            onSwipeRight = onPrevious
+                        )
+                    }
+                    
+                    // Right side - Controls
+                    Column(
+                        modifier = Modifier
+                            .weight(0.55f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        // Top Bar - compact for landscape
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Close",
+                                    tint = dominantColors.onBackground
+                                )
+                            }
+                            Text(
+                                text = "NOW PLAYING",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = dominantColors.onBackground.copy(alpha = 0.7f),
+                                letterSpacing = 2.sp
+                            )
+                            IconButton(onClick = { showQueue = true }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                    contentDescription = "Queue",
+                                    tint = dominantColors.onBackground
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Song Info
+                        SongInfoSection(
+                            song = song,
+                            isFavorite = playerState.isLiked,
+                            downloadState = playerState.downloadState,
+                            onFavoriteClick = onToggleLike,
+                            onDownloadClick = onDownload,
+                            onMoreClick = { showActionsSheet = true },
+                            dominantColors = dominantColors
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Progress & Waveform
+                        WaveformSeeker(
+                            progress = playerState.progress,
+                            isPlaying = playerState.isPlaying,
+                            onSeek = { progress ->
+                                val newPosition = (progress * playerState.duration).toLong()
+                                onSeekTo(newPosition)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            activeColor = dominantColors.accent,
+                            inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f)
+                        )
+                        
+                        // Time labels
+                        TimeLabelsWithQuality(
+                            currentPosition = playerState.currentPosition,
+                            duration = playerState.duration,
+                            dominantColors = dominantColors
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Playback Controls
+                        PlaybackControls(
+                            isPlaying = playerState.isPlaying,
+                            shuffleEnabled = playerState.shuffleEnabled,
+                            repeatMode = playerState.repeatMode,
+                            onPlayPause = onPlayPause,
+                            onNext = onNext,
+                            onPrevious = onPrevious,
+                            onShuffleToggle = onShuffleToggle,
+                            onRepeatToggle = onRepeatToggle,
+                            dominantColors = dominantColors
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Bottom Actions
+                        BottomActions(
+                            onLyricsClick = { showLyrics = true },
+                            onCastClick = { /* TODO */ },
+                            onQueueClick = { showQueue = true },
+                            dominantColors = dominantColors
+                        )
+                    }
+                }
+            } else {
+                // Portrait Layout - Original vertical layout
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top Bar
+                    PlayerTopBar(
+                        onBack = onBack,
+                        onShowQueue = { showQueue = true },
+                        dominantColors = dominantColors
+                    )
+                    
+                    Spacer(modifier = Modifier.weight(0.5f))
+                    
+                    // Album Art with shadow - swipeable
+                    AlbumArtwork(
+                        imageUrl = highResThumbnail,
+                        title = song?.title,
+                        dominantColors = dominantColors,
+                        isLoading = playerState.isLoading,
+                        onSwipeLeft = onNext,
+                        onSwipeRight = onPrevious
+                    )
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    // Song Info with actions
+                    SongInfoSection(
+                        song = song,
+                        isFavorite = playerState.isLiked,
+                        downloadState = playerState.downloadState,
+                        onFavoriteClick = onToggleLike,
+                        onDownloadClick = onDownload,
+                        onMoreClick = { showActionsSheet = true },
+                        dominantColors = dominantColors
+                    )
+                    
+                    Spacer(modifier = Modifier.weight(1f))
+                    
+                    // Progress & Waveform
+                    WaveformSeeker(
+                        progress = playerState.progress,
+                        isPlaying = playerState.isPlaying,
+                        onSeek = { progress ->
+                            val newPosition = (progress * playerState.duration).toLong()
+                            onSeekTo(newPosition)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        activeColor = dominantColors.accent,
+                        inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f)
+                    )
+                    
+                    // Time labels with quality badge
+                    TimeLabelsWithQuality(
+                        currentPosition = playerState.currentPosition,
+                        duration = playerState.duration,
+                        dominantColors = dominantColors
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // Playback Controls
+                    PlaybackControls(
+                        isPlaying = playerState.isPlaying,
+                        shuffleEnabled = playerState.shuffleEnabled,
+                        repeatMode = playerState.repeatMode,
+                        onPlayPause = onPlayPause,
+                        onNext = onNext,
+                        onPrevious = onPrevious,
+                        onShuffleToggle = onShuffleToggle,
+                        onRepeatToggle = onRepeatToggle,
+                        dominantColors = dominantColors
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Bottom Actions
+                    BottomActions(
+                        onLyricsClick = { showLyrics = true },
+                        onCastClick = { /* TODO */ },
+                        onQueueClick = { showQueue = true },
+                        dominantColors = dominantColors
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
         }
         
@@ -454,10 +589,17 @@ private fun AlbumArtwork(
     val scale = 1f - (kotlin.math.abs(animatedOffsetX) / 1500f).coerceIn(0f, 0.1f)
     val rotation = animatedOffsetX / 30f
     
+    val isLandscapeMode = isLandscape()
+    
     Box(
         modifier = Modifier
-            .fillMaxWidth(0.85f)
-            .aspectRatio(1f)
+            .then(
+                if (isLandscapeMode) {
+                    Modifier.fillMaxHeight(0.85f).aspectRatio(1f)
+                } else {
+                    Modifier.fillMaxWidth(0.85f).aspectRatio(1f)
+                }
+            )
             .graphicsLayer {
                 translationX = animatedOffsetX
                 scaleX = scale
