@@ -17,7 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -227,13 +229,25 @@ private fun PlaylistDisplayCard(
     playlist: PlaylistDisplayItem,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    
+    // Get high-res thumbnail (replace w120 or similar with w544)
+    val highResThumbnail = playlist.thumbnailUrl?.let { url ->
+        url.replace(Regex("w\\d+-h\\d+"), "w544-h544")
+            .replace(Regex("=w\\d+"), "=w544")
+    } ?: playlist.thumbnailUrl
+    
     Column(
         modifier = Modifier
             .width(160.dp)
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
-            model = playlist.thumbnailUrl,
+            model = ImageRequest.Builder(context)
+                .data(highResThumbnail)
+                .crossfade(true)
+                .size(544)  // Request high-res
+                .build(),
             contentDescription = playlist.name,
             modifier = Modifier
                 .size(160.dp)
@@ -262,13 +276,25 @@ private fun MediumSongCard(
     song: Song,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    
+    // Get high-res thumbnail (replace w120 or similar with w544)
+    val highResThumbnail = song.thumbnailUrl?.let { url ->
+        url.replace(Regex("w\\d+-h\\d+"), "w544-h544")
+            .replace(Regex("=w\\d+"), "=w544")
+    } ?: song.thumbnailUrl
+    
     Column(
         modifier = Modifier
             .width(160.dp)
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
-            model = song.thumbnailUrl,
+            model = ImageRequest.Builder(context)
+                .data(highResThumbnail)
+                .crossfade(true)
+                .size(544)  // Request high-res
+                .build(),
             contentDescription = song.title,
             modifier = Modifier
                 .size(160.dp)
