@@ -1,153 +1,70 @@
-<p align="center">
-  <img src="https://img.icons8.com/color/96/music--v1.png" alt="SuvMusic Logo"/>
-</p>
+# SuvMusic
 
-<h1 align="center">🎵 SuvMusic</h1>
+**A Premium, Native Android Client for YouTube Music**
 
-<p align="center">
-  <strong>A Premium YouTube Music Client for Android</strong>
-</p>
+SuvMusic is a modern, feature-rich music player built with Jetpack Compose that brings the YouTube Music experience to Android with a premium user interface and enhanced functionality. It offers a seamless blend of online streaming and offline playback capabilities, wrapped in a beautiful Material 3 design.
 
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#screenshots">Screenshots</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#contributing">Contributing</a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform">
-  <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
-  <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License">
-</p>
+![Platform](https://img.shields.io/badge/Platform-Android_8.0+-00C853?style=flat-square)
+![Kotlin](https://img.shields.io/badge/Language-Kotlin_1.9-7F52FF?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
 ---
 
-## ✨ Features
+## Key Features
 
-<table>
-  <tr>
-    <td>🎵 <b>Stream Millions of Songs</b></td>
-    <td>Access YouTube Music's vast library</td>
-  </tr>
-  <tr>
-    <td>📥 <b>Download for Offline</b></td>
-    <td>Save your favorite tracks locally</td>
-  </tr>
-  <tr>
-    <td>🎨 <b>Dynamic Theming</b></td>
-    <td>UI colors adapt to album artwork</td>
-  </tr>
-  <tr>
-    <td>📋 <b>Playlist Management</b></td>
-    <td>Create, rename, and reorder playlists</td>
-  </tr>
-  <tr>
-    <td>🔍 <b>Smart Search</b></td>
-    <td>Real-time suggestions as you type</td>
-  </tr>
-  <tr>
-    <td>🎧 <b>High Quality Audio</b></td>
-    <td>Premium audio streaming experience</td>
-  </tr>
-  <tr>
-    <td>📝 <b>Time-Synced Lyrics</b></td>
-    <td>Apple Music-style lyrics display</td>
-  </tr>
-  <tr>
-    <td>🎤 <b>Song Credits</b></td>
-    <td>View detailed song information</td>
-  </tr>
-</table>
+### 🎵 Comprehensive Music Experience
+*   **Native YouTube Music Integration**: Access personalized home sections, charts, and recommendations directly from YouTube Music.
+*   **Smart Search**: Powerful search capability for songs, albums, artists, and playlists.
+*   **Unified Library**: Seamlessly manage your YouTube liked songs along with local downloads.
+
+### 🎧 Advanced Playback
+*   **High-Fidelity Audio**: Support for high-quality audio streaming and downloading.
+*   **Gapless Playback**: uninterrupted listening experience for albums and mixes.
+*   **Background Playback**: Full support for background audio with media notification controls.
+*   **Synchronized Lyrics**: Live, time-synchronized lyrics display inspired by modern premium players.
+
+### ⚡ Performance & Offline
+*   **Instant Launch**: Smart caching system ensures the app opens immediately with content, even without an internet connection.
+*   **Offline Mode**: Download tracks with customizable quality settings for offline listening.
+*   **Intelligent Caching**: Automatically optimizes data usage and load times.
+
+### 🎨 Modern User Interface
+*   **Material 3 Design**: Fully adaptive UI with dynamic coloring based on album artwork.
+*   **Theme Support**: Complete support for system Dark and Light themes.
+*   **Fluid Animations**: Smooth transitions and interactive elements throughout the application.
+*   **Apple Music-Inspired Recents**: A dedicated history view to track your listening journey.
 
 ---
 
-## 📸 Screenshots
+## Technical Architecture
 
-<p align="center">
-  <i>Coming soon...</i>
-</p>
+SuvMusic is built using modern Android development practices and libraries, ensuring robustness, scalability, and performance.
 
----
-
-## 📲 Installation
-
-### Prerequisites
-- Android 8.0 (API 26) or higher
-- YouTube Music account (for personalized features)
-
-### Steps
-1. Download the latest APK from [Releases](https://github.com/yourusername/SuvMusic/releases)
-2. Enable "Install from unknown sources" on your device
-3. Install and enjoy!
+*   **Language**: Kotlin
+*   **UI Framework**: Jetpack Compose
+*   **Architecture Pattern**: MVVM (Model-View-ViewModel) with Clean Architecture principles
+*   **Dependency Injection**: Hilt
+*   **Asynchronous Programming**: Kotlin Coroutines & Flows
+*   **Media Engine**: Android Media3 (ExoPlayer)
+*   **Network**: Retrofit / OkHttp
+*   **Data Extraction**: NewPipe Extractor (for YouTube internal API interaction)
+*   **Local Storage**: DataStore Preferences (for session and settings), File System (for caching)
+*   **Image Loading**: Coil
 
 ---
 
-## 🛠️ Tech Stack
+## Installation
 
-| Category | Technology |
-|----------|------------|
-| **Language** | Kotlin |
-| **UI Framework** | Jetpack Compose |
-| **Architecture** | MVVM + Clean Architecture |
-| **DI** | Hilt |
-| **Audio Player** | ExoPlayer |
-| **Networking** | OkHttp + NewPipe Extractor |
-| **Local Storage** | Room Database |
-| **Image Loading** | Coil |
+1.  Download the latest APK from the [Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases) section.
+2.  Install the APK on your Android device (Android 8.0 Oreo or higher required).
+3.  Launch the app and sign in with your Google account for personalized recommendations, or use it anonymously.
 
 ---
 
-## 🏗️ Project Structure
+## Disclaimer
 
-```
-app/
-├── data/
-│   ├── model/          # Data classes
-│   ├── repository/     # Data sources
-│   └── di/             # Dependency injection
-├── ui/
-│   ├── screens/        # Composable screens
-│   ├── components/     # Reusable UI components
-│   └── viewmodel/      # ViewModels
-├── navigation/         # Navigation graph
-└── player/             # Music player service
-```
+This project is an open-source educational initiative. It uses the NewPipe Extractor to interface with YouTube services. It is not affiliated with, endorsed by, or associated with Google LLC or YouTube. All content is copyright to their respective owners.
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgements
-
-- [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) - YouTube data extraction
-- [ExoPlayer](https://github.com/google/ExoPlayer) - Audio playback
-- [Material Design 3](https://m3.material.io/) - Design guidelines
-
----
-
-<p align="center">
-  Made with ❤️ by <b>Suvojeet Sengupta</b>
-</p>
-
-<p align="center">
-  © 2026 SuvMusic
-</p>
+**Developed by Suvojeet Sengupta**
