@@ -62,53 +62,67 @@ fun HomeScreen(
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding(),
-                contentPadding = PaddingValues(bottom = 140.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp)
-            ) {
-                // Greeting Header
-                item {
-                    ProfileHeader(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        onRecentsClick = onRecentsClick
-                    )
-                }
-                
-                items(uiState.homeSections) { section ->
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        HomeSectionHeader(title = section.title)
-                        
-                        if (section.title.contains("Quick picks", ignoreCase = true) || 
-                            section.title.contains("Listen again", ignoreCase = true)) {
-                            // Render as Grid-like or specialized list if needed
-                            // For now, let's keep it consistent as a row for "Listen Again", 
-                            // but maybe "Quick Picks" could be a 2-row grid?
-                            // Implementing as a horizontal grid (2 rows) is complex in LazyRow.
-                            // Falling back to standard row for simplicity unless it's strictly "Quick Picks"
-                            // where we can use a Column of Rows.
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding(),
+                    contentPadding = PaddingValues(bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
+                    // Greeting Header
+                    item {
+                        ProfileHeader(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            onRecentsClick = onRecentsClick
+                        )
+                    }
+                    
+                    items(uiState.homeSections) { section ->
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            HomeSectionHeader(title = section.title)
                             
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(section.items) { item ->
-                                    HomeItemCard(item, onSongClick, onPlaylistClick, onAlbumClick, sectionItems = section.items)
+                            if (section.title.contains("Quick picks", ignoreCase = true) || 
+                                section.title.contains("Listen again", ignoreCase = true)) {
+                                // Render as Grid-like or specialized list if needed
+                                // For now, let's keep it consistent as a row for "Listen Again", 
+                                // but maybe "Quick Picks" could be a 2-row grid?
+                                // Implementing as a horizontal grid (2 rows) is complex in LazyRow.
+                                // Falling back to standard row for simplicity unless it's strictly "Quick Picks"
+                                // where we can use a Column of Rows.
+                                
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(section.items) { item ->
+                                        HomeItemCard(item, onSongClick, onPlaylistClick, onAlbumClick, sectionItems = section.items)
+                                    }
                                 }
-                            }
-                        } else {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(section.items) { item ->
-                                    HomeItemCard(item, onSongClick, onPlaylistClick, onAlbumClick, sectionItems = section.items)
+                            } else {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(section.items) { item ->
+                                        HomeItemCard(item, onSongClick, onPlaylistClick, onAlbumClick, sectionItems = section.items)
+                                    }
                                 }
                             }
                         }
                     }
+                }
+                
+                // Refreshing Indicator
+                if (uiState.isRefreshing) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .align(Alignment.TopCenter),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 }
             }
         }

@@ -54,6 +54,9 @@ class SessionManager @Inject constructor(
         // Recently Played
         private val RECENTLY_PLAYED_KEY = stringPreferencesKey("recently_played")
         private const val MAX_RECENTLY_PLAYED = 50
+        
+        // Home Cache
+        private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
     }
     
     // --- Cookies ---
@@ -381,20 +384,7 @@ class SessionManager @Inject constructor(
                 val songObj = obj.optJSONObject("song") ?: return@mapNotNull null
                 val playedAt = obj.optLong("playedAt", System.currentTimeMillis())
                 
-                val song = Song(
-                    id = songObj.optString("id"),
-                    title = songObj.optString("title"),
-                    artist = songObj.optString("artist"),
-                    album = songObj.optString("album"),
-                    thumbnailUrl = songObj.optString("thumbnailUrl").takeIf { it.isNotBlank() },
-                    duration = songObj.optLong("duration"),
-                    source = try { 
-                        SongSource.valueOf(songObj.optString("source", "YOUTUBE")) 
-                    } catch (e: Exception) { 
-                        SongSource.YOUTUBE 
-                    },
-                    localUri = songObj.optString("localUri").takeIf { it.isNotBlank() }?.let { android.net.Uri.parse(it) }
-                )
+                val song = jsonToSong(songObj) ?: return@mapNotNull null
                 com.suvojeet.suvmusic.data.model.RecentlyPlayed(song, playedAt)
             }
         } catch (e: Exception) {
@@ -405,16 +395,7 @@ class SessionManager @Inject constructor(
     private fun serializeRecentlyPlayed(list: List<com.suvojeet.suvmusic.data.model.RecentlyPlayed>): String {
         val array = JSONArray()
         list.forEach { recent ->
-            val songObj = JSONObject().apply {
-                put("id", recent.song.id)
-                put("title", recent.song.title)
-                put("artist", recent.song.artist)
-                put("album", recent.song.album)
-                put("thumbnailUrl", recent.song.thumbnailUrl ?: "")
-                put("duration", recent.song.duration)
-                put("source", recent.song.source.name)
-                put("localUri", recent.song.localUri?.toString() ?: "")
-            }
+            val songObj = songToJson(recent.song)
             val obj = JSONObject().apply {
                 put("song", songObj)
                 put("playedAt", recent.playedAt)
@@ -422,6 +403,187 @@ class SessionManager @Inject constructor(
             array.put(obj)
         }
         return array.toString()
+    }
+    
+    // --- Home Cache ---
+    
+    suspend fun saveHomeCache(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>) {
+        context.dataStore.edit { preferences ->
+            preferences[HOME_CACHE_KEY] = serializeHomeSections(sections)
+        }
+    }
+    
+    fun getCachedHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data.map { preferences ->
+        parseHomeSections(preferences[HOME_CACHE_KEY])
+    }
+    
+    suspend fun getCachedHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+        val prefs = context.dataStore.data.first()
+        return parseHomeSections(prefs[HOME_CACHE_KEY])
+    }
+    
+    // --- Helpers ---
+
+    private fun parseHomeSections(json: String?): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).mapNotNull { i ->
+                val obj = array.optJSONObject(i) ?: return@mapNotNull null
+                val title = obj.optString("title")
+                val itemsArray = obj.optJSONArray("items") ?: JSONArray()
+                
+                val items = (0 until itemsArray.length()).mapNotNull { j ->
+                    parseHomeItem(itemsArray.optJSONObject(j))
+                }
+                
+                com.suvojeet.suvmusic.data.model.HomeSection(title, items)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    
+    private fun serializeHomeSections(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>): String {
+        val array = JSONArray()
+        sections.forEach { section ->
+            val obj = JSONObject().apply {
+                put("title", section.title)
+                val itemsArray = JSONArray()
+                section.items.forEach { item ->
+                    itemsArray.put(serializeHomeItem(item))
+                }
+                put("items", itemsArray)
+            }
+            array.put(obj)
+        }
+        return array.toString()
+    }
+    
+    private fun parseHomeItem(obj: JSONObject?): com.suvojeet.suvmusic.data.model.HomeItem? {
+        if (obj == null) return null
+        val type = obj.optString("type")
+        val data = obj.optJSONObject("data") ?: return null
+        
+        return when (type) {
+            "song" -> {
+                val song = jsonToSong(data) ?: return null
+                com.suvojeet.suvmusic.data.model.HomeItem.SongItem(song)
+            }
+            "playlist" -> {
+                val playlist = com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                    id = data.optString("id"),
+                    name = data.optString("name"),
+                    url = data.optString("url"),
+                    uploaderName = data.optString("uploaderName"),
+                    thumbnailUrl = data.optString("thumbnailUrl").takeIf { it.isNotBlank() },
+                    songCount = data.optInt("songCount", 0)
+                )
+                com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(playlist)
+            }
+            "album" -> {
+                val album = com.suvojeet.suvmusic.data.model.Album(
+                    id = data.optString("id"),
+                    title = data.optString("title"),
+                    artist = data.optString("artist"),
+                    year = data.optString("year").takeIf { it.isNotBlank() },
+                    thumbnailUrl = data.optString("thumbnailUrl").takeIf { it.isNotBlank() },
+                    description = data.optString("description").takeIf { it.isNotBlank() }
+                )
+                com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(album)
+            }
+            "artist" -> {
+                val artist = com.suvojeet.suvmusic.data.model.Artist(
+                    id = data.optString("id"),
+                    name = data.optString("name"),
+                    thumbnailUrl = data.optString("thumbnailUrl").takeIf { it.isNotBlank() },
+                    description = data.optString("description").takeIf { it.isNotBlank() },
+                    subscribers = data.optString("subscribers").takeIf { it.isNotBlank() }
+                )
+                com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(artist)
+            }
+            else -> null
+        }
+    }
+    
+    private fun serializeHomeItem(item: com.suvojeet.suvmusic.data.model.HomeItem): JSONObject {
+        val obj = JSONObject()
+        when (item) {
+            is com.suvojeet.suvmusic.data.model.HomeItem.SongItem -> {
+                obj.put("type", "song")
+                obj.put("data", songToJson(item.song))
+            }
+            is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem -> {
+                obj.put("type", "playlist")
+                val data = JSONObject().apply {
+                    put("id", item.playlist.id)
+                    put("name", item.playlist.name)
+                    put("url", item.playlist.url)
+                    put("uploaderName", item.playlist.uploaderName)
+                    put("thumbnailUrl", item.playlist.thumbnailUrl ?: "")
+                    put("songCount", item.playlist.songCount)
+                }
+                obj.put("data", data)
+            }
+            is com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem -> {
+                obj.put("type", "album")
+                val data = JSONObject().apply {
+                    put("id", item.album.id)
+                    put("title", item.album.title)
+                    put("artist", item.album.artist)
+                    put("year", item.album.year ?: "")
+                    put("thumbnailUrl", item.album.thumbnailUrl ?: "")
+                    put("description", item.album.description ?: "")
+                }
+                obj.put("data", data)
+            }
+            is com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem -> {
+                obj.put("type", "artist")
+                val data = JSONObject().apply {
+                    put("id", item.artist.id)
+                    put("name", item.artist.name)
+                    put("thumbnailUrl", item.artist.thumbnailUrl ?: "")
+                    put("description", item.artist.description ?: "")
+                    put("subscribers", item.artist.subscribers ?: "")
+                }
+                obj.put("data", data)
+            }
+        }
+        return obj
+    }
+
+    private fun jsonToSong(songObj: JSONObject): Song? {
+        return try {
+            Song(
+                id = songObj.optString("id"),
+                title = songObj.optString("title"),
+                artist = songObj.optString("artist"),
+                album = songObj.optString("album"),
+                thumbnailUrl = songObj.optString("thumbnailUrl").takeIf { it.isNotBlank() },
+                duration = songObj.optLong("duration"),
+                source = try { 
+                    SongSource.valueOf(songObj.optString("source", "YOUTUBE")) 
+                } catch (e: Exception) { 
+                    SongSource.YOUTUBE 
+                },
+                localUri = songObj.optString("localUri").takeIf { it.isNotBlank() }?.let { android.net.Uri.parse(it) }
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun songToJson(song: Song): JSONObject {
+        return JSONObject().apply {
+            put("id", song.id)
+            put("title", song.title)
+            put("artist", song.artist)
+            put("album", song.album)
+            put("thumbnailUrl", song.thumbnailUrl ?: "")
+            put("duration", song.duration)
+            put("source", song.source.name)
+            put("localUri", song.localUri?.toString() ?: "")
+        }
     }
 }
 

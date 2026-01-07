@@ -18,6 +18,7 @@ data class HomeUiState(
     val homeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList(),
     val userAvatarUrl: String? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null
 )
 
@@ -45,22 +46,41 @@ class HomeViewModel @Inject constructor(
     
     private fun loadData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            
+            // 1. Load cache immediately
+            val cachedSections = sessionManager.getCachedHomeSectionsSync()
+            if (cachedSections.isNotEmpty()) {
+                _uiState.update { 
+                    it.copy(
+                        homeSections = cachedSections, 
+                        isLoading = false,
+                        isRefreshing = true
+                    ) 
+                }
+            } else {
+                 _uiState.update { it.copy(isLoading = true) }
+            }
+
             try {
+                // 2. Fetch fresh data
                 val sections = youTubeRepository.getHomeSections()
+                
+                // 3. Update cached and UI
+                sessionManager.saveHomeCache(sections)
                 
                 _uiState.update { 
                     it.copy(
                         homeSections = sections,
-                        isLoading = false
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = null
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
-                        error = e.message,
-                        isLoading = false
+                        error = if (it.homeSections.isEmpty()) e.message else null, // Only show error if no content
+                        isLoading = false,
+                        isRefreshing = false
                     )
                 }
             }
