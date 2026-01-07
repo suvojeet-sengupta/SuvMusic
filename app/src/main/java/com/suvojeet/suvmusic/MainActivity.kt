@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        // For deep links when app is already running, recreate to handle new URL
-        recreate()
+        // Deep links are handled in SuvMusicApp composable via LaunchedEffect
+        // Don't call recreate() as it wipes all state including HomeScreen data
     }
     
     private fun requestPermissions() {
