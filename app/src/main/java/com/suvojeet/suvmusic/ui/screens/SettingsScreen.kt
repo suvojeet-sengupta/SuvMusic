@@ -1,93 +1,66 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.R
-import com.suvojeet.suvmusic.data.model.AudioQuality
-import com.suvojeet.suvmusic.data.model.DownloadQuality
-import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
-import kotlinx.coroutines.launch
-import androidx.compose.material.icons.filled.GraphicEq
 
 /**
- * Settings screen with audio quality, theme, and account settings.
+ * Settings screen with navigation to sub-settings.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onLoginClick: () -> Unit = {},
+    onPlaybackClick: () -> Unit = {},
+    onAppearanceClick: () -> Unit = {},
     onAboutClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showQualitySheet by remember { mutableStateOf(false) }
-    var showDownloadQualitySheet by remember { mutableStateOf(false) }
-    var showThemeModeSheet by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
-    val downloadSheetState = rememberModalBottomSheetState()
-    val themeModeSheetState = rememberModalBottomSheetState()
-    val scope = rememberCoroutineScope()
     
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .padding(top = 48.dp)
             .verticalScroll(rememberScrollState())
     ) {
         Spacer(modifier = Modifier.height(16.dp))
@@ -187,117 +160,20 @@ fun SettingsScreen(
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
         
-        // Playback Section
-        SectionTitle("Playback")
-        
+        // Playback - Navigate to PlaybackSettingsScreen
         SettingsItem(
-            icon = Icons.Default.HighQuality,
-            title = "Streaming Quality",
-            subtitle = uiState.audioQuality.label,
-            onClick = { showQualitySheet = true }
+            icon = Icons.Default.GraphicEq,
+            title = "Playback",
+            subtitle = buildPlaybackSubtitle(uiState.gaplessPlaybackEnabled, uiState.automixEnabled),
+            onClick = onPlaybackClick
         )
         
-        // Download Quality
-        ListItem(
-            headlineContent = { Text("Download Quality") },
-            supportingContent = { Text(uiState.downloadQuality.label) },
-            leadingContent = {
-                Icon(
-                    imageVector = Icons.Default.Download,
-                    contentDescription = null
-                )
-            },
-            modifier = Modifier.clickable { showDownloadQualitySheet = true },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
-        )
-        
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-        
-        // Track Transitions Section
-        SectionTitle("Track transitions")
-        
-        // Gapless playback
-        ListItem(
-            headlineContent = { Text("Gapless playback") },
-            supportingContent = { 
-                Text("Removes any gaps or pauses that may occur in between tracks.") 
-            },
-            leadingContent = {
-                Icon(
-                    imageVector = Icons.Default.GraphicEq,
-                    contentDescription = null
-                )
-            },
-            trailingContent = {
-                Switch(
-                    checked = uiState.gaplessPlaybackEnabled,
-                    onCheckedChange = { viewModel.setGaplessPlayback(it) }
-                )
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
-        )
-        
-        // Automix
-        ListItem(
-            headlineContent = { Text("Automix") },
-            supportingContent = { 
-                Text("Allows seamless transitions between songs on certain playlists.") 
-            },
-            trailingContent = {
-                Switch(
-                    checked = uiState.automixEnabled,
-                    onCheckedChange = { viewModel.setAutomix(it) }
-                )
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
-        )
-        
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-        
-        // Appearance Section
-        SectionTitle("Appearance")
-        
-        // Theme Mode
-        ListItem(
-            headlineContent = { Text("Theme") },
-            supportingContent = { Text(uiState.themeMode.label) },
-            leadingContent = {
-                Icon(
-                    imageVector = Icons.Default.DarkMode,
-                    contentDescription = null
-                )
-            },
-            modifier = Modifier.clickable { showThemeModeSheet = true },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
-        )
-        
-        // Dynamic Theme
-        ListItem(
-            headlineContent = { Text("Dynamic Theme") },
-            supportingContent = { Text("Use system colors (Android 12+)") },
-            leadingContent = {
-                Icon(
-                    imageVector = Icons.Default.DarkMode,
-                    contentDescription = null
-                )
-            },
-            trailingContent = {
-                Switch(
-                    checked = uiState.dynamicColorEnabled,
-                    onCheckedChange = { viewModel.setDynamicColor(it) }
-                )
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
+        // Appearance - Navigate to AppearanceSettingsScreen
+        SettingsItem(
+            icon = Icons.Default.DarkMode,
+            title = "Appearance",
+            subtitle = buildAppearanceSubtitle(uiState.themeMode.label, uiState.dynamicColorEnabled),
+            onClick = onAppearanceClick
         )
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
@@ -358,142 +234,17 @@ fun SettingsScreen(
             }
         )
     }
-    
-    // Audio Quality Bottom Sheet
-    if (showQualitySheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showQualitySheet = false },
-            sheetState = sheetState
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "Audio Quality",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                AudioQuality.entries.forEach { quality ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.setAudioQuality(quality)
-                                scope.launch {
-                                    sheetState.hide()
-                                    showQualitySheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.audioQuality == quality,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = quality.label)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-    }
-    
-    // Download Quality Bottom Sheet
-    if (showDownloadQualitySheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showDownloadQualitySheet = false },
-            sheetState = downloadSheetState
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "Download Quality",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                
-                Text(
-                    text = "Lower quality = smaller file size",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                DownloadQuality.entries.forEach { quality ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.setDownloadQuality(quality)
-                                scope.launch {
-                                    downloadSheetState.hide()
-                                    showDownloadQualitySheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.downloadQuality == quality,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = quality.label)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-    }
-    
-    // Theme Mode Bottom Sheet
-    if (showThemeModeSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showThemeModeSheet = false },
-            sheetState = themeModeSheetState
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "Theme",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                ThemeMode.entries.forEach { mode ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.setThemeMode(mode)
-                                scope.launch {
-                                    themeModeSheetState.hide()
-                                    showThemeModeSheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.themeMode == mode,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = mode.label)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-    }
+}
+
+private fun buildPlaybackSubtitle(gapless: Boolean, automix: Boolean): String {
+    val parts = mutableListOf<String>()
+    if (gapless) parts.add("Gapless playback")
+    if (automix) parts.add("Automix")
+    return if (parts.isEmpty()) "Configure playback settings" else parts.joinToString(" • ")
+}
+
+private fun buildAppearanceSubtitle(themeLabel: String, dynamicColor: Boolean): String {
+    return if (dynamicColor) "$themeLabel • Dynamic colors" else themeLabel
 }
 
 @Composable

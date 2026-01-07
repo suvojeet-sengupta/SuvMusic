@@ -8,6 +8,8 @@ sealed class Destination(val route: String) {
     data object Search : Destination("search")
     data object Library : Destination("library")
     data object Settings : Destination("settings")
+    data object PlaybackSettings : Destination("playback_settings")
+    data object AppearanceSettings : Destination("appearance_settings")
     data object Player : Destination("player")
     data object YouTubeLogin : Destination("youtube_login")
     data object About : Destination("about")
