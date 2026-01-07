@@ -49,21 +49,14 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Loading skeleton - only show if loading AND no cached data
-        AnimatedVisibility(
-            visible = uiState.isLoading && uiState.homeSections.isEmpty(),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            HomeLoadingSkeleton()
-        }
-        
-        // Actual content - show if we have data (even if still refreshing in background)
-        AnimatedVisibility(
-            visible = uiState.homeSections.isNotEmpty(),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
+        // Simple conditional rendering - no animations to prevent blank flashes
+        when {
+            // Show skeleton only when loading AND no data
+            uiState.isLoading && uiState.homeSections.isEmpty() -> {
+                HomeLoadingSkeleton()
+            }
+            // Show content if we have data (priority over loading state)
+            uiState.homeSections.isNotEmpty() -> {
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
                     modifier = Modifier
@@ -126,6 +119,7 @@ fun HomeScreen(
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
+            }
             }
         }
     }
