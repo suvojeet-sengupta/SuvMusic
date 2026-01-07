@@ -245,46 +245,33 @@ class YouTubeRepository @Inject constructor(
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         if (!sessionManager.isLoggedIn()) {
             // Rich fallback for non-logged in users with multiple diverse sections
-            // Use async for parallel fetching to improve performance
             val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
             
-            try {
-                // Define all section queries with titles
-                val sectionQueries = listOf(
-                    "Trending Now" to "trending music 2024",
-                    "Top Hits" to "top hits 2024",
-                    "Bollywood Hits" to "bollywood hits latest",
-                    "Pop Hits" to "pop hits 2024",
-                    "Hip Hop & Rap" to "hip hop hits 2026",
-                    "Chill Vibes" to "chill lofi beats",
-                    "Punjabi Hits" to "punjabi hits latest",
-                    "90s Nostalgia" to "90s bollywood hits",
-                    "Workout Energy" to "workout music energy",
-                    "Romance" to "romantic songs love"
-                )
-                
-                // Fetch all sections in parallel using async
-                val deferredResults = sectionQueries.map { (title, query) ->
-                    kotlinx.coroutines.async {
-                        try {
-                            val songs = search(query, FILTER_SONGS).take(10)
-                                .map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
-                            if (songs.isNotEmpty()) title to songs else null
-                        } catch (e: Exception) {
-                            null
-                        }
+            // Define all section queries with titles
+            val sectionQueries = listOf(
+                "Trending Now" to "trending music 2024",
+                "Top Hits" to "top hits 2024",
+                "Bollywood Hits" to "bollywood hits latest",
+                "Pop Hits" to "pop hits 2024",
+                "Hip Hop & Rap" to "hip hop hits 2026",
+                "Chill Vibes" to "chill lofi beats",
+                "Punjabi Hits" to "punjabi hits latest",
+                "90s Nostalgia" to "90s bollywood hits",
+                "Workout Energy" to "workout music energy",
+                "Romance" to "romantic songs love"
+            )
+            
+            // Fetch sections sequentially
+            for ((title, query) in sectionQueries) {
+                try {
+                    val songs = search(query, FILTER_SONGS).take(10)
+                        .map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+                    if (songs.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, songs))
                     }
+                } catch (e: Exception) {
+                    // Skip failed section
                 }
-                
-                // Collect results maintaining order
-                deferredResults.forEach { deferred ->
-                    deferred.await()?.let { (title, items) ->
-                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
-                    }
-                }
-                
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
             
             return@withContext sections
@@ -292,7 +279,37 @@ class YouTubeRepository @Inject constructor(
 
         try {
             val jsonResponse = fetchInternalApi("FEmusic_home")
-            return@withContext parseHomeSectionsFromInternalJson(jsonResponse)
+            val personalizedSections = parseHomeSectionsFromInternalJson(jsonResponse).toMutableList()
+            
+            // Add extra curated sections for more content
+            val extraQueries = listOf(
+                "Bollywood Hits" to "bollywood hits latest",
+                "Punjabi Beats" to "punjabi hits latest",
+                "90s Nostalgia" to "90s bollywood hits",
+                "Chill Vibes" to "chill lofi beats",
+                "Workout Energy" to "workout music energy",
+                "Romance" to "romantic songs love",
+                "Party Mix" to "party songs hindi",
+                "Indie Picks" to "indie music hits"
+            )
+            
+            // Fetch extra sections sequentially
+            val existingTitles = personalizedSections.map { it.title.lowercase() }.toSet()
+            
+            for ((title, query) in extraQueries) {
+                if (title.lowercase() in existingTitles) continue
+                try {
+                    val songs = search(query, FILTER_SONGS).take(10)
+                        .map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+                    if (songs.isNotEmpty()) {
+                        personalizedSections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, songs))
+                    }
+                } catch (e: Exception) {
+                    // Skip failed section
+                }
+            }
+            
+            return@withContext personalizedSections
         } catch (e: Exception) {
             e.printStackTrace()
             return@withContext emptyList()
