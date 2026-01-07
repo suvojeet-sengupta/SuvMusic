@@ -244,14 +244,50 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         if (!sessionManager.isLoggedIn()) {
-            // Fallback for non-logged in users: specific search queries simulating sections
-            val trending = search("trending music", FILTER_SONGS).map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
-            val newReleases = search("new music", FILTER_SONGS).map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+            // Rich fallback for non-logged in users with multiple diverse sections
+            // Use async for parallel fetching to improve performance
+            val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
             
-            return@withContext listOf(
-                com.suvojeet.suvmusic.data.model.HomeSection("Trending", trending),
-                com.suvojeet.suvmusic.data.model.HomeSection("New Releases", newReleases)
-            )
+            try {
+                // Define all section queries with titles
+                val sectionQueries = listOf(
+                    "Trending Now" to "trending music 2024",
+                    "Top Hits" to "top hits 2024",
+                    "Bollywood Hits" to "bollywood hits latest",
+                    "Pop Hits" to "pop hits 2024",
+                    "Hip Hop & Rap" to "hip hop hits 2026",
+                    "Chill Vibes" to "chill lofi beats",
+                    "Punjabi Hits" to "punjabi hits latest",
+                    "90s Nostalgia" to "90s bollywood hits",
+                    "Workout Energy" to "workout music energy",
+                    "Romance" to "romantic songs love"
+                )
+                
+                // Fetch all sections in parallel using async
+                val deferredResults = sectionQueries.map { (title, query) ->
+                    kotlinx.coroutines.async {
+                        try {
+                            val songs = search(query, FILTER_SONGS).take(10)
+                                .map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+                            if (songs.isNotEmpty()) title to songs else null
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                
+                // Collect results maintaining order
+                deferredResults.forEach { deferred ->
+                    deferred.await()?.let { (title, items) ->
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                    }
+                }
+                
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            
+            return@withContext sections
         }
 
         try {
