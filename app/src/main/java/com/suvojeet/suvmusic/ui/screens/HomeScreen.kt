@@ -47,18 +47,18 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Loading skeleton
+        // Loading skeleton - only show if loading AND no cached data
         AnimatedVisibility(
-            visible = uiState.isLoading,
+            visible = uiState.isLoading && uiState.homeSections.isEmpty(),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
             HomeLoadingSkeleton()
         }
         
-        // Actual content
+        // Actual content - show if we have data (even if still refreshing in background)
         AnimatedVisibility(
-            visible = !uiState.isLoading,
+            visible = uiState.homeSections.isNotEmpty(),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
