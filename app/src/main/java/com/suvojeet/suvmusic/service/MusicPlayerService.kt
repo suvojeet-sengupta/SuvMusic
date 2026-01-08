@@ -77,6 +77,7 @@ class MusicPlayerService : MediaSessionService() {
         
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivityPendingIntent)
+            .setBitmapLoader(CoilBitmapLoader(this))
             .build()
     }
     
