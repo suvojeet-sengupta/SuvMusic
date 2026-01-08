@@ -66,6 +66,8 @@ import javax.inject.Inject
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -101,7 +103,7 @@ fun SongCreditsSheet(
     viewModel: SongCreditsViewModel = hiltViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val artistCredits = viewModel.artistCredits.collectAsState().value
+    val artistCredits by viewModel.artistCredits.collectAsState()
     
     // Fetch artist thumbnails when sheet becomes visible
     LaunchedEffect(isVisible, song.artist) {

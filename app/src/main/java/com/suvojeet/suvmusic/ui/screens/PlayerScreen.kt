@@ -60,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,8 +86,12 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.Lyrics
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
+import android.content.Intent
+import android.provider.Settings
+import com.suvojeet.suvmusic.util.RingtoneHelper
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
+import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
 import com.suvojeet.suvmusic.ui.components.SongCreditsSheet
 import com.suvojeet.suvmusic.ui.components.WaveformSeeker
@@ -95,6 +100,8 @@ import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.player.SleepTimerManager
 import com.suvojeet.suvmusic.player.SleepTimerOption
+import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import android.widget.Toast
@@ -129,7 +136,8 @@ fun PlayerScreen(
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
     onSetSleepTimer: (SleepTimerOption) -> Unit = {},
-    playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
+    playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
+    ringtoneViewModel: RingtoneViewModel = hiltViewModel()
 ) {
 
     val song = playerState.currentSong
@@ -161,6 +169,16 @@ fun PlayerScreen(
     var showActionsSheet by remember { mutableStateOf(false) }
     var showCreditsSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
+    
+    // Ringtone states
+    var showRingtoneProgress by remember { mutableStateOf(false) }
+    var ringtoneProgress by remember { mutableStateOf(0f) }
+    var ringtoneStatusMessage by remember { mutableStateOf("") }
+    var ringtoneComplete by remember { mutableStateOf(false) }
+    var ringtoneSuccess by remember { mutableStateOf(false) }
+    
+    // Coroutine scope for ringtone operation
+    val coroutineScope = rememberCoroutineScope()
     
     // High-res thumbnail
     val highResThumbnail = getHighResThumbnail(song?.thumbnailUrl)
@@ -480,13 +498,42 @@ fun PlayerScreen(
                 },
                 onSetRingtone = {
                     showActionsSheet = false
-                    // Show toast - user needs to download song first and set via system settings
-                    Toast.makeText(
-                        context,
-                        "Download the song first, then set as ringtone from Downloads",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    
+                    if (song.id == null) return@SongActionsSheet
+                    
+                    // Start ringtone process
+                    coroutineScope.launch {
+                        showRingtoneProgress = true
+                        ringtoneProgress = 0f
+                        ringtoneStatusMessage = "Initializing..."
+                        ringtoneComplete = false
+                        ringtoneSuccess = false
+                        
+                        ringtoneViewModel.ringtoneHelper.downloadAndSetAsRingtone(
+                            context = context,
+                            song = song,
+                            onProgress = { progress, message ->
+                                ringtoneProgress = progress
+                                ringtoneStatusMessage = message
+                            },
+                            onComplete = { success, message ->
+                                ringtoneComplete = true
+                                ringtoneSuccess = success
+                                ringtoneStatusMessage = message
+                            }
+                        )
+                    }
                 }
+            )
+            
+            // Ringtone Progress Dialog
+            RingtoneProgressDialog(
+                isVisible = showRingtoneProgress,
+                progress = ringtoneProgress,
+                statusMessage = ringtoneStatusMessage,
+                isComplete = ringtoneComplete,
+                isSuccess = ringtoneSuccess,
+                onDismiss = { showRingtoneProgress = false }
             )
             
             // Song Credits Sheet
