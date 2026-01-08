@@ -61,6 +61,31 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import javax.inject.Inject
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+/**
+ * Data class to hold artist credit information with thumbnail
+ */
+data class ArtistCreditInfo(
+    val name: String,
+    val role: String,
+    val thumbnailUrl: String?,
+    val artistId: String?
+)
 
 /**
  * Apple Music-inspired Song Credits screen.
@@ -72,9 +97,18 @@ fun SongCreditsSheet(
     song: Song,
     isVisible: Boolean,
     onDismiss: () -> Unit,
-    onArtistClick: (String) -> Unit = {}
+    onArtistClick: (String) -> Unit = {},
+    viewModel: SongCreditsViewModel = hiltViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val artistCredits = viewModel.artistCredits.collectAsState().value
+    
+    // Fetch artist thumbnails when sheet becomes visible
+    LaunchedEffect(isVisible, song.artist) {
+        if (isVisible) {
+            viewModel.fetchArtistCredits(song.artist)
+        }
+    }
     
     if (isVisible) {
         ModalBottomSheet(
@@ -209,7 +243,6 @@ fun SongCreditsSheet(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     // Artists vertical list in a Surface container
-                    val artists = parseArtists(song.artist)
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -218,16 +251,17 @@ fun SongCreditsSheet(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column {
-                            artists.forEachIndexed { index, artistInfo ->
+                            artistCredits.forEachIndexed { index, artistInfo ->
                                 ArtistCreditRow(
-                                    artistName = artistInfo.first,
-                                    role = "Vocals",
-                                    artistId = artistInfo.second,
+                                    artistName = artistInfo.name,
+                                    role = artistInfo.role,
+                                    thumbnailUrl = artistInfo.thumbnailUrl,
+                                    artistId = artistInfo.artistId,
                                     onClick = { 
-                                        artistInfo.second?.let { onArtistClick(it) }
+                                        artistInfo.artistId?.let { onArtistClick(it) }
                                     }
                                 )
-                                if (index < artists.lastIndex) {
+                                if (index < artistCredits.lastIndex) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(start = 72.dp),
                                         color = Color.White.copy(alpha = 0.1f)
@@ -486,9 +520,12 @@ private fun parseArtists(artistString: String): List<Pair<String, String?>> {
 private fun ArtistCreditRow(
     artistName: String,
     role: String,
+    thumbnailUrl: String?,
     artistId: String?,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -496,7 +533,7 @@ private fun ArtistCreditRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Circular avatar with first letter or initials
+        // Circular avatar - show thumbnail or initials
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -504,20 +541,34 @@ private fun ArtistCreditRow(
                 .background(Color(0xFF3A3A3C)),
             contentAlignment = Alignment.Center
         ) {
-            // Get initials (first letter of each word, max 2)
-            val initials = artistName.split(" ")
-                .filter { it.isNotBlank() }
-                .take(2)
-                .map { it.first().uppercaseChar() }
-                .joinToString("")
-            
-            Text(
-                text = initials.ifEmpty { "?" },
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = Color.White
-            )
+            if (thumbnailUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = artistName,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                // Fallback to initials
+                val initials = artistName.split(" ")
+                    .filter { it.isNotBlank() }
+                    .take(2)
+                    .map { it.first().uppercaseChar() }
+                    .joinToString("")
+                
+                Text(
+                    text = initials.ifEmpty { "?" },
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = Color.White
+                )
+            }
         }
         
         Spacer(modifier = Modifier.width(16.dp))
@@ -537,5 +588,77 @@ private fun ArtistCreditRow(
                 color = Color.White.copy(alpha = 0.5f)
             )
         }
+    }
+}
+
+/**
+ * ViewModel for fetching artist credits with thumbnails from YouTube Music
+ */
+@HiltViewModel
+class SongCreditsViewModel @Inject constructor(
+    private val youTubeRepository: YouTubeRepository
+) : ViewModel() {
+    
+    private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
+    val artistCredits: StateFlow<List<ArtistCreditInfo>> = _artistCredits.asStateFlow()
+    
+    private var lastArtistString: String? = null
+    
+    fun fetchArtistCredits(artistString: String) {
+        // Avoid refetching if same artist string
+        if (artistString == lastArtistString && _artistCredits.value.isNotEmpty()) return
+        lastArtistString = artistString
+        
+        viewModelScope.launch {
+            // First, parse the artist string to get individual names
+            val artistNames = parseArtistNames(artistString)
+            
+            // Show artists immediately with no thumbnail
+            _artistCredits.value = artistNames.map { name ->
+                ArtistCreditInfo(
+                    name = name,
+                    role = "Vocals",
+                    thumbnailUrl = null,
+                    artistId = null
+                )
+            }
+            
+            // Then fetch thumbnails for each artist
+            val updatedCredits = artistNames.map { name ->
+                try {
+                    val searchResults = youTubeRepository.searchArtists(name)
+                    val matchingArtist = searchResults.firstOrNull { 
+                        it.name.contains(name, ignoreCase = true) || 
+                        name.contains(it.name, ignoreCase = true)
+                    } ?: searchResults.firstOrNull()
+                    
+                    ArtistCreditInfo(
+                        name = name,
+                        role = "Vocals",
+                        thumbnailUrl = matchingArtist?.thumbnailUrl,
+                        artistId = matchingArtist?.id
+                    )
+                } catch (e: Exception) {
+                    ArtistCreditInfo(
+                        name = name,
+                        role = "Vocals",
+                        thumbnailUrl = null,
+                        artistId = null
+                    )
+                }
+            }
+            
+            _artistCredits.value = updatedCredits
+        }
+    }
+    
+    private fun parseArtistNames(artistString: String): List<String> {
+        if (artistString.isBlank()) return emptyList()
+        
+        // Split by common separators
+        val separatorRegex = Regex("[,&]|\\b(feat\\.?|ft\\.?|with|x)\\b", RegexOption.IGNORE_CASE)
+        return artistString.split(separatorRegex)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
     }
 }
