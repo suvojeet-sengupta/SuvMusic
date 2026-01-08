@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.BrowseCategory
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
@@ -10,6 +11,8 @@ import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +32,7 @@ data class SearchUiState(
     val query: String = "",
     val filter: String = YouTubeRepository.FILTER_SONGS,
     val results: List<Song> = emptyList(),
+    val artistResults: List<Artist> = emptyList(),
     val suggestions: List<String> = emptyList(),
     val browseCategories: List<BrowseCategory> = emptyList(),
     val selectedCategory: BrowseCategory? = null,
@@ -247,20 +251,39 @@ class SearchViewModel @Inject constructor(
             try {
                 val currentTab = _uiState.value.selectedTab
                 
-                val results = when (currentTab) {
+                when (currentTab) {
                     SearchTab.YOUTUBE_MUSIC -> {
-                        youTubeRepository.search(query, _uiState.value.filter)
+                        // Search songs and artists in parallel
+                        coroutineScope {
+                            val songsDeferred = async { 
+                                youTubeRepository.search(query, _uiState.value.filter) 
+                            }
+                            val artistsDeferred = async { 
+                                youTubeRepository.searchArtists(query) 
+                            }
+                            
+                            val songs = songsDeferred.await()
+                            val artists = artistsDeferred.await()
+                            
+                            _uiState.update { 
+                                it.copy(
+                                    results = songs,
+                                    artistResults = artists,
+                                    isLoading = false
+                                )
+                            }
+                        }
                     }
                     SearchTab.YOUR_LIBRARY -> {
-                        localAudioRepository.searchLocalSongs(query)
+                        val results = localAudioRepository.searchLocalSongs(query)
+                        _uiState.update { 
+                            it.copy(
+                                results = results,
+                                artistResults = emptyList(),
+                                isLoading = false
+                            )
+                        }
                     }
-                }
-                
-                _uiState.update { 
-                    it.copy(
-                        results = results,
-                        isLoading = false
-                    )
                 }
             } catch (e: Exception) {
                 _uiState.update { 

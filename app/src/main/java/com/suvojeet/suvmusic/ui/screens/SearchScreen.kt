@@ -63,9 +63,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyRow
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Apple Music-inspired search screen with recent searches, suggestions, and inline results.
@@ -271,6 +276,31 @@ fun SearchScreen(
                         ) {
                             CircularProgressIndicator(color = accentColor)
                         }
+                    }
+                }
+                
+                // Artist Results (show at top)
+                if (uiState.query.isNotBlank() && uiState.artistResults.isNotEmpty()) {
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        ) {
+                            items(uiState.artistResults) { artist ->
+                                ArtistSearchCard(
+                                    artist = artist,
+                                    onClick = { onArtistClick(artist.id) }
+                                )
+                            }
+                        }
+                    }
+                    
+                    item {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
                     }
                 }
                 
@@ -483,3 +513,75 @@ private fun SearchResultItem(
     }
 }
 
+@Composable
+private fun ArtistSearchCard(
+    artist: Artist,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(100.dp)
+            .clickable(onClick = onClick)
+    ) {
+        // Circular artist image
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            if (artist.thumbnailUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(artist.thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = artist.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Artist name
+        Text(
+            text = artist.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        
+        // Subscriber count
+        if (artist.subscribers != null) {
+            Text(
+                text = artist.subscribers,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        } else {
+            Text(
+                text = "Artist",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}

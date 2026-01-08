@@ -103,6 +103,43 @@ class YouTubeRepository @Inject constructor(
     }
 
     /**
+     * Search for artists/channels on YouTube Music.
+     * Returns a list of Artist objects with basic info (id, name, thumbnail, subscribers).
+     */
+    suspend fun searchArtists(query: String): List<Artist> = withContext(Dispatchers.IO) {
+        try {
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+                ?: return@withContext emptyList()
+            
+            val searchExtractor = ytService.getSearchExtractor(query, listOf("channels"), "")
+            searchExtractor.fetchPage()
+            
+            searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.channel.ChannelInfoItem>().take(3).mapNotNull { item ->
+                try {
+                    val channelId = item.url?.substringAfter("/channel/")?.substringBefore("/")?.substringBefore("?")
+                    if (channelId.isNullOrBlank()) return@mapNotNull null
+                    
+                    Artist(
+                        id = channelId,
+                        name = item.name ?: "Unknown Artist",
+                        thumbnailUrl = item.thumbnails?.lastOrNull()?.url,
+                        subscribers = item.subscriberCount?.let { 
+                            if (it >= 1_000_000) "${it / 1_000_000}M subscribers"
+                            else if (it >= 1_000) "${it / 1_000}K subscribers"
+                            else "$it subscribers"
+                        }
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
      * Get search suggestions for autocomplete.
      */
     suspend fun getSearchSuggestions(query: String): List<String> = withContext(Dispatchers.IO) {
@@ -1392,7 +1429,21 @@ class YouTubeRepository @Inject constructor(
         
         val name = getRunText(header?.optJSONObject("title")) ?: "Unknown Artist"
         val description = getRunText(header?.optJSONObject("description"))
-        val thumbnailUrl = extractThumbnail(header?.optJSONObject("thumbnail") ?: header?.optJSONObject("foregroundThumbnail")) // check foreground for immersive
+        
+        // Artist thumbnail is in header.thumbnail.thumbnails or header.foregroundThumbnail.thumbnails
+        val thumbnailUrl = run {
+            val thumbObj = header?.optJSONObject("thumbnail") 
+                ?: header?.optJSONObject("foregroundThumbnail")
+            val thumbnails = thumbObj?.optJSONObject("musicThumbnailRenderer")
+                ?.optJSONObject("thumbnail")
+                ?.optJSONArray("thumbnails")
+                ?: thumbObj?.optJSONArray("thumbnails")
+            // Get largest thumbnail
+            thumbnails?.let { arr ->
+                if (arr.length() > 0) arr.optJSONObject(arr.length() - 1)?.optString("url") else null
+            }
+        }
+        
         val subscribers = getRunText(header?.optJSONObject("subscriptionButton")?.optJSONObject("subscribeButtonRenderer")?.optJSONObject("subscriberCountText"))
 
         val songs = mutableListOf<Song>()
