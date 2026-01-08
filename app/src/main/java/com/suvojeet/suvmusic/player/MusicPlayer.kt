@@ -196,7 +196,7 @@ class MusicPlayer @Inject constructor(
                         .setTitle(song.title)
                         .setArtist(song.artist)
                         .setAlbumTitle(song.album)
-                        .setArtworkUri(song.thumbnailUrl?.let { android.net.Uri.parse(it) })
+                        .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
                         .build()
                 )
                 .build()
@@ -370,7 +370,7 @@ class MusicPlayer @Inject constructor(
                             .setTitle(song.title)
                             .setArtist(song.artist)
                             .setAlbumTitle(song.album)
-                            .setArtworkUri(song.thumbnailUrl?.let { android.net.Uri.parse(it) })
+                            .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
                             .build()
                     )
                     .build()
@@ -437,7 +437,7 @@ class MusicPlayer @Inject constructor(
                     .setTitle(song.title)
                     .setArtist(song.artist)
                     .setAlbumTitle(song.album)
-                    .setArtworkUri(song.thumbnailUrl?.let { android.net.Uri.parse(it) })
+                    .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
                     .build()
             )
             .build()
@@ -576,5 +576,26 @@ class MusicPlayer @Inject constructor(
         positionUpdateJob?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         mediaController = null
+    }
+    
+    /**
+     * Convert a YouTube thumbnail URL to high resolution for better notification artwork quality.
+     * Converts hqdefault, mqdefault, sddefault to maxresdefault format.
+     */
+    private fun getHighResThumbnail(url: String?): String? {
+        return url?.let {
+            when {
+                it.contains("ytimg.com") -> it
+                    .replace("hqdefault", "maxresdefault")
+                    .replace("mqdefault", "maxresdefault")
+                    .replace("sddefault", "maxresdefault")
+                    .replace("default", "maxresdefault")
+                    .replace(Regex("w\\d+-h\\d+"), "w544-h544")
+                it.contains("lh3.googleusercontent.com") -> 
+                    it.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
+                      .replace(Regex("=s\\d+"), "=s544")
+                else -> it
+            }
+        }
     }
 }
