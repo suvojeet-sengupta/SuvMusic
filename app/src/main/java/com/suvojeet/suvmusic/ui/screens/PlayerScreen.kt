@@ -501,6 +501,20 @@ fun PlayerScreen(
                     
                     if (song.id == null) return@SongActionsSheet
                     
+                    // Check for WRITE_SETTINGS permission
+                    if (!ringtoneViewModel.ringtoneHelper.hasWriteSettingsPermission(context)) {
+                        Toast.makeText(context, "Permission required to set ringtone. Please grant it in settings.", Toast.LENGTH_LONG).show()
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                                data = android.net.Uri.parse("package:${context.packageName}")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                           Toast.makeText(context, "Could not open settings", Toast.LENGTH_SHORT).show()
+                        }
+                        return@SongActionsSheet
+                    }
+                    
                     // Start ringtone process
                     coroutineScope.launch {
                         showRingtoneProgress = true
