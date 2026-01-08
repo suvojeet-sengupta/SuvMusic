@@ -59,4 +59,21 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
     override fun supportsMimeType(mimeType: String): Boolean {
         return true
     }
+
+    override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> {
+        val future = SettableFuture.create<Bitmap>()
+        scope.launch {
+            try {
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size)
+                if (bitmap != null) {
+                    future.set(bitmap)
+                } else {
+                    future.setException(Exception("Failed to decode bitmap from byte array"))
+                }
+            } catch (e: Exception) {
+                future.setException(e)
+            }
+        }
+        return future
+    }
 }
