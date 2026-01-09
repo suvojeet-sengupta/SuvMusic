@@ -70,6 +70,31 @@ data class Song(
                 localUri = contentUri
             )
         }
+        
+        /**
+         * Create a Song from JioSaavn data.
+         */
+        fun fromJioSaavn(
+            songId: String,
+            title: String,
+            artist: String,
+            album: String,
+            duration: Long,
+            thumbnailUrl: String?,
+            streamUrl: String? = null
+        ): Song? {
+            if (songId.isBlank()) return null
+            return Song(
+                id = songId,
+                title = title,
+                artist = artist,
+                album = album,
+                duration = duration,
+                thumbnailUrl = thumbnailUrl,
+                source = SongSource.JIOSAAVN,
+                streamUrl = streamUrl
+            )
+        }
     }
 }
 
@@ -80,5 +105,6 @@ enum class SongSource {
     YOUTUBE,
     YOUTUBE_MUSIC,
     LOCAL,
-    DOWNLOADED
+    DOWNLOADED,
+    JIOSAAVN
 }

@@ -20,6 +20,7 @@ import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.service.MusicPlayerService
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -44,6 +45,7 @@ import javax.inject.Singleton
 class MusicPlayer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,
     private val sleepTimerManager: SleepTimerManager
 ) {
@@ -181,11 +183,11 @@ class MusicPlayer @Inject constructor(
         try {
             _playerState.update { it.copy(isLoading = true) }
             
-            // Resolve stream URL for the song
-            val streamUrl = if (song.source == SongSource.LOCAL || song.source == SongSource.DOWNLOADED) {
-                song.localUri.toString()
-            } else {
-                youTubeRepository.getStreamUrl(song.id) ?: return
+            // Resolve stream URL for the song based on source
+            val streamUrl = when (song.source) {
+                SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
+                SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id) ?: return
+                else -> youTubeRepository.getStreamUrl(song.id) ?: return
             }
             
             val newMediaItem = MediaItem.Builder()
@@ -335,10 +337,10 @@ class MusicPlayer @Inject constructor(
         isPreloading = true
         scope.launch {
             try {
-                val streamUrl = if (nextSong.source == SongSource.LOCAL || nextSong.source == SongSource.DOWNLOADED) {
-                    nextSong.localUri.toString()
-                } else {
-                    youTubeRepository.getStreamUrl(nextSong.id)
+                val streamUrl = when (nextSong.source) {
+                    SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
+                    SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
+                    else -> youTubeRepository.getStreamUrl(nextSong.id)
                 }
                 
                 if (streamUrl != null) {
@@ -420,6 +422,13 @@ class MusicPlayer @Inject constructor(
     private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true): MediaItem {
         val uri = when (song.source) {
             SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
+            SongSource.JIOSAAVN -> {
+                if (resolveStream) {
+                    jioSaavnRepository.getStreamUrl(song.id) ?: ""
+                } else {
+                    song.streamUrl ?: ""
+                }
+            }
             else -> {
                 if (resolveStream) {
                     youTubeRepository.getStreamUrl(song.id) ?: "https://youtube.com/watch?v=${song.id}"

@@ -197,9 +197,13 @@ fun SearchScreen(
                 }
             }
             
-            // Tabs (YouTube Music / Your Library) - visible when searching
+            // Tabs (YouTube Music / JioSaavn / Your Library) - visible when searching
             AnimatedVisibility(visible = uiState.query.isNotBlank()) {
-                val selectedTabIndex = if (uiState.selectedTab == SearchTab.YOUTUBE_MUSIC) 0 else 1
+                val selectedTabIndex = when (uiState.selectedTab) {
+                    SearchTab.YOUTUBE_MUSIC -> 0
+                    SearchTab.JIOSAAVN -> 1
+                    SearchTab.YOUR_LIBRARY -> 2
+                }
                 
                 TabRow(
                     selectedTabIndex = selectedTabIndex,
@@ -218,9 +222,9 @@ fun SearchScreen(
                         onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
                         text = {
                             Text(
-                                text = "YOUTUBE MUSIC",
+                                text = "YT MUSIC",
                                 fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 12.sp
+                                fontSize = 11.sp
                             )
                         },
                         selectedContentColor = accentColor,
@@ -228,12 +232,25 @@ fun SearchScreen(
                     )
                     Tab(
                         selected = selectedTabIndex == 1,
+                        onClick = { viewModel.onTabChange(SearchTab.JIOSAAVN) },
+                        text = {
+                            Text(
+                                text = "JIOSAAVN",
+                                fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 11.sp
+                            )
+                        },
+                        selectedContentColor = accentColor,
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 2,
                         onClick = { viewModel.onTabChange(SearchTab.YOUR_LIBRARY) },
                         text = {
                             Text(
-                                text = "YOUR LIBRARY",
-                                fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 12.sp
+                                text = "LIBRARY",
+                                fontWeight = if (selectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 11.sp
                             )
                         },
                         selectedContentColor = accentColor,

@@ -57,6 +57,9 @@ class SessionManager @Inject constructor(
         
         // Home Cache
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
+        
+        // Music Source
+        private val MUSIC_SOURCE_KEY = stringPreferencesKey("music_source")
     }
     
     // --- Cookies ---
@@ -205,6 +208,27 @@ class SessionManager @Inject constructor(
     suspend fun setDynamicColor(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[DYNAMIC_COLOR_KEY] = enabled
+        }
+    }
+    
+    // --- Music Source ---
+    
+    fun getMusicSource(): MusicSource = runBlocking {
+        val sourceName = context.dataStore.data.first()[MUSIC_SOURCE_KEY]
+        sourceName?.let { 
+            try { MusicSource.valueOf(it) } catch (e: Exception) { MusicSource.YOUTUBE }
+        } ?: MusicSource.YOUTUBE
+    }
+    
+    val musicSourceFlow: Flow<MusicSource> = context.dataStore.data.map { preferences ->
+        preferences[MUSIC_SOURCE_KEY]?.let {
+            try { MusicSource.valueOf(it) } catch (e: Exception) { MusicSource.YOUTUBE }
+        } ?: MusicSource.YOUTUBE
+    }
+    
+    suspend fun setMusicSource(source: MusicSource) {
+        context.dataStore.edit { preferences ->
+            preferences[MUSIC_SOURCE_KEY] = source.name
         }
     }
     
@@ -597,4 +621,11 @@ data class LastPlaybackState(
     val index: Int
 )
 
-
+/**
+ * Music source preference.
+ */
+enum class MusicSource {
+    YOUTUBE,
+    JIOSAAVN,
+    BOTH
+}

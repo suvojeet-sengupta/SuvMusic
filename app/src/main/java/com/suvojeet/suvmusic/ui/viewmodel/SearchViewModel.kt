@@ -6,8 +6,10 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.BrowseCategory
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.data.MusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -25,6 +27,7 @@ import javax.inject.Inject
 
 enum class SearchTab {
     YOUTUBE_MUSIC,
+    JIOSAAVN,
     YOUR_LIBRARY
 }
 
@@ -50,6 +53,7 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
     private val localAudioRepository: LocalAudioRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
@@ -272,6 +276,17 @@ class SearchViewModel @Inject constructor(
                                     isLoading = false
                                 )
                             }
+                        }
+                    }
+                    SearchTab.JIOSAAVN -> {
+                        // Search JioSaavn (320kbps)
+                        val results = jioSaavnRepository.search(query)
+                        _uiState.update { 
+                            it.copy(
+                                results = results,
+                                artistResults = emptyList(),
+                                isLoading = false
+                            )
                         }
                     }
                     SearchTab.YOUR_LIBRARY -> {
