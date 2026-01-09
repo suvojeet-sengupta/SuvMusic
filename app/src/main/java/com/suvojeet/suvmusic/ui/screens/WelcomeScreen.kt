@@ -1,7 +1,10 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.material3.RadioButton
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -73,7 +76,7 @@ fun WelcomeScreen(
     viewModel: WelcomeViewModel = hiltViewModel()
 ) {
     var startAnimation by remember { mutableStateOf(false) }
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pagerState = rememberPagerState(pageCount = { 5 })
     val scope = rememberCoroutineScope()
     
     LaunchedEffect(Unit) {
@@ -126,7 +129,7 @@ fun WelcomeScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) { page ->
-                WelcomePageContent(page = page)
+                WelcomePageContent(page = page, viewModel = viewModel)
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -136,7 +139,7 @@ fun WelcomeScreen(
                 modifier = Modifier.padding(bottom = 32.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                repeat(4) { iteration ->
+                repeat(5) { iteration ->
                     val color = if (pagerState.currentPage == iteration) 
                         MaterialTheme.colorScheme.primary 
                     else 
@@ -157,7 +160,7 @@ fun WelcomeScreen(
                 modifier = Modifier.fillMaxWidth().height(60.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (pagerState.currentPage < 3) {
+                if (pagerState.currentPage < 4) {
                     Button(
                         onClick = {
                             scope.launch {
@@ -207,7 +210,7 @@ fun WelcomeScreen(
             // Skip Button (Always visible logic or only on last page? 
             // User requested "Next Next" but also "Skip". Let's keep Skip available.)
             AnimatedVisibility(
-                visible = pagerState.currentPage == 3,
+                visible = pagerState.currentPage == 4,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
@@ -236,7 +239,7 @@ fun WelcomeScreen(
 }
 
 @Composable
-fun WelcomePageContent(page: Int) {
+fun WelcomePageContent(page: Int, viewModel: WelcomeViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -248,7 +251,96 @@ fun WelcomePageContent(page: Int) {
             0 -> IntroPage()
             1 -> FeaturesPageOne()
             2 -> FeaturesPageTwo()
-            3 -> LoginPage()
+            3 -> SourceSelectionPage(viewModel)
+            4 -> LoginPage()
+        }
+    }
+}
+
+@Composable
+fun SourceSelectionPage(viewModel: WelcomeViewModel) {
+    val currentSource by viewModel.currentSource.collectAsState(initial = com.suvojeet.suvmusic.data.MusicSource.YOUTUBE)
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Select Default Source",
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Text(
+            text = "Choose your primary music source. This customizes your search & home experience.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        SourceOptionCard(
+            title = "YouTube Music",
+            description = "Huge library, official & community tracks",
+            selected = currentSource == com.suvojeet.suvmusic.data.MusicSource.YOUTUBE,
+            onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.YOUTUBE) }
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        SourceOptionCard(
+            title = "JioSaavn",
+            description = "High Fidelity (320kbps), Bollywood & Regional",
+            selected = currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN,
+            onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) }
+        )
+    }
+}
+
+@Composable
+fun SourceOptionCard(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val containerColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
+        border = BorderStroke(2.dp, borderColor),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = selected,
+                onClick = null
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
