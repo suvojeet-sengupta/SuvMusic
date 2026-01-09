@@ -46,7 +46,8 @@ data class SearchUiState(
     val isCategoriesLoading: Boolean = true,
     val isSuggestionsLoading: Boolean = false,
     val isSearchActive: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val currentSource: MusicSource = MusicSource.YOUTUBE
 )
 
 @OptIn(FlowPreview::class)
@@ -72,6 +73,9 @@ class SearchViewModel @Inject constructor(
         // Load recent searches
         loadRecentSearches()
         
+        // Observe music source
+        observeMusicSource()
+        
         // Observe query changes for debounced suggestions and search
         viewModelScope.launch {
             _searchQuery
@@ -83,6 +87,23 @@ class SearchViewModel @Inject constructor(
                     // Auto-search while typing
                     searchInternal(query)
                 }
+        }
+    }
+    
+    private fun observeMusicSource() {
+        viewModelScope.launch {
+            sessionManager.musicSourceFlow.collect { source ->
+                val defaultTab = when (source) {
+                    MusicSource.JIOSAAVN -> SearchTab.JIOSAAVN
+                    else -> SearchTab.YOUTUBE_MUSIC
+                }
+                _uiState.update { 
+                    it.copy(
+                        currentSource = source,
+                        selectedTab = defaultTab
+                    ) 
+                }
+            }
         }
     }
     
