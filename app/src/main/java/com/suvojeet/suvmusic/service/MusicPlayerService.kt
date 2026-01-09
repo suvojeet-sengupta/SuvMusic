@@ -33,14 +33,14 @@ class MusicPlayerService : MediaSessionService() {
         val isGaplessEnabled = sessionManager.isGaplessPlaybackEnabled()
         val isAutomixEnabled = sessionManager.isAutomixEnabled()
         
-        // Optimized buffer for faster playback start
-        // Values are in milliseconds - smaller initial buffer = faster start
+        // Ultra-fast buffer for instant playback
+        // Minimum buffering = faster start (may rebuffer on slow networks)
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15_000,    // Min buffer: 15 seconds
-                50_000,    // Max buffer: 50 seconds  
-                1_500,     // Buffer for playback start: 1.5s (fast start!)
-                3_000      // Buffer for rebuffer: 3 seconds
+                5_000,     // Min buffer: 5 seconds (aggressive)
+                30_000,    // Max buffer: 30 seconds  
+                500,       // Buffer for playback start: 0.5s (INSTANT!)
+                1_500      // Buffer for rebuffer: 1.5 seconds
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
