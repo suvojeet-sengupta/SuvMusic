@@ -12,9 +12,17 @@ class WelcomeViewModel @Inject constructor(
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
+    val currentSource = sessionManager.musicSourceFlow
+    
     fun setOnboardingCompleted() {
         viewModelScope.launch {
             sessionManager.setOnboardingCompleted(true)
+        }
+    }
+    
+    fun setMusicSource(source: com.suvojeet.suvmusic.data.MusicSource) {
+        viewModelScope.launch {
+            sessionManager.setMusicSource(source)
         }
     }
 }
