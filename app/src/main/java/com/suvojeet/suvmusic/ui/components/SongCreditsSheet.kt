@@ -324,7 +324,7 @@ fun SongCreditsSheet(
                             CreditItem(
                                 icon = Icons.Default.MusicNote,
                                 label = "Format",
-                                value = "M4A / AAC"
+                                value = if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) "MP3 • 320kbps" else "M4A / AAC"
                             )
                             
                             CreditDivider()
@@ -364,6 +364,7 @@ fun SongCreditsSheet(
                                 label = "Source",
                                 value = when (song.source) {
                                     com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YouTube Music"
+                                    com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JioSaavn"
                                     com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "Local Storage"
                                     com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> "Downloaded"
                                     else -> "Unknown"
