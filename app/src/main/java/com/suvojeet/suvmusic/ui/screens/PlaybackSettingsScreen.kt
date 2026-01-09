@@ -124,7 +124,9 @@ fun PlaybackSettingsScreen(
             
             ListItem(
                 headlineContent = { Text("Streaming Quality") },
-                supportingContent = { Text(uiState.audioQuality.label) },
+                supportingContent = { 
+                    Text(getAudioQualityLabel(uiState.audioQuality, uiState.musicSource)) 
+                },
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.HighQuality,
@@ -137,7 +139,9 @@ fun PlaybackSettingsScreen(
             
             ListItem(
                 headlineContent = { Text("Download Quality") },
-                supportingContent = { Text(uiState.downloadQuality.label) },
+                supportingContent = { 
+                    Text(getDownloadQualityLabel(uiState.downloadQuality, uiState.musicSource)) 
+                },
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Download,
@@ -221,7 +225,7 @@ fun PlaybackSettingsScreen(
                             onClick = null
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = quality.label)
+                        Text(text = getAudioQualityLabel(quality, uiState.musicSource))
                     }
                 }
                 
@@ -269,7 +273,7 @@ fun PlaybackSettingsScreen(
                             onClick = null
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = quality.label)
+                        Text(text = getDownloadQualityLabel(quality, uiState.musicSource))
                     }
                 }
                 
@@ -277,7 +281,7 @@ fun PlaybackSettingsScreen(
             }
         }
     }
-    
+
     // Music Source Bottom Sheet
     if (showMusicSourceSheet) {
         ModalBottomSheet(
@@ -339,4 +343,42 @@ private fun SectionTitle(title: String) {
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
     )
+}
+
+private fun getAudioQualityLabel(quality: AudioQuality, source: MusicSource): String {
+    return if (source == MusicSource.JIOSAAVN) {
+        when (quality) {
+            AudioQuality.LOW -> "Low (96 kbps)"
+            AudioQuality.MEDIUM -> "Standard (160 kbps)"
+            AudioQuality.HIGH -> "High (320 kbps)"
+            AudioQuality.BEST -> "Best Available (320 kbps)"
+        }
+    } else {
+        // YouTube Defaults
+        when (quality) {
+            AudioQuality.LOW -> "Low (48 kbps)"
+            AudioQuality.MEDIUM -> "Normal (128 kbps)"
+            AudioQuality.HIGH -> "High (256 kbps)"
+            AudioQuality.BEST -> "Always High"
+        }
+    }
+}
+
+private fun getDownloadQualityLabel(quality: DownloadQuality, source: MusicSource): String {
+    return if (source == MusicSource.JIOSAAVN) {
+        when (quality) {
+            DownloadQuality.LOW -> "Low (96 kbps) • Saves data"
+            DownloadQuality.MEDIUM -> "Standard (160 kbps)"
+            DownloadQuality.HIGH -> "High (320 kbps)"
+            DownloadQuality.BEST -> "Best Available (320 kbps)"
+        }
+    } else {
+        // YouTube Defaults
+        when (quality) {
+            DownloadQuality.LOW -> "Low (48 kbps) • Saves data"
+            DownloadQuality.MEDIUM -> "Medium (128 kbps)"
+            DownloadQuality.HIGH -> "High (256 kbps)"
+            DownloadQuality.BEST -> "Best available"
+        }
+    }
 }
