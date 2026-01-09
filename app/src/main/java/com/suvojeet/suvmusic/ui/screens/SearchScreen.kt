@@ -199,63 +199,48 @@ fun SearchScreen(
             
             // Tabs (YouTube Music / JioSaavn / Your Library) - visible when searching
             AnimatedVisibility(visible = uiState.query.isNotBlank()) {
-                val selectedTabIndex = when (uiState.selectedTab) {
-                    SearchTab.YOUTUBE_MUSIC -> 0
-                    SearchTab.JIOSAAVN -> 1
-                    SearchTab.YOUR_LIBRARY -> 2
+                // Determine tab order based on primary source
+                val orderedTabs = if (uiState.currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
+                    listOf(SearchTab.JIOSAAVN, SearchTab.YOUTUBE_MUSIC, SearchTab.YOUR_LIBRARY)
+                } else {
+                    listOf(SearchTab.YOUTUBE_MUSIC, SearchTab.JIOSAAVN, SearchTab.YOUR_LIBRARY)
                 }
+                
+                val selectedTabIndex = orderedTabs.indexOf(uiState.selectedTab).let { if (it == -1) 0 else it }
                 
                 TabRow(
                     selectedTabIndex = selectedTabIndex,
                     containerColor = Color.Transparent,
                     contentColor = accentColor,
                     indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                            color = accentColor
-                        )
+                        if (selectedTabIndex < tabPositions.size) {
+                            TabRowDefaults.SecondaryIndicator(
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                                color = accentColor
+                            )
+                        }
                     },
                     divider = {}
                 ) {
-                    Tab(
-                        selected = selectedTabIndex == 0,
-                        onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
-                        text = {
-                            Text(
-                                text = "YT MUSIC",
-                                fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 11.sp
-                            )
-                        },
-                        selectedContentColor = accentColor,
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Tab(
-                        selected = selectedTabIndex == 1,
-                        onClick = { viewModel.onTabChange(SearchTab.JIOSAAVN) },
-                        text = {
-                            Text(
-                                text = "JIOSAAVN",
-                                fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 11.sp
-                            )
-                        },
-                        selectedContentColor = accentColor,
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Tab(
-                        selected = selectedTabIndex == 2,
-                        onClick = { viewModel.onTabChange(SearchTab.YOUR_LIBRARY) },
-                        text = {
-                            Text(
-                                text = "LIBRARY",
-                                fontWeight = if (selectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 11.sp
-                            )
-                        },
-                        selectedContentColor = accentColor,
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    orderedTabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { viewModel.onTabChange(tab) },
+                            text = {
+                                Text(
+                                    text = when (tab) {
+                                        SearchTab.YOUTUBE_MUSIC -> "YT MUSIC"
+                                        SearchTab.JIOSAAVN -> "JIOSAAVN"
+                                        SearchTab.YOUR_LIBRARY -> "LIBRARY"
+                                    },
+                                    fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 11.sp
+                                )
+                            },
+                            selectedContentColor = accentColor,
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             
