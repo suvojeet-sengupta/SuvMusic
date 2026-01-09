@@ -257,8 +257,8 @@ fun WelcomePageContent(page: Int) {
 fun IntroPage() {
     Surface(
         modifier = Modifier
-            .size(100.dp)
-            .clip(RoundedCornerShape(24.dp)),
+            .size(120.dp)
+            .clip(RoundedCornerShape(28.dp)),
         color = MaterialTheme.colorScheme.primaryContainer
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -283,7 +283,7 @@ fun IntroPage() {
     Spacer(modifier = Modifier.height(16.dp))
     
     Text(
-        text = "Developer: Suvojeet Sengupta",
+        text = "Developed by Suvojeet Sengupta",
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.SemiBold
@@ -292,7 +292,7 @@ fun IntroPage() {
     Spacer(modifier = Modifier.height(24.dp))
     
     Text(
-        text = "A premium YouTube Music client designed for the best listening experience.",
+        text = "A premium, native client blending YouTube Music & JioSaavn in a stunning Material 3 interface.",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -305,50 +305,50 @@ fun FeaturesPageOne() {
         painter = painterResource(id = com.suvojeet.suvmusic.R.drawable.logo),
         contentDescription = null,
         modifier = Modifier
-            .size(80.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .size(60.dp)
+            .clip(RoundedCornerShape(12.dp))
     )
     
     Spacer(modifier = Modifier.height(40.dp))
     
     FeatureItemLarge(
         icon = Icons.Default.Album,
-        title = "Ad-free Listening",
-        desc = "Enjoy your favorite music without any interruptions."
+        title = "Dual Music Sources",
+        desc = "The vast library of YouTube Music combined with JioSaavn's high-quality catalog."
     )
     
     Spacer(modifier = Modifier.height(32.dp))
     
     FeatureItemLarge(
-        icon = Icons.Default.Speed,
-        title = "Background Play",
-        desc = "Keep the music playing while using other apps or with screen off."
+        icon = Icons.Default.GraphicEq,
+        title = "Hi-Fi Audio",
+        desc = "Stream in crystal clear 320kbps MP3 (via JioSaavn) or high-quality AAC."
     )
 }
 
 @Composable
 fun FeaturesPageTwo() {
     Icon(
-        imageVector = Icons.Default.GraphicEq,
+        imageVector = Icons.Default.MusicNote,
         contentDescription = null,
-        modifier = Modifier.size(80.dp),
+        modifier = Modifier.size(60.dp),
         tint = MaterialTheme.colorScheme.secondary
     )
     
     Spacer(modifier = Modifier.height(40.dp))
     
     FeatureItemLarge(
-        icon = Icons.Default.GraphicEq,
-        title = "High Quality Audio",
-        desc = "Experience music in the best possible audio quality."
+        icon = Icons.Default.MusicNote,
+        title = "Premium Experience",
+        desc = "Synchronized lyrics, detailed song credits, and adaptive themes."
     )
     
     Spacer(modifier = Modifier.height(32.dp))
     
     FeatureItemLarge(
         icon = Icons.Default.CloudDownload,
-        title = "Offline Downloads",
-        desc = "Download your favorite tracks and playlists for offline listening."
+        title = "Offline & Ad-Free",
+        desc = "Download your favorites for offline listening. No ads, just music."
     )
 }
 
@@ -373,7 +373,7 @@ fun LoginPage() {
     Spacer(modifier = Modifier.height(16.dp))
     
     Text(
-        text = "Sign in with your YouTube Music account to access your library, playlists, and recommendations.",
+        text = "Sign in to access your YouTube Music library and playlists. JioSaavn works out of the box!",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurfaceVariant
