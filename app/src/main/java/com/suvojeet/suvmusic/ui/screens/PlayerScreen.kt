@@ -779,6 +779,41 @@ private fun SongInfoSection(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            
+            // Audio Quality Badge - Apple Music style
+            if (song != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(
+                            color = dominantColors.onBackground.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = dominantColors.onBackground.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = when (song.source) {
+                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JioSaavn • 320kbps"
+                            com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "Local"
+                            else -> "YouTube Music"
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.5.sp
+                        ),
+                        color = dominantColors.onBackground.copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
         
         // Download Button
