@@ -108,7 +108,7 @@ fun SongCreditsSheet(
     // Fetch artist thumbnails when sheet becomes visible
     LaunchedEffect(isVisible, song.artist) {
         if (isVisible) {
-            viewModel.fetchArtistCredits(song.artist)
+            viewModel.fetchArtistCredits(song.artist, song.source)
         }
     }
     
@@ -599,7 +599,8 @@ private fun ArtistCreditRow(
  */
 @HiltViewModel
 class SongCreditsViewModel @Inject constructor(
-    private val youTubeRepository: YouTubeRepository
+    private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 ) : ViewModel() {
     
     private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
@@ -607,7 +608,7 @@ class SongCreditsViewModel @Inject constructor(
     
     private var lastArtistString: String? = null
     
-    fun fetchArtistCredits(artistString: String) {
+    fun fetchArtistCredits(artistString: String, source: com.suvojeet.suvmusic.data.model.SongSource = com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE) {
         // Avoid refetching if same artist string
         if (artistString == lastArtistString && _artistCredits.value.isNotEmpty()) return
         lastArtistString = artistString
@@ -629,7 +630,12 @@ class SongCreditsViewModel @Inject constructor(
             // Then fetch thumbnails for each artist
             val updatedCredits = artistNames.map { name ->
                 try {
-                    val searchResults = youTubeRepository.searchArtists(name)
+                    val searchResults = if (source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
+                        jioSaavnRepository.searchArtists(name)
+                    } else {
+                        youTubeRepository.searchArtists(name)
+                    }
+                    
                     val matchingArtist = searchResults.firstOrNull { 
                         it.name.contains(name, ignoreCase = true) || 
                         name.contains(it.name, ignoreCase = true)

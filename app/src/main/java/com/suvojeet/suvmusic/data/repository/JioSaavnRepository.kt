@@ -58,6 +58,34 @@ class JioSaavnRepository @Inject constructor(
     }
     
     /**
+     * Search for artists on JioSaavn.
+     */
+    suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.data.model.Artist> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$BASE_URL?__call=search.getArtistResults&_format=json&n=5&q=${query.encodeUrl()}"
+            val response = makeRequest(url)
+            val json = JsonParser.parseString(response).asJsonObject
+            val results = json.getAsJsonArray("results") ?: return@withContext emptyList()
+            
+            results.mapNotNull { element ->
+                val artist = element.asJsonObject
+                val id = artist.get("id")?.asString ?: return@mapNotNull null
+                val name = artist.get("name")?.asString ?: artist.get("title")?.asString ?: ""
+                val image = artist.get("image")?.asString?.toHighResImage()
+                
+                com.suvojeet.suvmusic.data.model.Artist(
+                    id = id,
+                    name = name.decodeHtml(),
+                    thumbnailUrl = image
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+    
+    /**
      * Get song details by ID.
      */
     suspend fun getSongDetails(songId: String): Song? = withContext(Dispatchers.IO) {
