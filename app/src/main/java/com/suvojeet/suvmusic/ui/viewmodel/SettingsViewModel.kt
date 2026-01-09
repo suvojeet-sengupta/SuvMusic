@@ -13,6 +13,7 @@ import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.UpdateState
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
+import com.suvojeet.suvmusic.data.MusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -33,6 +34,7 @@ data class SettingsUiState(
     val dynamicColorEnabled: Boolean = true,
     val gaplessPlaybackEnabled: Boolean = true,
     val automixEnabled: Boolean = true,
+    val musicSource: MusicSource = MusicSource.YOUTUBE,
     val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = ""
 )
@@ -71,6 +73,7 @@ class SettingsViewModel @Inject constructor(
                 dynamicColorEnabled = sessionManager.isDynamicColorEnabled(),
                 gaplessPlaybackEnabled = sessionManager.isGaplessPlaybackEnabled(),
                 automixEnabled = sessionManager.isAutomixEnabled(),
+                musicSource = sessionManager.getMusicSource(),
                 currentVersion = updateRepository.getCurrentVersionName()
             )
         }
@@ -210,6 +213,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAutomix(enabled)
             _uiState.update { it.copy(automixEnabled = enabled) }
+        }
+    }
+    
+    fun setMusicSource(source: MusicSource) {
+        viewModelScope.launch {
+            sessionManager.setMusicSource(source)
+            _uiState.update { it.copy(musicSource = source) }
         }
     }
     

@@ -196,6 +196,127 @@ class JioSaavnRepository @Inject constructor(
         }
     }
     
+    /**
+     * Get home sections with trending content from JioSaavn.
+     * Returns sections similar to YouTube Music home page.
+     */
+    suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+        val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+        
+        try {
+            // 1. Get trending songs
+            val trendingUrl = "$BASE_URL?__call=content.getCharts&_format=json"
+            val trendingResponse = makeRequest(trendingUrl)
+            val trendingJson = JsonParser.parseString(trendingResponse)
+            
+            if (trendingJson.isJsonArray) {
+                trendingJson.asJsonArray.take(3).forEach { chart ->
+                    val chartObj = chart.asJsonObject
+                    val chartTitle = chartObj.get("title")?.asString ?: "Charts"
+                    val chartId = chartObj.get("id")?.asString
+                    
+                    if (chartId != null) {
+                        val playlist = getPlaylist(chartId)
+                        if (playlist != null && playlist.songs.isNotEmpty()) {
+                            val items = playlist.songs.take(10).map { song ->
+                                com.suvojeet.suvmusic.data.model.HomeItem.SongItem(song)
+                            }
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(chartTitle, items))
+                        }
+                    }
+                }
+            }
+            
+            // 2. Get new releases
+            val newReleasesUrl = "$BASE_URL?__call=content.getAlbums&_format=json&n=10&p=1&type=new"
+            val newReleasesResponse = makeRequest(newReleasesUrl)
+            val newReleasesJson = JsonParser.parseString(newReleasesResponse)
+            
+            if (newReleasesJson.isJsonObject) {
+                val albumsList = newReleasesJson.asJsonObject.getAsJsonArray("data")
+                    ?: newReleasesJson.asJsonObject.getAsJsonArray("albums")
+                
+                if (albumsList != null && albumsList.size() > 0) {
+                    val albumItems = albumsList.take(10).mapNotNull { albumElement ->
+                        val albumObj = albumElement.asJsonObject
+                        val albumId = albumObj.get("albumid")?.asString 
+                            ?: albumObj.get("id")?.asString 
+                            ?: return@mapNotNull null
+                        val title = albumObj.get("title")?.asString 
+                            ?: albumObj.get("name")?.asString 
+                            ?: "Album"
+                        val artist = albumObj.get("primary_artists")?.asString 
+                            ?: albumObj.get("music")?.asString 
+                            ?: ""
+                        val image = albumObj.get("image")?.asString?.toHighResImage()
+                        
+                        com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
+                            com.suvojeet.suvmusic.data.model.Album(
+                                id = albumId,
+                                title = title.decodeHtml(),
+                                artist = artist.decodeHtml(),
+                                thumbnailUrl = image,
+                                year = albumObj.get("year")?.asString
+                            )
+                        )
+                    }
+                    
+                    if (albumItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("New Releases", albumItems))
+                    }
+                }
+            }
+            
+            // 3. Get top playlists
+            val playlistsUrl = "$BASE_URL?__call=content.getFeaturedPlaylists&_format=json&n=10&p=1"
+            val playlistsResponse = makeRequest(playlistsUrl)
+            val playlistsJson = JsonParser.parseString(playlistsResponse)
+            
+            if (playlistsJson.isJsonObject) {
+                val playlistsList = playlistsJson.asJsonObject.getAsJsonArray("data")
+                    ?: playlistsJson.asJsonObject.getAsJsonArray("featuredPlaylists")
+                
+                if (playlistsList != null && playlistsList.size() > 0) {
+                    val playlistItems = playlistsList.take(10).mapNotNull { plElement ->
+                        val plObj = plElement.asJsonObject
+                        val plId = plObj.get("listid")?.asString 
+                            ?: plObj.get("id")?.asString 
+                            ?: return@mapNotNull null
+                        val name = plObj.get("listname")?.asString 
+                            ?: plObj.get("title")?.asString 
+                            ?: "Playlist"
+                        val image = plObj.get("image")?.asString?.toHighResImage()
+                        
+                        com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                                id = plId,
+                                name = name.decodeHtml(),
+                                url = "",
+                                uploaderName = "JioSaavn",
+                                thumbnailUrl = image,
+                                songCount = 0
+                            )
+                        )
+                    }
+                    
+                    if (playlistItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Featured Playlists", playlistItems))
+                    }
+                }
+            }
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        // If no sections loaded, add a search prompt section
+        if (sections.isEmpty()) {
+            // Return empty list - will show default UI
+        }
+        
+        sections
+    }
+    
     // ==================== Private Helpers ====================
     
     private fun makeRequest(url: String): String {

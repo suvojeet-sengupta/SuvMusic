@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
+import com.suvojeet.suvmusic.data.MusicSource
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -61,8 +63,10 @@ fun PlaybackSettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showQualitySheet by remember { mutableStateOf(false) }
     var showDownloadQualitySheet by remember { mutableStateOf(false) }
+    var showMusicSourceSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val downloadSheetState = rememberModalBottomSheetState()
+    val musicSourceSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -91,7 +95,31 @@ fun PlaybackSettingsScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Streaming Quality
+            // Music Source
+            SectionTitle("Music Source")
+            
+            ListItem(
+                headlineContent = { Text("Primary Source") },
+                supportingContent = { 
+                    Text(
+                        when (uiState.musicSource) {
+                            MusicSource.YOUTUBE -> "YouTube Music (256 kbps)"
+                            MusicSource.JIOSAAVN -> "JioSaavn (320 kbps)"
+                            MusicSource.BOTH -> "Both"
+                        }
+                    ) 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { showMusicSourceSheet = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            // Audio Section
             SectionTitle("Audio")
             
             ListItem(
@@ -242,6 +270,57 @@ fun PlaybackSettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(text = quality.label)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    // Music Source Bottom Sheet
+    if (showMusicSourceSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showMusicSourceSheet = false },
+            sheetState = musicSourceSheetState
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Primary Music Source",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Text(
+                    text = "JioSaavn offers higher quality (320 kbps) audio",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                listOf(
+                    MusicSource.YOUTUBE to "YouTube Music (256 kbps max)",
+                    MusicSource.JIOSAAVN to "JioSaavn (320 kbps)"
+                ).forEach { (source, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setMusicSource(source)
+                                scope.launch {
+                                    musicSourceSheetState.hide()
+                                    showMusicSourceSheet = false
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.musicSource == source,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(text = label)
                     }
                 }
                 

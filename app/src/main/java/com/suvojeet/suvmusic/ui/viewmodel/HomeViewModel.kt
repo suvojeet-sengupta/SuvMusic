@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.MusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +21,14 @@ data class HomeUiState(
     val userAvatarUrl: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val currentSource: MusicSource = MusicSource.YOUTUBE
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
     
@@ -34,6 +38,7 @@ class HomeViewModel @Inject constructor(
     init {
         loadData()
         observeSession()
+        observeMusicSource()
     }
     
     private fun observeSession() {
@@ -44,28 +49,52 @@ class HomeViewModel @Inject constructor(
         }
     }
     
+    private fun observeMusicSource() {
+        viewModelScope.launch {
+            sessionManager.musicSourceFlow.collect { source ->
+                val currentSource = _uiState.value.currentSource
+                if (source != currentSource) {
+                    _uiState.update { it.copy(currentSource = source) }
+                    loadData() // Reload when source changes
+                }
+            }
+        }
+    }
+    
     private fun loadData() {
         viewModelScope.launch {
-            // 1. Load cache immediately
-            val cachedSections = sessionManager.getCachedHomeSectionsSync()
-            if (cachedSections.isNotEmpty()) {
-                _uiState.update { 
-                    it.copy(
-                        homeSections = cachedSections, 
-                        isLoading = false,
-                        isRefreshing = true
-                    ) 
+            val source = sessionManager.getMusicSource()
+            _uiState.update { it.copy(currentSource = source) }
+            
+            // 1. Load cache immediately (only for YouTube)
+            if (source == MusicSource.YOUTUBE) {
+                val cachedSections = sessionManager.getCachedHomeSectionsSync()
+                if (cachedSections.isNotEmpty()) {
+                    _uiState.update { 
+                        it.copy(
+                            homeSections = cachedSections, 
+                            isLoading = false,
+                            isRefreshing = true
+                        ) 
+                    }
+                } else {
+                     _uiState.update { it.copy(isLoading = true) }
                 }
             } else {
-                 _uiState.update { it.copy(isLoading = true) }
+                _uiState.update { it.copy(isLoading = true) }
             }
 
             try {
-                // 2. Fetch fresh data
-                val sections = youTubeRepository.getHomeSections()
+                // 2. Fetch fresh data based on source
+                val sections = when (source) {
+                    MusicSource.JIOSAAVN -> jioSaavnRepository.getHomeSections()
+                    else -> youTubeRepository.getHomeSections()
+                }
                 
-                // 3. Update cached and UI
-                sessionManager.saveHomeCache(sections)
+                // 3. Update cache and UI (only cache YouTube)
+                if (source == MusicSource.YOUTUBE) {
+                    sessionManager.saveHomeCache(sections)
+                }
                 
                 _uiState.update { 
                     it.copy(
@@ -78,7 +107,7 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
-                        error = if (it.homeSections.isEmpty()) e.message else null, // Only show error if no content
+                        error = if (it.homeSections.isEmpty()) e.message else null,
                         isLoading = false,
                         isRefreshing = false
                     )
