@@ -71,8 +71,17 @@ fun SongActionsSheet(
                 append("💿 ${song.album}\n")
             }
             append("\n")
-            append("Listen on YouTube Music:\n")
-            append("https://music.youtube.com/watch?v=${song.id}")
+            
+            if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
+                append("Listen on JioSaavn:\n")
+                // JioSaavn link format: https://www.jiosaavn.com/song/slug/id
+                // We use a simplified slug as the ID is the critical part
+                val slug = song.title.replace(Regex("[^a-zA-Z0-9]+"), "-").lowercase()
+                append("https://www.jiosaavn.com/song/$slug/${song.id}")
+            } else {
+                append("Listen on YouTube Music:\n")
+                append("https://music.youtube.com/watch?v=${song.id}")
+            }
         }
         
         val sendIntent = Intent().apply {
