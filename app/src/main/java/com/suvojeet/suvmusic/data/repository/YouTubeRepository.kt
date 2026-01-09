@@ -491,7 +491,7 @@ class YouTubeRepository @Inject constructor(
             Playlist(
                 id = playlistId,
                 title = playlistName ?: songs.firstOrNull()?.album?.takeIf { it.isNotBlank() } ?: "Playlist",
-                author = uploaderName ?: "Unknown",
+                author = uploaderName?.takeIf { it.isNotBlank() } ?: "",
                 thumbnailUrl = thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
                 songs = songs
             )
@@ -1291,7 +1291,8 @@ class YouTubeRepository @Inject constructor(
             ?.replace("Playlist", "")
             ?.replace("Auto playlist", "YouTube Music")
             ?.trim()
-            ?: "Unknown"
+            ?.takeIf { it.isNotBlank() && it.lowercase() != "unknown" }
+            ?: ""
         
         // Extract thumbnail from multiple possible locations
         var thumbnailUrl: String? = null

@@ -331,13 +331,15 @@ private fun PlaylistHeader(
         
         Spacer(modifier = Modifier.height(4.dp))
         
-        // Author
-        Text(
-            text = playlist.author,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center
-        )
+        // Author - only show if available
+        if (playlist.author.isNotBlank()) {
+            Text(
+                text = playlist.author,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
         
         // Updated info (if you have it, otherwise show song count)
         Text(
