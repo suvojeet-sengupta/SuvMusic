@@ -1,70 +1,85 @@
 # SuvMusic
 
-**A Premium, Native Android Client for YouTube Music**
+<div align="center">
+  <img src="app/src/main/res/drawable/logo.webp" alt="SuvMusic Logo" width="140" height="140" style="border-radius: 20px;">
+  <br>
+  <h1>SuvMusic</h1>
+  <p><b>A Premium, Native Music Client for Android</b></p>
+  <p>
+    <i>Seamlessly blending YouTube Music & JioSaavn in a stunning Material 3 interface.</i>
+  </p>
+</div>
 
-SuvMusic is a modern, feature-rich music player built with Jetpack Compose that brings the YouTube Music experience to Android with a premium user interface and enhanced functionality. It offers a seamless blend of online streaming and offline playback capabilities, wrapped in a beautiful Material 3 design.
+<div align="center">
 
 ![Platform](https://img.shields.io/badge/Platform-Android_8.0+-00C853?style=flat-square)
 ![Kotlin](https://img.shields.io/badge/Language-Kotlin_1.9-7F52FF?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
----
-
-## Key Features
-
-### 🎵 Comprehensive Music Experience
-*   **Native YouTube Music Integration**: Access personalized home sections, charts, and recommendations directly from YouTube Music.
-*   **Smart Search**: Powerful search capability for songs, albums, artists, and playlists.
-*   **Unified Library**: Seamlessly manage your YouTube liked songs along with local downloads.
-
-### 🎧 Advanced Playback
-*   **High-Fidelity Audio**: Support for high-quality audio streaming and downloading.
-*   **Gapless Playback**: uninterrupted listening experience for albums and mixes.
-*   **Background Playback**: Full support for background audio with media notification controls.
-*   **Synchronized Lyrics**: Live, time-synchronized lyrics display inspired by modern premium players.
-
-### ⚡ Performance & Offline
-*   **Instant Launch**: Smart caching system ensures the app opens immediately with content, even without an internet connection.
-*   **Offline Mode**: Download tracks with customizable quality settings for offline listening.
-*   **Intelligent Caching**: Automatically optimizes data usage and load times.
-
-### 🎨 Modern User Interface
-*   **Material 3 Design**: Fully adaptive UI with dynamic coloring based on album artwork.
-*   **Theme Support**: Complete support for system Dark and Light themes.
-*   **Fluid Animations**: Smooth transitions and interactive elements throughout the application.
-*   **Apple Music-Inspired Recents**: A dedicated history view to track your listening journey.
+</div>
 
 ---
 
-## Technical Architecture
+## Overview
 
-SuvMusic is built using modern Android development practices and libraries, ensuring robustness, scalability, and performance.
+**SuvMusic** redefines the music streaming experience on Android. Built with modern **Jetpack Compose**, it aggregates content from **YouTube Music** and **JioSaavn** into a single, cohesive, and premium application. Whether you want the vast library of YouTube or the 320kbps high-fidelity audio of JioSaavn, SuvMusic delivers it with style.
+
+## ✨ Key Features
+
+### 🎵 Dual Music Sources
+*   **YouTube Music Integration**: Full access to charts, mixes, and personalized recommendations.
+*   **JioSaavn Support**: Stream songs in **320kbps MP3** quality directly from JioSaavn.
+*   **Seamless Switching**: Set your primary source in Settings. Search and Home content dynamically adapt to your preference.
+
+### 🎧 Premium Playback Experience
+*   **High-Fidelity Audio**: Crystal clear audio engine with gapless playback.
+*   **Smart Quality Badges**: Know exactly what you're listening to (e.g., "JioSaavn • 320kbps" vs "YouTube Music").
+*   **Synchronized Lyrics**: Beautiful, time-synced lyrics with blurred background artistry.
+*   **Song Credits**: Detailed credits sheet inspired by Apple Music (Performing Artists, Production, Source).
+
+### 🚀 Smart & Dynamic UI
+*   **Adaptive Search**: Search tabs automatically reorder based on your preferred music source.
+*   **Instant Caching**: Home sections for both YouTube and JioSaavn are cached for instant offline loading.
+*   **Material 3 Design**: A modern, fluid interface that extracts colors from album artwork.
+*   **Apple Music-Style Recents**: A visual history of your listening journey.
+
+### ⚡ Offline & Library
+*   **Unified Library**: Manage downloaded tracks and liked songs in one place.
+*   **Offline Mode**: Download music for data-free listening.
+*   **Local Playback**: Full support for playing local audio files.
+
+---
+
+## 🛠️ Technical Architecture
+
+SuvMusic is engineered with robust, modern Android practices:
 
 *   **Language**: Kotlin
-*   **UI Framework**: Jetpack Compose
-*   **Architecture Pattern**: MVVM (Model-View-ViewModel) with Clean Architecture principles
+*   **UI Toolkit**: Jetpack Compose (Material 3)
+*   **Architecture**: MVVM + Clean Architecture
 *   **Dependency Injection**: Hilt
-*   **Asynchronous Programming**: Kotlin Coroutines & Flows
-*   **Media Engine**: Android Media3 (ExoPlayer)
-*   **Network**: Retrofit / OkHttp
-*   **Data Extraction**: NewPipe Extractor (for YouTube internal API interaction)
-*   **Local Storage**: DataStore Preferences (for session and settings), File System (for caching)
-*   **Image Loading**: Coil
+*   **Async Processing**: Coroutines & Flows
+*   **Caching**: DataStore & File-based Caching (Custom implementation for Home/Search)
+*   **Network**: Retrofit, OkHttp, NewPipe Extractor
+*   **Media**: Android Media3 (ExoPlayer)
+*   **Image Loading**: Coil (with high-res thumbnail extraction)
 
 ---
 
-## Installation
+## 📥 Installation
 
 1.  Download the latest APK from the [Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases) section.
-2.  Install the APK on your Android device (Android 8.0 Oreo or higher required).
-3.  Launch the app and sign in with your Google account for personalized recommendations, or use it anonymously.
+2.  Install on your Android device (Android 8.0+ required).
+3.  Enjoy premium music streaming!
 
 ---
 
-## Disclaimer
+## ⚠️ Disclaimer
 
-This project is an open-source educational initiative. It uses the NewPipe Extractor to interface with YouTube services. It is not affiliated with, endorsed by, or associated with Google LLC or YouTube. All content is copyright to their respective owners.
+This project is an open-source educational initiative. It interfaces with public APIs of YouTube Music and JioSaavn. It is not affiliated with, endorsed by, or associated with Google LLC, YouTube, or JioSaavn. All content is copyright to their respective owners.
 
 ---
 
-**Developed by Suvojeet Sengupta**
+<div align="center">
+  <b>Developed with ❤️ by Suvojeet Sengupta</b>
+</div>
