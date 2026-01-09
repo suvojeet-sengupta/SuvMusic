@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Palette
@@ -134,7 +135,7 @@ fun AboutScreen(
             
             // App Description
             Text(
-                text = "A premium YouTube Music client with stunning Apple Music inspired design. Experience music the way it's meant to be — beautiful, fast, and ad-free.",
+                text = "A premium music client with Apple Music inspired design. Stream from YouTube Music or JioSaavn (320 kbps). Beautiful, fast, and ad-free.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     lineHeight = 22.sp
                 ),
@@ -182,6 +183,12 @@ fun AboutScreen(
                         icon = Icons.Default.CloudDownload,
                         title = "Offline Downloads",
                         subtitle = "Save songs for offline listening",
+                        showDivider = true
+                    )
+                    FeatureItem(
+                        icon = Icons.Default.HighQuality,
+                        title = "High Quality Audio",
+                        subtitle = "Up to 320 kbps with JioSaavn",
                         showDivider = true
                     )
                     FeatureItem(
@@ -311,7 +318,7 @@ fun AboutScreen(
                     )
                     AboutInfoItem(
                         label = "Data Source",
-                        value = "YouTube Music",
+                        value = "YouTube + JioSaavn",
                         showDivider = false
                     )
                 }
