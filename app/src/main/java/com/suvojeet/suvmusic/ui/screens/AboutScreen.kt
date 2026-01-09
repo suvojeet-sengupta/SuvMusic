@@ -22,11 +22,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.HorizontalDivider
@@ -225,9 +227,11 @@ fun AboutScreen(
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                    
                     Box(
                         modifier = Modifier
-                            .size(60.dp)
+                            .size(80.dp)
                             .clip(CircleShape)
                             .background(
                                 brush = Brush.linearGradient(
@@ -239,11 +243,13 @@ fun AboutScreen(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
+                        coil.compose.AsyncImage(
+                            model = "https://photos.fife.usercontent.google.com/pw/AP1GczMBNMmsCeKjdZ3Tr0-H6j-c62sKTKRtnWBHPcMMZoeWFmYmFsQQa2TD_A=w1289-h859-s-no-gm?authuser=0",
+                            contentDescription = "Suvojeet Sengupta",
+                            modifier = Modifier
+                                .size(76.dp)
+                                .clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
                         )
                     }
                     
@@ -265,7 +271,42 @@ fun AboutScreen(
                         color = Color.White.copy(alpha = 0.5f)
                     )
                     
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Social Links
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // GitHub
+                        IconButton(onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") }) {
+                            Icon(
+                                imageVector = Icons.Default.Code,
+                                contentDescription = "GitHub",
+                                tint = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                        
+                        // Instagram
+                        IconButton(onClick = { uriHandler.openUri("https://www.instagram.com/suvojeet__sengupta?igsh=MWhyMXE4YzhxaDVvNg==") }) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoCamera,
+                                contentDescription = "Instagram",
+                                tint = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                        
+                        // Telegram
+                        IconButton(onClick = { uriHandler.openUri("https://t.me/suvojeet_sengupta") }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Telegram",
+                                tint = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                     
                     Text(
                         text = "Crafted with passion for music lovers who deserve a premium experience without the premium price tag.",
