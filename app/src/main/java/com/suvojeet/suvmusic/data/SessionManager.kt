@@ -57,6 +57,7 @@ class SessionManager @Inject constructor(
         
         // Home Cache
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
+        private val JIOSAAVN_HOME_CACHE_KEY = stringPreferencesKey("jiosaavn_home_cache")
         
         // Music Source
         private val MUSIC_SOURCE_KEY = stringPreferencesKey("music_source")
@@ -444,6 +445,21 @@ class SessionManager @Inject constructor(
     suspend fun getCachedHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> {
         val prefs = context.dataStore.data.first()
         return parseHomeSections(prefs[HOME_CACHE_KEY])
+    }
+    
+    suspend fun saveJioSaavnHomeCache(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>) {
+        context.dataStore.edit { preferences ->
+            preferences[JIOSAAVN_HOME_CACHE_KEY] = serializeHomeSections(sections)
+        }
+    }
+    
+    fun getCachedJioSaavnHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data.map { preferences ->
+        parseHomeSections(preferences[JIOSAAVN_HOME_CACHE_KEY])
+    }
+    
+    suspend fun getCachedJioSaavnHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+        val prefs = context.dataStore.data.first()
+        return parseHomeSections(prefs[JIOSAAVN_HOME_CACHE_KEY])
     }
     
     // --- Helpers ---

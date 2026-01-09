@@ -199,38 +199,114 @@ class JioSaavnRepository @Inject constructor(
     /**
      * Get home sections with trending content from JioSaavn.
      * Returns sections similar to YouTube Music home page.
+     * Includes songs, albums, and featured playlists.
      */
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
         
         try {
-            // 1. Get trending songs via search for popular terms
+            // 1. Trending Now - Top hits 2026
             val trendingSongs = mutableListOf<Song>()
-            listOf("trending", "latest hindi", "arijit singh").forEach { query ->
+            listOf("trending 2026", "new hindi songs 2026", "latest bollywood").forEach { query ->
                 try {
                     val results = search(query)
                     if (results.isNotEmpty()) {
-                        trendingSongs.addAll(results.take(5))
+                        trendingSongs.addAll(results.take(6))
                     }
                 } catch (e: Exception) { }
             }
             
             if (trendingSongs.isNotEmpty()) {
-                val items = trendingSongs.distinctBy { it.id }.take(15).map { song ->
+                val items = trendingSongs.distinctBy { it.id }.take(12).map { song ->
                     com.suvojeet.suvmusic.data.model.HomeItem.SongItem(song)
                 }
-                sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Trending Now", items))
+                sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Trending Now 🔥", items))
             }
             
-            // 2. Get more categories with searches
+            // 2. New Albums - Fetch latest albums via search
+            try {
+                val albumsUrl = "$BASE_URL?__call=search.getAlbumResults&_format=json&q=new+album+2026&n=15"
+                val albumsResponse = makeRequest(albumsUrl)
+                val albumsJson = JsonParser.parseString(albumsResponse)
+                
+                if (albumsJson.isJsonObject) {
+                    val results = albumsJson.asJsonObject.getAsJsonArray("results")
+                    if (results != null && results.size() > 0) {
+                        val albumItems = results.take(10).mapNotNull { albumElement ->
+                            val albumObj = albumElement.asJsonObject
+                            val albumId = albumObj.get("id")?.asString ?: return@mapNotNull null
+                            val title = albumObj.get("title")?.asString ?: "Album"
+                            val artist = albumObj.get("music")?.asString 
+                                ?: albumObj.get("primary_artists")?.asString ?: ""
+                            val image = albumObj.get("image")?.asString?.toHighResImage()
+                            val year = albumObj.get("year")?.asString
+                            
+                            com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
+                                com.suvojeet.suvmusic.data.model.Album(
+                                    id = albumId,
+                                    title = title.decodeHtml(),
+                                    artist = artist.decodeHtml(),
+                                    thumbnailUrl = image,
+                                    year = year
+                                )
+                            )
+                        }
+                        
+                        if (albumItems.isNotEmpty()) {
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection("New Albums 💿", albumItems))
+                        }
+                    }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+            
+            // 3. Featured Playlists
+            try {
+                val playlistsUrl = "$BASE_URL?__call=search.getPlaylistResults&_format=json&q=top+hits&n=15"
+                val playlistsResponse = makeRequest(playlistsUrl)
+                val playlistsJson = JsonParser.parseString(playlistsResponse)
+                
+                if (playlistsJson.isJsonObject) {
+                    val results = playlistsJson.asJsonObject.getAsJsonArray("results")
+                    if (results != null && results.size() > 0) {
+                        val playlistItems = results.take(10).mapNotNull { plElement ->
+                            val plObj = plElement.asJsonObject
+                            val plId = plObj.get("id")?.asString ?: return@mapNotNull null
+                            val name = plObj.get("title")?.asString ?: "Playlist"
+                            val image = plObj.get("image")?.asString?.toHighResImage()
+                            val songCount = plObj.get("count")?.asInt ?: 0
+                            
+                            com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                                    id = plId,
+                                    name = name.decodeHtml(),
+                                    url = "",
+                                    uploaderName = "JioSaavn",
+                                    thumbnailUrl = image,
+                                    songCount = songCount
+                                )
+                            )
+                        }
+                        
+                        if (playlistItems.isNotEmpty()) {
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Featured Playlists 🎧", playlistItems))
+                        }
+                    }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+            
+            // 4. Category-based song sections
             val categories = listOf(
-                "Bollywood" to "bollywood hits 2024",
-                "Romantic" to "romantic songs",
-                "Party" to "party songs punjabi",
-                "Old is Gold" to "90s hindi songs"
+                "Bollywood Hits" to "bollywood hits 2026",
+                "Romantic" to "romantic love songs hindi",
+                "Punjabi Beats" to "punjabi songs 2026",
+                "Arijit Singh" to "arijit singh latest",
+                "Party Mix" to "party dance songs",
+                "90s Retro" to "90s hindi evergreen"
             )
             
             for ((sectionName, searchQuery) in categories) {
+                if (sections.size >= 8) break // Limit total sections
+                
                 try {
                     val results = search(searchQuery)
                     if (results.isNotEmpty()) {
@@ -240,9 +316,6 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.data.model.HomeSection(sectionName, items))
                     }
                 } catch (e: Exception) { }
-                
-                // Limit to 4-5 sections total
-                if (sections.size >= 5) break
             }
             
         } catch (e: Exception) {
