@@ -66,22 +66,24 @@ class HomeViewModel @Inject constructor(
             val source = sessionManager.getMusicSource()
             _uiState.update { it.copy(currentSource = source) }
             
-            // 1. Load cache immediately (only for YouTube)
-            if (source == MusicSource.YOUTUBE) {
-                val cachedSections = sessionManager.getCachedHomeSectionsSync()
-                if (cachedSections.isNotEmpty()) {
-                    _uiState.update { 
-                        it.copy(
-                            homeSections = cachedSections, 
-                            isLoading = false,
-                            isRefreshing = true
-                        ) 
-                    }
-                } else {
-                     _uiState.update { it.copy(isLoading = true) }
+            // 1. Load cache immediately based on source
+            val cachedSections = if (source == MusicSource.JIOSAAVN) {
+                sessionManager.getCachedJioSaavnHomeSectionsSync()
+            } else {
+                sessionManager.getCachedHomeSectionsSync()
+            }
+            
+            if (cachedSections.isNotEmpty()) {
+                _uiState.update { 
+                    it.copy(
+                        homeSections = cachedSections, 
+                        isLoading = false,
+                        isRefreshing = true,
+                        error = null
+                    ) 
                 }
             } else {
-                _uiState.update { it.copy(isLoading = true) }
+                 _uiState.update { it.copy(isLoading = true, error = null) }
             }
 
             try {
@@ -91,23 +93,33 @@ class HomeViewModel @Inject constructor(
                     else -> youTubeRepository.getHomeSections()
                 }
                 
-                // 3. Update cache and UI (only cache YouTube)
-                if (source == MusicSource.YOUTUBE) {
-                    sessionManager.saveHomeCache(sections)
-                }
-                
-                _uiState.update { 
-                    it.copy(
-                        homeSections = sections,
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = null
-                    )
+                // 3. Update cache and UI
+                if (sections.isNotEmpty()) {
+                    if (source == MusicSource.JIOSAAVN) {
+                        sessionManager.saveJioSaavnHomeCache(sections)
+                    } else {
+                        sessionManager.saveHomeCache(sections)
+                    }
+                    
+                    _uiState.update { 
+                        it.copy(
+                            homeSections = sections,
+                            isLoading = false,
+                            isRefreshing = false,
+                            error = null
+                        )
+                    }
+                } else if (cachedSections.isEmpty()) {
+                     // Only show error if both cache and fresh fetch are empty
+                     throw Exception("No content available")
+                } else {
+                    // Fetch failed but we have cache, just stop refreshing
+                    _uiState.update { it.copy(isRefreshing = false) }
                 }
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
-                        error = if (it.homeSections.isEmpty()) e.message else null,
+                        error = if (it.homeSections.isEmpty()) e.message ?: "Failed to load content" else null,
                         isLoading = false,
                         isRefreshing = false
                     )
