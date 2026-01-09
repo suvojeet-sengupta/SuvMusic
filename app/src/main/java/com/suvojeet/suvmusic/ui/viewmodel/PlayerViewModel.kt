@@ -69,6 +69,15 @@ class PlayerViewModel @Inject constructor(
     
     private fun observeDownloads() {
         viewModelScope.launch {
+            // Wait a bit for downloads to be loaded, then check initial state
+            kotlinx.coroutines.delay(500)
+            val currentSong = playerState.value.currentSong
+            if (currentSong != null) {
+                checkDownloadStatus(currentSong)
+            }
+        }
+        
+        viewModelScope.launch {
             downloadRepository.downloadedSongs.collect {
                 val currentSong = playerState.value.currentSong
                 if (currentSong != null) {
