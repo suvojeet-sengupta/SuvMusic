@@ -120,6 +120,9 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
     
+    // Security
+    implementation(libs.androidx.security.crypto)
+    
     // Gson
     implementation(libs.gson)
     

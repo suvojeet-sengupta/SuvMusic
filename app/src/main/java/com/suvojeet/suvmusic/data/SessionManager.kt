@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.Song
@@ -32,6 +34,16 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class SessionManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+    
+    private val encryptedPrefs = EncryptedSharedPreferences.create(
+        "suvmusic_secure_session",
+        masterKeyAlias,
+        context,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
     companion object {
         private val COOKIES_KEY = stringPreferencesKey("cookies")
         private val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
@@ -100,17 +112,36 @@ class SessionManager @Inject constructor(
     
     // --- Cookies ---
     
-    fun getCookies(): String? = runBlocking {
-        context.dataStore.data.first()[COOKIES_KEY]
+    fun getCookies(): String? {
+        // Try getting from encrypted prefs first
+        val secureCookies = encryptedPrefs.getString("cookies", null)
+        if (secureCookies != null) return secureCookies
+        
+        // Migration: Check if cookies exist in DataStore
+        val oldCookies = runBlocking {
+            context.dataStore.data.first()[COOKIES_KEY]
+        }
+        
+        if (oldCookies != null) {
+            // Save to secure prefs and clear from DataStore
+            encryptedPrefs.edit().putString("cookies", oldCookies).apply()
+            runBlocking {
+                context.dataStore.edit { it.remove(COOKIES_KEY) }
+            }
+            return oldCookies
+        }
+        
+        return null
     }
     
     suspend fun saveCookies(cookies: String) {
-        context.dataStore.edit { preferences ->
-            preferences[COOKIES_KEY] = cookies
-        }
+        encryptedPrefs.edit().putString("cookies", cookies).apply()
+        // Also ensure cleared from DataStore
+        context.dataStore.edit { it.remove(COOKIES_KEY) }
     }
     
     suspend fun clearCookies() {
+        encryptedPrefs.edit().remove("cookies").apply()
         context.dataStore.edit { preferences ->
             preferences.remove(COOKIES_KEY)
         }
