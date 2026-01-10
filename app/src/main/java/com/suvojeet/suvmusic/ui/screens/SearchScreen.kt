@@ -199,11 +199,20 @@ fun SearchScreen(
             
             // Tabs (YouTube Music / JioSaavn / Your Library) - visible when searching
             AnimatedVisibility(visible = uiState.query.isNotBlank()) {
-                // Determine tab order based on primary source
-                val orderedTabs = if (uiState.currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
-                    listOf(SearchTab.JIOSAAVN, SearchTab.YOUTUBE_MUSIC, SearchTab.YOUR_LIBRARY)
+                // Get developer mode state from viewModel
+                val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
+                
+                // Determine tab order based on primary source and developer mode
+                val orderedTabs = if (isDeveloperMode) {
+                    // Developer mode - show all tabs
+                    if (uiState.currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
+                        listOf(SearchTab.JIOSAAVN, SearchTab.YOUTUBE_MUSIC, SearchTab.YOUR_LIBRARY)
+                    } else {
+                        listOf(SearchTab.YOUTUBE_MUSIC, SearchTab.JIOSAAVN, SearchTab.YOUR_LIBRARY)
+                    }
                 } else {
-                    listOf(SearchTab.YOUTUBE_MUSIC, SearchTab.JIOSAAVN, SearchTab.YOUR_LIBRARY)
+                    // Normal mode - hide JioSaavn
+                    listOf(SearchTab.YOUTUBE_MUSIC, SearchTab.YOUR_LIBRARY)
                 }
                 
                 val selectedTabIndex = orderedTabs.indexOf(uiState.selectedTab).let { if (it == -1) 0 else it }

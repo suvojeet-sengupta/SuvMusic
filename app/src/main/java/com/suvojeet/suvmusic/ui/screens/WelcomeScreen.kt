@@ -322,6 +322,7 @@ fun ReadyPage() {
 fun SourceSelectionPage(viewModel: WelcomeViewModel) {
     val currentSource by viewModel.currentSource.collectAsState(initial = com.suvojeet.suvmusic.data.MusicSource.YOUTUBE)
     val sourceSelected by viewModel.sourceSelected.collectAsState()
+    val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -352,14 +353,17 @@ fun SourceSelectionPage(viewModel: WelcomeViewModel) {
             onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.YOUTUBE) }
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        SourceOptionCard(
-            title = "HQ Audio",
-            description = "High Fidelity (320kbps), Bollywood & Regional",
-            selected = sourceSelected && currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN,
-            onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) }
-        )
+        // Only show JioSaavn option in developer mode
+        if (isDeveloperMode) {
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            SourceOptionCard(
+                title = "HQ Audio",
+                description = "High Fidelity (320kbps), Bollywood & Regional",
+                selected = sourceSelected && currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN,
+                onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) }
+            )
+        }
         
         // Hint text when not selected
         if (!sourceSelected) {
