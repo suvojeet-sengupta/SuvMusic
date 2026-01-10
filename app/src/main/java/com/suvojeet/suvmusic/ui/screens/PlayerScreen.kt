@@ -203,8 +203,16 @@ fun PlayerScreen(
                 )
             )
             .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                    if (dragAmount > 50) onBack()
+                var hasTriggeredBack = false
+                detectVerticalDragGestures(
+                    onDragStart = { hasTriggeredBack = false },
+                    onDragEnd = { hasTriggeredBack = false },
+                    onDragCancel = { hasTriggeredBack = false }
+                ) { _, dragAmount ->
+                    if (!hasTriggeredBack && dragAmount > 50) {
+                        hasTriggeredBack = true
+                        onBack()
+                    }
                 }
             }
     ) {
