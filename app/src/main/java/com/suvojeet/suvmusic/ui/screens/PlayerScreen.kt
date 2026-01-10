@@ -50,6 +50,8 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -129,6 +131,7 @@ fun PlayerScreen(
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onToggleAutoplay: () -> Unit,
+    onToggleVideoMode: () -> Unit = {},
     onPlayFromQueue: (Int) -> Unit = {},
     lyrics: Lyrics? = null,
     isFetchingLyrics: Boolean = false,
@@ -337,7 +340,10 @@ fun PlayerScreen(
                             onLyricsClick = { showLyrics = true },
                             onCastClick = { /* TODO */ },
                             onQueueClick = { showQueue = true },
-                            dominantColors = dominantColors
+                            dominantColors = dominantColors,
+                            isYouTubeSong = song?.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE,
+                            isVideoMode = playerState.isVideoMode,
+                            onVideoToggle = onToggleVideoMode
                         )
                     }
                 }
@@ -427,7 +433,10 @@ fun PlayerScreen(
                         onLyricsClick = { showLyrics = true },
                         onCastClick = { /* TODO */ },
                         onQueueClick = { showQueue = true },
-                        dominantColors = dominantColors
+                        dominantColors = dominantColors,
+                        isYouTubeSong = song?.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE,
+                        isVideoMode = playerState.isVideoMode,
+                        onVideoToggle = onToggleVideoMode
                     )
                     
                     Spacer(modifier = Modifier.height(24.dp))
@@ -995,7 +1004,10 @@ private fun BottomActions(
     onLyricsClick: () -> Unit,
     onCastClick: () -> Unit,
     onQueueClick: () -> Unit,
-    dominantColors: DominantColors
+    dominantColors: DominantColors,
+    isYouTubeSong: Boolean = false,
+    isVideoMode: Boolean = false,
+    onVideoToggle: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1009,12 +1021,23 @@ private fun BottomActions(
             )
         }
         
-        IconButton(onClick = onCastClick) {
-            Icon(
-                imageVector = Icons.Default.Cast,
-                contentDescription = "Cast",
-                tint = dominantColors.onBackground.copy(alpha = 0.6f)
-            )
+        // Video mode toggle - only for YouTube songs
+        if (isYouTubeSong) {
+            IconButton(onClick = onVideoToggle) {
+                Icon(
+                    imageVector = if (isVideoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                    contentDescription = if (isVideoMode) "Switch to Audio" else "Switch to Video",
+                    tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
+                )
+            }
+        } else {
+            IconButton(onClick = onCastClick) {
+                Icon(
+                    imageVector = Icons.Default.Cast,
+                    contentDescription = "Cast",
+                    tint = dominantColors.onBackground.copy(alpha = 0.6f)
+                )
+            }
         }
         
         IconButton(onClick = onQueueClick) {

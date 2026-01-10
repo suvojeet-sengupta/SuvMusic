@@ -236,6 +236,7 @@ fun SuvMusicApp(initialDeepLink: String? = null) {
                     onShuffleToggle = { playerViewModel.toggleShuffle() },
                     onRepeatToggle = { playerViewModel.toggleRepeat() },
                     onToggleAutoplay = { playerViewModel.toggleAutoplay() },
+                    onToggleVideoMode = { playerViewModel.toggleVideoMode() },
                     lyrics = lyrics,
                     isFetchingLyrics = isFetchingLyrics,
                     sleepTimerOption = sleepTimerOption,
