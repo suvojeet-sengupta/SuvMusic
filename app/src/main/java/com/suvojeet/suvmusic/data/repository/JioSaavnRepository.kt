@@ -255,9 +255,183 @@ class JioSaavnRepository @Inject constructor(
     }
     
     /**
-     * Get lyrics for a song.
+     * Get synced lyrics for a song using LRCLIB API.
+     * Falls back to plain JioSaavn lyrics if synced lyrics not found.
      */
-    suspend fun getLyrics(songId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getSyncedLyrics(songId: String, title: String, artist: String, duration: Long): com.suvojeet.suvmusic.data.model.Lyrics? = withContext(Dispatchers.IO) {
+        try {
+            // Clean up title and artist for better matching
+            val cleanTitle = title.replace(Regex("\\s*\\(.*?\\)"), "") // Remove parentheses content
+                .replace(Regex("\\s*\\[.*?\\]"), "") // Remove brackets content
+                .replace(Regex("\\s*-\\s*.*"), "") // Remove after dash
+                .trim()
+            val cleanArtist = artist.split(",", "&", "feat.", "ft.").firstOrNull()?.trim() ?: artist
+            val durationSeconds = (duration / 1000).toInt()
+            
+            // Try LRCLIB API for synced lyrics
+            val lrcLibUrl = "https://lrclib.net/api/get?" +
+                "track_name=${cleanTitle.encodeUrl()}" +
+                "&artist_name=${cleanArtist.encodeUrl()}" +
+                "&duration=$durationSeconds"
+            
+            android.util.Log.d("JioSaavnRepo", "Fetching synced lyrics from: $lrcLibUrl")
+            
+            val request = Request.Builder()
+                .url(lrcLibUrl)
+                .addHeader("User-Agent", "SuvMusic/1.0 (https://github.com/suvojeet-sengupta/SuvMusic)")
+                .build()
+            
+            val response = okHttpClient.newCall(request).execute()
+            
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                if (!responseBody.isNullOrBlank() && responseBody != "null") {
+                    val json = JsonParser.parseString(responseBody).asJsonObject
+                    
+                    // Try to get synced lyrics first
+                    val syncedLyrics = json.get("syncedLyrics")?.asString
+                    if (!syncedLyrics.isNullOrBlank()) {
+                        val lines = parseLrcLyrics(syncedLyrics)
+                        if (lines.isNotEmpty()) {
+                            android.util.Log.d("JioSaavnRepo", "Found synced lyrics with ${lines.size} lines")
+                            return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                                lines = lines,
+                                sourceCredit = "Lyrics from LRCLIB",
+                                isSynced = true
+                            )
+                        }
+                    }
+                    
+                    // Fall back to plain lyrics from LRCLIB
+                    val plainLyrics = json.get("plainLyrics")?.asString
+                    if (!plainLyrics.isNullOrBlank()) {
+                        val lines = plainLyrics.split("\n").map { line ->
+                            com.suvojeet.suvmusic.data.model.LyricsLine(text = line.trim())
+                        }
+                        return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                            lines = lines,
+                            sourceCredit = "Lyrics from LRCLIB",
+                            isSynced = false
+                        )
+                    }
+                }
+            }
+            response.close()
+            
+            // Fallback: Search LRCLIB if exact match failed
+            val searchUrl = "https://lrclib.net/api/search?q=${(cleanTitle + " " + cleanArtist).encodeUrl()}"
+            val searchRequest = Request.Builder()
+                .url(searchUrl)
+                .addHeader("User-Agent", "SuvMusic/1.0")
+                .build()
+            
+            val searchResponse = okHttpClient.newCall(searchRequest).execute()
+            if (searchResponse.isSuccessful) {
+                val searchBody = searchResponse.body?.string()
+                if (!searchBody.isNullOrBlank() && searchBody != "[]") {
+                    val results = JsonParser.parseString(searchBody).asJsonArray
+                    if (results.size() > 0) {
+                        val firstResult = results[0].asJsonObject
+                        val syncedLyrics = firstResult.get("syncedLyrics")?.asString
+                        if (!syncedLyrics.isNullOrBlank()) {
+                            val lines = parseLrcLyrics(syncedLyrics)
+                            if (lines.isNotEmpty()) {
+                                android.util.Log.d("JioSaavnRepo", "Found synced lyrics via search")
+                                return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                                    lines = lines,
+                                    sourceCredit = "Lyrics from LRCLIB",
+                                    isSynced = true
+                                )
+                            }
+                        }
+                        
+                        val plainLyrics = firstResult.get("plainLyrics")?.asString
+                        if (!plainLyrics.isNullOrBlank()) {
+                            val lines = plainLyrics.split("\n").map { line ->
+                                com.suvojeet.suvmusic.data.model.LyricsLine(text = line.trim())
+                            }
+                            return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                                lines = lines,
+                                sourceCredit = "Lyrics from LRCLIB",
+                                isSynced = false
+                            )
+                        }
+                    }
+                }
+            }
+            searchResponse.close()
+            
+            // Final fallback: Try JioSaavn's own lyrics
+            val jiosaavnLyrics = getLyricsFromJioSaavn(songId)
+            if (!jiosaavnLyrics.isNullOrBlank()) {
+                val lines = jiosaavnLyrics.split("\n").map { line ->
+                    com.suvojeet.suvmusic.data.model.LyricsLine(text = line.trim())
+                }
+                return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                    lines = lines,
+                    sourceCredit = "Lyrics from JioSaavn",
+                    isSynced = false
+                )
+            }
+            
+            null
+        } catch (e: Exception) {
+            android.util.Log.e("JioSaavnRepo", "Error fetching synced lyrics", e)
+            null
+        }
+    }
+    
+    /**
+     * Parse LRC format lyrics into LyricsLine objects.
+     * LRC format: [mm:ss.xx]lyrics text
+     */
+    private fun parseLrcLyrics(lrcContent: String): List<com.suvojeet.suvmusic.data.model.LyricsLine> {
+        val lines = mutableListOf<com.suvojeet.suvmusic.data.model.LyricsLine>()
+        val lrcPattern = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)") // [mm:ss.xx]text
+        
+        lrcContent.split("\n").forEach { line ->
+            val match = lrcPattern.find(line)
+            if (match != null) {
+                val minutes = match.groupValues[1].toLongOrNull() ?: 0L
+                val seconds = match.groupValues[2].toLongOrNull() ?: 0L
+                val millisPart = match.groupValues[3]
+                val millis = if (millisPart.length == 2) {
+                    (millisPart.toLongOrNull() ?: 0L) * 10
+                } else {
+                    millisPart.toLongOrNull() ?: 0L
+                }
+                val text = match.groupValues[4].trim()
+                
+                val startTimeMs = (minutes * 60 * 1000) + (seconds * 1000) + millis
+                
+                if (text.isNotBlank()) {
+                    lines.add(
+                        com.suvojeet.suvmusic.data.model.LyricsLine(
+                            text = text,
+                            startTimeMs = startTimeMs
+                        )
+                    )
+                }
+            }
+        }
+        
+        // Calculate end times based on next line's start time
+        for (i in lines.indices) {
+            if (i < lines.lastIndex) {
+                lines[i] = lines[i].copy(endTimeMs = lines[i + 1].startTimeMs)
+            } else {
+                // Last line - add 5 seconds as default duration
+                lines[i] = lines[i].copy(endTimeMs = lines[i].startTimeMs + 5000)
+            }
+        }
+        
+        return lines
+    }
+    
+    /**
+     * Get plain lyrics from JioSaavn (internal fallback).
+     */
+    private suspend fun getLyricsFromJioSaavn(songId: String): String? = withContext(Dispatchers.IO) {
         try {
             val url = "$BASE_URL?__call=lyrics.getLyrics&_format=json&lyrics_id=$songId"
             val response = makeRequest(url)
@@ -265,10 +439,14 @@ class JioSaavnRepository @Inject constructor(
             val json = JsonParser.parseString(response).asJsonObject
             json.get("lyrics")?.asString
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }
+    
+    /**
+     * Get lyrics for a song (legacy function - now returns plain text).
+     */
+    suspend fun getLyrics(songId: String): String? = getLyricsFromJioSaavn(songId)
     
     /**
      * Get home sections with trending content from JioSaavn.
