@@ -608,19 +608,56 @@ class DownloadRepository @Inject constructor(
         val song = _downloadedSongs.value.find { it.id == songId } ?: return@withContext
         
         try {
+            // Try to delete the audio file
+            var deleted = false
+            
             song.localUri?.let { uri ->
                 when (uri.scheme) {
                     "file" -> {
                         val file = File(uri.path ?: "")
-                        if (file.exists()) file.delete()
-                    }
-                    "content" -> {
-                        try {
-                            context.contentResolver.delete(uri, null, null)
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Could not delete via ContentResolver", e)
+                        if (file.exists()) {
+                            deleted = file.delete()
+                            Log.d(TAG, "Deleted file via file:// scheme: $deleted")
                         }
                     }
+                    "content" -> {
+                        // For content:// URIs, try ContentResolver first
+                        try {
+                            val rowsDeleted = context.contentResolver.delete(uri, null, null)
+                            deleted = rowsDeleted > 0
+                            Log.d(TAG, "Deleted via ContentResolver: $deleted (rows: $rowsDeleted)")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "ContentResolver delete failed", e)
+                        }
+                    }
+                }
+            }
+            
+            // If URI delete didn't work, try finding the file in public Downloads folder
+            if (!deleted) {
+                try {
+                    val publicFolder = getPublicDownloadsFolder()
+                    val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
+                    val file = File(publicFolder, fileName)
+                    if (file.exists()) {
+                        deleted = file.delete()
+                        Log.d(TAG, "Deleted file from public folder: $deleted - ${file.absolutePath}")
+                    }
+                    
+                    // Also try without extension variations
+                    if (!deleted) {
+                        publicFolder.listFiles()?.forEach { f ->
+                            if (f.nameWithoutExtension.contains(song.title.take(20), ignoreCase = true)) {
+                                deleted = f.delete()
+                                if (deleted) {
+                                    Log.d(TAG, "Deleted matching file: ${f.name}")
+                                    return@forEach
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deleting from public folder", e)
                 }
             }
             
@@ -629,13 +666,30 @@ class DownloadRepository @Inject constructor(
             val thumbFile = File(thumbnailsDir, "${songId}.jpg")
             if (thumbFile.exists()) {
                 thumbFile.delete()
+                Log.d(TAG, "Deleted thumbnail: ${thumbFile.name}")
             }
             
+            // Also try to delete thumbnail from public folder (if it was saved there before)
+            try {
+                val publicFolder = getPublicDownloadsFolder()
+                val thumbFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.jpg"
+                val publicThumbFile = File(publicFolder, thumbFileName)
+                if (publicThumbFile.exists()) {
+                    publicThumbFile.delete()
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+            
+            // Remove from list and save
             _downloadedSongs.value = _downloadedSongs.value.filter { it.id != songId }
             saveDownloads()
-            Log.d(TAG, "Deleted download: $songId")
+            Log.d(TAG, "Deleted download from list: $songId (file deleted: $deleted)")
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting download", e)
+            // Still remove from list even if file delete failed
+            _downloadedSongs.value = _downloadedSongs.value.filter { it.id != songId }
+            saveDownloads()
         }
     }
     
