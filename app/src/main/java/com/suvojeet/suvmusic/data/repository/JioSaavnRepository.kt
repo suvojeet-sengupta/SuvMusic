@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.util.SecureConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -20,6 +21,8 @@ import android.util.Base64
  * Repository for fetching music from JioSaavn.
  * Uses JioSaavn's internal API endpoints (unofficial).
  * Supports 320kbps high-quality audio.
+ * 
+ * NOTE: This is a developer-only feature, hidden from public UI.
  */
 @Singleton
 class JioSaavnRepository @Inject constructor(
@@ -33,14 +36,16 @@ class JioSaavnRepository @Inject constructor(
     private val playlistCache = mutableMapOf<String, Playlist>()
 
     companion object {
-        private const val BASE_URL = "https://www.jiosaavn.com/api.php"
+        // Base URL retrieved from encrypted config at runtime
+        private val BASE_URL: String
+            get() = SecureConfig.getJioSaavnBaseUrl().ifBlank { 
+                // Fallback for first run - encrypted value needs to be generated
+                "https://www.jiosaavn.com/api.php" 
+            }
         
-        // Obfuscated key to prevent simple static analysis
-        // Reconstructs "38346591" at runtime
+        // DES key for URL decryption - obfuscated
         private val DES_KEY: String
-            get() = byteArrayOf(66, 71, 66, 67, 69, 68, 72, 64)
-                .map { (it - 15).toChar() }
-                .joinToString("")
+            get() = SecureConfig.getJioSaavnDesKey()
         
         // Quality suffixes for stream URLs
         private const val QUALITY_96 = "_96.mp4"

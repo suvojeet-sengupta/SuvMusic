@@ -62,6 +62,9 @@ class SearchViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
     
+    // Developer mode - shows JioSaavn tab when enabled
+    val isDeveloperMode = sessionManager.developerModeFlow
+    
     private val _searchQuery = MutableStateFlow("")
     private var suggestionJob: Job? = null
     private var searchJob: Job? = null
