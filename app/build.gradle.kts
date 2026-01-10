@@ -75,7 +75,7 @@ android {
 
 dependencies {
     // Core Library Desugaring for Java 8+ APIs on older Android
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.4")
     
     // Core
     implementation(libs.androidx.core.ktx)
