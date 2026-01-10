@@ -168,6 +168,8 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.toggleVideoMode()
     }
     
+    fun getPlayer() = musicPlayer.getPlayer()
+    
     /**
      * Play a song from a deep link (YouTube/YouTube Music URL).
      * Fetches song details from YouTube and starts playback.

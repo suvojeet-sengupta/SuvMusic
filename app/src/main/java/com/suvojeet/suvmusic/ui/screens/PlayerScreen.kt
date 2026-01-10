@@ -113,6 +113,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.BoxWithConstraints
 import com.suvojeet.suvmusic.ui.utils.isLandscape
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.Player
+import androidx.media3.ui.PlayerView
 
 /**
  * Premium full-screen player with Apple Music-style design.
@@ -132,6 +135,7 @@ fun PlayerScreen(
     onRepeatToggle: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onToggleVideoMode: () -> Unit = {},
+    player: Player? = null,
     onPlayFromQueue: (Int) -> Unit = {},
     lyrics: Lyrics? = null,
     isFetchingLyrics: Boolean = false,
@@ -366,15 +370,49 @@ fun PlayerScreen(
                     
                     Spacer(modifier = Modifier.weight(0.5f))
                     
-                    // Album Art with shadow - swipeable
-                    AlbumArtwork(
-                        imageUrl = highResThumbnail,
-                        title = song?.title,
-                        dominantColors = dominantColors,
-                        isLoading = playerState.isLoading,
-                        onSwipeLeft = onNext,
-                        onSwipeRight = onPrevious
-                    )
+                    // Album Art or Video Player - swipeable
+                    if (playerState.isVideoMode && player != null) {
+                        // Video Player
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.85f)
+                                .aspectRatio(16f / 9f)
+                                .shadow(
+                                    elevation = 32.dp,
+                                    shape = RoundedCornerShape(16.dp),
+                                    spotColor = dominantColors.primary.copy(alpha = 0.5f)
+                                )
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AndroidView(
+                                factory = { context ->
+                                    PlayerView(context).apply {
+                                        this.player = player
+                                        useController = false
+                                        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                    }
+                                },
+                                update = { playerView ->
+                                    playerView.player = player
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            
+                            LoadingArtworkOverlay(isVisible = playerState.isLoading)
+                        }
+                    } else {
+                        // Album artwork
+                        AlbumArtwork(
+                            imageUrl = highResThumbnail,
+                            title = song?.title,
+                            dominantColors = dominantColors,
+                            isLoading = playerState.isLoading,
+                            onSwipeLeft = onNext,
+                            onSwipeRight = onPrevious
+                        )
+                    }
                     
                     Spacer(modifier = Modifier.height(32.dp))
                     

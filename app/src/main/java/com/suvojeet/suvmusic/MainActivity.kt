@@ -237,6 +237,7 @@ fun SuvMusicApp(initialDeepLink: String? = null) {
                     onRepeatToggle = { playerViewModel.toggleRepeat() },
                     onToggleAutoplay = { playerViewModel.toggleAutoplay() },
                     onToggleVideoMode = { playerViewModel.toggleVideoMode() },
+                    player = playerViewModel.getPlayer(),
                     lyrics = lyrics,
                     isFetchingLyrics = isFetchingLyrics,
                     sleepTimerOption = sleepTimerOption,
