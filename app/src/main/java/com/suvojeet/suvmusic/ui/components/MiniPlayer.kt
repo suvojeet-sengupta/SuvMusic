@@ -160,8 +160,8 @@ fun MiniPlayer(
                         // Next Button
                         IconButton(
                             onClick = onNextClick,
-                            modifier = Modifier.size(32.dp))
-                        {
+                            modifier = Modifier.size(32.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Next",
