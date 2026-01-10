@@ -28,7 +28,13 @@ class JioSaavnRepository @Inject constructor(
 ) {
     companion object {
         private const val BASE_URL = "https://www.jiosaavn.com/api.php"
-        private const val DES_KEY = "38346591"
+        
+        // Obfuscated key to prevent simple static analysis
+        // Reconstructs "38346591" at runtime
+        private val DES_KEY: String
+            get() = byteArrayOf(66, 71, 66, 67, 69, 68, 72, 64)
+                .map { (it - 15).toChar() }
+                .joinToString("")
         
         // Quality suffixes for stream URLs
         private const val QUALITY_96 = "_96.mp4"
