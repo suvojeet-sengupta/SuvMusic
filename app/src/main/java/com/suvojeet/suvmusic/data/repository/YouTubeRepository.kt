@@ -21,6 +21,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.LruCache
 
 /**
  * Repository for fetching data from YouTube Music.
@@ -41,9 +42,14 @@ class YouTubeRepository @Inject constructor(
     }
 
     private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
         .build()
+    
+    // Cache for stream URLs to avoid re-fetching (max 50 entries, 30 min expiry)
+    private data class CachedStream(val url: String, val timestamp: Long)
+    private val streamCache = LruCache<String, CachedStream>(50)
+    private val CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
 
     init {
         initializeNewPipe()
@@ -183,6 +189,15 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun getStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+        // Check cache first for fast playback
+        val cacheKey = "audio_$videoId"
+        streamCache.get(cacheKey)?.let { cached ->
+            if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
+                android.util.Log.d("YouTubeRepo", "Stream URL from cache: $videoId")
+                return@withContext cached.url
+            }
+        }
+        
         try {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
@@ -204,7 +219,10 @@ class YouTubeRepository @Inject constructor(
                 .maxByOrNull { it.averageBitrate }
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
             
-            bestAudioStream?.content
+            bestAudioStream?.content?.also { url ->
+                // Cache the result
+                streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -216,6 +234,15 @@ class YouTubeRepository @Inject constructor(
      * Returns the best quality video stream that includes audio (for combined playback).
      */
     suspend fun getVideoStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+        // Check cache first for fast playback
+        val cacheKey = "video_$videoId"
+        streamCache.get(cacheKey)?.let { cached ->
+            if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
+                android.util.Log.d("YouTubeRepo", "Video stream URL from cache: $videoId")
+                return@withContext cached.url
+            }
+        }
+        
         try {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
@@ -239,9 +266,12 @@ class YouTubeRepository @Inject constructor(
                 }
                 ?: videoStreams.firstOrNull() // Fallback to any available stream
             
-            android.util.Log.d("YouTubeRepo", "Video stream: ${bestVideoStream?.resolution} - ${bestVideoStream?.content?.take(50)}")
+            android.util.Log.d("YouTubeRepo", "Video stream: ${bestVideoStream?.resolution}")
             
-            bestVideoStream?.content
+            bestVideoStream?.content?.also { url ->
+                // Cache the result
+                streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
+            }
         } catch (e: Exception) {
             android.util.Log.e("YouTubeRepo", "Error getting video stream", e)
             null
