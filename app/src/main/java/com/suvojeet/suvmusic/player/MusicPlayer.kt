@@ -581,6 +581,77 @@ class MusicPlayer @Inject constructor(
         _playerState.update { it.copy(isAutoplayEnabled = !it.isAutoplayEnabled) }
     }
     
+    /**
+     * Toggle video mode for YouTube songs.
+     * Switches between audio-only and video playback while preserving position.
+     */
+    fun toggleVideoMode() {
+        val state = _playerState.value
+        val song = state.currentSong ?: return
+        
+        // Only works for YouTube songs
+        if (song.source != SongSource.YOUTUBE) {
+            return
+        }
+        
+        val currentPosition = mediaController?.currentPosition ?: 0L
+        val wasPlaying = mediaController?.isPlaying == true
+        val newVideoMode = !state.isVideoMode
+        
+        _playerState.update { it.copy(isLoading = true, isVideoMode = newVideoMode) }
+        
+        scope.launch {
+            try {
+                val streamUrl = if (newVideoMode) {
+                    // Switch to video stream
+                    youTubeRepository.getVideoStreamUrl(song.id)
+                } else {
+                    // Switch back to audio stream
+                    youTubeRepository.getStreamUrl(song.id)
+                }
+                
+                if (streamUrl == null) {
+                    // Fallback - revert state
+                    _playerState.update { it.copy(isLoading = false, isVideoMode = !newVideoMode) }
+                    return@launch
+                }
+                
+                val newMediaItem = MediaItem.Builder()
+                    .setUri(streamUrl)
+                    .setMediaId(song.id)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(song.title)
+                            .setArtist(song.artist)
+                            .setAlbumTitle(song.album)
+                            .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                            .build()
+                    )
+                    .build()
+                
+                mediaController?.let { controller ->
+                    val currentIndex = controller.currentMediaItemIndex
+                    if (currentIndex < controller.mediaItemCount) {
+                        controller.replaceMediaItem(currentIndex, newMediaItem)
+                        controller.prepare()
+                        
+                        // Seek to preserved position
+                        controller.seekTo(currentPosition)
+                        
+                        if (wasPlaying) {
+                            controller.play()
+                        }
+                    }
+                }
+                
+                _playerState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                android.util.Log.e("MusicPlayer", "Error toggling video mode", e)
+                _playerState.update { it.copy(isLoading = false, isVideoMode = !newVideoMode, error = e.message) }
+            }
+        }
+    }
+    
     fun release() {
         positionUpdateJob?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }

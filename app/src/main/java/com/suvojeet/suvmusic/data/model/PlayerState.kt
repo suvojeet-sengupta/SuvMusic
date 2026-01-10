@@ -18,7 +18,8 @@ data class PlayerState(
     val error: String? = null,
     val isLiked: Boolean = false,
     val downloadState: DownloadState = DownloadState.NOT_DOWNLOADED,
-    val isAutoplayEnabled: Boolean = true
+    val isAutoplayEnabled: Boolean = true,
+    val isVideoMode: Boolean = false // Video playback mode for YouTube songs
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f

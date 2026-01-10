@@ -212,6 +212,43 @@ class YouTubeRepository @Inject constructor(
     }
 
     /**
+     * Get video stream URL for video playback mode.
+     * Returns the best quality video stream that includes audio (for combined playback).
+     */
+    suspend fun getVideoStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+                ?: return@withContext null
+            
+            val streamExtractor = ytService.getStreamExtractor(streamUrl)
+            streamExtractor.fetchPage()
+            
+            // Get video streams (these include audio in the stream)
+            val videoStreams = streamExtractor.videoStreams
+            
+            // Filter for streams with resolution <= 720p to reduce bandwidth
+            // and sort by resolution to get best quality
+            val bestVideoStream = videoStreams
+                .filter { 
+                    val height = it.resolution?.replace("p", "")?.toIntOrNull() ?: 0
+                    height <= 720 && height > 0
+                }
+                .maxByOrNull { 
+                    it.resolution?.replace("p", "")?.toIntOrNull() ?: 0 
+                }
+                ?: videoStreams.firstOrNull() // Fallback to any available stream
+            
+            android.util.Log.d("YouTubeRepo", "Video stream: ${bestVideoStream?.resolution} - ${bestVideoStream?.content?.take(50)}")
+            
+            bestVideoStream?.content
+        } catch (e: Exception) {
+            android.util.Log.e("YouTubeRepo", "Error getting video stream", e)
+            null
+        }
+    }
+
+    /**
      * Get stream URL for downloading with the user's download quality preference.
      */
     suspend fun getStreamUrlForDownload(videoId: String): String? = withContext(Dispatchers.IO) {

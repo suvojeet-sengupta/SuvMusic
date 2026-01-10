@@ -46,6 +46,7 @@ fun NavGraph(
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onToggleAutoplay: () -> Unit,
+    onToggleVideoMode: () -> Unit = {},
     lyrics: com.suvojeet.suvmusic.data.model.Lyrics?,
     isFetchingLyrics: Boolean,
     // Sleep timer
@@ -232,6 +233,7 @@ fun NavGraph(
                 onShuffleToggle = onShuffleToggle,
                 onRepeatToggle = onRepeatToggle,
                 onToggleAutoplay = onToggleAutoplay,
+                onToggleVideoMode = onToggleVideoMode,
                 onPlayFromQueue = { index ->
                     if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
                         onPlaySong(playerState.queue, index)
