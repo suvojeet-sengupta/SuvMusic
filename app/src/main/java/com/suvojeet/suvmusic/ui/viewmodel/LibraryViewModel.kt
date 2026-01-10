@@ -29,7 +29,8 @@ class LibraryViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,
     private val localAudioRepository: LocalAudioRepository,
-    private val downloadRepository: DownloadRepository
+    private val downloadRepository: DownloadRepository,
+    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -56,6 +57,9 @@ class LibraryViewModel @Inject constructor(
                 // Refresh downloads to scan for new files in Downloads/SuvMusic
                 downloadRepository.refreshDownloads()
                 
+                // Get current source preference
+                val musicSource = sessionManager.getMusicSource()
+                
                 // Fetch from both sources
                 val ytPlaylists = try {
                     youTubeRepository.getUserPlaylists()
@@ -63,9 +67,14 @@ class LibraryViewModel @Inject constructor(
                     emptyList()
                 }
                 
-                val jioPlaylists = try {
-                    jioSaavnRepository.getFeaturedPlaylists()
-                } catch (e: Exception) {
+                // Only show JioSaavn playlists if Source is HQ Audio (JioSaavn)
+                val jioPlaylists = if (musicSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
+                    try {
+                        jioSaavnRepository.getFeaturedPlaylists()
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                } else {
                     emptyList()
                 }
                 
