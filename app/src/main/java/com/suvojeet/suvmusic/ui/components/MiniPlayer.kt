@@ -165,7 +165,8 @@ fun MiniPlayer(
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Next",
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
