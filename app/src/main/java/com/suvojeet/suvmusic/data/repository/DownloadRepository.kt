@@ -422,7 +422,8 @@ class DownloadRepository @Inject constructor(
                 source = SongSource.DOWNLOADED,
                 localUri = downloadedUri,
                 thumbnailUrl = localThumbnailUrl,
-                streamUrl = null
+                streamUrl = null,
+                originalSource = song.source // Preserve original source for credits
             )
 
             _downloadedSongs.value = _downloadedSongs.value + downloadedSong
@@ -584,7 +585,8 @@ class DownloadRepository @Inject constructor(
                 source = SongSource.DOWNLOADED,
                 localUri = finalUri,
                 thumbnailUrl = localThumbnailUrl,
-                streamUrl = null
+                streamUrl = null,
+                originalSource = song.source // Preserve original source for credits
             )
             
             _downloadedSongs.value = _downloadedSongs.value + downloadedSong
