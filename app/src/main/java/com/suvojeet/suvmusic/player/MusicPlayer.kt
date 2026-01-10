@@ -148,11 +148,14 @@ class MusicPlayer @Inject constructor(
                     val currentItem = controller.currentMediaItem
                     val currentUri = currentItem?.localConfiguration?.uri?.toString()
                     
-                    // If URI is valid stream (not placeholder), skip resolution
-                    // Placeholders are "https://youtube.com/watch?v=..."
-                    val isPlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+                    // Check if URI needs resolution:
+                    // - YouTube placeholders: "https://youtube.com/watch?v=..."
+                    // - JioSaavn/empty: null, empty, or doesn't look like a valid stream URL
+                    val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+                    val isEmptyOrInvalid = currentUri.isNullOrBlank()
+                    val needsResolution = isYouTubePlaceholder || isEmptyOrInvalid
                     
-                    if (!isPlaceholder && currentUri != null) {
+                    if (!needsResolution && currentUri != null) {
                         // Already has valid stream, just ensure UI state is correct and play
                         _playerState.update { it.copy(isLoading = false) }
                         
