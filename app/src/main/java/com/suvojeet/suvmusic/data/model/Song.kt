@@ -17,7 +17,8 @@ data class Song(
     val streamUrl: String? = null, // For YouTube, this is resolved at playback time
     val localUri: Uri? = null, // For local files
     val setVideoId: String? = null, // Unique ID for this song instance in a playlist (for reordering)
-    val artistId: String? = null // Artist browse ID for navigation to artist screen
+    val artistId: String? = null, // Artist browse ID for navigation to artist screen
+    val originalSource: SongSource? = null // Original source before download (for credits display)
 ) {
     companion object {
         /**
