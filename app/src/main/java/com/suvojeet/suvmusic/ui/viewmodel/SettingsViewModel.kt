@@ -49,6 +49,9 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     
+    // Developer mode - shows JioSaavn option when enabled
+    val isDeveloperMode = sessionManager.developerModeFlow
+    
     private var downloadJob: Job? = null
     private var downloadedApkFile: File? = null
     

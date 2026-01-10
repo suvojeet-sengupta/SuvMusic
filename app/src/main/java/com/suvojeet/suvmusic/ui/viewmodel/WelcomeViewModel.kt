@@ -17,6 +17,9 @@ class WelcomeViewModel @Inject constructor(
 
     val currentSource = sessionManager.musicSourceFlow
     
+    // Developer mode - shows JioSaavn option when enabled
+    val isDeveloperMode = sessionManager.developerModeFlow
+    
     // Track if user has explicitly selected a source
     private val _sourceSelected = MutableStateFlow(false)
     val sourceSelected: StateFlow<Boolean> = _sourceSelected.asStateFlow()
@@ -34,3 +37,4 @@ class WelcomeViewModel @Inject constructor(
         }
     }
 }
+

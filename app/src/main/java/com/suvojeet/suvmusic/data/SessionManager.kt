@@ -61,6 +61,41 @@ class SessionManager @Inject constructor(
         
         // Music Source
         private val MUSIC_SOURCE_KEY = stringPreferencesKey("music_source")
+        
+        // Developer Mode (Hidden feature)
+        private val DEV_MODE_KEY = stringPreferencesKey("_dx_mode")
+    }
+    
+    // --- Developer Mode (Hidden) ---
+    
+    /**
+     * Check if developer mode is enabled.
+     * When enabled, JioSaavn option becomes visible.
+     */
+    fun isDeveloperMode(): Boolean = runBlocking {
+        context.dataStore.data.first()[DEV_MODE_KEY] == "unlocked"
+    }
+    
+    val developerModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DEV_MODE_KEY] == "unlocked"
+    }
+    
+    /**
+     * Enable developer mode (unlocks JioSaavn).
+     */
+    suspend fun enableDeveloperMode() {
+        context.dataStore.edit { preferences ->
+            preferences[DEV_MODE_KEY] = "unlocked"
+        }
+    }
+    
+    /**
+     * Disable developer mode (hides JioSaavn).
+     */
+    suspend fun disableDeveloperMode() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(DEV_MODE_KEY)
+        }
     }
     
     // --- Cookies ---
