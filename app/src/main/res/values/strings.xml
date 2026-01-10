@@ -1,3 +1,37 @@
 <resources>
     <string name="app_name">SuvMusic</string>
+
+    <!-- General Actions -->
+    <string name="action_play">Play</string>
+    <string name="action_shuffle">Shuffle</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_see_all">See All</string>
+    <string name="action_show_less">Show Less</string>
+    <string name="action_read_more">Read More</string>
+
+    <!-- Content Descriptions (Accessibility) -->
+    <string name="cd_subscribe">Subscribe</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_album_art">Album Art</string>
+
+    <!-- Artist Screen Headers & Badges -->
+    <string name="header_latest_release">Latest Release</string>
+    <string name="badge_single">SINGLE</string>
+    <string name="badge_album">ALBUM</string>
+    <string name="header_top_songs">Top Songs</string>
+    <string name="header_albums">Albums</string>
+    <string name="header_singles_eps">Singles &amp; EPs</string>
+    <string name="header_about_artist">About %1$s</string>
+
+    <!-- Error Messages -->
+    <string name="error_restricted_title">Restricted Content</string>
+    <string name="error_restricted_message">This artist requires a YouTube Music login. Please sign in via Settings to access this content.</string>
+
+    <string name="error_connection_title">Connection Error</string>
+    <string name="error_connection_message">Could not load artist data. Please check your internet connection and try again.</string>
+
+    <string name="error_generic_title">Something Went Wrong</string>
+    <string name="error_generic_message">An unknown error occurred while loading the artist page.</string>
+    <string name="error_loading">Loading...</string>
 </resources>
