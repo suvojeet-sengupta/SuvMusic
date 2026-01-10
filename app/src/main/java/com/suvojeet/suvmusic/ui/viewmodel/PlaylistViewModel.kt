@@ -31,6 +31,7 @@ data class PlaylistUiState(
 class PlaylistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,
+    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -69,12 +70,26 @@ class PlaylistViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Try YouTube first (most likely for user playlists)
-                val playlist = try {
-                     youTubeRepository.getPlaylist(playlistId)
-                } catch (e: Exception) {
-                    // Fallback to JioSaavn
-                    jioSaavnRepository.getPlaylist(playlistId) ?: throw e
+                val currentSource = sessionManager.getMusicSource()
+                
+                // Smart loading based on source preference
+                val playlist = if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
+                    // In HQ Audio mode, prioritize JioSaavn
+                    val jioPlaylist = jioSaavnRepository.getPlaylist(playlistId)
+                    if (jioPlaylist != null) {
+                        jioPlaylist
+                    } else {
+                        // Fallback to YouTube if not found in JioSaavn (e.g. user clicked a YT playlist)
+                        youTubeRepository.getPlaylist(playlistId)
+                    }
+                } else {
+                    // In YouTube mode, prioritize YouTube
+                    try {
+                        youTubeRepository.getPlaylist(playlistId)
+                    } catch (e: Exception) {
+                        // Fallback to JioSaavn if not found in YouTube (e.g. user clicked a Jio playlist)
+                        jioSaavnRepository.getPlaylist(playlistId) ?: throw e
+                    }
                 }
                 
                 // Merge with initial data:
