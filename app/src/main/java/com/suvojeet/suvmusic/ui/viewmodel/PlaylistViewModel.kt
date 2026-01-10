@@ -30,6 +30,7 @@ data class PlaylistUiState(
 @HiltViewModel
 class PlaylistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -68,7 +69,13 @@ class PlaylistViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val playlist = youTubeRepository.getPlaylist(playlistId)
+                // Try YouTube first (most likely for user playlists)
+                val playlist = try {
+                     youTubeRepository.getPlaylist(playlistId)
+                } catch (e: Exception) {
+                    // Fallback to JioSaavn
+                    jioSaavnRepository.getPlaylist(playlistId) ?: throw e
+                }
                 
                 // Merge with initial data:
                 // - Prefer navigation thumbnail (it's the correct playlist art from Home screen)
@@ -99,10 +106,14 @@ class PlaylistViewModel @Inject constructor(
 
     private fun checkEditable() {
         viewModelScope.launch {
-            val userPlaylists = youTubeRepository.getUserEditablePlaylists()
-            val isEditable = userPlaylists.any { it.id == playlistId } || playlistId.startsWith("PL") 
-            
-            _uiState.update { it.copy(isEditable = isEditable || playlistId == "LM") }
+            try {
+                val userPlaylists = youTubeRepository.getUserEditablePlaylists()
+                val isEditable = userPlaylists.any { it.id == playlistId } || playlistId.startsWith("PL") 
+                
+                _uiState.update { it.copy(isEditable = isEditable || playlistId == "LM") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isEditable = false) }
+            }
         }
     }
 

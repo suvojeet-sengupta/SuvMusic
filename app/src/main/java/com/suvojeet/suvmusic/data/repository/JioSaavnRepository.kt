@@ -577,6 +577,87 @@ class JioSaavnRepository @Inject constructor(
         sections
     }
     
+    /**
+     * Get featured/trending playlists from JioSaavn for the library.
+     */
+    suspend fun getFeaturedPlaylists(): List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+        val playlists = mutableListOf<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem>()
+        
+        try {
+            // Fetch top charts/featured playlists
+            val playlistsUrl = "$BASE_URL?__call=content.getCharts&_format=json&n=20"
+            val response = makeRequest(playlistsUrl)
+            
+            // Note: getCharts returns an array directly or inside "results" depending on endpoint version
+            // But usually content.getCharts returns a list of playlists
+            val json = JsonParser.parseString(response)
+            
+            val results = if (json.isJsonArray) {
+                json.asJsonArray
+            } else if (json.isJsonObject && json.asJsonObject.has("results")) {
+                json.asJsonObject.getAsJsonArray("results")
+            } else {
+                null
+            }
+            
+            results?.forEach { element ->
+                val plObj = element.asJsonObject
+                val plId = plObj.get("id")?.asString ?: plObj.get("listid")?.asString
+                val name = plObj.get("title")?.asString ?: plObj.get("listname")?.asString ?: "Playlist"
+                val image = plObj.get("image")?.asString?.toHighResImage()
+                val songCount = plObj.get("count")?.asInt ?: 0
+                
+                if (plId != null) {
+                    playlists.add(
+                        com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                            id = plId,
+                            name = name.decodeHtml(),
+                            url = "",
+                            uploaderName = "JioSaavn",
+                            thumbnailUrl = image,
+                            songCount = songCount
+                        )
+                    )
+                }
+            }
+            
+            // Also add some specific search results if charts are empty or few
+            if (playlists.size < 5) {
+                val searchUrl = "$BASE_URL?__call=search.getPlaylistResults&_format=json&q=top+hits&n=10"
+                val searchResponse = makeRequest(searchUrl)
+                val searchJson = JsonParser.parseString(searchResponse).asJsonObject
+                val searchResults = searchJson.getAsJsonArray("results")
+                
+                searchResults?.forEach { element ->
+                    val plObj = element.asJsonObject
+                    val plId = plObj.get("id")?.asString ?: return@forEach
+                    // Avoid duplicates
+                    if (playlists.none { it.id == plId }) {
+                        val name = plObj.get("title")?.asString ?: "Playlist"
+                        val image = plObj.get("image")?.asString?.toHighResImage()
+                        val songCount = plObj.get("count")?.asInt ?: 0
+                        
+                        playlists.add(
+                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                                id = plId,
+                                name = name.decodeHtml(),
+                                url = "",
+                                uploaderName = "JioSaavn",
+                                thumbnailUrl = image,
+                                songCount = songCount
+                            )
+                        )
+                    }
+                }
+            }
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        playlists
+    }
+    
     // ==================== Private Helpers ====================
     
     private fun makeRequest(url: String): String {

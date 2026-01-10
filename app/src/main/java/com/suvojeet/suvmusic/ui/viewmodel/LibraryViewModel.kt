@@ -27,6 +27,7 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,
     private val localAudioRepository: LocalAudioRepository,
     private val downloadRepository: DownloadRepository
 ) : ViewModel() {
@@ -55,13 +56,30 @@ class LibraryViewModel @Inject constructor(
                 // Refresh downloads to scan for new files in Downloads/SuvMusic
                 downloadRepository.refreshDownloads()
                 
-                val playlists = youTubeRepository.getUserPlaylists()
+                // Fetch from both sources
+                val ytPlaylists = try {
+                    youTubeRepository.getUserPlaylists()
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                
+                val jioPlaylists = try {
+                    jioSaavnRepository.getFeaturedPlaylists()
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                
+                val allPlaylists = ytPlaylists + jioPlaylists
                 val localSongs = localAudioRepository.getAllLocalSongs()
-                val likedSongs = youTubeRepository.getLikedMusic()
+                val likedSongs = try {
+                    youTubeRepository.getLikedMusic()
+                } catch (e: Exception) {
+                    emptyList()
+                }
                 
                 _uiState.update { 
                     it.copy(
-                        playlists = playlists,
+                        playlists = allPlaylists,
                         localSongs = localSongs,
                         likedSongs = likedSongs,
                         isLoading = false
