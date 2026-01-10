@@ -88,12 +88,12 @@ class UpdateRepository @Inject constructor(
             }
             
             // Parse version code from version name (e.g., "1.0.3" -> assume each part)
-            val versionCode = parseVersionCode(versionName)
-            val currentVersionCode = getCurrentVersionCode()
+            val remoteVersionCode = parseVersionCode(versionName)
+            val currentVersionCode = parseVersionCode(getCurrentVersionName())
             
             val update = AppUpdate(
                 versionName = versionName,
-                versionCode = versionCode,
+                versionCode = remoteVersionCode,
                 releaseNotes = releaseNotes,
                 downloadUrl = downloadUrl,
                 publishedAt = publishedAt,
@@ -101,7 +101,7 @@ class UpdateRepository @Inject constructor(
             )
             
             // Check if update is available
-            if (versionCode > currentVersionCode) {
+            if (remoteVersionCode > currentVersionCode) {
                 Result.success(update)
             } else {
                 Result.success(null) // No update available
