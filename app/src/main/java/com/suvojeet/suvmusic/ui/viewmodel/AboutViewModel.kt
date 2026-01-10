@@ -15,12 +15,17 @@ class AboutViewModel @Inject constructor(
     val isDeveloperMode = sessionManager.developerModeFlow
     
     /**
-     * Enable developer mode - unlocks hidden JioSaavn feature.
+     * Validate password and enable developer mode if correct.
+     * Returns true if successful, false otherwise.
      */
-    fun enableDeveloperMode() {
-        viewModelScope.launch {
-            sessionManager.enableDeveloperMode()
+    fun tryUnlockDeveloperMode(password: String): Boolean {
+        if (com.suvojeet.suvmusic.util.SecureConfig.checkDeveloperPassword(password)) {
+            viewModelScope.launch {
+                sessionManager.enableDeveloperMode()
+            }
+            return true
         }
+        return false
     }
     
     /**
