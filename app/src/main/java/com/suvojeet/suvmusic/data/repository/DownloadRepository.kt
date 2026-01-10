@@ -406,21 +406,8 @@ class DownloadRepository @Inject constructor(
                             FileOutputStream(thumbFile).use { output ->
                                 output.write(thumbBytes)
                             }
-                            localThumbnailUrl = thumbFile.absolutePath
+                            localThumbnailUrl = thumbFile.toUri().toString()
                             Log.d(TAG, "Downloaded high-res thumbnail to $localThumbnailUrl")
-                            
-                            // Also save to public Downloads/SuvMusic folder as "{Title} - {Artist}.jpg"
-                            // Some external players use this for album art
-                            try {
-                                val publicFolder = getPublicDownloadsFolder()
-                                val publicThumbFile = File(publicFolder, "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.jpg")
-                                FileOutputStream(publicThumbFile).use { output ->
-                                    output.write(thumbBytes)
-                                }
-                                Log.d(TAG, "Also saved thumbnail to public folder: ${publicThumbFile.name}")
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Could not save thumbnail to public folder", e)
-                            }
                         }
                     }
                     thumbResponse.close()
@@ -583,7 +570,7 @@ class DownloadRepository @Inject constructor(
                         val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
                         thumbResponse.body?.bytes()?.let { bytes ->
                             FileOutputStream(thumbFile).use { it.write(bytes) }
-                            localThumbnailUrl = thumbFile.absolutePath
+                            localThumbnailUrl = thumbFile.toUri().toString()
                         }
                     }
                     thumbResponse.close()

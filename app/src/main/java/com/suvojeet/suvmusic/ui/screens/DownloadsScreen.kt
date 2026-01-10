@@ -341,8 +341,17 @@ private fun DownloadedSongItem(
             contentAlignment = Alignment.Center
         ) {
             if (song.thumbnailUrl != null) {
+                // Handle both URL and local file:// URI
+                val imageModel = if (song.thumbnailUrl.startsWith("file://")) {
+                    android.net.Uri.parse(song.thumbnailUrl)
+                } else if (song.thumbnailUrl.startsWith("/")) {
+                    // Handle absolute file path (legacy)
+                    java.io.File(song.thumbnailUrl)
+                } else {
+                    song.thumbnailUrl
+                }
                 AsyncImage(
-                    model = song.thumbnailUrl,
+                    model = imageModel,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
