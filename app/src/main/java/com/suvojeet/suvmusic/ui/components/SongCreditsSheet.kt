@@ -364,7 +364,7 @@ fun SongCreditsSheet(
                                 label = "Source",
                                 value = when (song.source) {
                                     com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YouTube Music"
-                                    com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JioSaavn"
+                                    com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "Cloud (High Quality)"
                                     com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "Local Storage"
                                     com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> "Downloaded"
                                     else -> "Unknown"

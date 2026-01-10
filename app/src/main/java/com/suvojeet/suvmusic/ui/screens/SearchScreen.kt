@@ -230,7 +230,7 @@ fun SearchScreen(
                                 Text(
                                     text = when (tab) {
                                         SearchTab.YOUTUBE_MUSIC -> "YT MUSIC"
-                                        SearchTab.JIOSAAVN -> "JIOSAAVN"
+                                        SearchTab.JIOSAAVN -> "HQ AUDIO"
                                         SearchTab.YOUR_LIBRARY -> "LIBRARY"
                                     },
                                     fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,

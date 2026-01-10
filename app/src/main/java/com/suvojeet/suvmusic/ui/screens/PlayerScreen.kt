@@ -802,7 +802,7 @@ private fun SongInfoSection(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = when (song.source) {
-                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JioSaavn • 320kbps"
+                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "HQ Audio • 320kbps"
                             com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "Local"
                             else -> "YouTube Music"
                         },

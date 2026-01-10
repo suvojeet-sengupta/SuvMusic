@@ -137,7 +137,7 @@ fun AboutScreen(
             
             // App Description
             Text(
-                text = "A premium music client with Apple Music inspired design. Stream from YouTube Music or JioSaavn (320 kbps). Beautiful, fast, and ad-free.",
+                text = "A premium music client with Apple Music inspired design. Stream from YouTube Music or HQ Audio (320 kbps). Beautiful, fast, and ad-free.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     lineHeight = 22.sp
                 ),
@@ -190,7 +190,7 @@ fun AboutScreen(
                     FeatureItem(
                         icon = Icons.Default.HighQuality,
                         title = "High Quality Audio",
-                        subtitle = "Up to 320 kbps with JioSaavn",
+                        subtitle = "Up to 320 kbps with HQ Audio",
                         showDivider = true
                     )
                     FeatureItem(
@@ -359,7 +359,7 @@ fun AboutScreen(
                     )
                     AboutInfoItem(
                         label = "Data Source",
-                        value = "YouTube + JioSaavn",
+                        value = "YouTube + HQ Audio",
                         showDivider = false
                     )
                 }

@@ -26,6 +26,12 @@ class JioSaavnRepository @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val gson: Gson
 ) {
+    // In-memory caches to reduce server load and improve performance
+    private val searchCache = mutableMapOf<String, List<Song>>()
+    private val songDetailsCache = mutableMapOf<String, Song>()
+    private val streamUrlCache = mutableMapOf<String, String>()
+    private val playlistCache = mutableMapOf<String, Playlist>()
+
     companion object {
         private const val BASE_URL = "https://www.jiosaavn.com/api.php"
         
@@ -46,6 +52,11 @@ class JioSaavnRepository @Inject constructor(
      * Search for songs on JioSaavn.
      */
     suspend fun search(query: String): List<Song> = withContext(Dispatchers.IO) {
+        val cacheKey = query.trim().lowercase()
+        if (searchCache.containsKey(cacheKey)) {
+            return@withContext searchCache[cacheKey] ?: emptyList()
+        }
+
         try {
             val url = "$BASE_URL?__call=search.getResults&_format=json&_marker=0&n=20&q=${query.encodeUrl()}"
             val response = makeRequest(url)
@@ -53,10 +64,17 @@ class JioSaavnRepository @Inject constructor(
             val json = JsonParser.parseString(response).asJsonObject
             val results = json.getAsJsonArray("results") ?: return@withContext emptyList()
             
-            results.mapNotNull { element ->
+            val songs = results.mapNotNull { element ->
                 val song = element.asJsonObject
                 parseSong(song)
             }
+            
+            if (songs.isNotEmpty()) {
+                searchCache[cacheKey] = songs
+                // Also cache individual song details
+                songs.forEach { song -> songDetailsCache[song.id] = song }
+            }
+            songs
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
@@ -95,6 +113,10 @@ class JioSaavnRepository @Inject constructor(
      * Get song details by ID.
      */
     suspend fun getSongDetails(songId: String): Song? = withContext(Dispatchers.IO) {
+        if (songDetailsCache.containsKey(songId)) {
+            return@withContext songDetailsCache[songId]
+        }
+
         try {
             val url = "$BASE_URL?__call=song.getDetails&_format=json&pids=$songId"
             val response = makeRequest(url)
@@ -102,12 +124,15 @@ class JioSaavnRepository @Inject constructor(
             val json = JsonParser.parseString(response).asJsonObject
             val songs = json.getAsJsonObject("songs") ?: json.getAsJsonObject(songId)
             
-            if (songs != null && songs.has(songId)) {
+            val result = if (songs != null && songs.has(songId)) {
                 parseSong(songs.getAsJsonObject(songId))
             } else {
                 // Try parsing as direct song object
                 parseSong(json)
             }
+            
+            result?.let { songDetailsCache[songId] = it }
+            result
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -119,6 +144,11 @@ class JioSaavnRepository @Inject constructor(
      * JioSaavn returns encrypted URLs that need to be decrypted.
      */
     suspend fun getStreamUrl(songId: String, quality: Int = 320): String? = withContext(Dispatchers.IO) {
+        val cacheKey = "${songId}_$quality"
+        if (streamUrlCache.containsKey(cacheKey)) {
+            return@withContext streamUrlCache[cacheKey]
+        }
+
         try {
             val url = "$BASE_URL?__call=song.getDetails&_format=json&pids=$songId"
             val response = makeRequest(url)
@@ -135,7 +165,7 @@ class JioSaavnRepository @Inject constructor(
                 json
             }
             
-            songJson?.let { song ->
+            val streamUrl = songJson?.let { song ->
                 val encryptedUrl = song.get("encrypted_media_url")?.asString
                     ?: song.get("more_info")?.asJsonObject?.get("encrypted_media_url")?.asString
                 
@@ -149,6 +179,9 @@ class JioSaavnRepository @Inject constructor(
                     }
                 }
             }
+            
+            streamUrl?.let { streamUrlCache[cacheKey] = it }
+            streamUrl
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -159,6 +192,10 @@ class JioSaavnRepository @Inject constructor(
      * Get playlist details with all songs.
      */
     suspend fun getPlaylist(playlistId: String): Playlist? = withContext(Dispatchers.IO) {
+        if (playlistCache.containsKey(playlistId)) {
+            return@withContext playlistCache[playlistId]
+        }
+
         try {
             val url = "$BASE_URL?__call=playlist.getDetails&_format=json&listid=$playlistId"
             val response = makeRequest(url)
@@ -171,13 +208,16 @@ class JioSaavnRepository @Inject constructor(
                 parseSong(it.asJsonObject) 
             } ?: emptyList()
             
-            Playlist(
+            val playlist = Playlist(
                 id = playlistId,
                 title = title,
                 author = json.get("firstname")?.asString ?: "",
                 thumbnailUrl = image,
                 songs = songs
             )
+            
+            playlistCache[playlistId] = playlist
+            playlist
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -314,7 +354,7 @@ class JioSaavnRepository @Inject constructor(
                                     id = plId,
                                     name = name.decodeHtml(),
                                     url = "",
-                                    uploaderName = "JioSaavn",
+                                    uploaderName = "HQ Audio",
                                     thumbnailUrl = image,
                                     songCount = songCount
                                 )
@@ -364,7 +404,11 @@ class JioSaavnRepository @Inject constructor(
     private fun makeRequest(url: String): String {
         val request = Request.Builder()
             .url(url)
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36")
+            .addHeader("Referer", "https://www.jiosaavn.com/")
+            .addHeader("Origin", "https://www.jiosaavn.com")
+            .addHeader("Accept", "application/json, text/plain, */*")
+            .addHeader("Accept-Language", "en-US,en;q=0.9")
             .build()
         
         return okHttpClient.newCall(request).execute().use { response ->

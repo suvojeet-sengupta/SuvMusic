@@ -104,7 +104,7 @@ fun PlaybackSettingsScreen(
                     Text(
                         when (uiState.musicSource) {
                             MusicSource.YOUTUBE -> "YouTube Music (256 kbps)"
-                            MusicSource.JIOSAAVN -> "JioSaavn (320 kbps)"
+                            MusicSource.JIOSAAVN -> "HQ Audio (320 kbps)"
                             MusicSource.BOTH -> "Both"
                         }
                     ) 
@@ -296,7 +296,7 @@ fun PlaybackSettingsScreen(
                 )
                 
                 Text(
-                    text = "JioSaavn offers higher quality (320 kbps) audio",
+                    text = "HQ Audio offers higher quality (320 kbps) audio",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -304,7 +304,7 @@ fun PlaybackSettingsScreen(
                 
                 listOf(
                     MusicSource.YOUTUBE to "YouTube Music (256 kbps max)",
-                    MusicSource.JIOSAAVN to "JioSaavn (320 kbps)"
+                    MusicSource.JIOSAAVN to "HQ Audio (320 kbps)"
                 ).forEach { (source, label) ->
                     Row(
                         modifier = Modifier
