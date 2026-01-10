@@ -58,6 +58,9 @@ fun MiniPlayer(
     onCloseClick: (() -> Unit)? = null
 ) {
     val song = playerState.currentSong
+
+    val cornerRadius = 14.dp
+    val playerShape = RoundedCornerShape(cornerRadius)
     
     AnimatedVisibility(
         visible = song != null,
@@ -69,33 +72,17 @@ fun MiniPlayer(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
                     .shadow(
                         elevation = 16.dp,
-                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                        shape = playerShape,
                         spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     )
-                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .clip(playerShape)
                     .clickable(onClick = onPlayerClick),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
                 Column {
-                    // Progress bar
-                    val animatedProgress by animateFloatAsState(
-                        targetValue = playerState.progress,
-                        animationSpec = spring(stiffness = Spring.StiffnessLow),
-                        label = "progress"
-                    )
-                    
-                    LinearProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeCap = StrokeCap.Round
-                    )
-                    
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -127,7 +114,7 @@ fun MiniPlayer(
                             }
                         }
                         
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         
                         // Song Info
                         Column(
@@ -141,7 +128,6 @@ fun MiniPlayer(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = song.artist,
                                 style = MaterialTheme.typography.bodySmall,
@@ -156,7 +142,7 @@ fun MiniPlayer(
                         // Play/Pause Button - Apple Music style
                         IconButton(
                             onClick = onPlayPauseClick,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
                                 imageVector = if (playerState.isPlaying) 
@@ -165,14 +151,17 @@ fun MiniPlayer(
                                     Icons.Default.PlayArrow,
                                 contentDescription = if (playerState.isPlaying) "Pause" else "Play",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                         
                         Spacer(modifier = Modifier.width(4.dp))
                         
                         // Next Button
-                        IconButton(onClick = onNextClick) {
+                        IconButton(
+                            onClick = onNextClick,
+                            modifier = Modifier.size(32.dp))
+                        {
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Next",
@@ -182,16 +171,34 @@ fun MiniPlayer(
 
                         // Close Button (Optional, for floating)
                         if (onCloseClick != null) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            IconButton(onClick = onCloseClick) {
+                            IconButton(
+                                onClick = onCloseClick,
+                                modifier = Modifier.size(28.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Close",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
+                    // Progress bar
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = playerState.progress,
+                        animationSpec = spring(stiffness = Spring.StiffnessLow),
+                        label = "progress"
+                    )
+                    LinearProgressIndicator(
+                        progress = { animatedProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp),
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeCap = StrokeCap.Round
+                    )
                 }
             }
         }
