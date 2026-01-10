@@ -27,6 +27,7 @@ import com.suvojeet.suvmusic.ui.screens.SettingsScreen
 import com.suvojeet.suvmusic.ui.screens.WelcomeScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
 import kotlinx.coroutines.launch
+import androidx.media3.common.Player
 
 /**
  * Main navigation graph for the app.
@@ -47,6 +48,7 @@ fun NavGraph(
     onRepeatToggle: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onToggleVideoMode: () -> Unit = {},
+    player: Player? = null,
     lyrics: com.suvojeet.suvmusic.data.model.Lyrics?,
     isFetchingLyrics: Boolean,
     // Sleep timer
@@ -234,6 +236,7 @@ fun NavGraph(
                 onRepeatToggle = onRepeatToggle,
                 onToggleAutoplay = onToggleAutoplay,
                 onToggleVideoMode = onToggleVideoMode,
+                player = player,
                 onPlayFromQueue = { index ->
                     if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
                         onPlaySong(playerState.queue, index)
