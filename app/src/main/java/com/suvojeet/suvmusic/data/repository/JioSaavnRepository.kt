@@ -38,10 +38,7 @@ class JioSaavnRepository @Inject constructor(
     companion object {
         // Base URL retrieved from encrypted config at runtime
         private val BASE_URL: String
-            get() = SecureConfig.getJioSaavnBaseUrl().ifBlank { 
-                // Fallback for first run - encrypted value needs to be generated
-                "https://www.jiosaavn.com/api.php" 
-            }
+            get() = SecureConfig.getJioSaavnBaseUrl()
         
         // DES key for URL decryption - obfuscated
         private val DES_KEY: String
@@ -666,11 +663,15 @@ class JioSaavnRepository @Inject constructor(
     // ==================== Private Helpers ====================
     
     private fun makeRequest(url: String): String {
+        // Derive referer dynamically
+        val referer = BASE_URL.substringBefore("/api")  + "/"
+        val origin = referer.dropLast(1)
+        
         val request = Request.Builder()
             .url(url)
             .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36")
-            .addHeader("Referer", "https://www.jiosaavn.com/")
-            .addHeader("Origin", "https://www.jiosaavn.com")
+            .addHeader("Referer", referer)
+            .addHeader("Origin", origin)
             .addHeader("Accept", "application/json, text/plain, */*")
             .addHeader("Accept-Language", "en-US,en;q=0.9")
             .build()

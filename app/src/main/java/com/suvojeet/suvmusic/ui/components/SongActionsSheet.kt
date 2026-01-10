@@ -73,10 +73,10 @@ fun SongActionsSheet(
             append("\n")
             
             if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
-                append("Listen on High Quality Audio:\n")
-                // Cloud link format
-                val slug = song.title.replace(Regex("[^a-zA-Z0-9]+"), "-").lowercase()
-                append("https://www.jiosaavn.com/song/$slug/${song.id}")
+                append("Listen via search:\n")
+                // Use a generic search link instead of direct URL
+                val query = "${song.title} ${song.artist}".replace(" ", "+")
+                append("https://www.google.com/search?q=$query")
             } else {
                 append("Listen on YouTube Music:\n")
                 append("https://music.youtube.com/watch?v=${song.id}")
