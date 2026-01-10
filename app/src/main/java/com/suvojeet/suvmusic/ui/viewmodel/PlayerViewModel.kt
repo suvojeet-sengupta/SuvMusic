@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +27,7 @@ class PlayerViewModel @Inject constructor(
     private val musicPlayer: MusicPlayer,
     private val downloadRepository: DownloadRepository,
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
     private val sleepTimerManager: SleepTimerManager,
     private val sessionManager: SessionManager
 ) : ViewModel() {
@@ -262,6 +264,29 @@ class PlayerViewModel @Inject constructor(
             _isFetchingLyrics.value = true
             _lyricsState.value = null
             
+            val currentSong = playerState.value.currentSong
+            
+            // For JioSaavn songs, use JioSaavn's synced lyrics API
+            if (currentSong?.source == SongSource.JIOSAAVN || 
+                currentSong?.originalSource == SongSource.JIOSAAVN) {
+                try {
+                    val lyrics = jioSaavnRepository.getSyncedLyrics(
+                        songId = currentSong.id,
+                        title = currentSong.title,
+                        artist = currentSong.artist,
+                        duration = currentSong.duration
+                    )
+                    if (lyrics != null) {
+                        _lyricsState.value = lyrics
+                        _isFetchingLyrics.value = false
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("PlayerViewModel", "Error fetching JioSaavn lyrics", e)
+                }
+            }
+            
+            // For YouTube songs or as fallback
             val lyrics = youTubeRepository.getLyrics(videoId)
             _lyricsState.value = lyrics
             
