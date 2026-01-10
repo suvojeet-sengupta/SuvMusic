@@ -293,7 +293,7 @@ fun SourceSelectionPage(viewModel: WelcomeViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
         
         SourceOptionCard(
-            title = "JioSaavn",
+            title = "HQ Audio",
             description = "High Fidelity (320kbps), Bollywood & Regional",
             selected = currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN,
             onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) }
@@ -384,7 +384,7 @@ fun IntroPage() {
     Spacer(modifier = Modifier.height(24.dp))
     
     Text(
-        text = "A premium, native client blending YouTube Music & JioSaavn in a stunning Material 3 interface.",
+        text = "A premium, native client blending YouTube Music & Cloud Audio in a stunning Material 3 interface.",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -406,7 +406,7 @@ fun FeaturesPageOne() {
     FeatureItemLarge(
         icon = Icons.Default.Album,
         title = "Dual Music Sources",
-        desc = "The vast library of YouTube Music combined with JioSaavn's high-quality catalog."
+        desc = "The vast library of YouTube Music combined with HQ Audio's catalog."
     )
     
     Spacer(modifier = Modifier.height(32.dp))
@@ -414,7 +414,7 @@ fun FeaturesPageOne() {
     FeatureItemLarge(
         icon = Icons.Default.GraphicEq,
         title = "Hi-Fi Audio",
-        desc = "Stream in crystal clear 320kbps MP3 (via JioSaavn) or high-quality AAC."
+        desc = "Stream in crystal clear 320kbps MP3 (HQ Audio) or high-quality AAC."
     )
 }
 
@@ -465,7 +465,7 @@ fun LoginPage() {
     Spacer(modifier = Modifier.height(16.dp))
     
     Text(
-        text = "Sign in to access your YouTube Music library and playlists. JioSaavn works out of the box!",
+        text = "Sign in to access your YouTube Music library and playlists. HQ Audio works out of the box!",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurfaceVariant
