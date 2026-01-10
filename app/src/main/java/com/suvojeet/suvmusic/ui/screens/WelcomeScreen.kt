@@ -76,13 +76,20 @@ fun WelcomeScreen(
     viewModel: WelcomeViewModel = hiltViewModel()
 ) {
     var startAnimation by remember { mutableStateOf(false) }
-    val pagerState = rememberPagerState(pageCount = { 5 })
     val scope = rememberCoroutineScope()
+    
+    val currentSource by viewModel.currentSource.collectAsState(initial = com.suvojeet.suvmusic.data.MusicSource.YOUTUBE)
+    val sourceSelected by viewModel.sourceSelected.collectAsState()
+    
+    // Dynamic page count - 4 pages if HQ Audio selected (no login), 5 if YouTube (with login)
+    val showLoginPage = currentSource == com.suvojeet.suvmusic.data.MusicSource.YOUTUBE
+    val totalPages = if (showLoginPage) 5 else 4
+    
+    val pagerState = rememberPagerState(pageCount = { totalPages })
     
     LaunchedEffect(Unit) {
         delay(100)
         startAnimation = true
-        // Removed automatic completion logic
     }
 
     val alphaAnim by animateFloatAsState(
@@ -127,9 +134,10 @@ fun WelcomeScreen(
                 state = pagerState,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
+                userScrollEnabled = !(pagerState.currentPage == 3 && !sourceSelected) // Disable scroll on source page until selected
             ) { page ->
-                WelcomePageContent(page = page, viewModel = viewModel)
+                WelcomePageContent(page = page, viewModel = viewModel, showLoginPage = showLoginPage)
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -139,7 +147,7 @@ fun WelcomeScreen(
                 modifier = Modifier.padding(bottom = 32.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                repeat(5) { iteration ->
+                repeat(totalPages) { iteration ->
                     val color = if (pagerState.currentPage == iteration) 
                         MaterialTheme.colorScheme.primary 
                     else 
@@ -160,16 +168,23 @@ fun WelcomeScreen(
                 modifier = Modifier.fillMaxWidth().height(60.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (pagerState.currentPage < 4) {
+                val isLastPage = pagerState.currentPage == totalPages - 1
+                val isSourcePage = pagerState.currentPage == 3
+                
+                if (!isLastPage) {
+                    // Next button - disabled on source page if not selected
+                    val canProceed = !isSourcePage || sourceSelected
+                    
                     Button(
                         onClick = {
                             scope.launch {
                                 pagerState.animateScrollToPage(pagerState.currentPage + 1)
                             }
                         },
+                        enabled = canProceed,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurface
+                            containerColor = if (canProceed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            contentColor = if (canProceed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                         ),
                         shape = CircleShape,
                         modifier = Modifier.size(60.dp),
@@ -181,42 +196,64 @@ fun WelcomeScreen(
                         )
                     }
                 } else {
-                    Button(
-                        onClick = {
-                            // On Login, we DON'T mark complete yet. Navigation handles it on success.
-                            onLoginClick()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(Icons.Default.Login, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Login with YouTube Music",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                    // Last page action
+                    if (showLoginPage) {
+                        // YouTube Music selected - show login button
+                        Button(
+                            onClick = { onLoginClick() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.Login, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Login with YouTube Music",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        // HQ Audio selected - show Get Started button (no login needed)
+                        Button(
+                            onClick = {
+                                viewModel.setOnboardingCompleted()
+                                onSkipClick()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Get Started",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Skip Button (Always visible logic or only on last page? 
-            // User requested "Next Next" but also "Skip". Let's keep Skip available.)
+            // Skip Button - only visible on last page for YouTube Music login
             AnimatedVisibility(
-                visible = pagerState.currentPage == 4,
+                visible = pagerState.currentPage == totalPages - 1 && showLoginPage,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 TextButton(
                     onClick = {
-                        // Mark as complete when explicitly skipping
                         viewModel.setOnboardingCompleted()
                         onSkipClick()
                     },
@@ -229,17 +266,13 @@ fun WelcomeScreen(
                     )
                 }
             }
-            
-            // Allow skipping from earlier pages too? Maybe just a small "Skip" at top right or bottom?
-            // Let's stick to user request flow: "welcpme screen ko multiple steps mein kr next next kr paye"
-            // Usually "Skip" is an alternative to the whole flow. 
-
         }
     }
 }
 
+
 @Composable
-fun WelcomePageContent(page: Int, viewModel: WelcomeViewModel) {
+fun WelcomePageContent(page: Int, viewModel: WelcomeViewModel, showLoginPage: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -252,14 +285,43 @@ fun WelcomePageContent(page: Int, viewModel: WelcomeViewModel) {
             1 -> FeaturesPageOne()
             2 -> FeaturesPageTwo()
             3 -> SourceSelectionPage(viewModel)
-            4 -> LoginPage()
+            4 -> if (showLoginPage) LoginPage() else ReadyPage()
         }
     }
 }
 
 @Composable
+fun ReadyPage() {
+    Icon(
+        imageVector = Icons.Default.Check,
+        contentDescription = null,
+        modifier = Modifier.size(80.dp),
+        tint = Color(0xFF4CAF50)
+    )
+    
+    Spacer(modifier = Modifier.height(32.dp))
+    
+    Text(
+        text = "You're All Set!",
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onBackground
+    )
+    
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    Text(
+        text = "HQ Audio is ready to use. Enjoy high-fidelity music streaming with no login required!",
+        style = MaterialTheme.typography.bodyLarge,
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
 fun SourceSelectionPage(viewModel: WelcomeViewModel) {
     val currentSource by viewModel.currentSource.collectAsState(initial = com.suvojeet.suvmusic.data.MusicSource.YOUTUBE)
+    val sourceSelected by viewModel.sourceSelected.collectAsState()
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -275,7 +337,7 @@ fun SourceSelectionPage(viewModel: WelcomeViewModel) {
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Choose your primary music source. This customizes your search & home experience.",
+            text = "Choose your primary music source to continue.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -286,7 +348,7 @@ fun SourceSelectionPage(viewModel: WelcomeViewModel) {
         SourceOptionCard(
             title = "YouTube Music",
             description = "Huge library, official & community tracks",
-            selected = currentSource == com.suvojeet.suvmusic.data.MusicSource.YOUTUBE,
+            selected = sourceSelected && currentSource == com.suvojeet.suvmusic.data.MusicSource.YOUTUBE,
             onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.YOUTUBE) }
         )
         
@@ -295,9 +357,20 @@ fun SourceSelectionPage(viewModel: WelcomeViewModel) {
         SourceOptionCard(
             title = "HQ Audio",
             description = "High Fidelity (320kbps), Bollywood & Regional",
-            selected = currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN,
+            selected = sourceSelected && currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN,
             onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) }
         )
+        
+        // Hint text when not selected
+        if (!sourceSelected) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "↑ Tap to select a source",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

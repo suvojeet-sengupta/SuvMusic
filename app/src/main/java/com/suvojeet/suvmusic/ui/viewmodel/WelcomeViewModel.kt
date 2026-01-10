@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -14,6 +17,10 @@ class WelcomeViewModel @Inject constructor(
 
     val currentSource = sessionManager.musicSourceFlow
     
+    // Track if user has explicitly selected a source
+    private val _sourceSelected = MutableStateFlow(false)
+    val sourceSelected: StateFlow<Boolean> = _sourceSelected.asStateFlow()
+    
     fun setOnboardingCompleted() {
         viewModelScope.launch {
             sessionManager.setOnboardingCompleted(true)
@@ -23,6 +30,7 @@ class WelcomeViewModel @Inject constructor(
     fun setMusicSource(source: com.suvojeet.suvmusic.data.MusicSource) {
         viewModelScope.launch {
             sessionManager.setMusicSource(source)
+            _sourceSelected.value = true
         }
     }
 }
