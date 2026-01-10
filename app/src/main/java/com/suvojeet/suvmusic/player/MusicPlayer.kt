@@ -127,7 +127,8 @@ class MusicPlayer @Inject constructor(
                         currentPosition = 0L,
                         duration = controller.duration.coerceAtLeast(0L),
                         isLiked = false,
-                        downloadState = DownloadState.NOT_DOWNLOADED
+                        downloadState = DownloadState.NOT_DOWNLOADED,
+                        isVideoMode = false // Reset video mode on song change
                     )
                 }
                 
@@ -138,8 +139,11 @@ class MusicPlayer @Inject constructor(
                     }
                 }
                 
-                // If this is an automatic transition (song ended), resolve stream and play
-                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && song != null) {
+                // Handle both AUTO (song ended) and SEEK (notification next/prev) transitions
+                val shouldResolve = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || 
+                                   reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+                
+                if (shouldResolve && song != null) {
                     // Check if current item already has a resolved stream URL (from preloading)
                     val currentItem = controller.currentMediaItem
                     val currentUri = currentItem?.localConfiguration?.uri?.toString()
@@ -149,18 +153,27 @@ class MusicPlayer @Inject constructor(
                     val isPlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
                     
                     if (!isPlaceholder && currentUri != null) {
-                        // Already has valid stream, just ensure UI state is correct
+                        // Already has valid stream, just ensure UI state is correct and play
                         _playerState.update { it.copy(isLoading = false) }
                         
                         // Reset preload state as we've seemingly consumed it
                         preloadedNextSongId = null
                         preloadedStreamUrl = null
                         isPreloading = false
+                        
+                        // Ensure playback continues for SEEK transitions (notification controls)
+                        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+                            controller.play()
+                        }
                         return@let
                     }
                     
-                    // Check sleep timer
-                    val timerTriggered = sleepTimerManager.onSongEnded()
+                    // Check sleep timer (only for auto transitions)
+                    val timerTriggered = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+                        sleepTimerManager.onSongEnded()
+                    } else {
+                        false
+                    }
                     
                     scope.launch {
                         resolveAndPlayCurrentItem(song, index, shouldPlay = !timerTriggered)
