@@ -46,10 +46,11 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
                 if (drawable is BitmapDrawable) {
                     // If image is already a valid Bitmap, return it
-                    if (drawable.bitmap.width > 0 && drawable.bitmap.height > 0) {
-                        future.set(drawable.bitmap)
+                    val bitmap = drawable.bitmap
+                    if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
+                        future.set(bitmap)
                     } else {
-                        // If BitmapDrawable is empty or broken
+                        // If BitmapDrawable is empty, broken, or has a null bitmap
                         future.set(createFallbackBitmap(drawable))
                     }
                 } else {
