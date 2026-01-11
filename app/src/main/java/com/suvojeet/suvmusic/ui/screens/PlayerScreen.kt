@@ -201,6 +201,9 @@ fun PlayerScreen(
     // High-res thumbnail
     val highResThumbnail = getHighResThumbnail(song?.thumbnailUrl)
 
+    // Capture the current background color from the theme (White in light mode, Dark in dark mode)
+    val themeBackgroundColor = MaterialTheme.colorScheme.background
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -254,7 +257,8 @@ fun PlayerScreen(
                         colors = listOf(
                             dominantColors.secondary,
                             dominantColors.primary,
-                            Color.Black
+                            // Use themeBackgroundColor instead of Color.Black to support Light Theme
+                            themeBackgroundColor
                         )
                     )
                 )
@@ -1175,6 +1179,9 @@ private fun QueueView(
     onMoreClick: () -> Unit,
     dominantColors: DominantColors
 ) {
+    // Capture background color for QueueView as well
+    val themeBackgroundColor = MaterialTheme.colorScheme.background
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1183,7 +1190,8 @@ private fun QueueView(
                     colors = listOf(
                         dominantColors.secondary,
                         dominantColors.primary,
-                        Color.Black
+                        // Use themeBackgroundColor instead of Color.Black
+                        themeBackgroundColor
                     )
                 )
             )
