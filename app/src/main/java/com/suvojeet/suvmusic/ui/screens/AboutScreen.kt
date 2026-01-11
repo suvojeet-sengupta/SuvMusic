@@ -216,13 +216,28 @@ fun AboutScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") }) {
-                        Icon(Icons.Default.Code, "GitHub", tint = Color.White.copy(alpha = 0.8f))
+                        Icon(
+                            imageVector = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub,
+                            contentDescription = "GitHub",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                     IconButton(onClick = { uriHandler.openUri("https://www.instagram.com/suvojeet__sengupta?igsh=MWhyMXE4YzhxaDVvNg==") }) {
-                        Icon(Icons.Default.PhotoCamera, "Instagram", tint = Color.White.copy(alpha = 0.8f))
+                        Icon(
+                            imageVector = com.suvojeet.suvmusic.ui.utils.SocialIcons.Instagram,
+                            contentDescription = "Instagram",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                     IconButton(onClick = { uriHandler.openUri("https://t.me/suvojeet_sengupta") }) {
-                        Icon(Icons.AutoMirrored.Filled.Send, "Telegram", tint = Color.White.copy(alpha = 0.8f))
+                        Icon(
+                            imageVector = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram,
+                            contentDescription = "Telegram",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
 
