@@ -59,6 +59,7 @@ fun SettingsScreen(
     onLoginClick: () -> Unit = {},
     onPlaybackClick: () -> Unit = {},
     onAppearanceClick: () -> Unit = {},
+    onStatsClick: () -> Unit = {},
     onAboutClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -184,6 +185,14 @@ fun SettingsScreen(
         )
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        
+        // Statistics
+        SettingsItem(
+            icon = Icons.Default.Info,
+            title = "Listening Statistics",
+            subtitle = "View your listening history and stats",
+            onClick = onStatsClick
+        )
         
         // About Section
         SectionTitle("About")
