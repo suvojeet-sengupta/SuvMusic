@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
@@ -14,20 +15,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class ArtistError {
+    NETWORK,
+    AUTH_REQUIRED,
+    UNKNOWN
+}
+
 data class ArtistUiState(
     val artist: Artist? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: ArtistError? = null
 )
 
 @HiltViewModel
 class ArtistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val sessionManager: SessionManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val artistId: String = checkNotNull(savedStateHandle[Destination.Artist.ARG_ARTIST_ID])
-    
+
     private val _uiState = MutableStateFlow(ArtistUiState())
     val uiState: StateFlow<ArtistUiState> = _uiState.asStateFlow()
 
@@ -35,38 +43,50 @@ class ArtistViewModel @Inject constructor(
         loadArtist()
     }
 
-    private fun loadArtist() {
+    fun loadArtist() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val artist = youTubeRepository.getArtist(artistId)
-                _uiState.update { 
-                    it.copy(
-                        artist = artist,
-                        isLoading = false
-                    )
+
+                if (artist != null) {
+                    _uiState.update {
+                        it.copy(
+                            artist = artist,
+                            isLoading = false
+                        )
+                    }
+                } else {
+                    // Determine error type based on session state
+                    val errorType = if (!sessionManager.isLoggedIn()) {
+                        ArtistError.AUTH_REQUIRED
+                    } else {
+                        ArtistError.NETWORK
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = errorType
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
-                        error = e.message,
+                        error = ArtistError.UNKNOWN,
                         isLoading = false
                     )
                 }
             }
         }
     }
-    
+
     fun toggleSubscribe() {
         val currentArtist = _uiState.value.artist ?: return
         viewModelScope.launch {
-            // Optimistic update if we had a boolean "isSubscribed" in Artist model
-            // But we don't, and the API returns localized text like "SUBSCRIBED" or "4.2M subscribers"
-            // So we blindly try to subscribe based on assumption or button state passed from UI
-            // For now, let's just trigger it.
-             youTubeRepository.subscribe(currentArtist.id, true) // Defaulting to true for now, need logic
-             // Ideally we should refresh the artist to see the new state
-             loadArtist()
+            youTubeRepository.subscribe(currentArtist.id, true)
+            loadArtist()
         }
     }
 }
