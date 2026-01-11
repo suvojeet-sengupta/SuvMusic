@@ -10,6 +10,7 @@ activityCompose = "1.9.3"
 composeBom = "2025.12.00"
 material3 = "1.5.0-alpha11"
 media3 = "1.9.0"
+mediarouter = "1.8.1"
 newpipeExtractor = "v0.24.8"
 okhttp = "4.12.0"
 coil = "2.7.0"
@@ -49,6 +50,9 @@ androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplaye
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
+
+# Media Router
+androidx-mediarouter = { group = "androidx.mediarouter", name = "mediarouter", version.ref = "mediarouter" }
 
 # NewPipe Extractor
 newpipe-extractor = { group = "com.github.teamnewpipe", name = "NewPipeExtractor", version.ref = "newpipeExtractor" }
