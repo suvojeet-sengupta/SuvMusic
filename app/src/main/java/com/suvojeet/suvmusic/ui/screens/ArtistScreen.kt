@@ -26,11 +26,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,6 +60,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,9 +69,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
 
 @Composable
@@ -77,7 +84,6 @@ fun ArtistScreen(
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
     Box(
         modifier = Modifier
@@ -94,28 +100,15 @@ fun ArtistScreen(
                 }
             }
             uiState.error != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Something went wrong",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = uiState.error ?: "Unknown error",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                ArtistErrorView(
+                    error = uiState.error!!,
+                    onRetry = { viewModel.loadArtist() },
+                    onBackClick = onBackClick
+                )
             }
             uiState.artist != null -> {
                 val artist = uiState.artist!!
-                
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 120.dp)
@@ -138,7 +131,7 @@ fun ArtistScreen(
                             onSubscribe = viewModel::toggleSubscribe
                         )
                     }
-                    
+
                     // Latest Release Section
                     val latestRelease = (artist.albums + artist.singles)
                         .maxByOrNull { it.year ?: "0" }
@@ -152,15 +145,15 @@ fun ArtistScreen(
                             )
                         }
                     }
-                    
+
                     // Top Songs Section
                     if (artist.songs.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(28.dp))
-                            ArtistSectionHeader(title = "Top Songs")
+                            ArtistSectionHeader(title = stringResource(R.string.header_top_songs))
                             Spacer(modifier = Modifier.height(12.dp))
                         }
-                        
+
                         itemsIndexed(artist.songs.take(5)) { index, song ->
                             TopSongRow(
                                 index = index + 1,
@@ -169,17 +162,17 @@ fun ArtistScreen(
                             )
                         }
                     }
-                    
+
                     // Albums Section
                     if (artist.albums.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(28.dp))
                             ArtistSectionHeader(
-                                title = "Albums",
+                                title = stringResource(R.string.header_albums),
                                 showSeeAll = artist.albums.size > 4
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            
+
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -193,17 +186,17 @@ fun ArtistScreen(
                             }
                         }
                     }
-                    
+
                     // Singles Section
                     if (artist.singles.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(28.dp))
                             ArtistSectionHeader(
-                                title = "Singles & EPs",
+                                title = stringResource(R.string.header_singles_eps),
                                 showSeeAll = artist.singles.size > 4
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            
+
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -217,7 +210,7 @@ fun ArtistScreen(
                             }
                         }
                     }
-                    
+
                     // About Section
                     if (!artist.description.isNullOrBlank()) {
                         item {
@@ -235,6 +228,113 @@ fun ArtistScreen(
 }
 
 @Composable
+private fun ArtistErrorView(
+    error: ArtistError,
+    onRetry: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    val (icon, title, message, buttonText) = when (error) {
+        ArtistError.AUTH_REQUIRED -> Quad(
+            Icons.Default.Lock,
+            stringResource(R.string.error_restricted_title),
+            stringResource(R.string.error_restricted_message),
+            stringResource(R.string.action_retry)
+        )
+        ArtistError.NETWORK -> Quad(
+            Icons.Default.CloudOff,
+            stringResource(R.string.error_connection_title),
+            stringResource(R.string.error_connection_message),
+            stringResource(R.string.action_retry)
+        )
+        else -> Quad(
+            Icons.Default.Warning,
+            stringResource(R.string.error_generic_title),
+            stringResource(R.string.error_generic_message),
+            stringResource(R.string.action_retry)
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Back button always available
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(16.dp)
+                .align(Alignment.TopStart)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.cd_back),
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Icon with subtle background
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                lineHeight = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = onRetry,
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.height(50.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = buttonText)
+            }
+        }
+    }
+}
+
+// Helper tuple class
+data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+@Composable
 private fun ArtistHeroHeader(
     artist: Artist,
     onBackClick: () -> Unit,
@@ -248,7 +348,7 @@ private fun ArtistHeroHeader(
             .replace(Regex("=w\\d+"), "=w800")
             .replace(Regex("=s\\d+"), "=s800")
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -268,7 +368,7 @@ private fun ArtistHeroHeader(
                 contentScale = ContentScale.Crop
             )
         }
-        
+
         // Gradient overlay
         Box(
             modifier = Modifier
@@ -286,7 +386,7 @@ private fun ArtistHeroHeader(
                     )
                 )
         )
-        
+
         // Artist Image (centered circle)
         Column(
             modifier = Modifier
@@ -326,9 +426,9 @@ private fun ArtistHeroHeader(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             // Artist Name
             Text(
                 text = artist.name,
@@ -342,7 +442,7 @@ private fun ArtistHeroHeader(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
-            
+
             // Subscriber count
             if (artist.subscribers != null) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -352,9 +452,9 @@ private fun ArtistHeroHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             // Action Buttons Row
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -376,11 +476,11 @@ private fun ArtistHeroHeader(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Play",
+                        text = stringResource(R.string.action_play),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                
+
                 // Shuffle Button
                 OutlinedButton(
                     onClick = onShuffle,
@@ -394,11 +494,11 @@ private fun ArtistHeroHeader(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Shuffle",
+                        text = stringResource(R.string.action_shuffle),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                
+
                 // Subscribe Button
                 IconButton(
                     onClick = onSubscribe,
@@ -409,13 +509,13 @@ private fun ArtistHeroHeader(
                 ) {
                     Icon(
                         imageVector = Icons.Default.NotificationsActive,
-                        contentDescription = "Subscribe",
+                        contentDescription = stringResource(R.string.cd_subscribe),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
         }
-        
+
         // Back button
         IconButton(
             onClick = onBackClick,
@@ -428,7 +528,7 @@ private fun ArtistHeroHeader(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.cd_back),
                 tint = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -442,18 +542,18 @@ private fun LatestReleaseSection(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    
+
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Text(
-            text = "Latest Release",
+            text = stringResource(R.string.header_latest_release),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold
             ),
             color = MaterialTheme.colorScheme.onBackground
         )
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         Surface(
             onClick = onClick,
             shape = RoundedCornerShape(16.dp),
@@ -477,9 +577,9 @@ private fun LatestReleaseSection(
                         .clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
                 )
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     // Type badge
                     Surface(
@@ -487,7 +587,7 @@ private fun LatestReleaseSection(
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            text = if (isSingle) "SINGLE" else "ALBUM",
+                            text = if (isSingle) stringResource(R.string.badge_single) else stringResource(R.string.badge_album),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold
                             ),
@@ -495,9 +595,9 @@ private fun LatestReleaseSection(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Text(
                         text = album.title,
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -507,7 +607,7 @@ private fun LatestReleaseSection(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    
+
                     if (album.year != null) {
                         Text(
                             text = album.year,
@@ -516,10 +616,10 @@ private fun LatestReleaseSection(
                         )
                     }
                 }
-                
+
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
+                    contentDescription = stringResource(R.string.action_play),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(32.dp)
                 )
@@ -548,11 +648,11 @@ private fun ArtistSectionHeader(
             ),
             color = MaterialTheme.colorScheme.onBackground
         )
-        
+
         if (showSeeAll) {
             TextButton(onClick = onSeeAllClick) {
                 Text(
-                    text = "See All",
+                    text = stringResource(R.string.action_see_all),
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -568,7 +668,7 @@ private fun TopSongRow(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -586,9 +686,9 @@ private fun TopSongRow(
             modifier = Modifier.width(28.dp),
             textAlign = TextAlign.Center
         )
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
         // Song thumbnail
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -601,9 +701,9 @@ private fun TopSongRow(
                 .clip(RoundedCornerShape(8.dp)),
             contentScale = ContentScale.Crop
         )
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
         // Song info
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -622,12 +722,12 @@ private fun TopSongRow(
                 maxLines = 1
             )
         }
-        
+
         // More button
         IconButton(onClick = { /* TODO: Show options */ }) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "More options",
+                contentDescription = stringResource(R.string.cd_more_options),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -640,7 +740,7 @@ private fun ArtistAlbumCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    
+
     Column(
         modifier = Modifier
             .width(150.dp)
@@ -681,9 +781,9 @@ private fun ArtistAlbumCard(
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(10.dp))
-        
+
         Text(
             text = album.title,
             style = MaterialTheme.typography.bodyLarge.copy(
@@ -693,7 +793,7 @@ private fun ArtistAlbumCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        
+
         if (album.year != null) {
             Text(
                 text = album.year,
@@ -710,18 +810,18 @@ private fun AboutSection(
     description: String
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    
+
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Text(
-            text = "About $artistName",
+            text = stringResource(R.string.header_about_artist, artistName),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold
             ),
             color = MaterialTheme.colorScheme.onBackground
         )
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
@@ -730,14 +830,14 @@ private fun AboutSection(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.animateContentSize()
         )
-        
+
         if (description.length > 150) {
             TextButton(
                 onClick = { isExpanded = !isExpanded },
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Text(
-                    text = if (isExpanded) "Show Less" else "Read More",
+                    text = if (isExpanded) stringResource(R.string.action_show_less) else stringResource(R.string.action_read_more),
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
