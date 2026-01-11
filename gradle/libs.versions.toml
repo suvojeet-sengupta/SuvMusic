@@ -17,6 +17,7 @@ coil = "2.7.0"
 hilt = "2.54"
 navigationCompose = "2.8.4"
 datastorePreferences = "1.1.1"
+room = "2.8.4"
 gson = "2.11.0"
 securityCrypto = "1.1.0"
 
@@ -71,6 +72,11 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 
 # DataStore
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
+
+# Room Database
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 
 # Gson
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
