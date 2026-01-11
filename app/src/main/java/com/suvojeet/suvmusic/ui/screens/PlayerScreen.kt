@@ -176,20 +176,24 @@ fun PlayerScreen(
     }
 
 
-    // Dynamic colors from album art
-    val dominantColors = rememberDominantColors(song?.thumbnailUrl)
-
     // Fix status bar color for immersive player
     // Force light icons (dark status bar) because player header is usually dark/colorful
     val view = LocalView.current
     val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
+    // Dynamic colors from album art
+    val dominantColors = rememberDominantColors(
+        imageUrl = song?.thumbnailUrl,
+        isDarkTheme = isAppInDarkTheme
+    )
     
     DisposableEffect(Unit) {
         val window = (view.context as Activity).window
         val insetsController = WindowCompat.getInsetsController(window, view)
         
-        // Force light icons (for dark background)
-        insetsController.isAppearanceLightStatusBars = false
+        // In dark mode, force light icons (for dark background)
+        // In light mode, force dark icons (for light background)
+        insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme
         
         onDispose {
             // Restore based on app theme
@@ -226,8 +230,8 @@ fun PlayerScreen(
     // High-res thumbnail
     val highResThumbnail = getHighResThumbnail(song?.thumbnailUrl)
 
-    // Use pure black for dark mode, but theme background for light mode
-    val playerBackgroundColor = if (isAppInDarkTheme) Color.Black else MaterialTheme.colorScheme.background
+    // Use pure black for dark mode, pure white for light mode
+    val playerBackgroundColor = if (isAppInDarkTheme) Color.Black else Color.White
 
     Box(
         modifier = Modifier

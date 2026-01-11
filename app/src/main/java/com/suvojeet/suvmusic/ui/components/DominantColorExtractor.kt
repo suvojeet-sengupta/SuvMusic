@@ -33,12 +33,13 @@ data class DominantColors(
 @Composable
 fun rememberDominantColors(
     imageUrl: String?,
+    isDarkTheme: Boolean = true,
     defaultColors: DominantColors = DominantColors()
 ): DominantColors {
-    var colors by remember(imageUrl) { mutableStateOf(defaultColors) }
+    var colors by remember(imageUrl, isDarkTheme) { mutableStateOf(defaultColors) }
     val context = LocalContext.current
     
-    LaunchedEffect(imageUrl) {
+    LaunchedEffect(imageUrl, isDarkTheme) {
         if (imageUrl == null) {
             colors = defaultColors
             return@LaunchedEffect
@@ -57,7 +58,7 @@ fun rememberDominantColors(
                 if (result is SuccessResult) {
                     val bitmap = (result.drawable as? BitmapDrawable)?.bitmap
                     bitmap?.let {
-                        colors = extractColorsFromBitmap(it)
+                        colors = extractColorsFromBitmap(it, isDarkTheme)
                     }
                 }
             } catch (e: Exception) {
@@ -71,8 +72,9 @@ fun rememberDominantColors(
 
 /**
  * Extract colors from bitmap using averaging and palette detection
+ * @param isDarkTheme If true, generates dark backgrounds; if false, generates light backgrounds
  */
-private fun extractColorsFromBitmap(bitmap: Bitmap): DominantColors {
+private fun extractColorsFromBitmap(bitmap: Bitmap, isDarkTheme: Boolean = true): DominantColors {
     val width = bitmap.width
     val height = bitmap.height
     
@@ -104,31 +106,51 @@ private fun extractColorsFromBitmap(bitmap: Bitmap): DominantColors {
     val avgG = (totalG / colors.size).toInt()
     val avgB = (totalB / colors.size).toInt()
     
-    // Create primary color (darker version for background)
-    val primary = Color(
-        red = (avgR * 0.3f / 255f).coerceIn(0f, 1f),
-        green = (avgG * 0.3f / 255f).coerceIn(0f, 1f),
-        blue = (avgB * 0.3f / 255f).coerceIn(0f, 1f)
-    )
+    // Create colors based on theme
+    val primary: Color
+    val secondary: Color
+    val onBackground: Color
     
-    // Create secondary color (slightly lighter)
-    val secondary = Color(
-        red = (avgR * 0.5f / 255f).coerceIn(0f, 1f),
-        green = (avgG * 0.5f / 255f).coerceIn(0f, 1f),
-        blue = (avgB * 0.5f / 255f).coerceIn(0f, 1f)
-    )
+    if (isDarkTheme) {
+        // Dark theme: dark backgrounds with white text
+        primary = Color(
+            red = (avgR * 0.3f / 255f).coerceIn(0f, 1f),
+            green = (avgG * 0.3f / 255f).coerceIn(0f, 1f),
+            blue = (avgB * 0.3f / 255f).coerceIn(0f, 1f)
+        )
+        
+        secondary = Color(
+            red = (avgR * 0.5f / 255f).coerceIn(0f, 1f),
+            green = (avgG * 0.5f / 255f).coerceIn(0f, 1f),
+            blue = (avgB * 0.5f / 255f).coerceIn(0f, 1f)
+        )
+        
+        onBackground = Color.White
+    } else {
+        // Light theme: light backgrounds with dark text
+        // Mix with white to create light, pastel-like backgrounds
+        primary = Color(
+            red = (avgR * 0.2f / 255f + 0.85f).coerceIn(0f, 1f),
+            green = (avgG * 0.2f / 255f + 0.85f).coerceIn(0f, 1f),
+            blue = (avgB * 0.2f / 255f + 0.85f).coerceIn(0f, 1f)
+        )
+        
+        secondary = Color(
+            red = (avgR * 0.3f / 255f + 0.75f).coerceIn(0f, 1f),
+            green = (avgG * 0.3f / 255f + 0.75f).coerceIn(0f, 1f),
+            blue = (avgB * 0.3f / 255f + 0.75f).coerceIn(0f, 1f)
+        )
+        
+        onBackground = Color(0xFF1A1A1A) // Dark gray, not pure black
+    }
     
-    // Create accent color (saturated version)
+    // Create accent color (saturated version) - works for both themes
     val hsl = FloatArray(3)
     ColorUtils.RGBToHSL(avgR, avgG, avgB, hsl)
     hsl[1] = minOf(1f, hsl[1] * 1.5f) // Boost saturation
-    hsl[2] = 0.6f // Set lightness for accent
+    hsl[2] = if (isDarkTheme) 0.6f else 0.5f // Slightly darker accent for light theme
     val accentInt = ColorUtils.HSLToColor(hsl)
     val accent = Color(accentInt)
-    
-    // Determine text color based on background luminance
-    val luminance = ColorUtils.calculateLuminance(android.graphics.Color.rgb(avgR, avgG, avgB))
-    val onBackground = if (luminance > 0.5) Color.Black else Color.White
     
     return DominantColors(
         primary = primary,
