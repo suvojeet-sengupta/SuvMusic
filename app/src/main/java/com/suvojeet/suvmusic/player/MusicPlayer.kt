@@ -21,6 +21,7 @@ import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.service.MusicPlayerService
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -53,7 +54,8 @@ class MusicPlayer @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,
-    private val sleepTimerManager: SleepTimerManager
+    private val sleepTimerManager: SleepTimerManager,
+    private val listeningHistoryRepository: ListeningHistoryRepository
 ) {
     
     private val _playerState = MutableStateFlow(PlayerState())
@@ -73,6 +75,10 @@ class MusicPlayer @Inject constructor(
     private var preloadedNextSongId: String? = null
     private var preloadedStreamUrl: String? = null
     private var isPreloading = false
+    
+    // Listening history tracking
+    private var currentSongStartTime: Long = 0L
+    private var currentSongStartPosition: Long = 0L
     
     init {
         connectToService()
@@ -240,10 +246,22 @@ class MusicPlayer @Inject constructor(
                     )
                 }
                 
-                // Add to recently played
+                // Add to recently played and track listening history
                 if (song != null) {
                     scope.launch {
                         sessionManager.addToRecentlyPlayed(song)
+                        
+                        // Track previous song if it was playing
+                        val prevSong = _playerState.value.currentSong
+                        if (prevSong != null && currentSongStartTime > 0) {
+                            val listenDuration = System.currentTimeMillis() - currentSongStartTime
+                            val wasSkipped = listenDuration < (prevSong.duration * 0.5) // Skipped if < 50% listened
+                            listeningHistoryRepository.recordPlay(prevSong, listenDuration, wasSkipped)
+                        }
+                        
+                        // Start tracking new song
+                        currentSongStartTime = System.currentTimeMillis()
+                        currentSongStartPosition = controller.currentPosition
                     }
                 }
                 
