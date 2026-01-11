@@ -527,6 +527,9 @@ class MusicPlayer @Inject constructor(
     }
     
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true) {
+        // IMMEDIATELY pause current playback for instant response
+        mediaController?.pause()
+        
         // Reset preload state
         preloadedNextSongId = null
         preloadedStreamUrl = null
