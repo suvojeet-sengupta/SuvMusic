@@ -1136,14 +1136,14 @@ private fun BottomActions(
                     tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
                 )
             }
-        } else {
-            IconButton(onClick = onCastClick) {
-                Icon(
-                    imageVector = Icons.Default.Cast,
-                    contentDescription = "Cast",
-                    tint = dominantColors.onBackground.copy(alpha = 0.6f)
-                )
-            }
+        }
+
+        IconButton(onClick = onCastClick) {
+            Icon(
+                imageVector = Icons.Default.Cast,
+                contentDescription = "Cast",
+                tint = dominantColors.onBackground.copy(alpha = 0.6f)
+            )
         }
 
         IconButton(onClick = onQueueClick) {
