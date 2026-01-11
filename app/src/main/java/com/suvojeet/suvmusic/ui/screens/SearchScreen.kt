@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.Artist
+import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
@@ -79,6 +80,7 @@ import androidx.compose.ui.platform.LocalContext
 fun SearchScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onArtistClick: (String) -> Unit = {}, // Artist browse ID
+    onPlaylistClick: (String) -> Unit = {}, // Playlist ID
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -302,6 +304,31 @@ fun SearchScreen(
                                 ArtistSearchCard(
                                     artist = artist,
                                     onClick = { onArtistClick(artist.id) }
+                                )
+                            }
+                        }
+                    }
+                    
+                    item {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+                
+                // Playlist Results (show after artists)
+                if (uiState.query.isNotBlank() && uiState.playlistResults.isNotEmpty()) {
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        ) {
+                            items(uiState.playlistResults) { playlist ->
+                                PlaylistSearchCard(
+                                    playlist = playlist,
+                                    onClick = { onPlaylistClick(playlist.id) }
                                 )
                             }
                         }
@@ -592,6 +619,71 @@ private fun ArtistSearchCard(
                 text = "Artist",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistSearchCard(
+    playlist: Playlist,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Column(
+        modifier = Modifier
+            .width(140.dp)
+            .clickable(onClick = onClick)
+    ) {
+        // Playlist thumbnail
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            if (playlist.thumbnailUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(playlist.thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = playlist.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Playlist title
+        Text(
+            text = playlist.title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        
+        // Author
+        if (playlist.author.isNotBlank()) {
+            Text(
+                text = playlist.author,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
