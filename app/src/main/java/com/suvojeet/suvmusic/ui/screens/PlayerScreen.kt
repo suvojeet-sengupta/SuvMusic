@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -99,8 +100,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.provider.Settings
+import android.view.WindowManager
 import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -233,6 +237,29 @@ fun PlayerScreen(
     // Use pure black for dark mode, pure white for light mode
     val playerBackgroundColor = if (isAppInDarkTheme) Color.Black else Color.White
 
+    // Volume control states
+    val audioManager = remember {
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+    
+    val maxVolume = remember {
+        audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+    }
+    
+    var currentVolume by remember {
+        mutableStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC))
+    }
+    
+    var showVolumeIndicator by remember { mutableStateOf(false) }
+    
+    // Auto-hide volume indicator
+    LaunchedEffect(showVolumeIndicator) {
+        if (showVolumeIndicator) {
+            kotlinx.coroutines.delay(1500)
+            showVolumeIndicator = false
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -291,6 +318,79 @@ fun PlayerScreen(
                     )
                 )
         )
+
+        // Volume Gesture Layer (Right side only - doesn't interfere with swipe dismiss)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragStart = { offset ->
+                            // Only activate on right 30% of screen
+                            if (offset.x > size.width * 0.7f) {
+                                showVolumeIndicator = true
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            // Only handle if on right side
+                            if (change.position.x > size.width * 0.7f) {
+                                change.consume()
+                                // Adjust volume (drag up = increase, drag down = decrease)
+                                val volumeChange = (-dragAmount / 30).roundToInt()
+                                val newVolume = (currentVolume + volumeChange).coerceIn(0, maxVolume)
+                                if (newVolume != currentVolume) {
+                                    audioManager.setStreamVolume(
+                                        AudioManager.STREAM_MUSIC,
+                                        newVolume,
+                                        0
+                                    )
+                                    currentVolume = newVolume
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            kotlinx.coroutines.GlobalScope.launch {
+                                kotlinx.coroutines.delay(1000)
+                                showVolumeIndicator = false
+                            }
+                        }
+                    )
+                }
+        )
+        
+        // Volume Indicator Overlay
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showVolumeIndicator,
+            enter = fadeIn() + slideInVertically { -it / 2 },
+            exit = fadeOut() + slideOutVertically { -it / 2 },
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 100.dp, end = 20.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(16.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = if (currentVolume > 0) 
+                            Icons.Default.Star else Icons.Default.StarOutline,
+                        contentDescription = "Volume",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "${(currentVolume * 100 / maxVolume)}%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
 
         // Main Content Layer that moves with drag
         Box(
