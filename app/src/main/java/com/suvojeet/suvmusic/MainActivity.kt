@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,11 +41,17 @@ import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
 import com.suvojeet.suvmusic.ui.components.MiniPlayer
 import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
+import com.suvojeet.suvmusic.utils.NetworkMonitor
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.foundation.isSystemInDarkTheme
+import kotlinx.coroutines.delay
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    @Inject
+    lateinit var networkMonitor: NetworkMonitor
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -72,7 +81,10 @@ class MainActivity : ComponentActivity() {
             }
             
             SuvMusicTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
-                SuvMusicApp(initialDeepLink = deepLinkUrl)
+                SuvMusicApp(
+                    initialDeepLink = deepLinkUrl,
+                    networkMonitor = networkMonitor
+                )
             }
         }
     }
@@ -118,15 +130,35 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun SuvMusicApp(initialDeepLink: String? = null) {
+fun SuvMusicApp(
+    initialDeepLink: String? = null,
+    networkMonitor: NetworkMonitor
+) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
+    val snackbarHostState = remember { SnackbarHostState() }
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val playerState by playerViewModel.playerState.collectAsState()
     val lyrics by playerViewModel.lyricsState.collectAsState()
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
+    
+    // Monitor network connectivity
+    val isConnected by networkMonitor.isConnected.collectAsState(initial = networkMonitor.isCurrentlyConnected())
+    
+    // Show snackbar when offline for 30 seconds
+    LaunchedEffect(isConnected) {
+        if (!isConnected) {
+            snackbarHostState.showSnackbar(
+                message = "No internet connection",
+                duration = androidx.compose.material3.SnackbarDuration.Long
+            )
+            // Auto-dismiss after 30 seconds
+            delay(30000)
+            snackbarHostState.currentSnackbarData?.dismiss()
+        }
+    }
     
     // Sleep Timer
     val sleepTimerOption by playerViewModel.sleepTimerOption.collectAsState()
@@ -183,6 +215,15 @@ fun SuvMusicApp(initialDeepLink: String? = null) {
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState) { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
+                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            },
             bottomBar = {
                 if (showBottomNav) {
                     Column {
