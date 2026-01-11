@@ -75,13 +75,36 @@ object AppModule {
     
     @Provides
     @Singleton
+    fun provideAppDatabase(
+        @ApplicationContext context: Context
+    ): com.suvojeet.suvmusic.data.local.AppDatabase {
+        return androidx.room.Room.databaseBuilder(
+            context,
+            com.suvojeet.suvmusic.data.local.AppDatabase::class.java,
+            "suvmusic_database"
+        )
+        .fallbackToDestructiveMigration() // For now, recreate DB on schema changes
+        .build()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideListeningHistoryDao(
+        database: com.suvojeet.suvmusic.data.local.AppDatabase
+    ): com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao {
+        return database.listeningHistoryDao()
+    }
+    
+    @Provides
+    @Singleton
     fun provideMusicPlayer(
         @ApplicationContext context: Context,
         youTubeRepository: YouTubeRepository,
         jioSaavnRepository: JioSaavnRepository,
         sessionManager: SessionManager,
-        sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager
+        sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager,
+        listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
     ): MusicPlayer {
-        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager)
+        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository)
     }
 }
