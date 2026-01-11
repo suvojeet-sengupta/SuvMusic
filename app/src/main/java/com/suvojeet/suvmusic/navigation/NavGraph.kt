@@ -167,18 +167,11 @@ fun NavGraph(
         
         composable(Destination.Settings.route) {
             SettingsScreen(
-                onLoginClick = {
-                    navController.navigate(Destination.YouTubeLogin.route)
-                },
-                onPlaybackClick = {
-                    navController.navigate(Destination.PlaybackSettings.route)
-                },
-                onAppearanceClick = {
-                    navController.navigate(Destination.AppearanceSettings.route)
-                },
-                onAboutClick = {
-                    navController.navigate(Destination.About.route)
-                }
+                onLoginClick = { navController.navigate(Destination.YouTubeLogin.route) },
+                onPlaybackClick = { navController.navigate(Destination.PlaybackSettings.route) },
+                onAppearanceClick = { navController.navigate(Destination.AppearanceSettings.route) },
+                onStatsClick = { navController.navigate(Destination.ListeningStats.route) },
+                onAboutClick = { navController.navigate(Destination.About.route) }
             )
         }
         
