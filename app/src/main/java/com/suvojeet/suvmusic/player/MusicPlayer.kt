@@ -84,14 +84,47 @@ class MusicPlayer @Inject constructor(
 
         // Initial device scan
         updateAvailableDevices()
+        
+        // Register receiver for device changes
+        registerDeviceReceiver()
+    }
+
+    private fun registerDeviceReceiver() {
+        val filter = android.content.IntentFilter().apply {
+            addAction(android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+            addAction(android.content.Intent.ACTION_HEADSET_PLUG)
+            addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
+            addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
+        }
+        
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                // Small delay to allow system to update device list
+                scope.launch {
+                    delay(1000)
+                    updateAvailableDevices()
+                }
+            }
+        }
+        
+        try {
+            context.registerReceiver(receiver, filter)
+        } catch (e: Exception) {
+            // Log error
+        }
     }
 
     private fun updateAvailableDevices() {
         val devices = mutableListOf<OutputDevice>()
         val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         
-        // Always add phone speaker as primary
-        devices.add(OutputDevice("phone_speaker", "Phone Speaker", DeviceType.PHONE, true))
+        // Check current output
+        val isBluetoothActive = audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn
+        val isWiredHeadsetConnected = audioManager.isWiredHeadsetOn
+
+        // Default: Phone Speaker
+        val phoneSelected = !isBluetoothActive && !isWiredHeadsetConnected
+        devices.add(OutputDevice("phone_speaker", "Phone Speaker", DeviceType.PHONE, phoneSelected))
 
         audioDevices.forEach { device ->
             val type = when (device.type) {
@@ -100,24 +133,31 @@ class MusicPlayer @Inject constructor(
                 AudioDeviceInfo.TYPE_WIRED_HEADPHONES, 
                 AudioDeviceInfo.TYPE_WIRED_HEADSET,
                 AudioDeviceInfo.TYPE_USB_HEADSET -> DeviceType.HEADPHONES
-                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> return@forEach // Already added
+                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> return@forEach // Already handled
                 else -> DeviceType.UNKNOWN
             }
             
-            // Add if not already present by type (simplified logic)
-            if (devices.none { it.type == type && it.name == device.productName.toString() }) {
+            val isSelected = when (type) {
+                DeviceType.BLUETOOTH -> isBluetoothActive
+                DeviceType.HEADPHONES -> isWiredHeadsetConnected
+                else -> false
+            }
+
+            // Avoid duplicates
+            if (devices.none { it.name == device.productName.toString() }) {
                 devices.add(
                     OutputDevice(
                         id = device.id.toString(),
                         name = device.productName.toString().ifBlank { type.name },
                         type = type,
-                        isSelected = false // Will be determined by current active route
+                        isSelected = isSelected
                     )
                 )
             }
         }
 
-        _playerState.update { it.copy(availableDevices = devices) }
+        val selectedDevice = devices.find { it.isSelected } ?: devices.firstOrNull()
+        _playerState.update { it.copy(availableDevices = devices, selectedDevice = selectedDevice) }
     }
 
     fun switchOutputDevice(device: OutputDevice) {
