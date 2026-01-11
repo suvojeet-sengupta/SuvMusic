@@ -208,6 +208,12 @@ fun NavGraph(
             )
         }
         
+        composable(Destination.ListeningStats.route) {
+            com.suvojeet.suvmusic.ui.screens.ListeningStatsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        
         composable(
             route = Destination.Player.route,
             enterTransition = {
