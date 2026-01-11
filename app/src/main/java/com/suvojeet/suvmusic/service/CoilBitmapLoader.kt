@@ -40,7 +40,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 val drawable = result.drawable
 
                 if (drawable == null) {
-                    future.setException(Exception("Drawable is null"))
+                    future.setException(Exception("Failed to load image: drawable result is null for URI: $uri"))
                     return@launch
                 }
 
