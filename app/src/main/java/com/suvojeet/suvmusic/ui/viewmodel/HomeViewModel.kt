@@ -7,6 +7,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import com.suvojeet.suvmusic.data.MusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val homeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList(),
+    val recommendations: List<Song> = emptyList(),
     val userAvatarUrl: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -29,7 +31,8 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val recommendationEngine: RecommendationEngine
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -39,6 +42,7 @@ class HomeViewModel @Inject constructor(
         loadData()
         observeSession()
         observeMusicSource()
+        loadRecommendations()
     }
     
     private fun observeSession() {
@@ -130,5 +134,19 @@ class HomeViewModel @Inject constructor(
     
     fun refresh() {
         loadData()
+        loadRecommendations()
+    }
+    
+    private fun loadRecommendations() {
+        viewModelScope.launch {
+            try {
+                // Only load recommendations if user has listening history
+                val recommendations = recommendationEngine.getPersonalizedRecommendations(20)
+                _uiState.update { it.copy(recommendations = recommendations) }
+            } catch (e: Exception) {
+                // Silently fail - recommendations are optional
+                _uiState.update { it.copy(recommendations = emptyList()) }
+            }
+        }
     }
 }

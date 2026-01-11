@@ -73,6 +73,29 @@ fun HomeScreen(
                         )
                     }
                     
+                    // For You - Personalized Recommendations
+                    if (uiState.recommendations.isNotEmpty()) {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                HomeSectionHeader(title = "For You")
+                                
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(uiState.recommendations) { song ->
+                                        MediumSongCard(
+                                            song = song,
+                                            onClick = {
+                                                onSongClick(uiState.recommendations, uiState.recommendations.indexOf(song))
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     items(uiState.homeSections) { section ->
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             HomeSectionHeader(title = section.title)
