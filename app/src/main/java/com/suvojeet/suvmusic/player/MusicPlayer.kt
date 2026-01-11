@@ -33,6 +33,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import androidx.mediarouter.media.MediaRouter
+import androidx.mediarouter.media.MediaRouteSelector
+import com.suvojeet.suvmusic.data.model.DeviceType
+import com.suvojeet.suvmusic.data.model.OutputDevice
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -60,6 +66,9 @@ class MusicPlayer @Inject constructor(
     
     private var positionUpdateJob: Job? = null
     
+    // Audio Manager for device detection
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    
     // Preloading state for gapless playback
     private var preloadedNextSongId: String? = null
     private var preloadedStreamUrl: String? = null
@@ -72,7 +81,66 @@ class MusicPlayer @Inject constructor(
         sleepTimerManager.setOnTimerFinished {
             pause()
         }
+
+        // Initial device scan
+        updateAvailableDevices()
     }
+
+    private fun updateAvailableDevices() {
+        val devices = mutableListOf<OutputDevice>()
+        val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        
+        // Always add phone speaker as primary
+        devices.add(OutputDevice("phone_speaker", "Phone Speaker", DeviceType.PHONE, true))
+
+        audioDevices.forEach { device ->
+            val type = when (device.type) {
+                AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 
+                AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> DeviceType.BLUETOOTH
+                AudioDeviceInfo.TYPE_WIRED_HEADPHONES, 
+                AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                AudioDeviceInfo.TYPE_USB_HEADSET -> DeviceType.HEADPHONES
+                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> return@forEach // Already added
+                else -> DeviceType.UNKNOWN
+            }
+            
+            // Add if not already present by type (simplified logic)
+            if (devices.none { it.type == type && it.name == device.productName.toString() }) {
+                devices.add(
+                    OutputDevice(
+                        id = device.id.toString(),
+                        name = device.productName.toString().ifBlank { type.name },
+                        type = type,
+                        isSelected = false // Will be determined by current active route
+                    )
+                )
+            }
+        }
+
+        _playerState.update { it.copy(availableDevices = devices) }
+    }
+
+    fun switchOutputDevice(device: OutputDevice) {
+        // Switching output device programmatically is limited on Android without system permissions
+        // Usually, we can only suggest or open system settings, or use MediaRouter for Cast
+        // For local devices, Android handles it automatically when connected.
+        // We will show the system output switcher if possible (MediaRouter)
+        
+        val mediaRouter = MediaRouter.getInstance(context)
+        // This is a simplified approach to trigger the system's output switcher
+        // In a real app, you might use MediaRouteActionProvider or similar
+        
+        _playerState.update { state ->
+            val updatedDevices = state.availableDevices.map { 
+                it.copy(isSelected = it.id == device.id)
+            }
+            state.copy(
+                availableDevices = updatedDevices,
+                selectedDevice = device
+            )
+        }
+    }
+
     
     private fun connectToService() {
         val sessionToken = SessionToken(
