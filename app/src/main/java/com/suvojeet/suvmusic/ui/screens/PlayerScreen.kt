@@ -65,6 +65,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -80,20 +81,24 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
+import android.app.Activity
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
@@ -173,6 +178,26 @@ fun PlayerScreen(
 
     // Dynamic colors from album art
     val dominantColors = rememberDominantColors(song?.thumbnailUrl)
+
+    // Fix status bar color for immersive player
+    // Force light icons (dark status bar) because player header is usually dark/colorful
+    val view = LocalView.current
+    val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    
+    DisposableEffect(Unit) {
+        val window = (view.context as Activity).window
+        val insetsController = WindowCompat.getInsetsController(window, view)
+        
+        // Force light icons (for dark background)
+        insetsController.isAppearanceLightStatusBars = false
+        
+        onDispose {
+            // Restore based on app theme
+            // If app is dark, we want light icons (false)
+            // If app is light, we want dark icons (true)
+            insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme
+        }
+    }
 
     // UI States
     var showQueue by remember { mutableStateOf(false) }
