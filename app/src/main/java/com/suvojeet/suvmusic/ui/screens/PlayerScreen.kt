@@ -140,6 +140,7 @@ fun PlayerScreen(
     onToggleVideoMode: () -> Unit = {},
     player: Player? = null,
     onPlayFromQueue: (Int) -> Unit = {},
+    onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
     lyrics: Lyrics? = null,
     isFetchingLyrics: Boolean = false,
     // Sleep timer
@@ -179,6 +180,7 @@ fun PlayerScreen(
     var showActionsSheet by remember { mutableStateOf(false) }
     var showCreditsSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
+    var showOutputDeviceSheet by remember { mutableStateOf(false) }
 
     // Ringtone states
     var showRingtoneProgress by remember { mutableStateOf(false) }
@@ -398,7 +400,7 @@ fun PlayerScreen(
                                 // Bottom Actions
                                 BottomActions(
                                     onLyricsClick = { showLyrics = true },
-                                    onCastClick = { /* TODO */ },
+                                    onCastClick = { showOutputDeviceSheet = true },
                                     onQueueClick = { showQueue = true },
                                     dominantColors = dominantColors,
                                     isYouTubeSong = song?.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE,
@@ -525,7 +527,7 @@ fun PlayerScreen(
                             // Bottom Actions
                             BottomActions(
                                 onLyricsClick = { showLyrics = true },
-                                onCastClick = { /* TODO */ },
+                                onCastClick = { showOutputDeviceSheet = true },
                                 onQueueClick = { showQueue = true },
                                 dominantColors = dominantColors,
                                 isYouTubeSong = song?.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE,
@@ -699,6 +701,15 @@ fun PlayerScreen(
                 },
                 onSelectOption = onSetSleepTimer,
                 onDismiss = { showSleepTimerSheet = false },
+                accentColor = dominantColors.accent
+            )
+
+            // Output Device Sheet
+            com.suvojeet.suvmusic.ui.components.OutputDeviceSheet(
+                isVisible = showOutputDeviceSheet,
+                devices = playerState.availableDevices,
+                onDeviceSelected = onSwitchDevice,
+                onDismiss = { showOutputDeviceSheet = false },
                 accentColor = dominantColors.accent
             )
         }
