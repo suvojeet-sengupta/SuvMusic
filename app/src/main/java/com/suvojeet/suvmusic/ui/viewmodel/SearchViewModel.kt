@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.BrowseCategory
+import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
@@ -36,6 +37,7 @@ data class SearchUiState(
     val filter: String = YouTubeRepository.FILTER_SONGS,
     val results: List<Song> = emptyList(),
     val artistResults: List<Artist> = emptyList(),
+    val playlistResults: List<Playlist> = emptyList(),
     val suggestions: List<String> = emptyList(),
     val browseCategories: List<BrowseCategory> = emptyList(),
     val selectedCategory: BrowseCategory? = null,
@@ -281,7 +283,7 @@ class SearchViewModel @Inject constructor(
                 
                 when (currentTab) {
                     SearchTab.YOUTUBE_MUSIC -> {
-                        // Search songs and artists in parallel
+                        // Search songs, artists, and playlists in parallel
                         coroutineScope {
                             val songsDeferred = async { 
                                 youTubeRepository.search(query, _uiState.value.filter) 
@@ -289,14 +291,19 @@ class SearchViewModel @Inject constructor(
                             val artistsDeferred = async { 
                                 youTubeRepository.searchArtists(query) 
                             }
+                            val playlistsDeferred = async {
+                                youTubeRepository.searchPlaylists(query)
+                            }
                             
                             val songs = songsDeferred.await()
                             val artists = artistsDeferred.await()
+                            val playlists = playlistsDeferred.await()
                             
                             _uiState.update { 
                                 it.copy(
                                     results = songs,
                                     artistResults = artists,
+                                    playlistResults = playlists,
                                     isLoading = false
                                 )
                             }

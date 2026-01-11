@@ -146,6 +146,40 @@ class YouTubeRepository @Inject constructor(
     }
 
     /**
+     * Search for playlists on YouTube Music.
+     * Returns a list of Playlist objects with basic info (id, title, author, thumbnail).
+     */
+    suspend fun searchPlaylists(query: String): List<Playlist> = withContext(Dispatchers.IO) {
+        try {
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+                ?: return@withContext emptyList()
+            
+            val searchExtractor = ytService.getSearchExtractor(query, listOf(FILTER_PLAYLISTS), "")
+            searchExtractor.fetchPage()
+            
+            searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.playlist.PlaylistInfoItem>().take(5).mapNotNull { item ->
+                try {
+                    val playlistId = item.url?.substringAfter("list=")?.substringBefore("&")
+                    if (playlistId.isNullOrBlank()) return@mapNotNull null
+                    
+                    Playlist(
+                        id = playlistId,
+                        title = item.name ?: "Unknown Playlist",
+                        author = item.uploaderName ?: "",
+                        thumbnailUrl = item.thumbnails?.lastOrNull()?.url,
+                        songs = emptyList() // Will be loaded when clicked
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
      * Get search suggestions for autocomplete.
      */
     suspend fun getSearchSuggestions(query: String): List<String> = withContext(Dispatchers.IO) {
