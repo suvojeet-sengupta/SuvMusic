@@ -226,8 +226,8 @@ fun PlayerScreen(
     // High-res thumbnail
     val highResThumbnail = getHighResThumbnail(song?.thumbnailUrl)
 
-    // Capture the current background color from the theme (White in light mode, Dark in dark mode)
-    val themeBackgroundColor = MaterialTheme.colorScheme.background
+    // Use pure black for dark mode, but theme background for light mode
+    val playerBackgroundColor = if (isAppInDarkTheme) Color.Black else MaterialTheme.colorScheme.background
 
     Box(
         modifier = Modifier
@@ -282,8 +282,7 @@ fun PlayerScreen(
                         colors = listOf(
                             dominantColors.secondary,
                             dominantColors.primary,
-                            // Use themeBackgroundColor instead of Color.Black to support Light Theme
-                            themeBackgroundColor
+                            playerBackgroundColor
                         )
                     )
                 )
