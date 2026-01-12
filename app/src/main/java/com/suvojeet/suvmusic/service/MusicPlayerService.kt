@@ -80,6 +80,53 @@ class MusicPlayerService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivityPendingIntent)
             .setBitmapLoader(CoilBitmapLoader(this))
+            .setCallback(object : MediaSession.Callback {
+                override fun onConnect(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo
+                ): MediaSession.ConnectionResult {
+                    val connectionResult = super.onConnect(session, controller)
+                    val sessionCommands = connectionResult.availableSessionCommands
+                        .buildUpon()
+                        .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
+                        .build()
+                    return MediaSession.ConnectionResult.accept(
+                        sessionCommands,
+                        connectionResult.availablePlayerCommands
+                    )
+                }
+
+                override fun onCustomCommand(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    customCommand: androidx.media3.session.SessionCommand,
+                    args: android.os.Bundle
+                ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+                    if (customCommand.customAction == "SET_OUTPUT_DEVICE") {
+                        val deviceId = args.getString("DEVICE_ID")
+                        if (deviceId != null) {
+                            val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+                            
+                            val targetDevice = if (deviceId == "phone_speaker") {
+                                devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                            } else {
+                                devices.find { it.id.toString() == deviceId }
+                            }
+                            
+                            val player = session.player
+                            if (player is ExoPlayer) {
+                                // If targetDevice is null, it clears the preference (default routing)
+                                player.setPreferredAudioDevice(targetDevice)
+                            }
+                        }
+                        return com.google.common.util.concurrent.Futures.immediateFuture(
+                            androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
+                        )
+                    }
+                    return super.onCustomCommand(session, controller, customCommand, args)
+                }
+            })
             .build()
     }
     
