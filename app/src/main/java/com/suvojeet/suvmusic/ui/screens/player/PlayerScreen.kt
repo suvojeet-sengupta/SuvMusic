@@ -123,6 +123,7 @@ fun PlayerScreen(
     player: Player? = null,
     onPlayFromQueue: (Int) -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
+    onRefreshDevices: () -> Unit = {},
     lyrics: Lyrics? = null,
     isFetchingLyrics: Boolean = false,
     // Sleep timer
@@ -814,6 +815,7 @@ fun PlayerScreen(
                 devices = playerState.availableDevices,
                 onDeviceSelected = onSwitchDevice,
                 onDismiss = { showOutputDeviceSheet = false },
+                onRefreshDevices = onRefreshDevices,
                 accentColor = dominantColors.accent
             )
         }

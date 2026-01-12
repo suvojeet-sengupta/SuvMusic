@@ -49,6 +49,7 @@ fun NavGraph(
     onToggleAutoplay: () -> Unit,
     onToggleVideoMode: () -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
+    onRefreshDevices: () -> Unit = {},
     player: Player? = null,
     lyrics: com.suvojeet.suvmusic.data.model.Lyrics?,
     isFetchingLyrics: Boolean,
@@ -252,6 +253,7 @@ fun NavGraph(
                     }
                 },
                 onSwitchDevice = onSwitchDevice,
+                onRefreshDevices = onRefreshDevices,
                 lyrics = lyrics,
                 isFetchingLyrics = isFetchingLyrics,
                 sleepTimerOption = sleepTimerOption,

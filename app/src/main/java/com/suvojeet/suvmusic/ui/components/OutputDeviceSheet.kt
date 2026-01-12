@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,8 +27,16 @@ fun OutputDeviceSheet(
     devices: List<OutputDevice>,
     onDeviceSelected: (OutputDevice) -> Unit,
     onDismiss: () -> Unit,
+    onRefreshDevices: () -> Unit = {},
     accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
+    // Refresh devices when sheet becomes visible
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            onRefreshDevices()
+        }
+    }
+    
     if (isVisible) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
