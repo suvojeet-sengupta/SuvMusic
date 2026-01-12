@@ -21,6 +21,7 @@ data class LibraryUiState(
     val downloadedSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null
 )
 
@@ -91,14 +92,16 @@ class LibraryViewModel @Inject constructor(
                         playlists = allPlaylists,
                         localSongs = localSongs,
                         likedSongs = likedSongs,
-                        isLoading = false
+                        isLoading = false,
+                        isRefreshing = false
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
                         error = e.message,
-                        isLoading = false
+                        isLoading = false,
+                        isRefreshing = false
                     )
                 }
             }
@@ -124,6 +127,7 @@ class LibraryViewModel @Inject constructor(
     }
     
     fun refresh() {
+        _uiState.update { it.copy(isRefreshing = true) }
         loadData()
     }
 }
