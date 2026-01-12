@@ -78,13 +78,8 @@ fun WelcomeScreen(
     var startAnimation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
-    val currentSource by viewModel.currentSource.collectAsState(initial = com.suvojeet.suvmusic.data.MusicSource.YOUTUBE)
-    val sourceSelected by viewModel.sourceSelected.collectAsState()
-    
-    // Dynamic page count - 4 pages if HQ Audio selected (no login), 5 if YouTube (with login)
-    val showLoginPage = currentSource == com.suvojeet.suvmusic.data.MusicSource.YOUTUBE
-    val totalPages = if (showLoginPage) 5 else 4
-    
+    // Fixed page count - 4 pages (Intro -> Features1 -> Features2 -> Login)
+    val totalPages = 4
     val pagerState = rememberPagerState(pageCount = { totalPages })
     
     LaunchedEffect(Unit) {
@@ -134,10 +129,9 @@ fun WelcomeScreen(
                 state = pagerState,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
-                userScrollEnabled = !(pagerState.currentPage == 3 && !sourceSelected) // Disable scroll on source page until selected
+                    .fillMaxWidth()
             ) { page ->
-                WelcomePageContent(page = page, viewModel = viewModel, showLoginPage = showLoginPage)
+                WelcomePageContent(page = page)
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -169,22 +163,17 @@ fun WelcomeScreen(
                 contentAlignment = Alignment.Center
             ) {
                 val isLastPage = pagerState.currentPage == totalPages - 1
-                val isSourcePage = pagerState.currentPage == 3
                 
                 if (!isLastPage) {
-                    // Next button - disabled on source page if not selected
-                    val canProceed = !isSourcePage || sourceSelected
-                    
                     Button(
                         onClick = {
                             scope.launch {
                                 pagerState.animateScrollToPage(pagerState.currentPage + 1)
                             }
                         },
-                        enabled = canProceed,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (canProceed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            contentColor = if (canProceed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         ),
                         shape = CircleShape,
                         modifier = Modifier.size(60.dp),
@@ -196,59 +185,33 @@ fun WelcomeScreen(
                         )
                     }
                 } else {
-                    // Last page action
-                    if (showLoginPage) {
-                        // YouTube Music selected - show login button
-                        Button(
-                            onClick = { onLoginClick() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Icon(Icons.Default.Login, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Login with YouTube Music",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    } else {
-                        // HQ Audio selected - show Get Started button (no login needed)
-                        Button(
-                            onClick = {
-                                viewModel.setOnboardingCompleted()
-                                onSkipClick()
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Get Started",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    // Last page action - show login button
+                    Button(
+                        onClick = { onLoginClick() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.Login, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Login with YouTube Music",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Skip Button - only visible on last page for YouTube Music login
+            // Skip Button - only visible on last page
             AnimatedVisibility(
-                visible = pagerState.currentPage == totalPages - 1 && showLoginPage,
+                visible = pagerState.currentPage == totalPages - 1,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
@@ -272,7 +235,7 @@ fun WelcomeScreen(
 
 
 @Composable
-fun WelcomePageContent(page: Int, viewModel: WelcomeViewModel, showLoginPage: Boolean) {
+fun WelcomePageContent(page: Int) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -284,140 +247,7 @@ fun WelcomePageContent(page: Int, viewModel: WelcomeViewModel, showLoginPage: Bo
             0 -> IntroPage()
             1 -> FeaturesPageOne()
             2 -> FeaturesPageTwo()
-            3 -> SourceSelectionPage(viewModel)
-            4 -> if (showLoginPage) LoginPage() else ReadyPage()
-        }
-    }
-}
-
-@Composable
-fun ReadyPage() {
-    Icon(
-        imageVector = Icons.Default.Check,
-        contentDescription = null,
-        modifier = Modifier.size(80.dp),
-        tint = Color(0xFF4CAF50)
-    )
-    
-    Spacer(modifier = Modifier.height(32.dp))
-    
-    Text(
-        text = "You're All Set!",
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground
-    )
-    
-    Spacer(modifier = Modifier.height(16.dp))
-    
-    Text(
-        text = "HQ Audio is ready to use. Enjoy high-fidelity music streaming with no login required!",
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-}
-
-@Composable
-fun SourceSelectionPage(viewModel: WelcomeViewModel) {
-    val currentSource by viewModel.currentSource.collectAsState(initial = com.suvojeet.suvmusic.data.MusicSource.YOUTUBE)
-    val sourceSelected by viewModel.sourceSelected.collectAsState()
-    val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
-    
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = "Select Default Source",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Text(
-            text = "Choose your primary music source to continue.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        SourceOptionCard(
-            title = "YouTube Music",
-            description = "Huge library, official & community tracks",
-            selected = sourceSelected && currentSource == com.suvojeet.suvmusic.data.MusicSource.YOUTUBE,
-            onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.YOUTUBE) }
-        )
-        
-        // Only show JioSaavn option in developer mode
-        if (isDeveloperMode) {
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            SourceOptionCard(
-                title = "HQ Audio",
-                description = "High Fidelity (320kbps), Bollywood & Regional",
-                selected = sourceSelected && currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN,
-                onClick = { viewModel.setMusicSource(com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) }
-            )
-        }
-        
-        // Hint text when not selected
-        if (!sourceSelected) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "↑ Tap to select a source",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun SourceOptionCard(
-    title: String,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
-    val containerColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-    
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = containerColor,
-        border = BorderStroke(2.dp, borderColor),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RadioButton(
-                selected = selected,
-                onClick = null
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            3 -> LoginPage()
         }
     }
 }
