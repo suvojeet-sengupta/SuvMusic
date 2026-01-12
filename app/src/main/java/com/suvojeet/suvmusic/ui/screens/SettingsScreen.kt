@@ -1,5 +1,8 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +20,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -26,6 +30,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,22 +38,26 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.UpdateState
+import com.suvojeet.suvmusic.service.DynamicIslandService
 import com.suvojeet.suvmusic.ui.components.CheckingUpdateDialog
 import com.suvojeet.suvmusic.ui.components.DownloadProgressDialog
 import com.suvojeet.suvmusic.ui.components.NoUpdateDialog
 import com.suvojeet.suvmusic.ui.components.UpdateAvailableDialog
 import com.suvojeet.suvmusic.ui.components.UpdateErrorDialog
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Settings screen with navigation to sub-settings.
@@ -64,6 +73,11 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
+    
+    // Dynamic Island
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val dynamicIslandEnabled by viewModel.dynamicIslandEnabled.collectAsState(initial = false)
     
     Column(
         modifier = Modifier
@@ -182,6 +196,53 @@ fun SettingsScreen(
             title = "Appearance",
             subtitle = buildAppearanceSubtitle(uiState.themeMode.label, uiState.dynamicColorEnabled),
             onClick = onAppearanceClick
+        )
+        
+        // Dynamic Island Toggle
+        ListItem(
+            headlineContent = { Text("Dynamic Island") },
+            supportingContent = { 
+                Text("Floating mini-player near camera when minimized") 
+            },
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Default.Smartphone,
+                    contentDescription = null
+                )
+            },
+            trailingContent = {
+                Switch(
+                    checked = dynamicIslandEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            // Check permission first
+                            if (DynamicIslandService.hasOverlayPermission(context)) {
+                                scope.launch { viewModel.setDynamicIslandEnabled(true) }
+                            } else {
+                                // Open overlay permission settings
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                                context.startActivity(intent)
+                            }
+                        } else {
+                            scope.launch { viewModel.setDynamicIslandEnabled(false) }
+                            DynamicIslandService.stop(context)
+                        }
+                    }
+                )
+            },
+            modifier = Modifier.clickable {
+                if (!dynamicIslandEnabled && !DynamicIslandService.hasOverlayPermission(context)) {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                    context.startActivity(intent)
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
