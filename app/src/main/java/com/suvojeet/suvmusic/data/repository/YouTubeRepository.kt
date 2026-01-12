@@ -787,13 +787,18 @@ class YouTubeRepository @Inject constructor(
             val songs = playlistExtractor.initialPage.items
                 .filterIsInstance<StreamInfoItem>()
                 .mapNotNull { item ->
+                    val videoId = extractVideoId(item.url)
+                    // Get thumbnail from NewPipe, fallback to YouTube standard thumbnail URL
+                    val itemThumbnail = item.thumbnails?.lastOrNull()?.url
+                        ?: "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+                    
                     Song.fromYouTube(
-                        videoId = extractVideoId(item.url),
+                        videoId = videoId,
                         title = item.name ?: "Unknown",
                         artist = item.uploaderName ?: "Unknown Artist",
                         album = playlistName ?: "",
                         duration = item.duration * 1000L,
-                        thumbnailUrl = item.thumbnails?.lastOrNull()?.url // Use last (highest quality)
+                        thumbnailUrl = itemThumbnail
                     )
                 }
             
