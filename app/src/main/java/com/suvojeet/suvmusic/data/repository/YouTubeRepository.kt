@@ -492,10 +492,36 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         if (!sessionManager.isLoggedIn()) {
-            // Rich fallback for non-logged in users with multiple diverse sections
+            // Try to fetch public YouTube Music content without auth
             val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
             
-            // Define all section queries with titles
+            // 1. Try fetching public trending/charts (works without auth)
+            try {
+                val chartsResponse = fetchPublicApi("FEmusic_charts")
+                if (chartsResponse.isNotEmpty()) {
+                    sections.addAll(parseChartsSectionsFromJson(chartsResponse))
+                }
+            } catch (e: Exception) {
+                // Charts failed, continue
+            }
+            
+            // 2. Try fetching public home browse (may work without auth for some content)
+            try {
+                val homeResponse = fetchPublicApi("FEmusic_home")
+                if (homeResponse.isNotEmpty()) {
+                    val homeSections = parseHomeSectionsFromInternalJson(homeResponse)
+                    sections.addAll(homeSections)
+                }
+            } catch (e: Exception) {
+                // Home failed, continue
+            }
+            
+            // 3. If we got sections from public API, return them
+            if (sections.isNotEmpty()) {
+                return@withContext sections.distinctBy { it.title }
+            }
+            
+            // 4. Fallback: Rich content via search for non-logged in users
             val sectionQueries = listOf(
                 "Trending Now" to "trending music 2024",
                 "Top Hits" to "top hits 2024",
@@ -509,7 +535,6 @@ class YouTubeRepository @Inject constructor(
                 "Romance" to "romantic songs love"
             )
             
-            // Fetch sections sequentially
             for ((title, query) in sectionQueries) {
                 try {
                     val songs = search(query, FILTER_SONGS).take(10)
@@ -1530,6 +1555,42 @@ class YouTubeRepository @Inject constructor(
             .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .addHeader("Origin", "https://music.youtube.com")
             .addHeader("X-Goog-AuthUser", "0")
+            .build()
+
+        return try {
+            okHttpClient.newCall(request).execute().body?.string() ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    /**
+     * Fetch public YouTube Music API without authentication.
+     * Used for charts, trending, and public browse content.
+     */
+    private fun fetchPublicApi(browseId: String): String {
+        val url = "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false"
+        
+        val jsonBody = """
+            {
+                "context": {
+                    "client": {
+                        "clientName": "WEB_REMIX",
+                        "clientVersion": "1.20240101.01.00",
+                        "hl": "en",
+                        "gl": "IN"
+                    }
+                },
+                "browseId": "$browseId"
+            }
+        """.trimIndent()
+
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .addHeader("Origin", "https://music.youtube.com")
+            .addHeader("Referer", "https://music.youtube.com/")
             .build()
 
         return try {
