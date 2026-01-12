@@ -310,14 +310,14 @@ fun PlayerScreen(
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragStart = { offset ->
-                            // Only activate on right 30% of screen
-                            if (offset.x > size.width * 0.7f) {
+                            // Activate on right 50% of screen (from center to right)
+                            if (offset.x > size.width * 0.5f) {
                                 lastVolumeChangeTime = System.currentTimeMillis()
                             }
                         },
                         onVerticalDrag = { change, dragAmount ->
                             // Only handle if on right side
-                            if (change.position.x > size.width * 0.7f) {
+                            if (change.position.x > size.width * 0.5f) {
                                 change.consume()
                                 // Adjust volume (drag up = increase, drag down = decrease)
                                 val volumeChange = (-dragAmount / 30).roundToInt()
@@ -672,6 +672,15 @@ fun PlayerScreen(
             currentVolume = currentVolume,
             maxVolume = maxVolume,
             dominantColors = dominantColors,
+            onVolumeChange = { newVolume ->
+                audioManager.setStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    newVolume,
+                    0
+                )
+                currentVolume = newVolume
+                lastVolumeChangeTime = System.currentTimeMillis()
+            },
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 16.dp)
