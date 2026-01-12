@@ -540,10 +540,88 @@ class YouTubeRepository @Inject constructor(
             val homeResponse = fetchInternalApi("FEmusic_home")
             sections.addAll(parseHomeSectionsFromInternalJson(homeResponse))
             
+            // 3. Handle Pagination (Continuations) to get MORE sections
+            var currentJson = JSONObject(homeResponse)
+            var continuationToken = extractContinuationToken(currentJson)
+            var attempts = 0
+            
+            while (continuationToken != null && attempts < 3) {
+                try {
+                    val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                    if (continuationResponse.isNotEmpty()) {
+                        val newSections = parseHomeSectionsFromInternalJson(continuationResponse)
+                        sections.addAll(newSections)
+                        
+                        currentJson = JSONObject(continuationResponse)
+                        continuationToken = extractContinuationToken(currentJson)
+                    } else {
+                        break
+                    }
+                } catch (e: Exception) {
+                    break
+                }
+                attempts++
+            }
+            
             return@withContext sections.distinctBy { it.title }
         } catch (e: Exception) {
             e.printStackTrace()
             return@withContext emptyList()
+        }
+    }
+
+    private fun extractContinuationToken(json: JSONObject): String? {
+        try {
+            val sectionListRenderer = json.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?: json.optJSONObject("continuationContents")
+                ?.optJSONObject("sectionListContinuation")
+            
+            val continuations = sectionListRenderer?.optJSONArray("continuations")
+            return continuations?.optJSONObject(0)
+                ?.optJSONObject("nextContinuationData")
+                ?.optString("continuation")
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    private fun fetchInternalApiWithContinuation(continuationToken: String): String {
+        val cookies = sessionManager.getCookies() ?: return ""
+        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+        
+        val jsonBody = """
+            {
+                "context": {
+                    "client": {
+                        "clientName": "WEB_REMIX",
+                        "clientVersion": "1.20230102.01.00",
+                        "hl": "en",
+                        "gl": "US"
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val request = okhttp3.Request.Builder()
+            .url("https://music.youtube.com/youtubei/v1/browse?ctoken=$continuationToken&continuation=$continuationToken")
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .addHeader("Cookie", cookies)
+            .addHeader("Authorization", authHeader)
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .addHeader("Origin", "https://music.youtube.com")
+            .addHeader("X-Goog-AuthUser", "0")
+            .build()
+
+        return try {
+            okHttpClient.newCall(request).execute().body?.string() ?: ""
+        } catch (e: Exception) {
+            ""
         }
     }
 
@@ -1780,7 +1858,9 @@ class YouTubeRepository @Inject constructor(
         val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
         try {
             val root = JSONObject(json)
-            val contents = root.optJSONObject("contents")
+            
+            // Try standard browse response path
+            var contents = root.optJSONObject("contents")
                 ?.optJSONObject("singleColumnBrowseResultsRenderer")
                 ?.optJSONArray("tabs")
                 ?.optJSONObject(0)
@@ -1788,6 +1868,13 @@ class YouTubeRepository @Inject constructor(
                 ?.optJSONObject("content")
                 ?.optJSONObject("sectionListRenderer")
                 ?.optJSONArray("contents")
+            
+            // If null, try continuation response path
+            if (contents == null) {
+                contents = root.optJSONObject("continuationContents")
+                    ?.optJSONObject("sectionListContinuation")
+                    ?.optJSONArray("contents")
+            }
 
             if (contents != null) {
                 for (i in 0 until contents.length()) {
