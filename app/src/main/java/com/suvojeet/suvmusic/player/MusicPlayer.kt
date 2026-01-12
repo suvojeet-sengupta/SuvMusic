@@ -76,6 +76,9 @@ class MusicPlayer @Inject constructor(
     private var preloadedStreamUrl: String? = null
     private var isPreloading = false
     
+    // Track manually selected device ID to persist selection across refreshes
+    private var manualSelectedDeviceId: String? = null
+    
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
     private var currentSongStartPosition: Long = 0L
@@ -128,18 +131,23 @@ class MusicPlayer @Inject constructor(
      * Refresh available audio output devices.
      * Call this when the output device sheet is opened to get latest devices.
      */
+    /**
+     * Refresh available audio output devices.
+     * Call this when the output device sheet is opened to get latest devices.
+     */
     fun refreshDevices() {
-        val devices = mutableListOf<OutputDevice>()
+        val rawDevices = mutableListOf<OutputDevice>()
         val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         
-        // Check current output
+        // System state for auto-selection
         val isBluetoothActive = audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn
         val isWiredHeadsetConnected = audioManager.isWiredHeadsetOn
+        val autoSelectPhone = !isBluetoothActive && !isWiredHeadsetConnected
 
-        // Default: Phone Speaker
-        val phoneSelected = !isBluetoothActive && !isWiredHeadsetConnected
-        devices.add(OutputDevice("phone_speaker", "Phone Speaker", DeviceType.PHONE, phoneSelected))
+        // 1. Add Phone Speaker
+        rawDevices.add(OutputDevice("phone_speaker", "Phone Speaker", DeviceType.PHONE, false))
 
+        // 2. Add other devices
         audioDevices.forEach { device ->
             val type = when (device.type) {
                 AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 
@@ -151,30 +159,72 @@ class MusicPlayer @Inject constructor(
                 else -> DeviceType.UNKNOWN
             }
             
-            val isSelected = when (type) {
-                DeviceType.BLUETOOTH -> isBluetoothActive
-                DeviceType.HEADPHONES -> isWiredHeadsetConnected
-                else -> false
-            }
-
-            // Avoid duplicates
-            if (devices.none { it.name == device.productName.toString() }) {
-                devices.add(
+            // Avoid duplicates by name
+            if (rawDevices.none { it.name == device.productName.toString() }) {
+                rawDevices.add(
                     OutputDevice(
                         id = device.id.toString(),
                         name = device.productName.toString().ifBlank { type.name },
                         type = type,
-                        isSelected = isSelected
+                        isSelected = false
                     )
                 )
             }
         }
 
-        val selectedDevice = devices.find { it.isSelected } ?: devices.firstOrNull()
-        _playerState.update { it.copy(availableDevices = devices, selectedDevice = selectedDevice) }
+        // 3. Determine selection
+        // Logic: specific manual selection > auto system selection
+        
+        var devicesWithSelection = rawDevices.map { device ->
+            val isSelected = if (manualSelectedDeviceId != null) {
+                device.id == manualSelectedDeviceId
+            } else {
+                when (device.type) {
+                    DeviceType.PHONE -> autoSelectPhone
+                    DeviceType.BLUETOOTH -> isBluetoothActive
+                    DeviceType.HEADPHONES -> isWiredHeadsetConnected
+                    else -> false
+                }
+            }
+            device.copy(isSelected = isSelected)
+        }
+        
+        // 4. Validate selection
+        // If manual selection is active but the device is no longer available (not found in list),
+        // or if no device is selected at all, fallback to auto/default.
+        val hasSelection = devicesWithSelection.any { it.isSelected }
+        
+        if (!hasSelection) {
+            // Manual device lost or auto-logic failed -> Reset manual and use auto logic
+            if (manualSelectedDeviceId != null) {
+                manualSelectedDeviceId = null
+                devicesWithSelection = rawDevices.map { device ->
+                    val isSelected = when (device.type) {
+                        DeviceType.PHONE -> autoSelectPhone
+                        DeviceType.BLUETOOTH -> isBluetoothActive
+                        DeviceType.HEADPHONES -> isWiredHeadsetConnected
+                        else -> false
+                    }
+                    device.copy(isSelected = isSelected)
+                }
+            }
+            
+            // If STILL no selection (edge case), select Phone Speaker (first)
+            if (devicesWithSelection.none { it.isSelected }) {
+                devicesWithSelection = devicesWithSelection.mapIndexed { index, dev -> 
+                    dev.copy(isSelected = index == 0)
+                }
+            }
+        }
+        
+        val selectedDevice = devicesWithSelection.find { it.isSelected }
+        _playerState.update { it.copy(availableDevices = devicesWithSelection, selectedDevice = selectedDevice) }
     }
 
     fun switchOutputDevice(device: OutputDevice) {
+        // Update manual preference
+        manualSelectedDeviceId = device.id
+        
         // Send command to service to switch output device (ExoPlayer routing)
         val args = android.os.Bundle().apply {
             putString("DEVICE_ID", device.id)
@@ -184,15 +234,8 @@ class MusicPlayer @Inject constructor(
             args
         )
         
-        _playerState.update { state ->
-            val updatedDevices = state.availableDevices.map { 
-                it.copy(isSelected = it.id == device.id)
-            }
-            state.copy(
-                availableDevices = updatedDevices,
-                selectedDevice = device
-            )
-        }
+        // Update local state immediately to reflect selection
+        refreshDevices()
     }
 
     
