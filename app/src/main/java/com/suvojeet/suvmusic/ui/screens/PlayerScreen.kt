@@ -331,7 +331,7 @@ fun PlayerScreen(
                                 showVolumeIndicator = true
                             }
                         },
-                        onDrag = { change, dragAmount ->
+                        onVerticalDrag = { change, dragAmount ->
                             // Only handle if on right side
                             if (change.position.x > size.width * 0.7f) {
                                 change.consume()
