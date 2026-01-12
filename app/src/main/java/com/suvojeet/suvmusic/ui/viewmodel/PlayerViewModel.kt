@@ -172,6 +172,10 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.switchOutputDevice(device)
     }
     
+    fun refreshDevices() {
+        musicPlayer.refreshDevices()
+    }
+    
     fun getPlayer() = musicPlayer.getPlayer()
     
     /**

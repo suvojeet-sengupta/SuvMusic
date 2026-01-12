@@ -279,6 +279,7 @@ fun SuvMusicApp(
                     onToggleAutoplay = { playerViewModel.toggleAutoplay() },
                     onToggleVideoMode = { playerViewModel.toggleVideoMode() },
                     onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
+                    onRefreshDevices = { playerViewModel.refreshDevices() },
                     player = playerViewModel.getPlayer(),
                     lyrics = lyrics,
                     isFetchingLyrics = isFetchingLyrics,

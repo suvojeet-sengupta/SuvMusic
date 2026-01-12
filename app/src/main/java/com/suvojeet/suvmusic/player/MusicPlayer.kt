@@ -121,6 +121,14 @@ class MusicPlayer @Inject constructor(
     }
 
     private fun updateAvailableDevices() {
+        refreshDevices()
+    }
+    
+    /**
+     * Refresh available audio output devices.
+     * Call this when the output device sheet is opened to get latest devices.
+     */
+    fun refreshDevices() {
         val devices = mutableListOf<OutputDevice>()
         val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         
