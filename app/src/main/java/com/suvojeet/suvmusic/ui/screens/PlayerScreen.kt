@@ -331,7 +331,13 @@ fun PlayerScreen(
                                 showVolumeIndicator = true
                             }
                         },
-                        onDrag = { change, dragAmount ->
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                kotlinx.coroutines.delay(1000)
+                                showVolumeIndicator = false
+                            }
+                        },
+                        onVerticalDrag = { change, dragAmount ->
                             // Only handle if on right side
                             if (change.position.x > size.width * 0.7f) {
                                 change.consume()
@@ -346,12 +352,6 @@ fun PlayerScreen(
                                     )
                                     currentVolume = newVolume
                                 }
-                            }
-                        },
-                        onDragEnd = {
-                            kotlinx.coroutines.GlobalScope.launch {
-                                kotlinx.coroutines.delay(1000)
-                                showVolumeIndicator = false
                             }
                         }
                     )
