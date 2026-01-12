@@ -527,35 +527,7 @@ class YouTubeRepository @Inject constructor(
 
         try {
             val jsonResponse = fetchInternalApi("FEmusic_home")
-            val personalizedSections = parseHomeSectionsFromInternalJson(jsonResponse).toMutableList()
-            
-            // Add extra curated sections for more content
-            val extraQueries = listOf(
-                "Bollywood Hits" to "bollywood hits latest",
-                "Punjabi Beats" to "punjabi hits latest",
-                "90s Nostalgia" to "90s bollywood hits",
-                "Chill Vibes" to "chill lofi beats",
-                "Workout Energy" to "workout music energy",
-                "Romance" to "romantic songs love",
-                "Party Mix" to "party songs hindi",
-                "Indie Picks" to "indie music hits"
-            )
-            
-            // Fetch extra sections sequentially
-            val existingTitles = personalizedSections.map { it.title.lowercase() }.toSet()
-            
-            for ((title, query) in extraQueries) {
-                if (title.lowercase() in existingTitles) continue
-                try {
-                    val songs = search(query, FILTER_SONGS).take(10)
-                        .map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
-                    if (songs.isNotEmpty()) {
-                        personalizedSections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, songs))
-                    }
-                } catch (e: Exception) {
-                    // Skip failed section
-                }
-            }
+            val personalizedSections = parseHomeSectionsFromInternalJson(jsonResponse)
             
             return@withContext personalizedSections
         } catch (e: Exception) {
