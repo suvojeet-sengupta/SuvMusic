@@ -18,7 +18,7 @@ import com.suvojeet.suvmusic.ui.screens.AboutScreen
 import com.suvojeet.suvmusic.ui.screens.AppearanceSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.HomeScreen
 import com.suvojeet.suvmusic.ui.screens.LibraryScreen
-import com.suvojeet.suvmusic.ui.screens.PlayerScreen
+import com.suvojeet.suvmusic.ui.screens.player.PlayerScreen
 import com.suvojeet.suvmusic.ui.screens.PlaybackSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.PlaylistScreen
 import com.suvojeet.suvmusic.ui.screens.RecentsScreen
