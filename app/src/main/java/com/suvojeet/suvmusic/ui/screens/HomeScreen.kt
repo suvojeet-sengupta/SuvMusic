@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -57,11 +59,16 @@ fun HomeScreen(
             }
             // Show content if we have data (priority over loading state)
             uiState.homeSections.isNotEmpty() -> {
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
+                @OptIn(ExperimentalMaterial3Api::class)
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = { viewModel.refresh() },
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding(),
+                        .statusBarsPadding()
+                ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 140.dp),
                     verticalArrangement = Arrangement.spacedBy(28.dp)
                 ) {
@@ -102,13 +109,6 @@ fun HomeScreen(
                             
                             if (section.title.contains("Quick picks", ignoreCase = true) || 
                                 section.title.contains("Listen again", ignoreCase = true)) {
-                                // Render as Grid-like or specialized list if needed
-                                // For now, let's keep it consistent as a row for "Listen Again", 
-                                // but maybe "Quick Picks" could be a 2-row grid?
-                                // Implementing as a horizontal grid (2 rows) is complex in LazyRow.
-                                // Falling back to standard row for simplicity unless it's strictly "Quick Picks"
-                                // where we can use a Column of Rows.
-                                
                                 LazyRow(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -129,18 +129,6 @@ fun HomeScreen(
                             }
                         }
                     }
-                }
-                
-                // Refreshing Indicator
-                if (uiState.isRefreshing) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .align(Alignment.TopCenter),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
                 }
             }
             }
