@@ -1792,15 +1792,17 @@ class YouTubeRepository @Inject constructor(
             if (contents != null) {
                 for (i in 0 until contents.length()) {
                     val sectionObj = contents.optJSONObject(i)
-                    val shelf = sectionObj?.optJSONObject("musicCarouselShelfRenderer")
+                    
+                    // 1. Carousels (Horizontal Scroll)
+                    val carouselShelf = sectionObj?.optJSONObject("musicCarouselShelfRenderer")
                         ?: sectionObj?.optJSONObject("musicImmersiveCarouselShelfRenderer")
 
-                    if (shelf != null) {
-                        val title = getRunText(shelf.optJSONObject("header")?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
-                            ?: getRunText(shelf.optJSONObject("header")?.optJSONObject("musicImmersiveCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
+                    if (carouselShelf != null) {
+                        val title = getRunText(carouselShelf.optJSONObject("header")?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
+                            ?: getRunText(carouselShelf.optJSONObject("header")?.optJSONObject("musicImmersiveCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
                             ?: ""
 
-                        val itemsArray = shelf.optJSONArray("contents")
+                        val itemsArray = carouselShelf.optJSONArray("contents")
                         val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
 
                         if (itemsArray != null) {
@@ -1811,6 +1813,44 @@ class YouTubeRepository @Inject constructor(
                         }
 
                         if (items.isNotEmpty() && title.isNotEmpty()) {
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                        }
+                    }
+                    
+                    // 2. Shelves (Vertical List - e.g. "Your Likes" often appears as a list)
+                    val shelf = sectionObj?.optJSONObject("musicShelfRenderer")
+                    if (shelf != null) {
+                         val title = getRunText(shelf.optJSONObject("title")) ?: ""
+                         val itemsArray = shelf.optJSONArray("contents")
+                         val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+                         
+                         if (itemsArray != null) {
+                             for (j in 0 until itemsArray.length()) {
+                                 val itemObj = itemsArray.optJSONObject(j)
+                                 parseHomeItem(itemObj)?.let { items.add(it) }
+                             }
+                         }
+                         
+                         if (items.isNotEmpty() && title.isNotEmpty()) {
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                        }
+                    }
+                    
+                    // 3. Grids (e.g. "Listen Again" sometimes)
+                    val grid = sectionObj?.optJSONObject("gridRenderer")
+                    if (grid != null) {
+                        val title = getRunText(grid.optJSONObject("header")?.optJSONObject("gridHeaderRenderer")?.optJSONObject("title")) ?: ""
+                        val itemsArray = grid.optJSONArray("items")
+                        val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+                         
+                         if (itemsArray != null) {
+                             for (j in 0 until itemsArray.length()) {
+                                 val itemObj = itemsArray.optJSONObject(j)
+                                 parseHomeItem(itemObj)?.let { items.add(it) }
+                             }
+                         }
+                         
+                         if (items.isNotEmpty() && title.isNotEmpty()) {
                             sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
                         }
                     }
