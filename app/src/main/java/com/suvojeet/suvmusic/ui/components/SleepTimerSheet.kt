@@ -35,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,12 +59,26 @@ fun SleepTimerSheet(
     isVisible: Boolean,
     currentOption: SleepTimerOption,
     remainingTimeFormatted: String?,
-    onSelectOption: (SleepTimerOption) -> Unit,
+    onSelectOption: (SleepTimerOption, Int?) -> Unit,
     onDismiss: () -> Unit,
     accentColor: Color = MaterialTheme.colorScheme.primary,
     backgroundColor: Color = Color(0xFF1C1C1E)
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    // State for custom timer dialog
+    var showCustomTimerDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    if (showCustomTimerDialog) {
+        CustomTimerDialog(
+            onDismiss = { showCustomTimerDialog = false },
+            onConfirm = { minutes ->
+                showCustomTimerDialog = false
+                onSelectOption(SleepTimerOption.CUSTOM, minutes)
+            },
+            accentColor = accentColor
+        )
+    }
     
     if (isVisible) {
         ModalBottomSheet(
@@ -153,21 +169,21 @@ fun SleepTimerSheet(
                             icon = Icons.Default.TimerOff,
                             isSelected = currentOption == SleepTimerOption.OFF,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.OFF); onDismiss() },
+                            onClick = { onSelectOption(SleepTimerOption.OFF, null) }, // Don't dismiss
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "5 min",
                             isSelected = currentOption == SleepTimerOption.FIVE_MIN,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.FIVE_MIN); onDismiss() },
+                            onClick = { onSelectOption(SleepTimerOption.FIVE_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "10 min",
                             isSelected = currentOption == SleepTimerOption.TEN_MIN,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.TEN_MIN); onDismiss() },
+                            onClick = { onSelectOption(SleepTimerOption.TEN_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -181,21 +197,21 @@ fun SleepTimerSheet(
                             label = "15 min",
                             isSelected = currentOption == SleepTimerOption.FIFTEEN_MIN,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.FIFTEEN_MIN); onDismiss() },
+                            onClick = { onSelectOption(SleepTimerOption.FIFTEEN_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "30 min",
                             isSelected = currentOption == SleepTimerOption.THIRTY_MIN,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.THIRTY_MIN); onDismiss() },
+                            onClick = { onSelectOption(SleepTimerOption.THIRTY_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "45 min",
                             isSelected = currentOption == SleepTimerOption.FORTY_FIVE_MIN,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.FORTY_FIVE_MIN); onDismiss() },
+                            onClick = { onSelectOption(SleepTimerOption.FORTY_FIVE_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -209,16 +225,39 @@ fun SleepTimerSheet(
                             label = "1 hour",
                             isSelected = currentOption == SleepTimerOption.ONE_HOUR,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.ONE_HOUR); onDismiss() },
+                            onClick = { onSelectOption(SleepTimerOption.ONE_HOUR, null) },
                             modifier = Modifier.weight(1f)
                         )
+                        TimerChip(
+                            label = "2 hours",
+                            isSelected = currentOption == SleepTimerOption.TWO_HOURS,
+                            accentColor = accentColor,
+                            onClick = { onSelectOption(SleepTimerOption.TWO_HOURS, null) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    
+                    // Row 4: Custom, End of song
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        TimerChip(
+                            label = "Custom",
+                            icon = Icons.Default.Edit,
+                            isSelected = currentOption == SleepTimerOption.CUSTOM,
+                            accentColor = accentColor,
+                            onClick = { showCustomTimerDialog = true },
+                            modifier = Modifier.weight(1f)
+                        )
+                        
                         TimerChip(
                             label = "End of song",
                             icon = Icons.Default.MusicNote,
                             isSelected = currentOption == SleepTimerOption.END_OF_SONG,
                             accentColor = accentColor,
-                            onClick = { onSelectOption(SleepTimerOption.END_OF_SONG); onDismiss() },
-                            modifier = Modifier.weight(2f)
+                            onClick = { onSelectOption(SleepTimerOption.END_OF_SONG, null) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -301,6 +340,98 @@ private fun TimerChip(
                     tint = contentColor,
                     modifier = Modifier.size(16.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomTimerDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+    accentColor: Color
+) {
+    var text by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(
+            shape = RoundedCornerShape(26.dp),
+            color = Color(0xFF2C2C2E),
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Custom Timer",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "Enter duration in minutes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                androidx.compose.material3.OutlinedTextField(
+                    value = text,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) text = it },
+                    singleLine = true,
+                    colors = androidx.compose.material3.TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = accentColor,
+                        unfocusedIndicatorColor = Color.Gray,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    androidx.compose.material3.TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                    ) {
+                        Text("Cancel", color = Color.White)
+                    }
+                    
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            val minutes = text.toIntOrNull()
+                            if (minutes != null && minutes > 0) {
+                                onConfirm(minutes)
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = accentColor
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Start", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

@@ -18,6 +18,8 @@ enum class SleepTimerOption(val minutes: Int, val label: String) {
     THIRTY_MIN(30, "30 minutes"),
     FORTY_FIVE_MIN(45, "45 minutes"),
     ONE_HOUR(60, "1 hour"),
+    TWO_HOURS(120, "2 hours"),
+    CUSTOM(-2, "Custom"),
     END_OF_SONG(-1, "End of song")
 }
 
@@ -53,7 +55,7 @@ class SleepTimerManager @Inject constructor() {
     /**
      * Start sleep timer with specified option.
      */
-    fun startTimer(option: SleepTimerOption) {
+    fun startTimer(option: SleepTimerOption, customMinutes: Int? = null) {
         cancelTimer()
         
         _currentOption.value = option
@@ -70,7 +72,16 @@ class SleepTimerManager @Inject constructor() {
         }
         
         _endOfSongMode.value = false
-        val durationMs = option.minutes * 60 * 1000L
+        
+        // Determine duration
+        val durationMs = if (option == SleepTimerOption.CUSTOM && customMinutes != null) {
+             customMinutes * 60 * 1000L
+        } else {
+             option.minutes * 60 * 1000L
+        }
+        
+        // Safety check
+        if (durationMs <= 0) return
         
         countDownTimer = object : CountDownTimer(durationMs, 1000) {
             override fun onTick(millisUntilFinished: Long) {

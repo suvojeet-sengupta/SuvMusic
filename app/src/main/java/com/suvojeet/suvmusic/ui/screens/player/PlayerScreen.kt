@@ -129,7 +129,7 @@ fun PlayerScreen(
     // Sleep timer
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    onSetSleepTimer: (SleepTimerOption) -> Unit = {},
+    onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
     ringtoneViewModel: RingtoneViewModel = hiltViewModel()
 ) {
@@ -804,7 +804,9 @@ fun PlayerScreen(
                     val seconds = (it / 1000) % 60
                     String.format("%d:%02d", minutes, seconds)
                 },
-                onSelectOption = onSetSleepTimer,
+                onSelectOption = { option, minutes -> 
+                    onSetSleepTimer(option, minutes)
+                },
                 onDismiss = { showSleepTimerSheet = false },
                 accentColor = dominantColors.accent
             )

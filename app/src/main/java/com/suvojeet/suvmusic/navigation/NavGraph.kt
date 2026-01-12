@@ -56,7 +56,7 @@ fun NavGraph(
     // Sleep timer
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    onSetSleepTimer: (com.suvojeet.suvmusic.player.SleepTimerOption) -> Unit = {},
+    onSetSleepTimer: (com.suvojeet.suvmusic.player.SleepTimerOption, Int?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     startDestination: String = Destination.Home.route
 ) {
