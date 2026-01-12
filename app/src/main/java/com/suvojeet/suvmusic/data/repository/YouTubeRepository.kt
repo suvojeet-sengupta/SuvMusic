@@ -372,6 +372,106 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    /**
+     * Get related songs (Up Next / Radio) for a specific video.
+     * Uses YouTube Music's "next" endpoint which provides the official recommendations.
+     */
+    suspend fun getRelatedSongs(videoId: String): List<Song> = withContext(Dispatchers.IO) {
+        try {
+            val cookies = sessionManager.getCookies()
+            val authHeader = if (cookies != null) YouTubeAuthUtils.getAuthorizationHeader(cookies) else ""
+
+            val jsonBody = JSONObject().apply {
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20230102.01.00")
+                        put("hl", "en")
+                        put("gl", "US")
+                    })
+                })
+                put("videoId", videoId)
+                put("enablePersistentPlaylistPanel", true)
+                put("isAudioOnly", true)
+            }
+
+            val request = okhttp3.Request.Builder()
+                .url("https://music.youtube.com/youtubei/v1/next")
+                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                .apply {
+                    if (cookies != null) addHeader("Cookie", cookies)
+                    if (authHeader != null && authHeader.isNotEmpty()) addHeader("Authorization", authHeader)
+                    addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    addHeader("Origin", "https://music.youtube.com")
+                    addHeader("X-Goog-AuthUser", "0")
+                }
+                .build()
+
+            val response = okHttpClient.newCall(request).execute()
+            val responseBody = response.body?.string() ?: return@withContext emptyList()
+            
+            parseSongsFromNextResponse(responseBody)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    private fun parseSongsFromNextResponse(json: String): List<Song> {
+        val songs = mutableListOf<Song>()
+        try {
+            val root = JSONObject(json)
+            val contents = root.optJSONObject("contents")
+                ?.optJSONObject("singleColumnMusicWatchNextResultsRenderer")
+                ?.optJSONObject("tabbedRenderer")
+                ?.optJSONObject("watchNextTabbedResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("musicQueueRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("playlistPanelRenderer")
+                ?.optJSONArray("contents")
+
+            if (contents != null) {
+                for (i in 0 until contents.length()) {
+                    val item = contents.optJSONObject(i)?.optJSONObject("playlistPanelVideoRenderer")
+                    if (item != null) {
+                        val videoId = item.optString("videoId")
+                        val title = getRunText(item.optJSONObject("title")) ?: "Unknown"
+                        val longByline = getRunText(item.optJSONObject("longBylineText")) ?: ""
+                        
+                        // longByline is typically "Artist • Album" or just "Artist"
+                        val artist = longByline.split("•").firstOrNull()?.trim() ?: "Unknown Artist"
+                        val album = if (longByline.contains("•")) longByline.split("•").lastOrNull()?.trim() ?: "" else ""
+                        
+                        val lengthText = getRunText(item.optJSONObject("lengthText")) ?: ""
+                        val duration = parseDurationText(lengthText)
+                        
+                        val thumbnail = extractThumbnail(item)
+                        
+                        // setVideoId is used for moving/removing items in the specific queue instance
+                        val setVideoId = item.optString("setVideoId")
+
+                        Song.fromYouTube(
+                            videoId = videoId,
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            duration = duration,
+                            thumbnailUrl = thumbnail,
+                            setVideoId = setVideoId
+                        )?.let { songs.add(it) }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return songs
+    }
+
     // ============================================================================================
     // Browsing (Internal API)
     // ============================================================================================
