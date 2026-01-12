@@ -44,8 +44,8 @@ class PlayerViewModel @Inject constructor(
     val sleepTimerOption: StateFlow<SleepTimerOption> = sleepTimerManager.currentOption
     val sleepTimerRemainingMs: StateFlow<Long?> = sleepTimerManager.remainingTimeMs
     
-    fun setSleepTimer(option: SleepTimerOption) {
-        sleepTimerManager.startTimer(option)
+    fun setSleepTimer(option: SleepTimerOption, customMinutes: Int? = null) {
+        sleepTimerManager.startTimer(option, customMinutes)
     }
     
     init {
