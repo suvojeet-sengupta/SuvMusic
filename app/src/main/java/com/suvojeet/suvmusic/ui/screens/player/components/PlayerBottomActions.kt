@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
@@ -50,8 +50,8 @@ fun BottomActions(
 
         IconButton(onClick = onCastClick) {
             Icon(
-                imageVector = Icons.Default.Cast,
-                contentDescription = "Cast",
+                imageVector = Icons.Default.Devices,
+                contentDescription = "Output Device",
                 tint = dominantColors.onBackground.copy(alpha = 0.6f)
             )
         }
