@@ -50,6 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.roundToInt
+
 /**
  * Vertical Volume Indicator similar to MX Player / iOS Control Center.
  * Appears on the right side of the screen.
@@ -60,6 +65,7 @@ fun VolumeIndicator(
     currentVolume: Int,
     maxVolume: Int,
     dominantColors: DominantColors,
+    onVolumeChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val volumePercentage = if (maxVolume > 0) currentVolume.toFloat() / maxVolume else 0f
@@ -83,6 +89,30 @@ fun VolumeIndicator(
                     // Apple Music style "Blur" equivalent - translucent surface
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                 )
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragStart = { offset ->
+                            // Calculate initial volume based on touch position
+                            // Y is 0 at top, height at bottom. Volume is 0 at bottom, max at top.
+                            val newPct = 1f - (offset.y / size.height)
+                            val newVol = (newPct * maxVolume).roundToInt().coerceIn(0, maxVolume)
+                            onVolumeChange(newVol)
+                        },
+                        onVerticalDrag = { change, _ ->
+                            change.consume()
+                            val newPct = 1f - (change.position.y / size.height)
+                            val newVol = (newPct * maxVolume).roundToInt().coerceIn(0, maxVolume)
+                            onVolumeChange(newVol)
+                        }
+                    )
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val newPct = 1f - (offset.y / size.height)
+                        val newVol = (newPct * maxVolume).roundToInt().coerceIn(0, maxVolume)
+                        onVolumeChange(newVol)
+                    }
+                }
         ) {
             // Background track
             Box(
