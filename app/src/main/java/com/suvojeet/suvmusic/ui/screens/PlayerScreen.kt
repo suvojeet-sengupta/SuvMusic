@@ -357,40 +357,6 @@ fun PlayerScreen(
                     )
                 }
         )
-        
-        // Volume Indicator Overlay
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showVolumeIndicator,
-            enter = fadeIn() + slideInVertically { -it / 2 },
-            exit = fadeOut() + slideOutVertically { -it / 2 },
-            modifier = Modifier.align(Alignment.TopEnd)
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 100.dp, end = 20.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(16.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = if (currentVolume > 0) 
-                            Icons.Default.Star else Icons.Default.StarOutline,
-                        contentDescription = "Volume",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${(currentVolume * 100 / maxVolume)}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
 
         // Main Content Layer that moves with drag
         Box(
@@ -711,6 +677,40 @@ fun PlayerScreen(
                     artworkUrl = highResThumbnail,
                     onClose = { showLyrics = false }
                 )
+            }
+        }
+
+        // Volume Indicator Overlay (Moved to end to appear on top)
+        AnimatedVisibility(
+            visible = showVolumeIndicator,
+            enter = fadeIn() + slideInVertically { -it / 2 },
+            exit = fadeOut() + slideOutVertically { -it / 2 },
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 100.dp, end = 20.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(16.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = if (currentVolume > 0)
+                            Icons.Default.Star else Icons.Default.StarOutline,
+                        contentDescription = "Volume",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "${(currentVolume * 100 / maxVolume)}%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
