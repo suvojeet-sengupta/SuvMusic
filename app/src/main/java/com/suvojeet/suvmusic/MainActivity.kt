@@ -42,6 +42,7 @@ import com.suvojeet.suvmusic.ui.components.MiniPlayer
 import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import com.suvojeet.suvmusic.utils.NetworkMonitor
+import com.suvojeet.suvmusic.service.DynamicIslandService
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.delay
@@ -52,6 +53,9 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var networkMonitor: NetworkMonitor
+    
+    @Inject
+    lateinit var sessionManager: SessionManager
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -126,6 +130,21 @@ class MainActivity : ComponentActivity() {
         if (permissions.isNotEmpty()) {
             requestPermissionLauncher.launch(permissions.toTypedArray())
         }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Start Dynamic Island if enabled and music might be playing
+        if (sessionManager.isDynamicIslandEnabled() && 
+            DynamicIslandService.hasOverlayPermission(this)) {
+            DynamicIslandService.start(this)
+        }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Stop Dynamic Island when app comes to foreground
+        DynamicIslandService.stop(this)
     }
 }
 

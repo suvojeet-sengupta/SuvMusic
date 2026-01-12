@@ -52,6 +52,13 @@ class SettingsViewModel @Inject constructor(
     // Developer mode - shows JioSaavn option when enabled
     val isDeveloperMode = sessionManager.developerModeFlow
     
+    // Dynamic Island enabled state
+    val dynamicIslandEnabled = sessionManager.dynamicIslandEnabledFlow
+    
+    suspend fun setDynamicIslandEnabled(enabled: Boolean) {
+        sessionManager.setDynamicIslandEnabled(enabled)
+    }
+    
     private var downloadJob: Job? = null
     private var downloadedApkFile: File? = null
     

@@ -76,6 +76,9 @@ class SessionManager @Inject constructor(
         
         // Developer Mode (Hidden feature)
         private val DEV_MODE_KEY = stringPreferencesKey("_dx_mode")
+        
+        // Dynamic Island (Floating pip overlay)
+        private val DYNAMIC_ISLAND_ENABLED_KEY = booleanPreferencesKey("dynamic_island_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -107,6 +110,22 @@ class SessionManager @Inject constructor(
     suspend fun disableDeveloperMode() {
         context.dataStore.edit { preferences ->
             preferences.remove(DEV_MODE_KEY)
+        }
+    }
+    
+    // --- Dynamic Island ---
+    
+    fun isDynamicIslandEnabled(): Boolean = runBlocking {
+        context.dataStore.data.first()[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
+    }
+    
+    val dynamicIslandEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
+    }
+    
+    suspend fun setDynamicIslandEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[DYNAMIC_ISLAND_ENABLED_KEY] = enabled
         }
     }
     
