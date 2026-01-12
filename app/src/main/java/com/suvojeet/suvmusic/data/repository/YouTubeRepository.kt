@@ -526,14 +526,72 @@ class YouTubeRepository @Inject constructor(
         }
 
         try {
-            val jsonResponse = fetchInternalApi("FEmusic_home")
-            val personalizedSections = parseHomeSectionsFromInternalJson(jsonResponse)
+            val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
             
-            return@withContext personalizedSections
+            // 1. Fetch Trending/Charts first to put at top
+            try {
+                val chartsResponse = fetchInternalApi("FEmusic_charts")
+                sections.addAll(parseChartsSectionsFromJson(chartsResponse))
+            } catch (e: Exception) {
+                // Charts failed, continue to home
+            }
+
+            // 2. Fetch Home personalized sections
+            val homeResponse = fetchInternalApi("FEmusic_home")
+            sections.addAll(parseHomeSectionsFromInternalJson(homeResponse))
+            
+            return@withContext sections.distinctBy { it.title }
         } catch (e: Exception) {
             e.printStackTrace()
             return@withContext emptyList()
         }
+    }
+
+    private fun parseChartsSectionsFromJson(json: String): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+        val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+        try {
+            val root = JSONObject(json)
+            val contents = root.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+
+            if (contents != null) {
+                for (i in 0 until contents.length()) {
+                    val sectionObj = contents.optJSONObject(i)
+                    
+                    // Charts can have musicCarouselShelfRenderer or musicShelfRenderer (for lists)
+                    val carouselShelf = sectionObj?.optJSONObject("musicCarouselShelfRenderer")
+                    if (carouselShelf != null) {
+                        val title = getRunText(carouselShelf.optJSONObject("header")?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title")) ?: ""
+                        
+                        // We only want "Trending" or "Top songs" for songs
+                        if (title.contains("Trending", ignoreCase = true) || title.contains("Top songs", ignoreCase = true)) {
+                            val itemsArray = carouselShelf.optJSONArray("contents")
+                            val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+
+                            if (itemsArray != null) {
+                                for (j in 0 until itemsArray.length()) {
+                                    val itemObj = itemsArray.optJSONObject(j)
+                                    parseHomeItem(itemObj)?.let { items.add(it) }
+                                }
+                            }
+
+                            if (items.isNotEmpty()) {
+                                sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return sections
     }
 
     suspend fun getUserPlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
