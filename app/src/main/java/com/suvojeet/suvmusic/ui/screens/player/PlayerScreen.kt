@@ -95,6 +95,8 @@ import com.suvojeet.suvmusic.ui.screens.player.components.PlayerTopBar
 import com.suvojeet.suvmusic.ui.screens.player.components.QueueView
 import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
+import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
+import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import kotlinx.coroutines.launch
@@ -213,8 +215,8 @@ fun PlayerScreen(
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
     
-    val maxVolume = remember {
-        audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+    var maxVolume by remember {
+        mutableStateOf(audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC))
     }
     
     var currentVolume by remember {
@@ -222,11 +224,22 @@ fun PlayerScreen(
     }
     
     var showVolumeIndicator by remember { mutableStateOf(false) }
+    var lastVolumeChangeTime by remember { mutableStateOf(0L) }
     
+    // Listen for System Volume Changes
+    SystemVolumeObserver(context = context) { newVol, newMax ->
+        maxVolume = newMax
+        if (currentVolume != newVol) {
+            currentVolume = newVol
+            lastVolumeChangeTime = System.currentTimeMillis()
+        }
+    }
+
     // Auto-hide volume indicator
-    LaunchedEffect(showVolumeIndicator) {
-        if (showVolumeIndicator) {
-            kotlinx.coroutines.delay(1500)
+    LaunchedEffect(lastVolumeChangeTime) {
+        if (lastVolumeChangeTime > 0) {
+            showVolumeIndicator = true
+            kotlinx.coroutines.delay(2000) // 2 seconds delay
             showVolumeIndicator = false
         }
     }
@@ -299,7 +312,7 @@ fun PlayerScreen(
                         onDragStart = { offset ->
                             // Only activate on right 30% of screen
                             if (offset.x > size.width * 0.7f) {
-                                showVolumeIndicator = true
+                                lastVolumeChangeTime = System.currentTimeMillis()
                             }
                         },
                         onVerticalDrag = { change, dragAmount ->
@@ -315,15 +328,17 @@ fun PlayerScreen(
                                         newVolume,
                                         0
                                     )
+                                    // currentVolume will be updated by observer, but update strictly for responsiveness
                                     currentVolume = newVolume
+                                    lastVolumeChangeTime = System.currentTimeMillis()
+                                } else {
+                                    // Even if volume doesn't change (max/min), keep indicator alive
+                                    lastVolumeChangeTime = System.currentTimeMillis()
                                 }
                             }
                         },
                         onDragEnd = {
-                            kotlinx.coroutines.GlobalScope.launch {
-                                kotlinx.coroutines.delay(1000)
-                                showVolumeIndicator = false
-                            }
+                            // Timer handles hiding
                         }
                     )
                 }
@@ -652,38 +667,15 @@ fun PlayerScreen(
         }
 
         // Volume Indicator Overlay (Moved to end to appear on top)
-        AnimatedVisibility(
-            visible = showVolumeIndicator,
-            enter = fadeIn() + slideInVertically { -it / 2 },
-            exit = fadeOut() + slideOutVertically { -it / 2 },
-            modifier = Modifier.align(Alignment.TopEnd)
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 100.dp, end = 20.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(16.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = if (currentVolume > 0)
-                            Icons.Default.Star else Icons.Default.StarOutline,
-                        contentDescription = "Volume",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${(currentVolume * 100 / maxVolume)}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
+        VolumeIndicator(
+            isVisible = showVolumeIndicator,
+            currentVolume = currentVolume,
+            maxVolume = maxVolume,
+            dominantColors = dominantColors,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp)
+        )
 
         // Song Actions Bottom Sheet
         if (song != null) {
