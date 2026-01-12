@@ -167,14 +167,14 @@ class MusicPlayer @Inject constructor(
     }
 
     fun switchOutputDevice(device: OutputDevice) {
-        // Switching output device programmatically is limited on Android without system permissions
-        // Usually, we can only suggest or open system settings, or use MediaRouter for Cast
-        // For local devices, Android handles it automatically when connected.
-        // We will show the system output switcher if possible (MediaRouter)
-        
-        val mediaRouter = MediaRouter.getInstance(context)
-        // This is a simplified approach to trigger the system's output switcher
-        // In a real app, you might use MediaRouteActionProvider or similar
+        // Send command to service to switch output device (ExoPlayer routing)
+        val args = android.os.Bundle().apply {
+            putString("DEVICE_ID", device.id)
+        }
+        mediaController?.sendCustomCommand(
+            androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY),
+            args
+        )
         
         _playerState.update { state ->
             val updatedDevices = state.availableDevices.map { 
