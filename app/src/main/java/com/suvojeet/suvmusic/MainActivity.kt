@@ -304,7 +304,7 @@ fun SuvMusicApp(
                     isFetchingLyrics = isFetchingLyrics,
                     sleepTimerOption = sleepTimerOption,
                     sleepTimerRemainingMs = sleepTimerRemainingMs,
-                    onSetSleepTimer = { playerViewModel.setSleepTimer(it) },
+                    onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
                     startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
                 )
             }
