@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -54,6 +56,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -97,6 +100,18 @@ fun PlaylistScreen(
     // Dialog states
     var showCreateDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val sharePlaylist: (Playlist) -> Unit = { playlistToShare ->
+        val shareText = "Check out this playlist: ${playlistToShare.title} by ${playlistToShare.author}\n\nhttps://music.youtube.com/playlist?list=${playlistToShare.id}"
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "Share Playlist")
+        context.startActivity(shareIntent)
+    }
 
     Box(
         modifier = Modifier
@@ -188,6 +203,7 @@ fun PlaylistScreen(
                 onBackClick = onBackClick,
                 onCreatePlaylist = { showCreateDialog = true },
                 onRenamePlaylist = { showRenameDialog = true },
+                onShareClick = { sharePlaylist(playlist) },
                 isDarkTheme = isDarkTheme,
                 contentColor = contentColor
             )
@@ -229,6 +245,7 @@ private fun TopBar(
     onBackClick: () -> Unit,
     onCreatePlaylist: (() -> Unit)? = null,
     onRenamePlaylist: (() -> Unit)? = null,
+    onShareClick: () -> Unit,
     isDarkTheme: Boolean,
     contentColor: Color
 ) {
@@ -276,6 +293,13 @@ private fun TopBar(
         }
         
         // Action buttons
+        IconButton(onClick = onShareClick) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = "Share",
+                tint = contentColor
+            )
+        }
    
         // Menu
         Box {
