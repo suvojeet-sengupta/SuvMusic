@@ -10,6 +10,7 @@ sealed class Destination(val route: String) {
     data object Settings : Destination("settings")
     data object PlaybackSettings : Destination("playback_settings")
     data object AppearanceSettings : Destination("appearance_settings")
+    data object CustomizationSettings : Destination("customization_settings")
     data object Recents : Destination("recents")
     data object Player : Destination("player")
     data object YouTubeLogin : Destination("youtube_login")
