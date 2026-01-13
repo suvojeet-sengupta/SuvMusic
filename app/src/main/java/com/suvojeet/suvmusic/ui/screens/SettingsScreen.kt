@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -68,6 +69,7 @@ fun SettingsScreen(
     onLoginClick: () -> Unit = {},
     onPlaybackClick: () -> Unit = {},
     onAppearanceClick: () -> Unit = {},
+    onCustomizationClick: () -> Unit = {},
     onStatsClick: () -> Unit = {},
     onAboutClick: () -> Unit = {}
 ) {
@@ -196,6 +198,14 @@ fun SettingsScreen(
             title = "Appearance",
             subtitle = buildAppearanceSubtitle(uiState.themeMode.label, uiState.dynamicColorEnabled),
             onClick = onAppearanceClick
+        )
+        
+        // Customization - Navigate to CustomizationScreen
+        SettingsItem(
+            icon = Icons.Default.Tune,
+            title = "Customization",
+            subtitle = "Seekbar style, artwork shape",
+            onClick = onCustomizationClick
         )
         
         // Dynamic Island Toggle

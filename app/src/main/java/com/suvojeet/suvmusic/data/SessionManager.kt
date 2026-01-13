@@ -79,6 +79,10 @@ class SessionManager @Inject constructor(
         
         // Dynamic Island (Floating pip overlay)
         private val DYNAMIC_ISLAND_ENABLED_KEY = booleanPreferencesKey("dynamic_island_enabled")
+        
+        // Player Customization
+        private val SEEKBAR_STYLE_KEY = stringPreferencesKey("seekbar_style")
+        private val ARTWORK_SHAPE_KEY = stringPreferencesKey("artwork_shape")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -126,6 +130,42 @@ class SessionManager @Inject constructor(
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[DYNAMIC_ISLAND_ENABLED_KEY] = enabled
+        }
+    }
+    
+    // --- Player Customization ---
+    
+    /**
+     * Get saved seekbar style (defaults to WAVEFORM)
+     */
+    fun getSeekbarStyle(): String = runBlocking {
+        context.dataStore.data.first()[SEEKBAR_STYLE_KEY] ?: "WAVEFORM"
+    }
+    
+    val seekbarStyleFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[SEEKBAR_STYLE_KEY] ?: "WAVEFORM"
+    }
+    
+    suspend fun setSeekbarStyle(style: String) {
+        context.dataStore.edit { preferences ->
+            preferences[SEEKBAR_STYLE_KEY] = style
+        }
+    }
+    
+    /**
+     * Get saved artwork shape (defaults to ROUNDED_SQUARE)
+     */
+    fun getArtworkShape(): String = runBlocking {
+        context.dataStore.data.first()[ARTWORK_SHAPE_KEY] ?: "ROUNDED_SQUARE"
+    }
+    
+    val artworkShapeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[ARTWORK_SHAPE_KEY] ?: "ROUNDED_SQUARE"
+    }
+    
+    suspend fun setArtworkShape(shape: String) {
+        context.dataStore.edit { preferences ->
+            preferences[ARTWORK_SHAPE_KEY] = shape
         }
     }
     
