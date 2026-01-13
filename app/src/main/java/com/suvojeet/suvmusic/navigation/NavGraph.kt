@@ -16,6 +16,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.ui.screens.AboutScreen
 import com.suvojeet.suvmusic.ui.screens.AppearanceSettingsScreen
+import com.suvojeet.suvmusic.ui.screens.CustomizationScreen
 import com.suvojeet.suvmusic.ui.screens.HomeScreen
 import com.suvojeet.suvmusic.ui.screens.LibraryScreen
 import com.suvojeet.suvmusic.ui.screens.player.PlayerScreen
@@ -171,6 +172,7 @@ fun NavGraph(
                 onLoginClick = { navController.navigate(Destination.YouTubeLogin.route) },
                 onPlaybackClick = { navController.navigate(Destination.PlaybackSettings.route) },
                 onAppearanceClick = { navController.navigate(Destination.AppearanceSettings.route) },
+                onCustomizationClick = { navController.navigate(Destination.CustomizationSettings.route) },
                 onStatsClick = { navController.navigate(Destination.ListeningStats.route) },
                 onAboutClick = { navController.navigate(Destination.About.route) }
             )
@@ -184,6 +186,12 @@ fun NavGraph(
         
         composable(Destination.AppearanceSettings.route) {
             AppearanceSettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        
+        composable(Destination.CustomizationSettings.route) {
+            CustomizationScreen(
                 onBack = { navController.popBackStack() }
             )
         }

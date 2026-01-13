@@ -72,11 +72,18 @@ fun WaveformSeeker(
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
     activeColor: Color = MaterialTheme.colorScheme.primary,
-    inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant
+    inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    initialStyle: SeekbarStyle = SeekbarStyle.WAVEFORM,
+    onStyleChange: ((SeekbarStyle) -> Unit)? = null
 ) {
-    // Current seekbar style
-    var currentStyle by remember { mutableStateOf(SeekbarStyle.WAVEFORM) }
+    // Current seekbar style - uses initial style from settings
+    var currentStyle by remember { mutableStateOf(initialStyle) }
     var showStyleMenu by remember { mutableStateOf(false) }
+    
+    // Sync with external style changes
+    LaunchedEffect(initialStyle) {
+        currentStyle = initialStyle
+    }
     
     // Animation for wave movement when playing
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
@@ -201,6 +208,7 @@ fun WaveformSeeker(
                     inactiveColor = inactiveColor,
                     onStyleSelected = { style ->
                         currentStyle = style
+                        onStyleChange?.invoke(style)
                         showStyleMenu = false
                     }
                 )
