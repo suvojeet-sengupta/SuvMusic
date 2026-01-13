@@ -6,16 +6,21 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,31 +38,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.ui.components.DominantColors
-
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.roundToInt
 
 /**
- * Vertical Volume Indicator similar to MX Player / iOS Control Center.
- * Appears on the right side of the screen.
+ * Fluid Vertical Volume Indicator with smooth spring animations.
+ * Similar to iOS Control Center / MX Player volume slider.
  */
 @Composable
 fun VolumeIndicator(
@@ -70,30 +67,63 @@ fun VolumeIndicator(
 ) {
     val volumePercentage = if (maxVolume > 0) currentVolume.toFloat() / maxVolume else 0f
     
-    // Smooth animation for the fill level
-    val animatedFill by animateFloatAsState(targetValue = volumePercentage, label = "VolumeFill")
+    // Smooth spring animation for ultra-fluid fill
+    val animatedFill by animateFloatAsState(
+        targetValue = volumePercentage,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "VolumeFill"
+    )
+    
+    // Smooth animation for percentage text
+    val animatedPercentage by animateFloatAsState(
+        targetValue = volumePercentage * 100,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "VolumePercentage"
+    )
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn() + slideInHorizontally { it / 2 },
-        exit = fadeOut() + slideOutHorizontally { it / 2 },
+        enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) + 
+                slideInHorizontally(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) { it / 2 } +
+                scaleIn(
+                    initialScale = 0.8f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ),
+        exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh)) + 
+               slideOutHorizontally(
+                   animationSpec = spring(stiffness = Spring.StiffnessHigh)
+               ) { it / 2 } +
+               scaleOut(
+                   targetScale = 0.8f,
+                   animationSpec = spring(stiffness = Spring.StiffnessHigh)
+               ),
         modifier = modifier
     ) {
         Box(
             modifier = Modifier
-                .width(50.dp)
+                .width(52.dp)
                 .height(200.dp)
-                .padding(end = 16.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(26.dp))
                 .background(
-                    // Apple Music style "Blur" equivalent - translucent surface
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f)
                 )
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragStart = { offset ->
-                            // Calculate initial volume based on touch position
-                            // Y is 0 at top, height at bottom. Volume is 0 at bottom, max at top.
                             val newPct = 1f - (offset.y / size.height)
                             val newVol = (newPct * maxVolume).roundToInt().coerceIn(0, maxVolume)
                             onVolumeChange(newVol)
@@ -114,46 +144,47 @@ fun VolumeIndicator(
                     }
                 }
         ) {
-            // Background track
+            // Background track with subtle pattern
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
             )
 
-            // Filled part (Bottom to Top)
+            // Animated filled part (Bottom to Top) with gradient
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .fillMaxHeight(animatedFill)
+                    .fillMaxHeight(animatedFill.coerceIn(0f, 1f))
+                    .clip(RoundedCornerShape(26.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                dominantColors.primary,
-                                dominantColors.accent
+                                dominantColors.accent,
+                                dominantColors.primary
                             )
                         )
                     )
             )
 
-            // Content Overlay (Icon and Percentage)
+            // Content Overlay (Icon at bottom, Percentage at top)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween // Icon at bottom, Text at top
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Percentage Text
+                // Percentage Text with animated value
                 Text(
-                    text = "${(volumePercentage * 100).toInt()}",
-                    color = if (volumePercentage > 0.5f) Color.White else dominantColors.onBackground,
-                    fontSize = 14.sp,
+                    text = "${animatedPercentage.roundToInt()}",
+                    color = if (volumePercentage > 0.45f) Color.White else dominantColors.onBackground,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
 
-                // Volume Icon
+                // Volume Icon - changes based on level
                 Icon(
                     imageVector = when {
                         volumePercentage == 0f -> Icons.AutoMirrored.Filled.VolumeOff
@@ -161,8 +192,8 @@ fun VolumeIndicator(
                         else -> Icons.AutoMirrored.Filled.VolumeUp
                     },
                     contentDescription = "Volume",
-                    tint = if (volumePercentage < 0.15f) dominantColors.onBackground else Color.White,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (volumePercentage < 0.12f) dominantColors.onBackground else Color.White,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -177,7 +208,9 @@ fun SystemVolumeObserver(
     context: Context,
     onVolumeChanged: (Int, Int) -> Unit
 ) {
-    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val audioManager = androidx.compose.runtime.remember { 
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager 
+    }
     val currentOnVolumeChanged by rememberUpdatedState(onVolumeChanged)
 
     DisposableEffect(context) {
