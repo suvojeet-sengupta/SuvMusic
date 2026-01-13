@@ -1,10 +1,13 @@
 package com.suvojeet.suvmusic
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -57,6 +60,8 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var sessionManager: SessionManager
     
+    private lateinit var audioManager: AudioManager
+    
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -66,6 +71,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Initialize audio manager for volume control
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
         requestPermissions()
         
@@ -92,6 +100,37 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    
+    /**
+     * Intercept hardware volume keys to control music volume
+     * without showing the system volume UI panel.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        return when (event.keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    audioManager.adjustStreamVolume(
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.ADJUST_RAISE,
+                        0 // No flags = no system UI
+                    )
+                }
+                true // Consume the event
+            }
+            KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    audioManager.adjustStreamVolume(
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.ADJUST_LOWER,
+                        0 // No flags = no system UI
+                    )
+                }
+                true // Consume the event
+            }
+            else -> super.dispatchKeyEvent(event)
+        }
+    }
+    
     
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
