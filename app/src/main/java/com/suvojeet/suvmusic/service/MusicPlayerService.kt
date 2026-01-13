@@ -2,16 +2,30 @@ package com.suvojeet.suvmusic.service
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.suvojeet.suvmusic.MainActivity
 import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.AndroidEntryPoint
+import java.io.File
 import javax.inject.Inject
 
 /**
@@ -25,27 +39,102 @@ class MusicPlayerService : MediaSessionService() {
     lateinit var sessionManager: SessionManager
     
     private var mediaSession: MediaSession? = null
-    
+
+    companion object {
+        private var simpleCache: SimpleCache? = null
+        private const val CACHE_SIZE_BYTES = 1024 * 1024 * 512L // 512 MB
+    }
+
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
         
         val isGaplessEnabled = sessionManager.isGaplessPlaybackEnabled()
         val isAutomixEnabled = sessionManager.isAutomixEnabled()
-        
-        // Ultra-fast buffer for instant playback
-        // Minimum buffering = faster start (may rebuffer on slow networks)
-        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+
+        // Setup caching
+        if (simpleCache == null) {
+            val cacheEvictor = LeastRecentlyUsedCacheEvictor(CACHE_SIZE_BYTES)
+            val databaseProvider = StandaloneDatabaseProvider(this)
+            val cacheDir = File(cacheDir, "media_cache")
+            if (!cacheDir.exists()) cacheDir.mkdirs()
+            simpleCache = SimpleCache(cacheDir, cacheEvictor, databaseProvider)
+        }
+
+        // Setup sources
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(30_000)
+            .setReadTimeoutMs(30_000)
+            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+        val cacheDataSourceFactory = CacheDataSource.Factory()
+            .setCache(simpleCache!!)
+            .setUpstreamDataSourceFactory(httpDataSourceFactory)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+
+        // Local Source
+        val defaultDataSourceFactory = DefaultDataSource.Factory(this)
+
+        // Switch between network and local
+        val smartDataSourceFactory = DataSource.Factory {
+            val cacheDS = cacheDataSourceFactory.createDataSource()
+            val defaultDS = defaultDataSourceFactory.createDataSource()
+
+            object : DataSource {
+                private var currentDataSource: DataSource? = null
+
+                override fun addTransferListener(transferListener: TransferListener) {
+                    cacheDS.addTransferListener(transferListener)
+                    defaultDS.addTransferListener(transferListener)
+                }
+
+                override fun open(dataSpec: DataSpec): Long {
+                    val uri = dataSpec.uri
+                    val scheme = uri.scheme?.lowercase()
+
+                    // Use Cache for HTTP/HTTPS, use Direct for Content or File
+                    currentDataSource = if (scheme == "http" || scheme == "https") {
+                        cacheDS
+                    } else {
+                        defaultDS
+                    }
+                    return currentDataSource!!.open(dataSpec)
+                }
+
+                override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                    return currentDataSource?.read(buffer, offset, length) ?: 0
+                }
+
+                override fun getUri(): Uri? = currentDataSource?.uri
+
+                override fun getResponseHeaders(): Map<String, List<String>> {
+                    return currentDataSource?.responseHeaders ?: emptyMap()
+                }
+
+                override fun close() {
+                    currentDataSource?.close()
+                }
+            }
+        }
+
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(smartDataSourceFactory)
+
+        // Buffering
+        val loadControl = DefaultLoadControl.Builder()
+            .setAllocator(DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE))
             .setBufferDurationsMs(
-                5_000,     // Min buffer: 5 seconds (aggressive)
-                30_000,    // Max buffer: 30 seconds  
-                500,       // Buffer for playback start: 0.5s (INSTANT!)
-                1_500      // Buffer for rebuffer: 1.5 seconds
+                30_000,     // Min buffer
+                120_000,    // Max buffer
+                1_500,      // Buffer for start
+                3_000       // Buffer for rebuffer
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
             
         val player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(mediaSourceFactory)
             .setLoadControl(loadControl)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -57,17 +146,7 @@ class MusicPlayerService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
             .apply {
-                // Configure for gapless playback
-                // When gapless is enabled, ExoPlayer will seamlessly transition between tracks
-                // When disabled, there may be small gaps between tracks
-                if (isGaplessEnabled || isAutomixEnabled) {
-                    // ExoPlayer handles gapless automatically when media items are queued
-                    // Enabling pause at end is DISABLED for gapless playback
-                    pauseAtEndOfMediaItems = false
-                } else {
-                    // Add small pause between tracks when gapless is disabled
-                    pauseAtEndOfMediaItems = false
-                }
+                pauseAtEndOfMediaItems = false
             }
         
         val sessionActivityPendingIntent = PendingIntent.getActivity(
@@ -80,53 +159,6 @@ class MusicPlayerService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivityPendingIntent)
             .setBitmapLoader(CoilBitmapLoader(this))
-            .setCallback(object : MediaSession.Callback {
-                override fun onConnect(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo
-                ): MediaSession.ConnectionResult {
-                    val connectionResult = super.onConnect(session, controller)
-                    val sessionCommands = connectionResult.availableSessionCommands
-                        .buildUpon()
-                        .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
-                        .build()
-                    return MediaSession.ConnectionResult.accept(
-                        sessionCommands,
-                        connectionResult.availablePlayerCommands
-                    )
-                }
-
-                override fun onCustomCommand(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo,
-                    customCommand: androidx.media3.session.SessionCommand,
-                    args: android.os.Bundle
-                ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
-                    if (customCommand.customAction == "SET_OUTPUT_DEVICE") {
-                        val deviceId = args.getString("DEVICE_ID")
-                        if (deviceId != null) {
-                            val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
-                            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-                            
-                            val targetDevice = if (deviceId == "phone_speaker") {
-                                devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                            } else {
-                                devices.find { it.id.toString() == deviceId }
-                            }
-                            
-                            val player = session.player
-                            if (player is ExoPlayer) {
-                                // If targetDevice is null, it clears the preference (default routing)
-                                player.setPreferredAudioDevice(targetDevice)
-                            }
-                        }
-                        return com.google.common.util.concurrent.Futures.immediateFuture(
-                            androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
-                        )
-                    }
-                    return super.onCustomCommand(session, controller, customCommand, args)
-                }
-            })
             .build()
     }
     

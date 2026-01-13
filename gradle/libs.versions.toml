@@ -20,6 +20,7 @@ datastorePreferences = "1.1.1"
 room = "2.8.4"
 gson = "2.11.0"
 securityCrypto = "1.1.0"
+youtubedlAndroid = "0.18.1"
 
 [libraries]
 # Core
@@ -51,6 +52,7 @@ androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplaye
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
+androidx-media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasource-okhttp", version.ref = "media3" }
 
 # Media Router
 androidx-mediarouter = { group = "androidx.mediarouter", name = "mediarouter", version.ref = "mediarouter" }
@@ -80,6 +82,11 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 
 # Gson
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
+# yt-dlp
+ytdlp-android-core = { module = "io.github.junkfood02.youtubedl-android:library", version.ref = "youtubedlAndroid" }
+ytdlp-android-ffmpeg = { module = "io.github.junkfood02.youtubedl-android:ffmpeg", version.ref = "youtubedlAndroid" }
+ytdlp-android-aria2c = { module = "io.github.junkfood02.youtubedl-android:aria2c", version.ref = "youtubedlAndroid" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

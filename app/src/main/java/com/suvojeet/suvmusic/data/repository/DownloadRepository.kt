@@ -9,9 +9,15 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
 import com.google.gson.reflect.TypeToken
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.yausername.youtubedl_android.YoutubeDL
+import com.yausername.youtubedl_android.YoutubeDLRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +29,7 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.RandomAccessFile
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,13 +44,18 @@ class DownloadRepository @Inject constructor(
         private const val TAG = "DownloadRepository"
         private const val SUVMUSIC_FOLDER = "SuvMusic"
     }
-    
-    private val gson = Gson()
+
+    private val gson: Gson = GsonBuilder()
+        .registerTypeAdapter(Uri::class.java, UriTypeAdapter())
+        .create()
+
     private val downloadsMetaFile = File(context.filesDir, "downloads_meta.json")
-    
-    // Old internal storage location (for migration)
-    private val oldDownloadsDir = File(context.filesDir, "downloads")
-    
+
+    // Временная папка для загрузок (используется для resume/докачки)
+    private val tempDownloadDir = File(context.cacheDir, "temp_downloads").apply {
+        if (!exists()) mkdirs()
+    }
+
     private val _downloadedSongs = MutableStateFlow<List<Song>>(emptyList())
     val downloadedSongs: StateFlow<List<Song>> = _downloadedSongs.asStateFlow()
 
@@ -66,19 +78,23 @@ class DownloadRepository @Inject constructor(
 
     init {
         loadDownloads()
-        // Migrate old downloads from internal storage to public Downloads folder
-        migrateOldDownloads()
-        // Scan Downloads/SuvMusic folder for any manually added files
-        scanDownloadsFolder()
+        scanMusicFolder()
     }
 
-    /**
-     * Scan Downloads/SuvMusic folder for audio files that aren't tracked yet.
-     * This allows users to manually add songs to the folder.
-     */
-    private fun scanDownloadsFolder() {
+    class UriTypeAdapter : TypeAdapter<Uri>() {
+        override fun write(out: JsonWriter, value: Uri?) {
+            out.value(value?.toString())
+        }
+
+        override fun read(input: JsonReader): Uri? {
+            val uriString = input.nextString()
+            return if (uriString.isNotEmpty()) Uri.parse(uriString) else null
+        }
+    }
+
+    private fun scanMusicFolder() {
         try {
-            val folder = getPublicDownloadsFolder()
+            val folder = getPublicMusicFolder()
             if (!folder.exists()) return
             
             val audioFiles = folder.listFiles { file ->
@@ -94,8 +110,9 @@ class DownloadRepository @Inject constructor(
                 // Check if already tracked by URI
                 val fileUri = file.toUri()
                 val isTracked = currentSongs.any { song ->
-                    song.localUri?.path == file.absolutePath || 
-                    song.localUri == fileUri
+                    song.localUri == fileUri ||
+                            song.localUri?.path == file.absolutePath ||
+                            file.name == "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
                 }
                 
                 if (!isTracked) {
@@ -109,7 +126,7 @@ class DownloadRepository @Inject constructor(
                         id = "local_${file.name.hashCode()}",
                         title = title,
                         artist = artist,
-                        album = "Downloads",
+                        album = "Music",
                         duration = 0L, // We don't have duration info for manually added files
                         thumbnailUrl = null,
                         source = SongSource.DOWNLOADED,
@@ -129,16 +146,13 @@ class DownloadRepository @Inject constructor(
                 Log.d(TAG, "Added ${currentSongs.size - _downloadedSongs.value.size} untracked files to downloads")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error scanning downloads folder", e)
+            Log.e(TAG, "Error scanning music folder", e)
         }
     }
 
-    /**
-     * Get the public Downloads/SuvMusic folder
-     */
-    private fun getPublicDownloadsFolder(): File {
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val suvMusicDir = File(downloadsDir, SUVMUSIC_FOLDER)
+    private fun getPublicMusicFolder(): File {
+        val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+        val suvMusicDir = File(musicDir, SUVMUSIC_FOLDER)
         if (!suvMusicDir.exists()) {
             suvMusicDir.mkdirs()
         }
@@ -146,64 +160,9 @@ class DownloadRepository @Inject constructor(
     }
 
     /**
-     * Migrate downloads from old internal storage to public Downloads folder
-     */
-    private fun migrateOldDownloads() {
-        if (!oldDownloadsDir.exists()) return
-        
-        val oldFiles = oldDownloadsDir.listFiles() ?: return
-        if (oldFiles.isEmpty()) return
-        
-        Log.d(TAG, "Found ${oldFiles.size} files to migrate from internal storage")
-        
-        val currentSongs = _downloadedSongs.value.toMutableList()
-        var migrated = false
-        
-        for (oldFile in oldFiles) {
-            try {
-                val songId = oldFile.nameWithoutExtension
-                val song = currentSongs.find { it.id == songId }
-                
-                if (song != null) {
-                    // Move file to public Downloads folder
-                    val newUri = saveFileToPublicDownloads(songId, song.artist, song.title, oldFile.inputStream())
-                    
-                    if (newUri != null) {
-                        // Update song with new URI
-                        val index = currentSongs.indexOfFirst { it.id == songId }
-                        if (index >= 0) {
-                            currentSongs[index] = song.copy(localUri = newUri)
-                            migrated = true
-                        }
-                        
-                        // Delete old file
-                        oldFile.delete()
-                        Log.d(TAG, "Migrated ${song.title} to public Downloads folder")
-                    }
-                } else {
-                    // No metadata, just delete old file
-                    oldFile.delete()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error migrating file: ${oldFile.name}", e)
-            }
-        }
-        
-        if (migrated) {
-            _downloadedSongs.value = currentSongs
-            saveDownloads()
-        }
-        
-        // Clean up old directory if empty
-        if (oldDownloadsDir.listFiles()?.isEmpty() == true) {
-            oldDownloadsDir.delete()
-        }
-    }
-
-    /**
      * Save file to public Downloads/SuvMusic folder using appropriate API
      */
-    private fun saveFileToPublicDownloads(songId: String, artist: String, title: String, inputStream: InputStream): Uri? {
+    private fun saveFileToPublicMusic(songId: String, artist: String, title: String, inputStream: InputStream): Uri? {
         val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.m4a"
         
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -223,7 +182,7 @@ class DownloadRepository @Inject constructor(
             val contentValues = ContentValues().apply {
                 put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
-                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$SUVMUSIC_FOLDER")
+                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER")
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
             }
 
@@ -239,24 +198,22 @@ class DownloadRepository @Inject constructor(
                 contentValues.clear()
                 contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
                 resolver.update(mediaUri, contentValues, null, null)
-                
-                Log.d(TAG, "Saved to MediaStore: $fileName")
+                Log.d(TAG, "Saved to MediaStore (Music): $fileName")
             }
             
             uri
         } catch (e: Exception) {
             Log.e(TAG, "Error saving to MediaStore", e)
-            // Fallback to direct file access
             saveToPublicFolder(songId, fileName, inputStream)
         }
     }
 
     /**
-     * Save to public Downloads folder directly (Android 9 and below)
+     * Save to public Music folder directly (Android 9 and below)
      */
     private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream): Uri? {
         return try {
-            val folder = getPublicDownloadsFolder()
+            val folder = getPublicMusicFolder()
             val file = File(folder, fileName)
             
             FileOutputStream(file).use { outputStream ->
@@ -296,8 +253,10 @@ class DownloadRepository @Inject constructor(
                         if (uri.scheme == "file") {
                             File(uri.path ?: "").exists()
                         } else {
-                            context.contentResolver.openInputStream(uri)?.close()
-                            true
+                            try {
+                                context.contentResolver.openInputStream(uri)?.close()
+                                true
+                            } catch (e: Exception) { false }
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "File not found for ${song.title}, removing from list")
@@ -335,95 +294,35 @@ class DownloadRepository @Inject constructor(
         
         // Mark as downloading
         _downloadingIds.value = _downloadingIds.value + song.id
-        Log.d(TAG, "Starting download for: ${song.title} (${song.id})")
-        
+        Log.d(TAG, "Starting download for: ${song.title} (${song.source})")
+
         try {
-            // Get stream URL based on song source
-            val streamUrl = when (song.source) {
-                SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id, 320)
-                else -> youTubeRepository.getStreamUrlForDownload(song.id)
+            val finalUri: Uri? = when (song.source) {
+                // Use OkHttp for JioSaavn
+                SongSource.JIOSAAVN -> downloadFromJioSaavn(song)
+                // Use yt-dlp for YouTube
+                else -> downloadFromYouTube(song)
             }
-            if (streamUrl == null) {
-                Log.e(TAG, "Failed to get stream URL for ${song.id}")
-                _downloadingIds.value = _downloadingIds.value - song.id
-                return@withContext false
-            }
-            
-            Log.d(TAG, "Got stream URL, starting download...")
-            
-            val request = Request.Builder()
-                .url(streamUrl)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .header("Accept", "*/*")
-                .header("Accept-Encoding", "identity")
-                .header("Connection", "keep-alive")
-                .build()
-            
-            val response = downloadClient.newCall(request).execute()
-            
-            if (!response.isSuccessful) {
-                Log.e(TAG, "Download request failed: ${response.code} - ${response.message}")
-                response.close()
-                _downloadingIds.value = _downloadingIds.value - song.id
-                return@withContext false
-            }
-            
-            val contentLength = response.body?.contentLength() ?: -1L
-            Log.d(TAG, "Content length: $contentLength bytes")
 
-            // Save to public Downloads/SuvMusic folder
-            val downloadedUri = response.body?.byteStream()?.use { inputStream ->
-                saveFileToPublicDownloads(song.id, song.artist, song.title, inputStream)
-            }
-            
-            response.close()
-            
-            if (downloadedUri == null) {
-                Log.e(TAG, "Failed to save file")
+            if (finalUri == null) {
+                Log.e(TAG, "Download failed (Uri is null)")
                 _downloadingIds.value = _downloadingIds.value - song.id
                 return@withContext false
             }
-            
-            Log.d(TAG, "Download complete: saved to $downloadedUri")
 
-            // Download high-quality thumbnail if available
+            // Download thumbnail
             var localThumbnailUrl = song.thumbnailUrl
             if (!song.thumbnailUrl.isNullOrEmpty() && song.thumbnailUrl.startsWith("http")) {
-                try {
-                    // Upgrade to high-res thumbnail URL
-                    val highResThumbnailUrl = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
-                    
-                    val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
-                    val thumbResponse = downloadClient.newCall(thumbRequest).execute()
-                    if (thumbResponse.isSuccessful) {
-                        // Save to app's internal thumbnails folder
-                        val thumbnailsDir = File(context.filesDir, "thumbnails")
-                        if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
-                        
-                        val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        val thumbBytes = thumbResponse.body?.bytes()
-                        if (thumbBytes != null) {
-                            FileOutputStream(thumbFile).use { output ->
-                                output.write(thumbBytes)
-                            }
-                            localThumbnailUrl = thumbFile.toUri().toString()
-                            Log.d(TAG, "Downloaded high-res thumbnail to $localThumbnailUrl")
-                        }
-                    }
-                    thumbResponse.close()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to download thumbnail", e)
-                    // Keep original URL if download fails, so it might work if online
-                }
+                localThumbnailUrl = downloadThumbnail(song.id, song.thumbnailUrl) ?: song.thumbnailUrl
             }
 
-            // Create downloaded song entry
+            // Finalize
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
-                localUri = downloadedUri,
+                localUri = finalUri,
                 thumbnailUrl = localThumbnailUrl,
                 streamUrl = null,
-                originalSource = song.source // Preserve original source for credits
+                originalSource = song.source
             )
 
             _downloadedSongs.value = _downloadedSongs.value + downloadedSong
@@ -441,21 +340,136 @@ class DownloadRepository @Inject constructor(
     }
 
     /**
-     * Progressive download with playback callback.
-     * Downloads first ~30 seconds, triggers onReadyToPlay, then continues downloading.
-     * This enables "play while downloading" feature.
-     * 
-     * @param song The song to download
-     * @param onReadyToPlay Callback when first chunk is ready for playback (receives temp file URI)
-     * @return true if download completed successfully
+     * Optimized JioSaavn Downloader using OkHttp with Resume support.
+     * Checks if file exists in temp folder and appends to it (Range header).
      */
+    private suspend fun downloadFromJioSaavn(song: Song): Uri? {
+        val streamUrl = jioSaavnRepository.getStreamUrl(song.id, 320) ?: return null
+        val tempFile = File(tempDownloadDir, "${song.id}.m4a.tmp")
+
+        var downloadedBytes = 0L
+        if (tempFile.exists()) {
+            downloadedBytes = tempFile.length()
+            Log.d(TAG, "Found temp file for ${song.title}, resuming from $downloadedBytes bytes")
+        }
+
+        val requestBuilder = Request.Builder().url(streamUrl)
+        if (downloadedBytes > 0) {
+            // Add Range header for resuming
+            requestBuilder.header("Range", "bytes=$downloadedBytes-")
+        }
+
+        val response = downloadClient.newCall(requestBuilder.build()).execute()
+
+        if (!response.isSuccessful) {
+            // If server doesn't support range (416 or 200 instead of 206), restart
+            if (response.code == 416 || (downloadedBytes > 0 && response.code == 200)) {
+                Log.w(TAG, "Server doesn't support resume properly, restarting download")
+                downloadedBytes = 0
+                tempFile.delete()
+                // Retry without range logic here if needed, but for now we fail or get new stream
+            } else {
+                response.close()
+                return null
+            }
+        }
+
+        val totalSize = (response.body?.contentLength() ?: 0) + downloadedBytes
+
+        response.body?.byteStream()?.use { input ->
+            // Use RandomAccessFile to append
+            RandomAccessFile(tempFile, "rw").use { output ->
+                output.seek(downloadedBytes) // Move to end of existing data
+
+                val buffer = ByteArray(8192 * 4) // 32KB buffer
+                var bytesRead: Int
+                var currentBatchRead = 0L
+
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    output.write(buffer, 0, bytesRead)
+                    currentBatchRead += bytesRead
+
+                    // Update progress
+                    if (totalSize > 0) {
+                        val progress = ((downloadedBytes + currentBatchRead).toFloat() / totalSize).coerceIn(0f, 1f)
+                        _downloadProgress.value = _downloadProgress.value + (song.id to progress)
+                    }
+                }
+            }
+        }
+        response.close()
+
+        // Move from temp to public
+        val finalUri = saveFileToPublicMusic(song.id, song.artist, song.title, tempFile.inputStream())
+        tempFile.delete() // Cleanup temp
+        return finalUri
+    }
+
+    /**
+     * yt-dlp Downloader with multi-thread support
+     */
+    private suspend fun downloadFromYouTube(song: Song): Uri? {
+        val tempBaseName = "temp_${song.id}"
+        val videoUrl = "https://www.youtube.com/watch?v=${song.id}"
+
+        val request = YoutubeDLRequest(videoUrl)
+        request.addOption("-o", "${tempDownloadDir.absolutePath}/$tempBaseName.%(ext)s")
+        request.addOption("-f", "bestaudio[ext=m4a]/bestaudio/best")
+        request.addOption("--no-playlist")
+        request.addOption("--add-metadata")
+
+        // Multi-threading for yt-dlp
+        request.addOption("-N", "8")
+
+        Log.d(TAG, "Executing yt-dlp (8 threads) for $videoUrl")
+
+        YoutubeDL.getInstance().execute(request) { progress, _, _ ->
+            val p = progress / 100f
+            _downloadProgress.value = _downloadProgress.value + (song.id to p)
+        }
+
+        val downloadedFile = tempDownloadDir.listFiles()?.find {
+            it.name.startsWith(tempBaseName)
+        } ?: throw Exception("Downloaded file not found")
+
+        val inputStream = downloadedFile.inputStream()
+        val finalUri = saveFileToPublicMusic(song.id, song.artist, song.title, inputStream)
+
+        inputStream.close()
+        downloadedFile.delete()
+        return finalUri
+    }
+
+    private fun downloadThumbnail(songId: String, url: String): String? {
+        return try {
+            val highResUrl = getHighResThumbnailUrl(url, songId)
+            val request = Request.Builder().url(highResUrl).build()
+            val response = downloadClient.newCall(request).execute()
+
+            if (response.isSuccessful) {
+                val thumbnailsDir = File(context.filesDir, "thumbnails")
+                if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
+
+                val thumbFile = File(thumbnailsDir, "${songId}.jpg")
+                response.body?.bytes()?.let { bytes ->
+                    FileOutputStream(thumbFile).use { it.write(bytes) }
+                    return thumbFile.toUri().toString()
+                }
+            }
+            response.close()
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "Thumbnail download failed", e)
+            null
+        }
+    }
+
+    // Keep progressive download as fallback
     suspend fun downloadSongProgressive(
         song: Song,
         onReadyToPlay: (android.net.Uri) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         if (_downloadedSongs.value.any { it.id == song.id }) {
-            Log.d(TAG, "Song ${song.id} already downloaded")
-            // Already downloaded, play from existing file
             _downloadedSongs.value.find { it.id == song.id }?.localUri?.let { uri ->
                 withContext(Dispatchers.Main) { onReadyToPlay(uri) }
             }
@@ -468,34 +482,20 @@ class DownloadRepository @Inject constructor(
         Log.d(TAG, "Starting progressive download for: ${song.title}")
         
         try {
-            // Get stream URL
-            val streamUrl = youTubeRepository.getStreamUrlForDownload(song.id)
-            if (streamUrl == null) {
-                Log.e(TAG, "Failed to get stream URL for ${song.id}")
-                _downloadingIds.value = _downloadingIds.value - song.id
-                _downloadProgress.value = _downloadProgress.value - song.id
-                return@withContext false
-            }
-            
-            // Create temp file for progressive download
-            val tempDir = File(context.cacheDir, "progressive_downloads")
-            if (!tempDir.exists()) tempDir.mkdirs()
-            val tempFile = File(tempDir, "${song.id}.m4a.tmp")
-            
-            val request = Request.Builder()
-                .url(streamUrl)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .header("Accept", "*/*")
-                .header("Accept-Encoding", "identity")
-                .build()
-            
+            val streamUrl = if (song.source == SongSource.JIOSAAVN)
+                jioSaavnRepository.getStreamUrl(song.id, 320)
+            else
+                youTubeRepository.getStreamUrlForDownload(song.id)
+
+            if (streamUrl == null) return@withContext false
+
+            // Progressive download
+            val tempFile = File(tempDownloadDir, "${song.id}_prog.m4a")
+            val request = Request.Builder().url(streamUrl).build()
             val response = downloadClient.newCall(request).execute()
             
             if (!response.isSuccessful) {
-                Log.e(TAG, "Progressive download request failed: ${response.code}")
                 response.close()
-                _downloadingIds.value = _downloadingIds.value - song.id
-                _downloadProgress.value = _downloadProgress.value - song.id
                 return@withContext false
             }
             
@@ -504,7 +504,7 @@ class DownloadRepository @Inject constructor(
             
             // Estimate bytes for 30 seconds (assuming ~128kbps = 16KB/s)
             // 30 seconds = ~480KB minimum to start playback
-            val minBytesForPlayback = 480 * 1024L
+            val minBytesForPlayback = 500 * 1024L
             var playbackTriggered = false
             var totalBytesRead = 0L
             
@@ -526,10 +526,7 @@ class DownloadRepository @Inject constructor(
                         // Trigger playback when we have enough data (~30 seconds)
                         if (!playbackTriggered && totalBytesRead >= minBytesForPlayback) {
                             playbackTriggered = true
-                            Log.d(TAG, "First chunk ready ($totalBytesRead bytes), triggering playback")
-                            withContext(Dispatchers.Main) {
-                                onReadyToPlay(tempFile.toUri())
-                            }
+                            withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
                         }
                     }
                 }
@@ -539,59 +536,24 @@ class DownloadRepository @Inject constructor(
             
             // If file was small and playback wasn't triggered, trigger now
             if (!playbackTriggered && tempFile.exists()) {
-                Log.d(TAG, "Small file, triggering playback now")
-                withContext(Dispatchers.Main) {
-                    onReadyToPlay(tempFile.toUri())
-                }
+                withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
             }
-            
-            // Move temp file to final location
-            val finalUri = saveFileToPublicDownloads(song.id, song.artist, song.title, tempFile.inputStream())
+
+            val finalUri = saveFileToPublicMusic(song.id, song.artist, song.title, tempFile.inputStream())
             tempFile.delete()
-            
-            if (finalUri == null) {
-                Log.e(TAG, "Failed to save final file")
-                _downloadingIds.value = _downloadingIds.value - song.id
-                _downloadProgress.value = _downloadProgress.value - song.id
-                return@withContext false
+
+            if (finalUri != null) {
+                val downloadedSong = song.copy(
+                    source = SongSource.DOWNLOADED,
+                    localUri = finalUri,
+                    thumbnailUrl = song.thumbnailUrl,
+                    streamUrl = null,
+                    originalSource = song.source
+                )
+                _downloadedSongs.value = _downloadedSongs.value + downloadedSong
+                saveDownloads()
             }
-            
-            Log.d(TAG, "Progressive download complete: $finalUri")
-            
-            // Download thumbnail
-            var localThumbnailUrl = song.thumbnailUrl
-            if (!song.thumbnailUrl.isNullOrEmpty() && song.thumbnailUrl.startsWith("http")) {
-                try {
-                    val highResThumbnailUrl = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
-                    val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
-                    val thumbResponse = downloadClient.newCall(thumbRequest).execute()
-                    if (thumbResponse.isSuccessful) {
-                        val thumbnailsDir = File(context.filesDir, "thumbnails")
-                        if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
-                        val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        thumbResponse.body?.bytes()?.let { bytes ->
-                            FileOutputStream(thumbFile).use { it.write(bytes) }
-                            localThumbnailUrl = thumbFile.toUri().toString()
-                        }
-                    }
-                    thumbResponse.close()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to download thumbnail", e)
-                }
-            }
-            
-            // Save to downloaded songs
-            val downloadedSong = song.copy(
-                source = SongSource.DOWNLOADED,
-                localUri = finalUri,
-                thumbnailUrl = localThumbnailUrl,
-                streamUrl = null,
-                originalSource = song.source // Preserve original source for credits
-            )
-            
-            _downloadedSongs.value = _downloadedSongs.value + downloadedSong
-            saveDownloads()
-            
+
             _downloadingIds.value = _downloadingIds.value - song.id
             _downloadProgress.value = _downloadProgress.value - song.id
             Log.d(TAG, "Song ${song.title} progressive download successful!")
@@ -599,7 +561,6 @@ class DownloadRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Progressive download error for ${song.id}", e)
             _downloadingIds.value = _downloadingIds.value - song.id
-            _downloadProgress.value = _downloadProgress.value - song.id
             false
         }
     }
@@ -612,129 +573,49 @@ class DownloadRepository @Inject constructor(
             var deleted = false
             
             song.localUri?.let { uri ->
-                when (uri.scheme) {
-                    "file" -> {
-                        val file = File(uri.path ?: "")
-                        if (file.exists()) {
-                            deleted = file.delete()
-                            Log.d(TAG, "Deleted file via file:// scheme: $deleted")
-                        }
-                    }
-                    "content" -> {
-                        // For content:// URIs, try ContentResolver first
-                        try {
-                            val rowsDeleted = context.contentResolver.delete(uri, null, null)
-                            deleted = rowsDeleted > 0
-                            Log.d(TAG, "Deleted via ContentResolver: $deleted (rows: $rowsDeleted)")
-                        } catch (e: Exception) {
-                            Log.w(TAG, "ContentResolver delete failed", e)
-                        }
-                    }
+                if (uri.scheme == "file") {
+                    deleted = File(uri.path ?: "").delete()
+                } else if (uri.scheme == "content") {
+                    deleted = context.contentResolver.delete(uri, null, null) > 0
                 }
             }
             
-            // If URI delete didn't work, try finding the file in public Downloads folder
+            // If URI delete didn't work, try finding the file in public Music folder
             if (!deleted) {
-                try {
-                    val publicFolder = getPublicDownloadsFolder()
-                    val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
-                    val file = File(publicFolder, fileName)
-                    if (file.exists()) {
-                        deleted = file.delete()
-                        Log.d(TAG, "Deleted file from public folder: $deleted - ${file.absolutePath}")
-                    }
-                    
-                    // Also try without extension variations
-                    if (!deleted) {
-                        publicFolder.listFiles()?.forEach { f ->
-                            if (f.nameWithoutExtension.contains(song.title.take(20), ignoreCase = true)) {
-                                deleted = f.delete()
-                                if (deleted) {
-                                    Log.d(TAG, "Deleted matching file: ${f.name}")
-                                    return@forEach
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error deleting from public folder", e)
-                }
+                val file = File(getPublicMusicFolder(), "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a")
+                if (file.exists()) file.delete()
             }
-            
-            // Delete local thumbnail if exists
-            val thumbnailsDir = File(context.filesDir, "thumbnails")
-            val thumbFile = File(thumbnailsDir, "${songId}.jpg")
-            if (thumbFile.exists()) {
-                thumbFile.delete()
-                Log.d(TAG, "Deleted thumbnail: ${thumbFile.name}")
-            }
-            
-            // Also try to delete thumbnail from public folder (if it was saved there before)
-            try {
-                val publicFolder = getPublicDownloadsFolder()
-                val thumbFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.jpg"
-                val publicThumbFile = File(publicFolder, thumbFileName)
-                if (publicThumbFile.exists()) {
-                    publicThumbFile.delete()
-                }
-            } catch (e: Exception) {
-                // Ignore
-            }
-            
-            // Remove from list and save
+            File(context.filesDir, "thumbnails/${songId}.jpg").delete()
             _downloadedSongs.value = _downloadedSongs.value.filter { it.id != songId }
             saveDownloads()
-            Log.d(TAG, "Deleted download from list: $songId (file deleted: $deleted)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error deleting download", e)
-            // Still remove from list even if file delete failed
-            _downloadedSongs.value = _downloadedSongs.value.filter { it.id != songId }
-            saveDownloads()
-        }
+        } catch (e: Exception) { Log.e(TAG, "Error deleting", e) }
     }
-    
-    fun isDownloaded(songId: String): Boolean {
-        return _downloadedSongs.value.any { it.id == songId }
-    }
-    
-    fun isDownloading(songId: String): Boolean {
-        return _downloadingIds.value.contains(songId)
-    }
-    
+
+    fun isDownloaded(songId: String): Boolean = _downloadedSongs.value.any { it.id == songId }
+
+    fun isDownloading(songId: String): Boolean = _downloadingIds.value.contains(songId)
+
     /**
      * Rescan Downloads/SuvMusic folder for new files.
      * Call this when entering the Library screen to pick up manually added files.
      */
     fun refreshDownloads() {
         loadDownloads()
-        scanDownloadsFolder()
+        scanMusicFolder()
     }
     
     /**
      * Get download count and total duration info.
      */
-    fun getDownloadInfo(): Pair<Int, Long> {
-        val songs = _downloadedSongs.value
-        val totalDuration = songs.sumOf { it.duration }
-        return Pair(songs.size, totalDuration)
-    }
-    
-    /**
-     * Get high resolution thumbnail URL.
-     * Handles various YouTube thumbnail URL formats.
-     */
+    fun getDownloadInfo(): Pair<Int, Long> = Pair(_downloadedSongs.value.size, _downloadedSongs.value.sumOf { it.duration })
+
     private fun getHighResThumbnailUrl(originalUrl: String, videoId: String): String {
         return when {
-            // Handle lh3.googleusercontent.com URLs (YT Music style)
             originalUrl.contains("lh3.googleusercontent.com") || originalUrl.contains("yt3.ggpht.com") -> {
-                originalUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w544-h544")
-                    .replace(Regex("=s\\d+.*"), "=s544")
+                originalUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w544-h544").replace(Regex("=s\\d+.*"), "=s544")
             }
-            // Handle ytimg.com URLs
             originalUrl.contains("ytimg.com") || originalUrl.contains("youtube.com") -> {
-                val ytVideoId = if (originalUrl.contains("/vi/")) {
-                    originalUrl.substringAfter("/vi/").substringBefore("/")
-                } else videoId
+                val ytVideoId = if (originalUrl.contains("/vi/")) originalUrl.substringAfter("/vi/").substringBefore("/") else videoId
                 "https://img.youtube.com/vi/$ytVideoId/maxresdefault.jpg"
             }
             else -> originalUrl

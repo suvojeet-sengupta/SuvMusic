@@ -20,6 +20,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    packaging {
+        jniLibs {
+            keepDebugSymbols += listOf(
+                "**/libpython.zip.so",
+                "**/libffmpeg.zip.so",
+                "**/libaria2c.zip.so"
+            )
+        }
+    }
+
+
     signingConfigs {
         create("release") {
             // Read from environment variables (GitHub Actions secrets)
@@ -72,11 +83,15 @@ android {
         buildConfig = true
     }
 }
-
 dependencies {
     // Core Library Desugaring for Java 8+ APIs on older Android
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.4")
-    
+
+    // yt-dlp
+    implementation(libs.ytdlp.android.core)
+    implementation(libs.ytdlp.android.ffmpeg)
+    implementation(libs.ytdlp.android.aria2c)
+
     // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -101,7 +116,8 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.common)
-    
+    implementation(libs.androidx.media3.datasource.okhttp)
+
     // Media Router
     implementation(libs.androidx.mediarouter)
     
@@ -111,7 +127,7 @@ dependencies {
     // Networking
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
-    
+
     // Image Loading
     implementation(libs.coil.compose)
     
