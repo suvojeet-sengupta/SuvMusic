@@ -99,19 +99,24 @@ fun AlbumArtwork(
         label = "vinyl_rotation"
     )
     
-    // Animate corner radius based on shape
+    // Animate corner radius based on shape - use coerceAtLeast to prevent negative values
+    val targetCornerRadius = when (currentShape) {
+        ArtworkShape.ROUNDED_SQUARE -> 16.dp
+        ArtworkShape.CIRCLE, ArtworkShape.VINYL -> 500.dp // Very large for circle
+        ArtworkShape.SQUARE -> 0.dp
+    }
+    
     val cornerRadius by animateDpAsState(
-        targetValue = when (currentShape) {
-            ArtworkShape.ROUNDED_SQUARE -> 16.dp
-            ArtworkShape.CIRCLE, ArtworkShape.VINYL -> 500.dp // Very large for circle
-            ArtworkShape.SQUARE -> 0.dp
-        },
+        targetValue = targetCornerRadius,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy, // Prevent overshooting into negative
             stiffness = Spring.StiffnessLow
         ),
         label = "corner_radius"
     )
+    
+    // Ensure corner radius is never negative
+    val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
     
     // Track horizontal drag offset
     var offsetX by remember { mutableStateOf(0f) }
@@ -172,10 +177,10 @@ fun AlbumArtwork(
                 }
                 .shadow(
                     elevation = 32.dp,
-                    shape = RoundedCornerShape(cornerRadius),
+                    shape = RoundedCornerShape(safeCornerRadius),
                     spotColor = dominantColors.primary.copy(alpha = 0.5f)
                 )
-                .clip(RoundedCornerShape(cornerRadius))
+                .clip(RoundedCornerShape(safeCornerRadius))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
