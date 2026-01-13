@@ -12,6 +12,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +44,9 @@ import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.navigation.NavGraph
 import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
 import com.suvojeet.suvmusic.ui.components.MiniPlayer
+import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
+import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import com.suvojeet.suvmusic.utils.NetworkMonitor
@@ -61,6 +66,9 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionManager: SessionManager
     
     private lateinit var audioManager: AudioManager
+    
+    // Track whether song is playing for volume key interception
+    private var isSongPlaying: Boolean = false
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -95,7 +103,11 @@ class MainActivity : ComponentActivity() {
             SuvMusicTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
                 SuvMusicApp(
                     initialDeepLink = deepLinkUrl,
-                    networkMonitor = networkMonitor
+                    networkMonitor = networkMonitor,
+                    audioManager = audioManager,
+                    onPlaybackStateChanged = { hasSong -> 
+                        isSongPlaying = hasSong
+                    }
                 )
             }
         }
@@ -103,9 +115,14 @@ class MainActivity : ComponentActivity() {
     
     /**
      * Intercept hardware volume keys to control music volume
-     * without showing the system volume UI panel.
+     * without showing the system volume UI panel - only when song is playing.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Only intercept volume keys when a song is playing
+        if (!isSongPlaying) {
+            return super.dispatchKeyEvent(event)
+        }
+        
         return when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
                 if (event.action == KeyEvent.ACTION_DOWN) {
@@ -190,7 +207,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SuvMusicApp(
     initialDeepLink: String? = null,
-    networkMonitor: NetworkMonitor
+    networkMonitor: NetworkMonitor,
+    audioManager: AudioManager,
+    onPlaybackStateChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -201,6 +220,40 @@ fun SuvMusicApp(
     val playerState by playerViewModel.playerState.collectAsState()
     val lyrics by playerViewModel.lyricsState.collectAsState()
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
+    
+    // Track if song is playing for Activity-level volume interception
+    val hasSong = playerState.currentSong != null
+    LaunchedEffect(hasSong) {
+        onPlaybackStateChanged(hasSong)
+    }
+    
+    // Volume control states for global indicator
+    var maxVolume by remember {
+        mutableStateOf(audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC))
+    }
+    var currentVolume by remember {
+        mutableStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC))
+    }
+    var showVolumeIndicator by remember { mutableStateOf(false) }
+    var lastVolumeChangeTime by remember { mutableStateOf(0L) }
+    
+    // Listen for System Volume Changes
+    SystemVolumeObserver(context = context) { newVol, newMax ->
+        maxVolume = newMax
+        if (currentVolume != newVol) {
+            currentVolume = newVol
+            lastVolumeChangeTime = System.currentTimeMillis()
+        }
+    }
+    
+    // Auto-hide volume indicator
+    LaunchedEffect(lastVolumeChangeTime) {
+        if (lastVolumeChangeTime > 0 && hasSong) {
+            showVolumeIndicator = true
+            kotlinx.coroutines.delay(2000) // 2 seconds delay
+            showVolumeIndicator = false
+        }
+    }
     
     // Monitor network connectivity
     val isConnected by networkMonitor.isConnected.collectAsState(initial = networkMonitor.isCurrentlyConnected())
@@ -269,6 +322,17 @@ fun SuvMusicApp(
     
     // Don't show MiniPlayer on Player screen itself
     val showMiniPlayer = currentRoute != Destination.Player.route
+    
+    // Don't show global volume indicator on PlayerScreen (it has its own)
+    val showGlobalVolumeIndicator = currentRoute != Destination.Player.route && hasSong
+    
+    // Default colors for non-player screens
+    val defaultDominantColors = DominantColors(
+        primary = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+        secondary = androidx.compose.material3.MaterialTheme.colorScheme.secondary,
+        accent = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
+        onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+    )
     
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -375,6 +439,28 @@ fun SuvMusicApp(
                     onCloseClick = { isFloatingMiniPlayerVisible = false }
                 )
             }
+        }
+        
+        // Global Volume Indicator (shows on all screens except PlayerScreen when song is playing)
+        if (showGlobalVolumeIndicator) {
+            VolumeIndicator(
+                isVisible = showVolumeIndicator,
+                currentVolume = currentVolume,
+                maxVolume = maxVolume,
+                dominantColors = defaultDominantColors,
+                onVolumeChange = { newVolume ->
+                    audioManager.setStreamVolume(
+                        AudioManager.STREAM_MUSIC,
+                        newVolume,
+                        0
+                    )
+                    currentVolume = newVolume
+                    lastVolumeChangeTime = System.currentTimeMillis()
+                },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp)
+            )
         }
     }
 }
