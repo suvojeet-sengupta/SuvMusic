@@ -77,11 +77,13 @@ import android.provider.Settings
 import android.widget.Toast
 import com.suvojeet.suvmusic.data.model.Lyrics
 import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
 import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
+import com.suvojeet.suvmusic.ui.components.SeekbarStyle
 import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
 import com.suvojeet.suvmusic.ui.components.SongCreditsSheet
@@ -89,6 +91,7 @@ import com.suvojeet.suvmusic.ui.components.WaveformSeeker
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.screens.LyricsScreen
 import com.suvojeet.suvmusic.ui.screens.player.components.AlbumArtwork
+import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
 import com.suvojeet.suvmusic.ui.screens.player.components.BottomActions
 import com.suvojeet.suvmusic.ui.screens.player.components.PlaybackControls
 import com.suvojeet.suvmusic.ui.screens.player.components.PlayerTopBar
@@ -99,6 +102,7 @@ import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
 import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -137,6 +141,23 @@ fun PlayerScreen(
     val song = playerState.currentSong
     val context = LocalContext.current
     val playlistUiState by playlistViewModel.uiState.collectAsState()
+    
+    // Customization styles from settings
+    val sessionManager = remember { SessionManager(context) }
+    val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
+    val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
+    
+    val currentSeekbarStyle = try {
+        SeekbarStyle.valueOf(savedSeekbarStyleString)
+    } catch (e: Exception) {
+        SeekbarStyle.WAVEFORM
+    }
+    
+    val currentArtworkShape = try {
+        ArtworkShape.valueOf(savedArtworkShapeString) 
+    } catch (e: Exception) {
+        ArtworkShape.ROUNDED_SQUARE
+    }
 
     // Show toast messages from playlist operations
     LaunchedEffect(playlistUiState.successMessage) {
@@ -389,7 +410,13 @@ fun PlayerScreen(
                                     dominantColors = dominantColors,
                                     isLoading = playerState.isLoading,
                                     onSwipeLeft = onNext,
-                                    onSwipeRight = onPrevious
+                                    onSwipeRight = onPrevious,
+                                    initialShape = currentArtworkShape,
+                                    onShapeChange = { shape ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            sessionManager.setArtworkShape(shape.name)
+                                        }
+                                    }
                                 )
                             }
 
@@ -455,7 +482,13 @@ fun PlayerScreen(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     activeColor = dominantColors.accent,
-                                    inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f)
+                                    inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                                    initialStyle = currentSeekbarStyle,
+                                    onStyleChange = { style ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            sessionManager.setSeekbarStyle(style.name)
+                                        }
+                                    }
                                 )
 
                                 // Time labels
@@ -553,7 +586,13 @@ fun PlayerScreen(
                                     dominantColors = dominantColors,
                                     isLoading = playerState.isLoading,
                                     onSwipeLeft = onNext,
-                                    onSwipeRight = onPrevious
+                                    onSwipeRight = onPrevious,
+                                    initialShape = currentArtworkShape,
+                                    onShapeChange = { shape ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            sessionManager.setArtworkShape(shape.name)
+                                        }
+                                    }
                                 )
                             }
 
@@ -582,7 +621,13 @@ fun PlayerScreen(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 activeColor = dominantColors.accent,
-                                inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f)
+                                inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                                initialStyle = currentSeekbarStyle,
+                                onStyleChange = { style ->
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        sessionManager.setSeekbarStyle(style.name)
+                                    }
+                                }
                             )
 
                             // Time labels with quality badge

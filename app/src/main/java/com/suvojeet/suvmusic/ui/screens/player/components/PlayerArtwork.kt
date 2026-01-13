@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,13 +84,20 @@ fun AlbumArtwork(
     dominantColors: DominantColors,
     isLoading: Boolean = false,
     onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {}
+    onSwipeRight: () -> Unit = {},
+    initialShape: ArtworkShape = ArtworkShape.ROUNDED_SQUARE,
+    onShapeChange: ((ArtworkShape) -> Unit)? = null
 ) {
     val context = LocalContext.current
 
-    // Shape state
-    var currentShape by remember { mutableStateOf(ArtworkShape.ROUNDED_SQUARE) }
+    // Shape state - uses initial shape from settings
+    var currentShape by remember { mutableStateOf(initialShape) }
     var showShapeMenu by remember { mutableStateOf(false) }
+    
+    // Sync with external shape changes
+    LaunchedEffect(initialShape) {
+        currentShape = initialShape
+    }
     
     // Vinyl rotation animation (only for vinyl mode)
     var vinylRotation by remember { mutableStateOf(0f) }
@@ -225,6 +233,7 @@ fun AlbumArtwork(
                     dominantColors = dominantColors,
                     onShapeSelected = { shape ->
                         currentShape = shape
+                        onShapeChange?.invoke(shape)
                         showShapeMenu = false
                     },
                     onDismiss = { showShapeMenu = false }
