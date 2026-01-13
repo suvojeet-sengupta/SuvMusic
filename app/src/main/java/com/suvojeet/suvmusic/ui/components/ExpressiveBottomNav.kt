@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,15 +47,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.navigation.Destination
-import com.suvojeet.suvmusic.ui.theme.Purple60
-
-// Subtle glass colors
-private val GlassBackground = Color(0xFF1C1C1E)
-private val GlassBorderLight = Color(0x18FFFFFF)
 
 /**
- * iOS-style Liquid Glass Bottom Navigation.
- * Clean, subtle glassmorphism with smooth animations.
+ * iOS-style Liquid Glass Bottom Navigation with Dynamic Colors.
+ * Uses Material You dynamic theming for colors that adapt to wallpaper.
  */
 @Composable
 fun ExpressiveBottomNav(
@@ -72,25 +65,29 @@ fun ExpressiveBottomNav(
         NavItem(Destination.Settings, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
     
+    // Dynamic colors from Material You
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainer
+    val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    
     Box(
         modifier = modifier
             .fillMaxWidth()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        GlassBackground.copy(alpha = 0.95f),
-                        GlassBackground
+                        surfaceColor.copy(alpha = 0.95f),
+                        surfaceColor
                     )
                 )
             )
             .drawBehind {
-                // Top border line - subtle glass edge
+                // Top border line - subtle glass edge with dynamic color
                 drawLine(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            GlassBorderLight,
-                            GlassBorderLight,
+                            borderColor,
+                            borderColor,
                             Color.Transparent
                         )
                     ),
@@ -129,6 +126,10 @@ private fun GlassNavItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     
+    // Dynamic colors from Material You
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    
     val iconSize by animateDpAsState(
         targetValue = if (isSelected) 24.dp else 22.dp,
         animationSpec = spring(
@@ -139,7 +140,7 @@ private fun GlassNavItem(
     )
     
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
+        targetValue = if (isSelected) primaryColor else onSurfaceVariant,
         animationSpec = tween(200, easing = FastOutSlowInEasing),
         label = "contentColor"
     )
@@ -150,7 +151,8 @@ private fun GlassNavItem(
         label = "pillAlpha"
     )
     
-    val selectedColor = Purple60
+    // Use primary color with transparency for the pill
+    val pillColor = primaryColor.copy(alpha = 0.15f)
     
     Box(
         modifier = Modifier
@@ -172,10 +174,10 @@ private fun GlassNavItem(
                 modifier = Modifier
                     .graphicsLayer { alpha = 1f }
                     .drawBehind {
-                        // Subtle pill background for selected state
+                        // Subtle pill background for selected state with dynamic color
                         if (pillAlpha > 0f) {
                             drawRoundRect(
-                                color = selectedColor.copy(alpha = 0.2f * pillAlpha),
+                                color = pillColor.copy(alpha = pillColor.alpha * pillAlpha),
                                 cornerRadius = CornerRadius(28f, 28f),
                                 size = Size(size.width + 24.dp.toPx(), size.height + 12.dp.toPx()),
                                 topLeft = Offset(-12.dp.toPx(), -6.dp.toPx())
@@ -188,14 +190,14 @@ private fun GlassNavItem(
                     imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                     contentDescription = item.label,
                     modifier = Modifier.size(iconSize),
-                    tint = if (isSelected) selectedColor else contentColor
+                    tint = contentColor
                 )
             }
             
             Text(
                 text = item.label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isSelected) selectedColor else contentColor
+                color = contentColor
             )
         }
     }
