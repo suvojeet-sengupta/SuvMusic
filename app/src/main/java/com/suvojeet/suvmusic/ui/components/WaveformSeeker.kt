@@ -1,44 +1,69 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.ui.theme.GradientEnd
-import com.suvojeet.suvmusic.ui.theme.GradientMiddle
-import com.suvojeet.suvmusic.ui.theme.GradientStart
-import kotlin.math.sin
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import com.suvojeet.suvmusic.ui.components.seekbar.ClassicStyle
+import com.suvojeet.suvmusic.ui.components.seekbar.DotsStyle
+import com.suvojeet.suvmusic.ui.components.seekbar.GradientBarStyle
+import com.suvojeet.suvmusic.ui.components.seekbar.WaveLineStyle
+import com.suvojeet.suvmusic.ui.components.seekbar.WaveformStyle
 import kotlin.random.Random
 
 /**
- * Animated waveform seeker with sound wave visualization.
- * Material Expressive style with gradient colors.
+ * Seekbar style options
+ */
+enum class SeekbarStyle {
+    WAVEFORM,      // Animated waveform bars
+    WAVE_LINE,     // Sine wave line
+    CLASSIC,       // Simple progress bar
+    DOTS,          // Animated dots
+    GRADIENT_BAR   // Gradient progress bar with glow
+}
+
+/**
+ * Animated waveform seeker with multiple style options.
+ * Long-press to change style.
  */
 @Composable
 fun WaveformSeeker(
@@ -49,6 +74,10 @@ fun WaveformSeeker(
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
+    // Current seekbar style
+    var currentStyle by remember { mutableStateOf(SeekbarStyle.WAVEFORM) }
+    var showStyleMenu by remember { mutableStateOf(false) }
+    
     // Animation for wave movement when playing
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
     val wavePhase by infiniteTransition.animateFloat(
@@ -66,246 +95,248 @@ fun WaveformSeeker(
         List(60) { Random.nextFloat() * 0.6f + 0.4f }
     }
     
-    var isDragging by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var isDragging by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableFloatStateOf(progress) }
     
     // Update currentProgress from external progress only when NOT dragging
-    androidx.compose.runtime.LaunchedEffect(progress) {
+    LaunchedEffect(progress) {
         if (!isDragging) {
             currentProgress = progress
         }
     }
     
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(60.dp)
-            .padding(horizontal = 8.dp)
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                    currentProgress = newProgress
-                    onSeek(newProgress)
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .padding(horizontal = 8.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                            currentProgress = newProgress
+                            onSeek(newProgress)
+                        },
+                        onLongPress = {
+                            showStyleMenu = true
+                        }
+                    )
+                }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { isDragging = true },
+                        onDragEnd = { 
+                            onSeek(currentProgress)
+                            isDragging = false
+                        },
+                        onHorizontalDrag = { change, _ ->
+                            val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
+                            currentProgress = newProgress
+                        }
+                    )
+                }
+        ) {
+            Canvas(modifier = Modifier.matchParentSize()) {
+                when (currentStyle) {
+                    SeekbarStyle.WAVEFORM -> with(WaveformStyle) {
+                        draw(
+                            progress = currentProgress,
+                            isPlaying = isPlaying,
+                            wavePhase = wavePhase,
+                            waveAmplitudes = waveAmplitudes,
+                            activeColor = activeColor,
+                            inactiveColor = inactiveColor,
+                            isDragging = isDragging
+                        )
+                    }
+                    SeekbarStyle.WAVE_LINE -> with(WaveLineStyle) {
+                        draw(
+                            progress = currentProgress,
+                            isPlaying = isPlaying,
+                            wavePhase = wavePhase,
+                            activeColor = activeColor,
+                            inactiveColor = inactiveColor
+                        )
+                    }
+                    SeekbarStyle.CLASSIC -> with(ClassicStyle) {
+                        draw(
+                            progress = currentProgress,
+                            activeColor = activeColor,
+                            inactiveColor = inactiveColor,
+                            isDragging = isDragging
+                        )
+                    }
+                    SeekbarStyle.DOTS -> with(DotsStyle) {
+                        draw(
+                            progress = currentProgress,
+                            isPlaying = isPlaying,
+                            wavePhase = wavePhase,
+                            activeColor = activeColor,
+                            inactiveColor = inactiveColor
+                        )
+                    }
+                    SeekbarStyle.GRADIENT_BAR -> with(GradientBarStyle) {
+                        draw(
+                            progress = currentProgress,
+                            activeColor = activeColor,
+                            inactiveColor = inactiveColor,
+                            isDragging = isDragging
+                        )
+                    }
                 }
             }
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onDragStart = { isDragging = true },
-                    onDragEnd = { 
-                        onSeek(currentProgress)
-                        isDragging = false
-                    },
-                    onHorizontalDrag = { change, _ ->
-                        val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
-                        currentProgress = newProgress
+        }
+        
+        // Style selection popup
+        if (showStyleMenu) {
+            Popup(
+                alignment = Alignment.Center,
+                onDismissRequest = { showStyleMenu = false },
+                properties = PopupProperties(focusable = true)
+            ) {
+                SeekbarStyleMenu(
+                    currentStyle = currentStyle,
+                    activeColor = activeColor,
+                    inactiveColor = inactiveColor,
+                    onStyleSelected = { style ->
+                        currentStyle = style
+                        showStyleMenu = false
                     }
                 )
             }
-    ) {
-        Canvas(modifier = Modifier.matchParentSize()) {
-            val width = size.width
-            val height = size.height
-            val centerY = height / 2
-            val barWidth = width / waveAmplitudes.size
-            val maxBarHeight = height * 0.8f
-            val progressX = currentProgress * width
-            
-            // Draw waveform bars
-            waveAmplitudes.forEachIndexed { index, amplitude ->
-                val x = index * barWidth + barWidth / 2
-                val isPast = x < progressX
-                
-                // Animate bar height when playing
-                val animatedAmplitude = if (isPlaying && isPast) {
-                    val phase = (wavePhase + index * 12) % 360
-                    val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
-                    amplitude * (0.7f + wave * 0.3f)
-                } else {
-                    amplitude
-                }
-                
-                val barHeight = animatedAmplitude * maxBarHeight
-                val topY = centerY - barHeight / 2
-                
-                // Gradient for played portion
-                val barColor = if (isPast) {
-                    Brush.verticalGradient(
-                        colors = listOf(activeColor.copy(alpha = 0.7f), activeColor, activeColor.copy(alpha = 0.7f)),
-                        startY = topY,
-                        endY = topY + barHeight
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            inactiveColor.copy(alpha = 0.5f),
-                            inactiveColor.copy(alpha = 0.3f)
-                        )
-                    )
-                }
-                
-                // Draw rounded bar
-                drawRoundRect(
-                    brush = barColor,
-                    topLeft = Offset(x - barWidth * 0.35f, topY),
-                    size = Size(barWidth * 0.7f, barHeight),
-                    cornerRadius = CornerRadius(barWidth * 0.35f)
-                )
-            }
-            
-            // Draw progress indicator (glowing dot)
-            val indicatorRadius = if (isDragging) 12.dp.toPx() else 8.dp.toPx()
-            
-            // Glow effect
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        activeColor.copy(alpha = 0.4f),
-                        Color.Transparent
-                    ),
-                    center = Offset(progressX, centerY),
-                    radius = indicatorRadius * 2
-                ),
-                radius = indicatorRadius * 2,
-                center = Offset(progressX, centerY)
-            )
-            
-            // Main indicator
-            drawCircle(
-                color = Color.White,
-                radius = indicatorRadius,
-                center = Offset(progressX, centerY)
-            )
-            
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(activeColor, activeColor),
-                    center = Offset(progressX, centerY)
-                ),
-                radius = indicatorRadius - 2.dp.toPx(),
-                center = Offset(progressX, centerY)
-            )
         }
     }
 }
 
 /**
- * Simple wave line seeker (alternative style).
+ * Seekbar style selection menu with previews
  */
 @Composable
-fun WaveLineSeeker(
-    progress: Float,
-    isPlaying: Boolean,
-    onSeek: (Float) -> Unit,
-    modifier: Modifier = Modifier
+private fun SeekbarStyleMenu(
+    currentStyle: SeekbarStyle,
+    activeColor: Color,
+    inactiveColor: Color,
+    onStyleSelected: (SeekbarStyle) -> Unit
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
-    
-    val infiniteTransition = rememberInfiniteTransition(label = "waveLine")
-    val phase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "phase"
-    )
-    
-    var isDragging by remember { androidx.compose.runtime.mutableStateOf(false) }
-    var currentProgress by remember { mutableFloatStateOf(progress) }
-    
-    // Update currentProgress from external progress only when NOT dragging
-    androidx.compose.runtime.LaunchedEffect(progress) {
-        if (!isDragging) {
-            currentProgress = progress
+    Surface(
+        modifier = Modifier.padding(16.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 16.dp,
+        tonalElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Seekbar Style",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            SeekbarStyle.entries.forEach { style ->
+                StylePreviewItem(
+                    style = style,
+                    isSelected = style == currentStyle,
+                    activeColor = activeColor,
+                    inactiveColor = inactiveColor,
+                    onClick = { onStyleSelected(style) }
+                )
+                
+                if (style != SeekbarStyle.entries.last()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
         }
     }
+}
+
+/**
+ * Individual style preview item
+ */
+@Composable
+private fun StylePreviewItem(
+    style: SeekbarStyle,
+    isSelected: Boolean,
+    activeColor: Color,
+    inactiveColor: Color,
+    onClick: () -> Unit
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) activeColor.copy(alpha = 0.15f) else Color.Transparent,
+        animationSpec = spring(),
+        label = "bg"
+    )
     
-    Box(
-        modifier = modifier
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) activeColor else Color.Transparent,
+        animationSpec = spring(),
+        label = "border"
+    )
+    
+    val styleName = when (style) {
+        SeekbarStyle.WAVEFORM -> "Waveform"
+        SeekbarStyle.WAVE_LINE -> "Wave Line"
+        SeekbarStyle.CLASSIC -> "Classic"
+        SeekbarStyle.DOTS -> "Dots"
+        SeekbarStyle.GRADIENT_BAR -> "Gradient"
+    }
+    
+    // Preview amplitudes
+    val previewAmplitudes = remember {
+        List(20) { Random.nextFloat() * 0.6f + 0.4f }
+    }
+    
+    Row(
+        modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
-            .padding(horizontal = 16.dp)
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                    currentProgress = newProgress
-                    onSeek(newProgress)
-                }
-            }
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onDragStart = { isDragging = true },
-                    onDragEnd = { 
-                        onSeek(currentProgress)
-                        isDragging = false
-                    },
-                    onHorizontalDrag = { change, _ ->
-                        val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
-                        currentProgress = newProgress
-                    }
-                )
-            }
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Canvas(modifier = Modifier.matchParentSize()) {
-            val width = size.width
-            val height = size.height
-            val centerY = height / 2
-            val progressX = currentProgress * width
-            val amplitude = height * 0.3f
-            val frequency = 0.03f
-            
-            // Draw unplayed wave path
-            val unplayedPath = Path().apply {
-                moveTo(progressX, centerY)
-                var x = progressX
-                while (x <= width) {
-                    val y = centerY + sin(x * frequency + phase) * amplitude * 0.5f
-                    lineTo(x, y.toFloat())
-                    x += 2f
+        // Preview canvas
+        Canvas(
+            modifier = Modifier
+                .width(80.dp)
+                .height(30.dp)
+        ) {
+            val previewProgress = 0.6f
+            when (style) {
+                SeekbarStyle.WAVEFORM -> with(WaveformStyle) {
+                    drawPreview(previewProgress, previewAmplitudes, activeColor, inactiveColor)
+                }
+                SeekbarStyle.WAVE_LINE -> with(WaveLineStyle) {
+                    drawPreview(previewProgress, activeColor, inactiveColor)
+                }
+                SeekbarStyle.CLASSIC -> with(ClassicStyle) {
+                    drawPreview(previewProgress, activeColor, inactiveColor)
+                }
+                SeekbarStyle.DOTS -> with(DotsStyle) {
+                    drawPreview(previewProgress, activeColor, inactiveColor)
+                }
+                SeekbarStyle.GRADIENT_BAR -> with(GradientBarStyle) {
+                    drawPreview(previewProgress, activeColor, inactiveColor)
                 }
             }
-            
-            drawPath(
-                path = unplayedPath,
-                color = surfaceColor,
-                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-            )
-            
-            // Draw played wave path with animation
-            val playedPath = Path().apply {
-                moveTo(0f, centerY)
-                var x = 0f
-                while (x <= progressX) {
-                    val waveAmplitude = if (isPlaying) amplitude else amplitude * 0.5f
-                    val y = centerY + sin(x * frequency + (if (isPlaying) phase else 0f)) * waveAmplitude
-                    lineTo(x, y.toFloat())
-                    x += 2f
-                }
-            }
-            
-            drawPath(
-                path = playedPath,
-                brush = Brush.horizontalGradient(
-                    colors = listOf(GradientStart, GradientMiddle, GradientEnd)
-                ),
-                style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
-            )
-            
-            // Draw indicator
-            drawCircle(
-                color = Color.White,
-                radius = 10.dp.toPx(),
-                center = Offset(progressX, centerY)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(GradientStart, GradientEnd)
-                ),
-                radius = 7.dp.toPx(),
-                center = Offset(progressX, centerY)
-            )
         }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Text(
+            text = styleName,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            ),
+            color = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurface
+        )
     }
 }
