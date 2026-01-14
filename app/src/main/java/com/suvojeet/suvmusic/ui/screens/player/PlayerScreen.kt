@@ -125,6 +125,9 @@ fun PlayerScreen(
     onToggleAutoplay: () -> Unit,
     onToggleVideoMode: () -> Unit = {},
     onStartRadio: () -> Unit = {},
+    onLoadMoreRadioSongs: () -> Unit = {},
+    isRadioMode: Boolean = false,
+    isLoadingMoreSongs: Boolean = false,
     player: Player? = null,
     onPlayFromQueue: (Int) -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
@@ -685,6 +688,8 @@ fun PlayerScreen(
                     repeatMode = playerState.repeatMode,
                     isAutoplayEnabled = playerState.isAutoplayEnabled,
                     isFavorite = playerState.isLiked,
+                    isRadioMode = isRadioMode,
+                    isLoadingMore = isLoadingMoreSongs,
                     onBack = { showQueue = false },
                     onSongClick = { index -> onPlayFromQueue(index) },
                     onPlayPause = onPlayPause,
@@ -693,6 +698,7 @@ fun PlayerScreen(
                     onToggleAutoplay = onToggleAutoplay,
                     onToggleLike = onToggleLike,
                     onMoreClick = { showActionsSheet = true },
+                    onLoadMore = onLoadMoreRadioSongs,
                     dominantColors = dominantColors
                 )
             }
