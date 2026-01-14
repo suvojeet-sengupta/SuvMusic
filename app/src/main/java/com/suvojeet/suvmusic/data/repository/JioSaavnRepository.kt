@@ -451,129 +451,275 @@ class JioSaavnRepository @Inject constructor(
     suspend fun getLyrics(songId: String): String? = getLyricsFromJioSaavn(songId)
     
     /**
-     * Get home sections with trending content from JioSaavn.
-     * Returns sections similar to YouTube Music home page.
-     * Includes songs, albums, and featured playlists.
+     * Get home sections with real JioSaavn homepage content.
+     * Fetches charts, trending songs, new releases, top albums, featured playlists
+     * directly from JioSaavn API - no pre-configured search strings.
      */
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
         
         try {
-            // 1. Trending Now - Top hits 2026
-            val trendingSongs = mutableListOf<Song>()
-            listOf("trending 2026", "new hindi songs 2026", "latest bollywood").forEach { query ->
-                try {
-                    val results = search(query)
-                    if (results.isNotEmpty()) {
-                        trendingSongs.addAll(results.take(6))
-                    }
-                } catch (e: Exception) { }
-            }
-            
-            if (trendingSongs.isNotEmpty()) {
-                val items = trendingSongs.distinctBy { it.id }.take(12).map { song ->
-                    com.suvojeet.suvmusic.data.model.HomeItem.SongItem(song)
-                }
-                sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Trending Now 🔥", items))
-            }
-            
-            // 2. New Albums - Fetch latest albums via search
+            // 1. Top Charts / Trending - Using content.getCharts
             try {
-                val albumsUrl = "$BASE_URL?__call=search.getAlbumResults&_format=json&q=new+album+2026&n=15"
-                val albumsResponse = makeRequest(albumsUrl)
-                val albumsJson = JsonParser.parseString(albumsResponse)
+                val chartsUrl = "$BASE_URL?__call=content.getCharts&_format=json"
+                val chartsResponse = makeRequest(chartsUrl)
+                val chartsJson = JsonParser.parseString(chartsResponse)
                 
-                if (albumsJson.isJsonObject) {
-                    val results = albumsJson.asJsonObject.getAsJsonArray("results")
-                    if (results != null && results.size() > 0) {
-                        val albumItems = results.take(10).mapNotNull { albumElement ->
-                            val albumObj = albumElement.asJsonObject
-                            val albumId = albumObj.get("id")?.asString ?: return@mapNotNull null
-                            val title = albumObj.get("title")?.asString ?: "Album"
-                            val artist = albumObj.get("music")?.asString 
-                                ?: albumObj.get("primary_artists")?.asString ?: ""
-                            val image = albumObj.get("image")?.asString?.toHighResImage()
-                            val year = albumObj.get("year")?.asString
-                            
-                            com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
-                                com.suvojeet.suvmusic.data.model.Album(
-                                    id = albumId,
-                                    title = title.decodeHtml(),
-                                    artist = artist.decodeHtml(),
-                                    thumbnailUrl = image,
-                                    year = year
-                                )
-                            )
-                        }
+                if (chartsJson.isJsonArray && chartsJson.asJsonArray.size() > 0) {
+                    val chartItems = chartsJson.asJsonArray.take(12).mapNotNull { element ->
+                        val chartObj = element.asJsonObject
+                        val chartId = chartObj.get("id")?.asString 
+                            ?: chartObj.get("listid")?.asString ?: return@mapNotNull null
+                        val title = chartObj.get("title")?.asString 
+                            ?: chartObj.get("listname")?.asString ?: "Chart"
+                        val image = chartObj.get("image")?.asString?.toHighResImage()
+                        val songCount = chartObj.get("count")?.asInt ?: chartObj.get("songs_count")?.asInt ?: 0
                         
-                        if (albumItems.isNotEmpty()) {
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection("New Albums 💿", albumItems))
-                        }
+                        com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                                id = chartId,
+                                name = title.decodeHtml(),
+                                url = "",
+                                uploaderName = "JioSaavn Charts",
+                                thumbnailUrl = image,
+                                songCount = songCount
+                            )
+                        )
+                    }
+                    if (chartItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Top Charts 📊", chartItems))
                     }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Charts fetch error", e) }
             
-            // 3. Featured Playlists
+            // 2. New Releases - Using content.getAlbums with filter
             try {
-                val playlistsUrl = "$BASE_URL?__call=search.getPlaylistResults&_format=json&q=top+hits&n=15"
+                val newReleasesUrl = "$BASE_URL?__call=content.getAlbums&_format=json&n=20&p=1&type=latest"
+                val releaseResponse = makeRequest(newReleasesUrl)
+                val releaseJson = JsonParser.parseString(releaseResponse)
+                
+                val albumsList = if (releaseJson.isJsonObject && releaseJson.asJsonObject.has("data")) {
+                    releaseJson.asJsonObject.getAsJsonArray("data")
+                } else if (releaseJson.isJsonArray) {
+                    releaseJson.asJsonArray
+                } else {
+                    null
+                }
+                
+                if (albumsList != null && albumsList.size() > 0) {
+                    val albumItems = albumsList.take(12).mapNotNull { albumElement ->
+                        val albumObj = albumElement.asJsonObject
+                        val albumId = albumObj.get("id")?.asString 
+                            ?: albumObj.get("albumid")?.asString ?: return@mapNotNull null
+                        val title = albumObj.get("title")?.asString 
+                            ?: albumObj.get("name")?.asString ?: "Album"
+                        val artist = albumObj.get("primary_artists")?.asString 
+                            ?: albumObj.get("music")?.asString ?: ""
+                        val image = albumObj.get("image")?.asString?.toHighResImage()
+                        val year = albumObj.get("year")?.asString
+                        
+                        com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
+                            com.suvojeet.suvmusic.data.model.Album(
+                                id = albumId,
+                                title = title.decodeHtml(),
+                                artist = artist.decodeHtml(),
+                                thumbnailUrl = image,
+                                year = year
+                            )
+                        )
+                    }
+                    if (albumItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("New Releases 🆕", albumItems))
+                    }
+                }
+            } catch (e: Exception) { android.util.Log.e("JioSaavn", "New releases fetch error", e) }
+            
+            // 3. Trending Songs - Using content.getTrending
+            try {
+                val trendingUrl = "$BASE_URL?__call=content.getTrending&type=song&_format=json&n=20"
+                val trendingResponse = makeRequest(trendingUrl)
+                val trendingJson = JsonParser.parseString(trendingResponse)
+                
+                val songsList = if (trendingJson.isJsonObject && trendingJson.asJsonObject.has("data")) {
+                    trendingJson.asJsonObject.getAsJsonArray("data")
+                } else if (trendingJson.isJsonArray) {
+                    trendingJson.asJsonArray
+                } else {
+                    null
+                }
+                
+                if (songsList != null && songsList.size() > 0) {
+                    val songItems = songsList.take(12).mapNotNull { songElement ->
+                        val song = parseSong(songElement.asJsonObject) ?: return@mapNotNull null
+                        com.suvojeet.suvmusic.data.model.HomeItem.SongItem(song)
+                    }
+                    if (songItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Trending Now 🔥", songItems))
+                    }
+                }
+            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Trending songs fetch error", e) }
+            
+            // 4. Top Playlists - Using content.getFeaturedPlaylists
+            try {
+                val playlistsUrl = "$BASE_URL?__call=content.getFeaturedPlaylists&_format=json&n=20&p=1"
                 val playlistsResponse = makeRequest(playlistsUrl)
                 val playlistsJson = JsonParser.parseString(playlistsResponse)
                 
-                if (playlistsJson.isJsonObject) {
-                    val results = playlistsJson.asJsonObject.getAsJsonArray("results")
-                    if (results != null && results.size() > 0) {
-                        val playlistItems = results.take(10).mapNotNull { plElement ->
-                            val plObj = plElement.asJsonObject
-                            val plId = plObj.get("id")?.asString ?: return@mapNotNull null
-                            val name = plObj.get("title")?.asString ?: "Playlist"
-                            val image = plObj.get("image")?.asString?.toHighResImage()
-                            val songCount = plObj.get("count")?.asInt ?: 0
-                            
-                            com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
-                                    id = plId,
-                                    name = name.decodeHtml(),
-                                    url = "",
-                                    uploaderName = "HQ Audio",
-                                    thumbnailUrl = image,
-                                    songCount = songCount
-                                )
-                            )
-                        }
+                val plList = if (playlistsJson.isJsonObject && playlistsJson.asJsonObject.has("data")) {
+                    playlistsJson.asJsonObject.getAsJsonArray("data")
+                } else if (playlistsJson.isJsonObject && playlistsJson.asJsonObject.has("featured_playlists")) {
+                    playlistsJson.asJsonObject.getAsJsonArray("featured_playlists")
+                } else if (playlistsJson.isJsonArray) {
+                    playlistsJson.asJsonArray
+                } else {
+                    null
+                }
+                
+                if (plList != null && plList.size() > 0) {
+                    val playlistItems = plList.take(12).mapNotNull { plElement ->
+                        val plObj = plElement.asJsonObject
+                        val plId = plObj.get("id")?.asString 
+                            ?: plObj.get("listid")?.asString ?: return@mapNotNull null
+                        val name = plObj.get("title")?.asString 
+                            ?: plObj.get("listname")?.asString ?: "Playlist"
+                        val image = plObj.get("image")?.asString?.toHighResImage()
+                        val songCount = plObj.get("count")?.asInt ?: plObj.get("songs_count")?.asInt ?: 0
                         
-                        if (playlistItems.isNotEmpty()) {
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Featured Playlists 🎧", playlistItems))
-                        }
+                        com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                                id = plId,
+                                name = name.decodeHtml(),
+                                url = "",
+                                uploaderName = "JioSaavn",
+                                thumbnailUrl = image,
+                                songCount = songCount
+                            )
+                        )
+                    }
+                    if (playlistItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Featured Playlists 🎧", playlistItems))
                     }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Featured playlists fetch error", e) }
             
-            // 4. Category-based song sections
-            val categories = listOf(
-                "Bollywood Hits" to "bollywood hits 2026",
-                "Romantic" to "romantic love songs hindi",
-                "Punjabi Beats" to "punjabi songs 2026",
-                "Arijit Singh" to "arijit singh latest",
-                "Party Mix" to "party dance songs",
-                "90s Retro" to "90s hindi evergreen"
-            )
-            
-            for ((sectionName, searchQuery) in categories) {
-                if (sections.size >= 8) break // Limit total sections
+            // 5. Top Artists - Using content.getArtists (trending artists)
+            try {
+                val artistsUrl = "$BASE_URL?__call=search.getArtistResults&_format=json&q=top+indian+artists&n=15"
+                val artistsResponse = makeRequest(artistsUrl)
+                val artistsJson = JsonParser.parseString(artistsResponse)
                 
-                try {
-                    val results = search(searchQuery)
-                    if (results.isNotEmpty()) {
-                        val items = results.take(10).map { song ->
-                            com.suvojeet.suvmusic.data.model.HomeItem.SongItem(song)
-                        }
-                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection(sectionName, items))
+                val artistResults = if (artistsJson.isJsonObject && artistsJson.asJsonObject.has("results")) {
+                    artistsJson.asJsonObject.getAsJsonArray("results")
+                } else {
+                    null
+                }
+                
+                if (artistResults != null && artistResults.size() > 0) {
+                    val artistItems = artistResults.take(10).mapNotNull { artistElement ->
+                        val artistObj = artistElement.asJsonObject
+                        val artistId = artistObj.get("id")?.asString ?: return@mapNotNull null
+                        val name = artistObj.get("name")?.asString 
+                            ?: artistObj.get("title")?.asString ?: "Artist"
+                        val image = artistObj.get("image")?.asString?.toHighResImage()
+                        
+                        com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(
+                            com.suvojeet.suvmusic.data.model.Artist(
+                                id = artistId,
+                                name = name.decodeHtml(),
+                                thumbnailUrl = image
+                            )
+                        )
                     }
-                } catch (e: Exception) { }
-            }
+                    if (artistItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Top Artists 🎤", artistItems))
+                    }
+                }
+            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Artists fetch error", e) }
+            
+            // 6. Trending Albums - Using content.getTrending with type=album
+            try {
+                val trendingAlbumsUrl = "$BASE_URL?__call=content.getTrending&type=album&_format=json&n=15"
+                val albumsResponse = makeRequest(trendingAlbumsUrl)
+                val albumsJson = JsonParser.parseString(albumsResponse)
+                
+                val albumArray = if (albumsJson.isJsonObject && albumsJson.asJsonObject.has("data")) {
+                    albumsJson.asJsonObject.getAsJsonArray("data")
+                } else if (albumsJson.isJsonArray) {
+                    albumsJson.asJsonArray
+                } else {
+                    null
+                }
+                
+                if (albumArray != null && albumArray.size() > 0) {
+                    val albumItems = albumArray.take(10).mapNotNull { albumElement ->
+                        val albumObj = albumElement.asJsonObject
+                        val albumId = albumObj.get("id")?.asString 
+                            ?: albumObj.get("albumid")?.asString ?: return@mapNotNull null
+                        val title = albumObj.get("title")?.asString 
+                            ?: albumObj.get("name")?.asString ?: "Album"
+                        val artist = albumObj.get("primary_artists")?.asString 
+                            ?: albumObj.get("music")?.asString ?: ""
+                        val image = albumObj.get("image")?.asString?.toHighResImage()
+                        val year = albumObj.get("year")?.asString
+                        
+                        com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
+                            com.suvojeet.suvmusic.data.model.Album(
+                                id = albumId,
+                                title = title.decodeHtml(),
+                                artist = artist.decodeHtml(),
+                                thumbnailUrl = image,
+                                year = year
+                            )
+                        )
+                    }
+                    if (albumItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Popular Albums 💿", albumItems))
+                    }
+                }
+            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Trending albums fetch error", e) }
+            
+            // 7. Editorial Picks / Radio Stations - Using content.getRadioStations
+            try {
+                val radioUrl = "$BASE_URL?__call=webradio.getFeaturedStations&_format=json&n=15"
+                val radioResponse = makeRequest(radioUrl)
+                val radioJson = JsonParser.parseString(radioResponse)
+                
+                val radioList = if (radioJson.isJsonObject && radioJson.asJsonObject.has("data")) {
+                    radioJson.asJsonObject.getAsJsonArray("data")
+                } else if (radioJson.isJsonArray) {
+                    radioJson.asJsonArray
+                } else {
+                    null
+                }
+                
+                if (radioList != null && radioList.size() > 0) {
+                    val radioItems = radioList.take(8).mapNotNull { radioElement ->
+                        val radioObj = radioElement.asJsonObject
+                        val radioId = radioObj.get("id")?.asString 
+                            ?: radioObj.get("stationid")?.asString ?: return@mapNotNull null
+                        val name = radioObj.get("name")?.asString 
+                            ?: radioObj.get("title")?.asString ?: "Radio"
+                        val image = radioObj.get("image")?.asString?.toHighResImage()
+                        
+                        com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                                id = "radio_$radioId",
+                                name = name.decodeHtml(),
+                                url = "",
+                                uploaderName = "JioSaavn Radio",
+                                thumbnailUrl = image,
+                                songCount = 0
+                            )
+                        )
+                    }
+                    if (radioItems.isNotEmpty()) {
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Radio Stations 📻", radioItems))
+                    }
+                }
+            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Radio stations fetch error", e) }
             
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("JioSaavn", "Home sections error", e)
         }
         
         sections
