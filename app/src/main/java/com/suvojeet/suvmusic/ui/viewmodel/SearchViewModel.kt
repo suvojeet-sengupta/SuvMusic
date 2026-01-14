@@ -32,6 +32,13 @@ enum class SearchTab {
     YOUR_LIBRARY
 }
 
+enum class ResultFilter {
+    ALL,
+    SONGS,
+    ARTISTS,
+    ALBUMS
+}
+
 data class SearchUiState(
     val query: String = "",
     val filter: String = YouTubeRepository.FILTER_SONGS,
@@ -49,7 +56,17 @@ data class SearchUiState(
     val isSuggestionsLoading: Boolean = false,
     val isSearchActive: Boolean = false,
     val error: String? = null,
-    val currentSource: MusicSource = MusicSource.YOUTUBE
+    val currentSource: MusicSource = MusicSource.YOUTUBE,
+    val resultFilter: ResultFilter = ResultFilter.ALL,
+    val trendingSearches: List<String> = listOf(
+        "Arijit Singh",
+        "Trending 2024",
+        "Lo-fi beats", 
+        "Workout music",
+        "Party songs",
+        "Bollywood hits",
+        "English songs"
+    )
 )
 
 @OptIn(FlowPreview::class)
@@ -261,6 +278,21 @@ class SearchViewModel @Inject constructor(
         if (_uiState.value.query.isNotBlank()) {
             search()
         }
+    }
+    
+    fun setResultFilter(filter: ResultFilter) {
+        _uiState.update { it.copy(resultFilter = filter) }
+    }
+    
+    fun onTrendingSearchClick(query: String) {
+        _uiState.update { 
+            it.copy(
+                query = query,
+                showSuggestions = false,
+                isSearchActive = true
+            )
+        }
+        search()
     }
     
     fun search() {

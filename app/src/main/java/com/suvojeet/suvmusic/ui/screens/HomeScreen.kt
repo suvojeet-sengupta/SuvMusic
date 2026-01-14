@@ -190,18 +190,23 @@ private fun HomeItemCard(
 /**
  * Get greeting based on time of day
  */
-private fun getGreeting(): String {
+    }
+}
+
+private fun getGreeting(userName: String? = null): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    return when {
+    val timeGreeting = when {
         hour < 12 -> "Good morning"
         hour < 17 -> "Good afternoon"
         hour < 21 -> "Good evening"
         else -> "Good night"
     }
+    return if (!userName.isNullOrBlank()) "$timeGreeting, $userName" else timeGreeting
 }
 
 @Composable
 private fun ProfileHeader(
+    userName: String? = null,
     modifier: Modifier = Modifier,
     onRecentsClick: () -> Unit = {}
 ) {
@@ -210,9 +215,9 @@ private fun ProfileHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Greeting Text
+        // Greeting Text with optional user name
         Text(
-            text = getGreeting(),
+            text = getGreeting(userName),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -324,13 +329,32 @@ private fun MediumSongCard(
 }
 
 @Composable
-private fun HomeSectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(horizontal = 16.dp)
-    )
+private fun HomeSectionHeader(
+    title: String,
+    onSeeAllClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (onSeeAllClick != null) {
+            TextButton(onClick = onSeeAllClick) {
+                Text(
+                    text = "See All",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
 }
 
