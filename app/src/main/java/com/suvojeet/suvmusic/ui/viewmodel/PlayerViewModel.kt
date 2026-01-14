@@ -54,6 +54,9 @@ class PlayerViewModel @Inject constructor(
     private val _isRadioMode = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
     
+    private val _isLoadingMoreSongs = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isLoadingMoreSongs: StateFlow<Boolean> = _isLoadingMoreSongs.asStateFlow()
+    
     private var radioBaseSongId: String? = null
     
     init {
@@ -231,15 +234,18 @@ class PlayerViewModel @Inject constructor(
     
     /**
      * Load more songs for endless radio queue.
-     * Called automatically when near end of queue.
+     * Called automatically when near end of queue (infinite scroll).
      */
     fun loadMoreRadioSongs() {
         if (!_isRadioMode.value) return
         if (!sessionManager.isEndlessQueueEnabled()) return
+        if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
         
-        val baseSongId = radioBaseSongId ?: playerState.value.currentSong?.id ?: return
+        val currentSong = playerState.value.currentSong ?: return
+        val baseSongId = radioBaseSongId ?: currentSong.id
         
         viewModelScope.launch {
+            _isLoadingMoreSongs.value = true
             try {
                 val moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
                 if (moreSongs.isNotEmpty()) {
@@ -250,10 +256,21 @@ class PlayerViewModel @Inject constructor(
                     
                     if (newSongs.isNotEmpty()) {
                         musicPlayer.addToQueue(newSongs.take(10))
+                        // Update base song for next batch (use last added song for variety)
+                        radioBaseSongId = newSongs.lastOrNull()?.id ?: baseSongId
+                    } else {
+                        // If no new songs from YT, try local recommendations
+                        val localRecs = recommendationEngine.getPersonalizedRecommendations(15)
+                        val newLocalSongs = localRecs.filter { it.id !in existingIds }
+                        if (newLocalSongs.isNotEmpty()) {
+                            musicPlayer.addToQueue(newLocalSongs.take(10))
+                        }
                     }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlayerViewModel", "Error loading more radio songs", e)
+            } finally {
+                _isLoadingMoreSongs.value = false
             }
         }
     }
