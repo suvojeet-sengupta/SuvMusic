@@ -275,6 +275,10 @@ fun SuvMusicApp(
     val sleepTimerOption by playerViewModel.sleepTimerOption.collectAsState()
     val sleepTimerRemainingMs by playerViewModel.sleepTimerRemainingMs.collectAsState()
     
+    // Radio Mode
+    val isRadioMode by playerViewModel.isRadioMode.collectAsState()
+    val isLoadingMoreSongs by playerViewModel.isLoadingMoreSongs.collectAsState()
+    
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
@@ -405,6 +409,9 @@ fun SuvMusicApp(
                             playerViewModel.startRadio(song)
                         }
                     },
+                    onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
+                    isRadioMode = isRadioMode,
+                    isLoadingMoreSongs = isLoadingMoreSongs,
                     onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
                     onRefreshDevices = { playerViewModel.refreshDevices() },
                     player = playerViewModel.getPlayer(),
