@@ -195,15 +195,15 @@ private fun PlaylistsTab(
 ) {
     LazyColumn(
         contentPadding = PaddingValues(bottom = 140.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Create Playlist Card
+        // Feature Cards Row
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 CreatePlaylistCard(
                     modifier = Modifier.weight(1f),
@@ -222,7 +222,8 @@ private fun PlaylistsTab(
                 Text(
                     text = "YOUR PLAYLISTS",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
             }
@@ -238,12 +239,31 @@ private fun PlaylistsTab(
         
         if (playlists.isEmpty()) {
             item {
-                Text(
-                    text = "No playlists yet.\nCreate one to get started!",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 32.dp)
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No playlists yet",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = "Create one to get started!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                }
             }
         }
     }
@@ -255,21 +275,23 @@ private fun CreatePlaylistCard(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         modifier = modifier
+            .height(110.dp)
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
             // Plus icon in gradient box
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
@@ -284,11 +306,9 @@ private fun CreatePlaylistCard(
                     imageVector = Icons.Default.Add,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
             
             Text(
                 text = "New Playlist",
@@ -308,21 +328,23 @@ private fun ImportSpotifyCard(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         modifier = modifier
+            .height(110.dp)
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
             // Spotify icon in green gradient box
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
@@ -337,11 +359,9 @@ private fun ImportSpotifyCard(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
             
             Text(
                 text = "Import Spotify",
@@ -364,14 +384,14 @@ private fun PlaylistListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Thumbnail
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(64.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (playlist.thumbnailUrl != null) {
@@ -381,6 +401,15 @@ private fun PlaylistListItem(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp)
+                )
             }
         }
         
@@ -389,14 +418,23 @@ private fun PlaylistListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = playlist.name,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Playlist",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                text = "${playlist.songCount} songs",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+        
+        IconButton(onClick = { /* TODO: Show menu */ }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "More options",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
         }
     }
