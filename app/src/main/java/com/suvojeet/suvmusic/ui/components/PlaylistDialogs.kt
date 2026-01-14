@@ -51,6 +51,7 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.ui.viewmodel.ImportState
 
 // Library UI Colors (Apple Music Dark Theme)
 private val DarkBackground = Color(0xFF1C1C1E)
@@ -553,3 +554,145 @@ fun RenamePlaylistDialog(
         }
     }
 }
+
+/**
+ * Dialog to import a Spotify playlist by URL.
+ */
+@Composable
+fun ImportSpotifyDialog(
+    isVisible: Boolean,
+    importState: ImportState,
+    onDismiss: () -> Unit,
+    onImport: (url: String) -> Unit
+) {
+    if (isVisible) {
+        var url by remember { mutableStateOf("") }
+        
+        Dialog(
+            onDismissRequest = { if (importState !is ImportState.Loading && importState !is ImportState.Matching) onDismiss() }
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = DarkBackground,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Import Spotify Playlist",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    when (importState) {
+                        is ImportState.Idle -> {
+                            Text(
+                                text = "Paste a public Spotify playlist link below to import it to your YouTube Music account.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(bottom = 24.dp)
+                            )
+
+                            BasicTextField(
+                                value = url,
+                                onValueChange = { url = it },
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    color = TextPrimary,
+                                    textAlign = TextAlign.Start
+                                ),
+                                singleLine = true,
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(DarkSurface, RoundedCornerShape(8.dp))
+                                            .padding(12.dp)
+                                    ) {
+                                        if (url.isEmpty()) {
+                                            Text(
+                                                text = "https://open.spotify.com/playlist/...",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = TextSecondary.copy(alpha = 0.5f)
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            
+                            Spacer(modifier = Modifier.height(32.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                TextButton(onClick = onDismiss) {
+                                    Text("Cancel", color = TextSecondary)
+                                }
+                                Button(
+                                    onClick = { onImport(url) },
+                                    enabled = url.contains("spotify.com/playlist/"),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Import", color = TextPrimary)
+                                }
+                            }
+                        }
+                        is ImportState.Loading -> {
+                            CircularProgressIndicator(color = AccentRed)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Fetching playlist info...", color = TextPrimary)
+                        }
+                        is ImportState.Matching -> {
+                            CircularProgressIndicator(
+                                progress = { importState.current.toFloat() / importState.total.toFloat() },
+                                color = AccentRed,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Matching songs: ${importState.current} / ${importState.total}", color = TextPrimary)
+                        }
+                        is ImportState.Success -> {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color.Green,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Playlist imported successfully!", color = TextPrimary, textAlign = TextAlign.Center)
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = onDismiss,
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Done", color = TextPrimary)
+                            }
+                        }
+                        is ImportState.Error -> {
+                            Text("Error: ${importState.message}", color = Color.Red, textAlign = TextAlign.Center)
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = onDismiss,
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Close", color = TextPrimary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

@@ -19,11 +19,14 @@ navigationCompose = "2.8.4"
 datastorePreferences = "1.1.1"
 room = "2.8.4"
 gson = "2.11.0"
+jsoup = "1.22.1"
 securityCrypto = "1.1.0"
 
 [libraries]
 # Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+# Jsoup
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 # Security
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
