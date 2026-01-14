@@ -1,5 +1,7 @@
 package com.suvojeet.suvmusic.util
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
@@ -19,70 +21,71 @@ class SpotifyImportHelper @Inject constructor(
     suspend fun getPlaylistSongs(url: String): List<Pair<String, String>> = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Pair<String, String>>()
         try {
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .get()
+            // 1. Try to extract playlist ID and use Embed method (most reliable)
+            val playlistId = extractPlaylistId(url)
+            if (playlistId != null) {
+                try {
+                    val embedUrl = "https://open.spotify.com/embed/playlist/$playlistId"
+                    val doc = Jsoup.connect(embedUrl)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .get()
 
-            // Spotify's public page structure often changes, but meta tags or specific classes usually contain song info.
-            // For the public non-logged in view, they often use meta tags or specific item classes.
-            
-            // Try meta tags first (OpenGraph) - though this only gives the first few or general info.
-            
-            // Modern Spotify web player uses a more complex structure, but we can try to find the track names.
-            // A more robust way without official API is to look for specific patterns in the HTML.
-            
-            // Let's look for track names in the embedded JSON if available, or list items.
-            val scriptTags = doc.select("script")
-            for (script in scriptTags) {
-                val content = script.html()
-                if (content.contains("Spotify.Entity")) {
-                    // This often contains track list in JSON format
-                    // Parsing this would be ideal but complex.
+                    val nextDataScript = doc.select("script#__NEXT_DATA__").first()
+                    if (nextDataScript != null) {
+                        val json = nextDataScript.html()
+                        val gson = Gson()
+                        val jsonObject = gson.fromJson(json, JsonObject::class.java)
+
+                        // Navigate JSON: props -> pageProps -> state -> data -> entity -> trackList
+                        val trackList = jsonObject.getAsJsonObject("props")
+                            ?.getAsJsonObject("pageProps")
+                            ?.getAsJsonObject("state")
+                            ?.getAsJsonObject("data")
+                            ?.getAsJsonObject("entity")
+                            ?.getAsJsonArray("trackList")
+
+                        if (trackList != null) {
+                            for (element in trackList) {
+                                val trackObj = element.asJsonObject
+                                val title = trackObj.get("title").asString
+                                val subtitle = trackObj.get("subtitle").asString // Artists
+                                if (title.isNotBlank()) {
+                                    songs.add(title to subtitle)
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
 
-            // Fallback to searching for specific elements that contain track info
-            // Track names are often in elements with specific data-attributes or classes
-            val trackElements = doc.select("meta[property=music:song]")
-            if (trackElements.isNotEmpty()) {
-                // Some pages might have these meta tags
-            }
-
-            // Most common structure for public playlists as of late 2024/2025:
-            // Track names are in spans or divs with specific roles or classes.
-            // Since we can't reliably guess the exact class names (they are often obfuscated), 
-            // we will look for the track name and artist patterns.
-            
-            // Alternatively, Spotify provides a "meta" view for some links.
-            // Let's try to extract from the most likely places.
-            
-            val trackRows = doc.select("div[role=gridcell]") // Common in modern web apps
-            
-            // If scraping fails due to heavy JS, we might need a different approach or 
-            // inform the user. But Jsoup can often see the SSR content.
-            
-            // Re-evaluating: Spotify's public playlist page usually has a "playlist-track-name" 
-            // or similar in the SSR HTML for SEO.
-            
-            val trackNames = doc.select("span.track-name, div.track-name, .track-name")
-            val artistNames = doc.select("span.artist-name, div.artist-name, .artist-name")
-            
-            if (trackNames.isNotEmpty() && trackNames.size == artistNames.size) {
-                for (i in trackNames.indices) {
-                    songs.add(trackNames[i].text() to artistNames[i].text())
-                }
-            }
-            
-            // If above fails, try searching for the "og:description" which sometimes lists tracks
+            // 2. Fallback to scraping the original URL if embed failed
             if (songs.isEmpty()) {
-                val ogDesc = doc.select("meta[property=og:description]").attr("content")
-                if (ogDesc.isNotBlank() && ogDesc.contains("·")) {
-                    // Format: "Song Name · Artist Name, Song 2 · Artist 2..."
-                    val parts = ogDesc.split(",")
-                    for (part in parts) {
-                        val trackInfo = part.split("·")
-                        if (trackInfo.size >= 2) {
-                            songs.add(trackInfo[0].trim() to trackInfo[1].trim())
+                val doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .get()
+
+                val trackNames = doc.select("span.track-name, div.track-name, .track-name")
+                val artistNames = doc.select("span.artist-name, div.artist-name, .artist-name")
+
+                if (trackNames.isNotEmpty() && trackNames.size == artistNames.size) {
+                    for (i in trackNames.indices) {
+                        songs.add(trackNames[i].text() to artistNames[i].text())
+                    }
+                }
+
+                // If above fails, try searching for the "og:description" which sometimes lists tracks
+                if (songs.isEmpty()) {
+                    val ogDesc = doc.select("meta[property=og:description]").attr("content")
+                    if (ogDesc.isNotBlank() && ogDesc.contains("·")) {
+                        // Format: "Song Name · Artist Name, Song 2 · Artist 2..."
+                        val parts = ogDesc.split(",")
+                        for (part in parts) {
+                            val trackInfo = part.split("·")
+                            if (trackInfo.size >= 2) {
+                                songs.add(trackInfo[0].trim() to trackInfo[1].trim())
+                            }
                         }
                     }
                 }
@@ -92,6 +95,12 @@ class SpotifyImportHelper @Inject constructor(
             e.printStackTrace()
         }
         songs
+    }
+
+    private fun extractPlaylistId(url: String): String? {
+        val pattern = "playlist/([a-zA-Z0-9]+)".toRegex()
+        val match = pattern.find(url)
+        return match?.groupValues?.get(1)
     }
 
     /**
