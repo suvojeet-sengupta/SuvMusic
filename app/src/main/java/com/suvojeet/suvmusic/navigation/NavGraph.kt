@@ -25,6 +25,7 @@ import com.suvojeet.suvmusic.ui.screens.PlaybackSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.PlaylistScreen
 import com.suvojeet.suvmusic.ui.screens.RecentsScreen
 import com.suvojeet.suvmusic.ui.screens.SearchScreen
+import com.suvojeet.suvmusic.ui.screens.SeekbarStyleScreen
 import com.suvojeet.suvmusic.ui.screens.SettingsScreen
 import com.suvojeet.suvmusic.ui.screens.WelcomeScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
@@ -194,12 +195,19 @@ fun NavGraph(
         composable(Destination.CustomizationSettings.route) {
             CustomizationScreen(
                 onBack = { navController.popBackStack() },
+                onSeekbarStyleClick = { navController.navigate(Destination.SeekbarStyleSettings.route) },
                 onArtworkShapeClick = { navController.navigate(Destination.ArtworkShapeSettings.route) }
             )
         }
         
         composable(Destination.ArtworkShapeSettings.route) {
             ArtworkShapeScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        
+        composable(Destination.SeekbarStyleSettings.route) {
+            SeekbarStyleScreen(
                 onBack = { navController.popBackStack() }
             )
         }
