@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.data.model.ImportResult
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
@@ -30,7 +31,7 @@ sealed class ImportState {
     object Idle : ImportState()
     object Loading : ImportState()
     data class Matching(val current: Int, val total: Int) : ImportState()
-    object Success : ImportState()
+    data class Success(val results: List<ImportResult>) : ImportState()
     data class Error(val message: String) : ImportState()
 }
 
@@ -153,9 +154,11 @@ class LibraryViewModel @Inject constructor(
 
                 _uiState.update { it.copy(importState = ImportState.Matching(0, spotifySongs.size)) }
                 
-                val matchedSongs = spotifyImportHelper.matchSongsOnYouTube(spotifySongs) { current, total ->
+                val importResults = spotifyImportHelper.matchSongsOnYouTube(spotifySongs) { current, total ->
                     _uiState.update { it.copy(importState = ImportState.Matching(current, total)) }
                 }
+
+                val matchedSongs = importResults.mapNotNull { it.matchedSong }
 
                 if (matchedSongs.isEmpty()) {
                     _uiState.update { it.copy(importState = ImportState.Error("Could not find any of the songs on YouTube Music.")) }
@@ -170,7 +173,7 @@ class LibraryViewModel @Inject constructor(
                     matchedSongs.forEach { song ->
                         youTubeRepository.addSongToPlaylist(playlistId, song.id)
                     }
-                    _uiState.update { it.copy(importState = ImportState.Success) }
+                    _uiState.update { it.copy(importState = ImportState.Success(importResults)) }
                     refresh() // Refresh to show new playlist
                 } else {
                     _uiState.update { it.copy(importState = ImportState.Error("Failed to create playlist on YouTube. Are you logged in?")) }
