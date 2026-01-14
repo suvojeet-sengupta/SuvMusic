@@ -42,6 +42,8 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,6 +70,7 @@ import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.ResultFilter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
 import coil.request.ImageRequest
@@ -411,33 +414,45 @@ fun SearchScreen(
                     }
                 }
                 
-                // Empty state when no recent searches
+                // Empty state with Trending Searches
                 if (uiState.query.isBlank() && uiState.recentSearches.isEmpty()) {
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(horizontal = 20.dp, vertical = 16.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Search for music",
+                                text = "Trending Searches",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Find songs, albums, artists and more",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
+                            
+                            uiState.trendingSearches.forEach { term ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { viewModel.onTrendingSearchClick(term) }
+                                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text(
+                                        text = term,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
                         }
                     }
                 }
