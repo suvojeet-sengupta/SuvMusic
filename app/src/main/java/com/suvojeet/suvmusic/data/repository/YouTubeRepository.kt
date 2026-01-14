@@ -1201,6 +1201,50 @@ class YouTubeRepository @Inject constructor(
     }
 
     /**
+     * Delete a playlist.
+     * @param playlistId The ID of the playlist
+     * @return True if successful
+     */
+    suspend fun deletePlaylist(playlistId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            if (!sessionManager.isLoggedIn()) return@withContext false
+            
+            val cookies = sessionManager.getCookies() ?: return@withContext false
+            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            
+            val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
+            
+            val jsonBody = JSONObject().apply {
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20230102.01.00")
+                        put("hl", "en")
+                        put("gl", "US")
+                    })
+                })
+                put("playlistId", realPlaylistId)
+            }
+            
+            val request = okhttp3.Request.Builder()
+                .url("https://music.youtube.com/youtubei/v1/playlist/delete")
+                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                .addHeader("Cookie", cookies)
+                .addHeader("Authorization", authHeader)
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .addHeader("Origin", "https://music.youtube.com")
+                .addHeader("X-Goog-AuthUser", "0")
+                .build()
+            
+            val response = okHttpClient.newCall(request).execute()
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
      * Fetch lyrics for a song.
      * Tries to find time-synced lyrics, falls back to plain text.
      */

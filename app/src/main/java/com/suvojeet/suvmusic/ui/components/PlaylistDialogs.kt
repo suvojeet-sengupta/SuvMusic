@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -836,6 +837,101 @@ fun ImportSpotifyDialog(
                                     Text("Close", fontWeight = FontWeight.Bold, color = TextPrimary)
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Dialog to delete a playlist.
+ * Styled to match Apple Music dark theme.
+ */
+@Composable
+fun DeletePlaylistDialog(
+    isVisible: Boolean,
+    playlistTitle: String,
+    isDeleting: Boolean,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit
+) {
+    if (isVisible) {
+        Dialog(
+            onDismissRequest = { if (!isDeleting) onDismiss() }
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = DarkBackground,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = AccentRed,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .padding(bottom = 16.dp)
+                    )
+
+                    Text(
+                        text = "Delete Playlist?",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = "Are you sure you want to delete \"$playlistTitle\"? This action cannot be undone.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+
+                    // Action Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = onDismiss,
+                            enabled = !isDeleting
+                        ) {
+                            Text(
+                                "Cancel", 
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+
+                        Button(
+                            onClick = onDelete,
+                            enabled = !isDeleting,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentRed,
+                                disabledContainerColor = AccentRed.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            if (isDeleting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = TextPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text("Delete", fontWeight = FontWeight.Bold, color = TextPrimary)
                         }
                     }
                 }
