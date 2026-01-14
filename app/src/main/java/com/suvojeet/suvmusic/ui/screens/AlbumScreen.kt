@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -67,7 +68,15 @@ fun AlbumScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val album = uiState.album
-    
+
+    // Check if we are in dark theme based on background luminance
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
+    // Define colors based on theme
+    val backgroundColor = if (isDarkTheme) Color(0xFF0D0D0D) else Color.White
+    val contentColor = if (isDarkTheme) Color.White else Color.Black
+    val secondaryContentColor = if (isDarkTheme) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f)
+
     // Track scroll position for collapsing header
     val listState = rememberLazyListState()
     val isScrolled by remember {
@@ -77,7 +86,7 @@ fun AlbumScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0D0D0D))
+            .background(backgroundColor)
     ) {
         // Blurred background image - Full screen like Apple Music
         if (album?.thumbnailUrl != null) {
@@ -88,7 +97,7 @@ fun AlbumScreen(
                     .fillMaxSize()
                     .blur(100.dp),
                 contentScale = ContentScale.Crop,
-                alpha = 0.4f
+                alpha = if (isDarkTheme) 0.4f else 0.3f
             )
         }
         
@@ -98,11 +107,19 @@ fun AlbumScreen(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color(0xFF0D0D0D).copy(alpha = 0.8f),
-                            Color(0xFF0D0D0D)
-                        )
+                        colors = if (isDarkTheme) {
+                            listOf(
+                                Color.Transparent,
+                                Color(0xFF0D0D0D).copy(alpha = 0.8f),
+                                Color(0xFF0D0D0D)
+                            )
+                        } else {
+                            listOf(
+                                Color.White.copy(alpha = 0.3f),
+                                Color.White.copy(alpha = 0.8f),
+                                Color.White
+                            )
+                        }
                     )
                 )
         )
@@ -118,7 +135,7 @@ fun AlbumScreen(
             uiState.error != null -> {
                 Text(
                     text = uiState.error ?: "Unknown Error",
-                    color = Color.White,
+                    color = contentColor,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -133,7 +150,10 @@ fun AlbumScreen(
                         AlbumHeader(
                             album = album,
                             onPlayAll = { onPlayAll(album.songs) },
-                            onShufflePlay = { onShufflePlay(album.songs) }
+                            onShufflePlay = { onShufflePlay(album.songs) },
+                            contentColor = contentColor,
+                            secondaryContentColor = secondaryContentColor,
+                            isDarkTheme = isDarkTheme
                         )
                     }
                     
@@ -142,7 +162,9 @@ fun AlbumScreen(
                         AlbumSongItem(
                             song = song,
                             trackNumber = index + 1,
-                            onClick = { onSongClick(album.songs, index) }
+                            onClick = { onSongClick(album.songs, index) },
+                            contentColor = contentColor,
+                            secondaryContentColor = secondaryContentColor
                         )
                     }
                 }
@@ -151,7 +173,9 @@ fun AlbumScreen(
                 AlbumTopBar(
                     title = album.title,
                     isScrolled = isScrolled,
-                    onBackClick = onBackClick
+                    onBackClick = onBackClick,
+                    isDarkTheme = isDarkTheme,
+                    contentColor = contentColor
                 )
             }
         }
@@ -162,14 +186,19 @@ fun AlbumScreen(
 private fun AlbumTopBar(
     title: String,
     isScrolled: Boolean,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isDarkTheme: Boolean,
+    contentColor: Color
 ) {
+    // Determine background color when scrolled
+    val scrolledColor = if (isDarkTheme) Color(0xFF1D1D1D) else Color.White
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .background(
-                if (isScrolled) Color(0xFF1D1D1D) else Color.Transparent
+                if (isScrolled) scrolledColor else Color.Transparent
             )
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -178,7 +207,7 @@ private fun AlbumTopBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = Color.White
+                tint = contentColor
             )
         }
         
@@ -191,7 +220,7 @@ private fun AlbumTopBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
+                color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -206,7 +235,7 @@ private fun AlbumTopBar(
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More",
-                tint = Color.White
+                tint = contentColor
             )
         }
     }
@@ -216,7 +245,10 @@ private fun AlbumTopBar(
 private fun AlbumHeader(
     album: Album,
     onPlayAll: () -> Unit,
-    onShufflePlay: () -> Unit
+    onShufflePlay: () -> Unit,
+    contentColor: Color,
+    secondaryContentColor: Color,
+    isDarkTheme: Boolean
 ) {
     Column(
         modifier = Modifier
@@ -233,7 +265,7 @@ private fun AlbumHeader(
                     shape = RoundedCornerShape(8.dp)
                 )
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color.LightGray)
         ) {
             if (album.thumbnailUrl != null) {
                 AsyncImage(
@@ -253,7 +285,7 @@ private fun AlbumHeader(
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold
             ),
-            color = Color.White,
+            color = contentColor,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -265,7 +297,7 @@ private fun AlbumHeader(
         Text(
             text = album.artist,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.7f),
+            color = secondaryContentColor,
             textAlign = TextAlign.Center
         )
         
@@ -276,7 +308,7 @@ private fun AlbumHeader(
                 append("${album.songs.size} songs")
             },
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.5f),
+            color = secondaryContentColor.copy(alpha = 0.5f),
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 4.dp)
         )
@@ -286,7 +318,7 @@ private fun AlbumHeader(
             Text(
                 text = album.description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.6f),
+                color = secondaryContentColor.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -297,6 +329,11 @@ private fun AlbumHeader(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Play & Shuffle Buttons
+        val buttonContainerColor = if (isDarkTheme)
+            Color.White.copy(alpha = 0.15f)
+        else
+            Color.Black.copy(alpha = 0.05f)
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -308,8 +345,8 @@ private fun AlbumHeader(
                     .weight(1f)
                     .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White.copy(alpha = 0.15f),
-                    contentColor = Color.White
+                    containerColor = buttonContainerColor,
+                    contentColor = contentColor
                 ),
                 shape = RoundedCornerShape(24.dp)
             ) {
@@ -332,8 +369,8 @@ private fun AlbumHeader(
                     .weight(1f)
                     .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White.copy(alpha = 0.15f),
-                    contentColor = Color.White
+                    containerColor = buttonContainerColor,
+                    contentColor = contentColor
                 ),
                 shape = RoundedCornerShape(24.dp)
             ) {
@@ -358,7 +395,9 @@ private fun AlbumHeader(
 private fun AlbumSongItem(
     song: Song,
     trackNumber: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    contentColor: Color,
+    secondaryContentColor: Color
 ) {
     Row(
         modifier = Modifier
@@ -393,7 +432,7 @@ private fun AlbumSongItem(
             Text(
                 text = song.title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.Medium
@@ -402,7 +441,7 @@ private fun AlbumSongItem(
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.6f),
+                color = secondaryContentColor.copy(alpha = 0.6f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -413,7 +452,7 @@ private fun AlbumSongItem(
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",
-                tint = Color.White.copy(alpha = 0.7f)
+                tint = secondaryContentColor.copy(alpha = 0.7f)
             )
         }
     }
