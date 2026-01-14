@@ -25,26 +25,35 @@ object DotsStyle {
         val dotCount = 30
         val dotSpacing = width / dotCount
         
+        // Draw unplayed straight line
+        drawLine(
+            color = inactiveColor.copy(alpha = 0.3f),
+            start = Offset(progressX, centerY),
+            end = Offset(width, centerY),
+            strokeWidth = 4.dp.toPx(),
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+
         for (i in 0 until dotCount) {
             val x = i * dotSpacing + dotSpacing / 2
             val isPast = x < progressX
             
-            val baseRadius = 4.dp.toPx()
-            val animatedRadius = if (isPlaying && isPast) {
-                val phase = (wavePhase + i * 20) % 360
-                val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
-                baseRadius * (1f + wave * 0.4f)
-            } else {
-                baseRadius
+            if (isPast) {
+                val baseRadius = 4.dp.toPx()
+                val animatedRadius = if (isPlaying) {
+                    val phase = (wavePhase + i * 20) % 360
+                    val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
+                    baseRadius * (1f + wave * 0.4f)
+                } else {
+                    baseRadius
+                }
+                
+                drawCircle(
+                    color = activeColor,
+                    radius = animatedRadius,
+                    center = Offset(x, centerY)
+                )
             }
-            
-            val dotColor = if (isPast) activeColor else inactiveColor.copy(alpha = 0.4f)
-            
-            drawCircle(
-                color = dotColor,
-                radius = animatedRadius,
-                center = Offset(x, centerY)
-            )
         }
         
         // Main indicator

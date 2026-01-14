@@ -33,21 +33,16 @@ object WaveLineStyle {
         val frequency = 0.03f
         val phase = wavePhase * (Math.PI.toFloat() / 180f)
         
-        // Unplayed path
+        // Unplayed path - Straight line
         val unplayedPath = Path().apply {
             moveTo(progressX, centerY)
-            var x = progressX
-            while (x <= width) {
-                val y = centerY + sin(x * frequency + phase) * amplitude * 0.5f
-                lineTo(x, y.toFloat())
-                x += 2f
-            }
+            lineTo(width, centerY)
         }
         
         drawPath(
             path = unplayedPath,
-            color = inactiveColor,
-            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+            color = inactiveColor.copy(alpha = 0.3f), // Reduced opacity for track
+            style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
         )
         
         // Played path

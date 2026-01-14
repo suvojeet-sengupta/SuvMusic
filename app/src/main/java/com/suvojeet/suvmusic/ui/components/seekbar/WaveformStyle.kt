@@ -30,23 +30,32 @@ object WaveformStyle {
         val maxBarHeight = height * 0.8f
         val progressX = progress * width
         
+        // Draw unplayed track line
+        drawLine(
+            color = inactiveColor.copy(alpha = 0.3f),
+            start = Offset(progressX, centerY),
+            end = Offset(width, centerY),
+            strokeWidth = 4.dp.toPx(),
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+
         waveAmplitudes.forEachIndexed { index, amplitude ->
             val x = index * barWidth + barWidth / 2
             val isPast = x < progressX
             
-            val animatedAmplitude = if (isPlaying && isPast) {
-                val phase = (wavePhase + index * 12) % 360
-                val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
-                amplitude * (0.7f + wave * 0.3f)
-            } else {
-                amplitude
-            }
-            
-            val barHeight = animatedAmplitude * maxBarHeight
-            val topY = centerY - barHeight / 2
-            
-            val barColor = if (isPast) {
-                Brush.verticalGradient(
+            if (isPast) {
+                val animatedAmplitude = if (isPlaying) {
+                    val phase = (wavePhase + index * 12) % 360
+                    val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
+                    amplitude * (0.7f + wave * 0.3f)
+                } else {
+                    amplitude
+                }
+                
+                val barHeight = animatedAmplitude * maxBarHeight
+                val topY = centerY - barHeight / 2
+                
+                val barColor = Brush.verticalGradient(
                     colors = listOf(
                         activeColor.copy(alpha = 0.7f),
                         activeColor,
@@ -55,21 +64,14 @@ object WaveformStyle {
                     startY = topY,
                     endY = topY + barHeight
                 )
-            } else {
-                Brush.verticalGradient(
-                    colors = listOf(
-                        inactiveColor.copy(alpha = 0.5f),
-                        inactiveColor.copy(alpha = 0.3f)
-                    )
+                
+                drawRoundRect(
+                    brush = barColor,
+                    topLeft = Offset(x - barWidth * 0.35f, topY),
+                    size = Size(barWidth * 0.7f, barHeight),
+                    cornerRadius = CornerRadius(barWidth * 0.35f)
                 )
             }
-            
-            drawRoundRect(
-                brush = barColor,
-                topLeft = Offset(x - barWidth * 0.35f, topY),
-                size = Size(barWidth * 0.7f, barHeight),
-                cornerRadius = CornerRadius(barWidth * 0.35f)
-            )
         }
         
         drawProgressIndicator(progressX, centerY, activeColor, isDragging)
