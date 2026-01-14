@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -600,6 +601,7 @@ fun ImportSpotifyDialog(
                                 modifier = Modifier.padding(bottom = 24.dp)
                             )
 
+                            // Input Field
                             BasicTextField(
                                 value = url,
                                 onValueChange = { url = it },
@@ -613,7 +615,7 @@ fun ImportSpotifyDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(DarkSurface, RoundedCornerShape(8.dp))
-                                            .padding(12.dp)
+                                            .padding(16.dp)
                                     ) {
                                         if (url.isEmpty()) {
                                             Text(
@@ -625,68 +627,178 @@ fun ImportSpotifyDialog(
                                         innerTextField()
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 24.dp)
                             )
                             
-                            Spacer(modifier = Modifier.height(32.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 TextButton(onClick = onDismiss) {
-                                    Text("Cancel", color = TextSecondary)
+                                    Text(
+                                        "Cancel", 
+                                        color = TextSecondary,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
                                 }
                                 Button(
                                     onClick = { onImport(url) },
                                     enabled = url.contains("spotify.com/playlist/"),
-                                    colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = AccentRed,
+                                        disabledContainerColor = AccentRed.copy(alpha = 0.5f)
+                                    ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text("Import", color = TextPrimary)
+                                    Text("Import", fontWeight = FontWeight.Bold, color = TextPrimary)
                                 }
                             }
                         }
                         is ImportState.Loading -> {
-                            CircularProgressIndicator(color = AccentRed)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Fetching playlist info...", color = TextPrimary)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            ) {
+                                CircularProgressIndicator(color = AccentRed)
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Text(
+                                    "Fetching playlist info...", 
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    "This might take a moment", 
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
                         }
                         is ImportState.Matching -> {
-                            CircularProgressIndicator(
-                                progress = { importState.current.toFloat() / importState.total.toFloat() },
-                                color = AccentRed,
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Matching songs: ${importState.current} / ${importState.total}", color = TextPrimary)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            ) {
+                                val progress = if (importState.total > 0) importState.current.toFloat() / importState.total.toFloat() else 0f
+                                val percentage = (progress * 100).toInt()
+                                
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    color = AccentRed,
+                                    trackColor = DarkSurface,
+                                )
+                                
+                                Spacer(modifier = Modifier.height(24.dp))
+                                
+                                Text(
+                                    "Importing Songs", 
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    "$percentage% Complete (${importState.current}/${importState.total})", 
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
                         }
                         is ImportState.Success -> {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = Color.Green,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Playlist imported successfully!", color = TextPrimary, textAlign = TextAlign.Center)
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(
-                                onClick = onDismiss,
-                                colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
-                                shape = RoundedCornerShape(8.dp)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(vertical = 16.dp)
                             ) {
-                                Text("Done", color = TextPrimary)
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .background(Color(0xFF1DB954).copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Color(0xFF1DB954),
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(24.dp))
+                                
+                                Text(
+                                    "Import Successful!", 
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    "Your playlist is ready in your library.", 
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                                )
+                                
+                                Button(
+                                    onClick = onDismiss,
+                                    colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Done", fontWeight = FontWeight.Bold, color = TextPrimary)
+                                }
                             }
                         }
                         is ImportState.Error -> {
-                            Text("Error: ${importState.message}", color = Color.Red, textAlign = TextAlign.Center)
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(
-                                onClick = onDismiss,
-                                colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
-                                shape = RoundedCornerShape(8.dp)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(vertical = 16.dp)
                             ) {
-                                Text("Close", color = TextPrimary)
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .background(Color.Red.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote, // Fallback icon, could be Error
+                                        contentDescription = null,
+                                        tint = Color.Red,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(24.dp))
+                                
+                                Text(
+                                    "Import Failed", 
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    importState.message, 
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                                )
+                                
+                                Button(
+                                    onClick = onDismiss,
+                                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurface),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Close", fontWeight = FontWeight.Bold, color = TextPrimary)
+                                }
                             }
                         }
                     }
