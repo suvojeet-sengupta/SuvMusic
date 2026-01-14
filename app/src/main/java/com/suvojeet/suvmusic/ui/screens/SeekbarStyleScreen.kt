@@ -7,7 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,20 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Square
-import androidx.compose.material.icons.rounded.RoundedCorner
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,19 +44,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientMiddle
 import com.suvojeet.suvmusic.ui.theme.GradientStart
-import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,32 +60,22 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Customization settings screen for player appearance
+ * Seekbar Style selection screen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomizationScreen(
-    viewModel: SettingsViewModel = hiltViewModel(),
-    onBack: () -> Unit,
-    onSeekbarStyleClick: () -> Unit = {},
-    onArtworkShapeClick: () -> Unit = {}
+fun SeekbarStyleScreen(
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     
     val seekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
-    val artworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
     
     val currentSeekbarStyle = try {
         SeekbarStyle.valueOf(seekbarStyleString)
     } catch (e: Exception) {
         SeekbarStyle.WAVEFORM
-    }
-    
-    val currentArtworkShape = try {
-        ArtworkShape.valueOf(artworkShapeString)
-    } catch (e: Exception) {
-        ArtworkShape.ROUNDED_SQUARE
     }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -109,7 +86,7 @@ fun CustomizationScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Customization") },
+                title = { Text("Seekbar Style") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -125,180 +102,37 @@ fun CustomizationScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Seekbar Style - Navigate to separate screen
-            SeekbarStyleNavigationItem(
-                currentStyle = currentSeekbarStyle,
-                primaryColor = primaryColor,
-                onClick = onSeekbarStyleClick
+            Text(
+                text = "Choose how the seekbar appears on the player screen",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            SeekbarStyle.entries.forEach { style ->
+                SeekbarStylePreviewCard(
+                    style = style,
+                    isSelected = style == currentSeekbarStyle,
+                    primaryColor = primaryColor,
+                    surfaceColor = surfaceColor,
+                    onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            sessionManager.setSeekbarStyle(style.name)
+                        }
+                    }
+                )
+            }
             
-            // Artwork Shape - Navigate to separate screen
-            ArtworkShapeNavigationItem(
-                currentShape = currentArtworkShape,
-                primaryColor = primaryColor,
-                onClick = onArtworkShapeClick
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             // Info text
             Text(
-                text = "You can also change these from the player by long-pressing on the seekbar or artwork.",
+                text = "You can also change this from the player by long-pressing on the seekbar.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 8.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun CustomizationSection(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        content()
-    }
-}
-
-@Composable
-private fun SeekbarStyleNavigationItem(
-    currentStyle: SeekbarStyle,
-    primaryColor: Color,
-    onClick: () -> Unit
-) {
-    val styleName = when (currentStyle) {
-        SeekbarStyle.WAVEFORM -> "Waveform"
-        SeekbarStyle.WAVE_LINE -> "Wave Line"
-        SeekbarStyle.CLASSIC -> "Classic"
-        SeekbarStyle.DOTS -> "Dots"
-        SeekbarStyle.GRADIENT_BAR -> "Gradient"
-    }
-    
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.GraphicEq,
-                contentDescription = null,
-                tint = primaryColor,
-                modifier = Modifier.size(28.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Seekbar Style",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Currently: $styleName",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ArtworkShapeNavigationItem(
-    currentShape: ArtworkShape,
-    primaryColor: Color,
-    onClick: () -> Unit
-) {
-    val shapeName = when (currentShape) {
-        ArtworkShape.ROUNDED_SQUARE -> "Rounded"
-        ArtworkShape.CIRCLE -> "Circle"
-        ArtworkShape.VINYL -> "Vinyl"
-        ArtworkShape.SQUARE -> "Square"
-    }
-    
-    val icon = when (currentShape) {
-        ArtworkShape.ROUNDED_SQUARE -> Icons.Rounded.RoundedCorner
-        ArtworkShape.CIRCLE -> Icons.Default.Circle
-        ArtworkShape.VINYL -> Icons.Default.Album
-        ArtworkShape.SQUARE -> Icons.Default.Square
-    }
-    
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = primaryColor,
-                modifier = Modifier.size(28.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Artwork Shape",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Currently: $shapeName",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -337,22 +171,22 @@ private fun SeekbarStylePreviewCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(backgroundColor)
-            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
         color = backgroundColor,
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Preview canvas
             Canvas(
                 modifier = Modifier
-                    .width(100.dp)
-                    .height(40.dp)
+                    .width(120.dp)
+                    .height(48.dp)
             ) {
                 val progress = 0.6f
                 when (style) {
@@ -364,12 +198,12 @@ private fun SeekbarStylePreviewCard(
                 }
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(20.dp))
             
             Column {
                 Text(
                     text = styleName,
-                    style = MaterialTheme.typography.bodyLarge.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                     ),
                     color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface
@@ -383,68 +217,6 @@ private fun SeekbarStylePreviewCard(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ArtworkShapeCard(
-    shape: ArtworkShape,
-    isSelected: Boolean,
-    primaryColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) primaryColor.copy(alpha = 0.12f) else Color.Transparent,
-        animationSpec = spring(),
-        label = "bg"
-    )
-    
-    val borderColor by animateColorAsState(
-        targetValue = if (isSelected) primaryColor else MaterialTheme.colorScheme.outlineVariant,
-        animationSpec = spring(),
-        label = "border"
-    )
-    
-    val (shapeName, icon) = when (shape) {
-        ArtworkShape.ROUNDED_SQUARE -> "Rounded" to Icons.Rounded.RoundedCorner
-        ArtworkShape.CIRCLE -> "Circle" to Icons.Default.Circle
-        ArtworkShape.VINYL -> "Vinyl" to Icons.Default.Album
-        ArtworkShape.SQUARE -> "Square" to Icons.Default.Square
-    }
-    
-    Surface(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(backgroundColor)
-            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = backgroundColor,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(vertical = 16.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = shapeName,
-                tint = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(32.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = shapeName,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                ),
-                color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
