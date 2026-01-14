@@ -133,6 +133,9 @@ dependencies {
     
     // Gson
     implementation(libs.gson)
+
+    // Jsoup (HTML Parser)
+    implementation(libs.jsoup)
     
     // Testing
     testImplementation(libs.junit)
