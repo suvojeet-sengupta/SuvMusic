@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import com.suvojeet.suvmusic.data.model.ImportResult
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.ImportState
@@ -578,13 +580,15 @@ fun ImportSpotifyDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
+                    // Increase max height for the list
+                    .height(if (importState is ImportState.Success) 500.dp else 300.dp) 
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Import Spotify Playlist",
+                        text = if (importState is ImportState.Success) "Import Summary" else "Import Spotify Playlist",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -712,39 +716,71 @@ fun ImportSpotifyDialog(
                             }
                         }
                         is ImportState.Success -> {
+                            val successful = importState.results.count { it.matchedSong != null }
+                            val total = importState.results.size
+                            
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .background(Color(0xFF1DB954).copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape),
-                                    contentAlignment = Alignment.Center
+                                Text(
+                                    "$successful of $total songs imported",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (successful == total) Color.Green else TextPrimary
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                LazyColumn(
+                                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = Color(0xFF1DB954),
-                                        modifier = Modifier.size(32.dp)
-                                    )
+                                    items(importState.results) { result ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(DarkSurface, RoundedCornerShape(8.dp))
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (result.matchedSong != null) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = "Success",
+                                                    tint = Color.Green,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Failed",
+                                                    tint = Color.Red,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                            
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = result.originalTitle,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = TextPrimary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = result.originalArtist,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = TextSecondary,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                                 
-                                Spacer(modifier = Modifier.height(24.dp))
-                                
-                                Text(
-                                    "Import Successful!", 
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    "Your playlist is ready in your library.", 
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
-                                )
+                                Spacer(modifier = Modifier.height(16.dp))
                                 
                                 Button(
                                     onClick = onDismiss,
@@ -768,7 +804,7 @@ fun ImportSpotifyDialog(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.MusicNote, // Fallback icon, could be Error
+                                        imageVector = Icons.Default.MusicNote, // Fallback icon
                                         contentDescription = null,
                                         tint = Color.Red,
                                         modifier = Modifier.size(32.dp)
@@ -807,4 +843,3 @@ fun ImportSpotifyDialog(
         }
     }
 }
-
