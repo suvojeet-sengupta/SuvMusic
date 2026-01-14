@@ -87,6 +87,9 @@ class SessionManager @Inject constructor(
         // Player Customization
         private val SEEKBAR_STYLE_KEY = stringPreferencesKey("seekbar_style")
         private val ARTWORK_SHAPE_KEY = stringPreferencesKey("artwork_shape")
+        
+        // Radio / Endless Queue
+        private val ENDLESS_QUEUE_ENABLED_KEY = booleanPreferencesKey("endless_queue_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -170,6 +173,22 @@ class SessionManager @Inject constructor(
     suspend fun setArtworkShape(shape: String) {
         context.dataStore.edit { preferences ->
             preferences[ARTWORK_SHAPE_KEY] = shape
+        }
+    }
+    
+    // --- Endless Queue / Radio Mode ---
+    
+    fun isEndlessQueueEnabled(): Boolean = runBlocking {
+        context.dataStore.data.first()[ENDLESS_QUEUE_ENABLED_KEY] ?: true // Enabled by default
+    }
+    
+    val endlessQueueFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ENDLESS_QUEUE_ENABLED_KEY] ?: true
+    }
+    
+    suspend fun setEndlessQueue(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ENDLESS_QUEUE_ENABLED_KEY] = enabled
         }
     }
     

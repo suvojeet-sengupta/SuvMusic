@@ -51,6 +51,7 @@ fun NavGraph(
     onRepeatToggle: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onToggleVideoMode: () -> Unit = {},
+    onStartRadio: () -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
     onRefreshDevices: () -> Unit = {},
     player: Player? = null,
@@ -270,6 +271,7 @@ fun NavGraph(
                 onRepeatToggle = onRepeatToggle,
                 onToggleAutoplay = onToggleAutoplay,
                 onToggleVideoMode = onToggleVideoMode,
+                onStartRadio = onStartRadio,
                 player = player,
                 onPlayFromQueue = { index ->
                     if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
