@@ -21,7 +21,9 @@ data class PlaylistUiState(
     val error: String? = null,
     val isEditable: Boolean = false,
     val isRenaming: Boolean = false,
-    val isCreating: Boolean = false
+    val isCreating: Boolean = false,
+    val isDeleting: Boolean = false,
+    val deleteSuccess: Boolean = false
 ) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
@@ -179,6 +181,14 @@ class PlaylistViewModel @Inject constructor(
                 // Revert if we can't move (no setVideoId)
                 loadPlaylist()
             }
+        }
+    }
+
+    fun deletePlaylist() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeleting = true) }
+            val success = youTubeRepository.deletePlaylist(playlistId)
+            _uiState.update { it.copy(isDeleting = false, deleteSuccess = success) }
         }
     }
 }

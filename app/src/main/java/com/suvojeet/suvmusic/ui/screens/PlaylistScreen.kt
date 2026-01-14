@@ -100,6 +100,14 @@ fun PlaylistScreen(
     // Dialog states
     var showCreateDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Handle delete success
+    androidx.compose.runtime.LaunchedEffect(uiState.deleteSuccess) {
+        if (uiState.deleteSuccess) {
+            onBackClick()
+        }
+    }
 
     val context = LocalContext.current
     val sharePlaylist: (Playlist) -> Unit = { playlistToShare ->
@@ -203,6 +211,7 @@ fun PlaylistScreen(
                 onBackClick = onBackClick,
                 onCreatePlaylist = { showCreateDialog = true },
                 onRenamePlaylist = { showRenameDialog = true },
+                onDeletePlaylist = { showDeleteDialog = true },
                 onShareClick = { sharePlaylist(playlist) },
                 isDarkTheme = isDarkTheme,
                 contentColor = contentColor
@@ -234,6 +243,18 @@ fun PlaylistScreen(
                 }
             )
         }
+        
+        if (showDeleteDialog && playlist != null) {
+            com.suvojeet.suvmusic.ui.components.DeletePlaylistDialog(
+                isVisible = showDeleteDialog,
+                playlistTitle = playlist.title,
+                isDeleting = uiState.isDeleting,
+                onDismiss = { showDeleteDialog = false },
+                onDelete = {
+                    viewModel.deletePlaylist()
+                }
+            )
+        }
     }
 }
 
@@ -245,6 +266,7 @@ private fun TopBar(
     onBackClick: () -> Unit,
     onCreatePlaylist: (() -> Unit)? = null,
     onRenamePlaylist: (() -> Unit)? = null,
+    onDeletePlaylist: (() -> Unit)? = null,
     onShareClick: () -> Unit,
     isDarkTheme: Boolean,
     contentColor: Color
@@ -324,14 +346,25 @@ private fun TopBar(
                         }
                     )
                 }
-                if (isEditable && onRenamePlaylist != null) {
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text("Rename playlist", color = contentColor) },
-                        onClick = {
-                            showMenu = false
-                            onRenamePlaylist()
-                        }
-                    )
+                if (isEditable) {
+                    if (onRenamePlaylist != null) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text("Rename playlist", color = contentColor) },
+                            onClick = {
+                                showMenu = false
+                                onRenamePlaylist()
+                            }
+                        )
+                    }
+                    if (onDeletePlaylist != null) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text("Delete playlist", color = contentColor) },
+                            onClick = {
+                                showMenu = false
+                                onDeletePlaylist()
+                            }
+                        )
+                    }
                 }
             }
         }
