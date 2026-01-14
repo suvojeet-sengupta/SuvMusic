@@ -59,3 +59,8 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
+
+# Jsoup
+-keep class org.jsoup.** { *; }
+-dontwarn org.jsoup.**
+-dontwarn com.google.re2j.**
