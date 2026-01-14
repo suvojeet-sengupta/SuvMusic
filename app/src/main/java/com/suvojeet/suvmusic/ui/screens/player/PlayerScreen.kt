@@ -124,6 +124,7 @@ fun PlayerScreen(
     onRepeatToggle: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onToggleVideoMode: () -> Unit = {},
+    onStartRadio: () -> Unit = {},
     player: Player? = null,
     onPlayFromQueue: (Int) -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
@@ -751,6 +752,10 @@ fun PlayerScreen(
                 onSleepTimer = {
                     showActionsSheet = false
                     showSleepTimerSheet = true
+                },
+                onStartRadio = {
+                    showActionsSheet = false
+                    onStartRadio()
                 },
                 onSetRingtone = {
                     showActionsSheet = false
