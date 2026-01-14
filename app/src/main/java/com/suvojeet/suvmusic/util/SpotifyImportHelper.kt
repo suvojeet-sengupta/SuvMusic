@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.util
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.suvojeet.suvmusic.data.model.ImportResult
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
@@ -106,8 +107,8 @@ class SpotifyImportHelper @Inject constructor(
     /**
      * Matches Spotify songs to YouTube Music songs.
      */
-    suspend fun matchSongsOnYouTube(spotifySongs: List<Pair<String, String>>, onProgress: (Int, Int) -> Unit): List<Song> {
-        val matchedSongs = mutableListOf<Song>()
+    suspend fun matchSongsOnYouTube(spotifySongs: List<Pair<String, String>>, onProgress: (Int, Int) -> Unit): List<ImportResult> {
+        val results = mutableListOf<ImportResult>()
         spotifySongs.forEachIndexed { index, (title, artist) ->
             try {
                 val query = "$title $artist"
@@ -116,12 +117,13 @@ class SpotifyImportHelper @Inject constructor(
                     it.title.contains(title, ignoreCase = true) || title.contains(it.title, ignoreCase = true)
                 } ?: searchResults.firstOrNull()
                 
-                bestMatch?.let { matchedSongs.add(it) }
+                results.add(ImportResult(title, artist, bestMatch))
             } catch (e: Exception) {
                 e.printStackTrace()
+                results.add(ImportResult(title, artist, null))
             }
             onProgress(index + 1, spotifySongs.size)
         }
-        return matchedSongs
+        return results
     }
 }
