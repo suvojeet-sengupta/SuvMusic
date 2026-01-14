@@ -57,7 +57,8 @@ fun SongActionsSheet(
     onViewCredits: () -> Unit = {},
     onSleepTimer: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
-    onSetRingtone: () -> Unit = {}
+    onSetRingtone: () -> Unit = {},
+    onStartRadio: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState()
     val context = LocalContext.current
@@ -165,6 +166,13 @@ fun SongActionsSheet(
                     icon = Icons.Default.PlaylistAdd,
                     title = "Add to a Playlist...",
                     onClick = { onAddToPlaylist(); onDismiss() }
+                )
+                
+                ActionItem(
+                    icon = Icons.Default.Radio,
+                    title = "Start a Radio",
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    onClick = { onStartRadio(); onDismiss() }
                 )
                 
                 ActionItem(

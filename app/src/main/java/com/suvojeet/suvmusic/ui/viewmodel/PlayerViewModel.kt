@@ -20,6 +20,7 @@ import com.suvojeet.suvmusic.player.SleepTimerManager
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,7 +30,8 @@ class PlayerViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val sleepTimerManager: SleepTimerManager,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val recommendationEngine: RecommendationEngine
 ) : ViewModel() {
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
@@ -47,6 +49,12 @@ class PlayerViewModel @Inject constructor(
     fun setSleepTimer(option: SleepTimerOption, customMinutes: Int? = null) {
         sleepTimerManager.startTimer(option, customMinutes)
     }
+    
+    // Radio Mode State
+    private val _isRadioMode = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
+    
+    private var radioBaseSongId: String? = null
     
     init {
         observeCurrentSong()
@@ -177,6 +185,86 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun getPlayer() = musicPlayer.getPlayer()
+    
+    /**
+     * Start a radio based on the given song.
+     * Uses YT Music recommendations when logged in, local history-based recommendations when not.
+     * Creates an endless queue that auto-loads more songs as you near the end.
+     */
+    fun startRadio(song: Song) {
+        viewModelScope.launch {
+            _isRadioMode.value = true
+            radioBaseSongId = song.id
+            
+            val radioSongs = mutableListOf<Song>()
+            radioSongs.add(song) // Current song first
+            
+            try {
+                // Try YT Music recommendations first (works best when logged in)
+                if (song.source == SongSource.YOUTUBE || song.source == SongSource.DOWNLOADED) {
+                    val relatedSongs = youTubeRepository.getRelatedSongs(song.id)
+                    if (relatedSongs.isNotEmpty()) {
+                        radioSongs.addAll(relatedSongs.take(30))
+                    }
+                }
+                
+                // If not enough songs, use local recommendation engine
+                if (radioSongs.size < 10) {
+                    val localRecommendations = recommendationEngine.getPersonalizedRecommendations(30)
+                    // Filter out songs already in queue
+                    val existingIds = radioSongs.map { it.id }.toSet()
+                    val newSongs = localRecommendations.filter { it.id !in existingIds }
+                    radioSongs.addAll(newSongs)
+                }
+                
+                // Play the radio queue
+                if (radioSongs.isNotEmpty()) {
+                    musicPlayer.playSong(song, radioSongs, 0)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerViewModel", "Error starting radio", e)
+                // Fallback: just play the song
+                musicPlayer.playSong(song)
+            }
+        }
+    }
+    
+    /**
+     * Load more songs for endless radio queue.
+     * Called automatically when near end of queue.
+     */
+    fun loadMoreRadioSongs() {
+        if (!_isRadioMode.value) return
+        if (!sessionManager.isEndlessQueueEnabled()) return
+        
+        val baseSongId = radioBaseSongId ?: playerState.value.currentSong?.id ?: return
+        
+        viewModelScope.launch {
+            try {
+                val moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
+                if (moreSongs.isNotEmpty()) {
+                    // Filter out songs already in queue
+                    val currentQueue = playerState.value.queue
+                    val existingIds = currentQueue.map { it.id }.toSet()
+                    val newSongs = moreSongs.filter { it.id !in existingIds }
+                    
+                    if (newSongs.isNotEmpty()) {
+                        musicPlayer.addToQueue(newSongs.take(10))
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerViewModel", "Error loading more radio songs", e)
+            }
+        }
+    }
+    
+    /**
+     * Stop radio mode and clear the endless queue behavior.
+     */
+    fun stopRadio() {
+        _isRadioMode.value = false
+        radioBaseSongId = null
+    }
     
     /**
      * Play a song from a deep link (YouTube/YouTube Music URL).

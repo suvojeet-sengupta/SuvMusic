@@ -778,6 +778,27 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
+     * Add songs to the end of the current queue.
+     * Used for endless radio mode to continuously add recommendations.
+     */
+    fun addToQueue(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        
+        scope.launch {
+            val currentQueue = _playerState.value.queue.toMutableList()
+            currentQueue.addAll(songs)
+            
+            _playerState.update { it.copy(queue = currentQueue) }
+            
+            // Add media items to player
+            songs.forEach { song ->
+                val mediaItem = createMediaItem(song, resolveStream = false)
+                mediaController?.addMediaItem(mediaItem)
+            }
+        }
+    }
+    
+    /**
      * Toggle video mode for YouTube songs.
      * Switches between audio-only and video playback while preserving position.
      */
