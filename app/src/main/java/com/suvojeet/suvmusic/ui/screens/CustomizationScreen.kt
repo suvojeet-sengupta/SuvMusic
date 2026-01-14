@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Square
@@ -77,7 +78,8 @@ import kotlin.random.Random
 @Composable
 fun CustomizationScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onArtworkShapeClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -144,27 +146,12 @@ fun CustomizationScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Artwork Shape Section
-            CustomizationSection(title = "Artwork Shape") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ArtworkShape.entries.forEach { shape ->
-                        ArtworkShapeCard(
-                            shape = shape,
-                            isSelected = shape == currentArtworkShape,
-                            primaryColor = primaryColor,
-                            onClick = {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    sessionManager.setArtworkShape(shape.name)
-                                }
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
+            // Artwork Shape - Navigate to separate screen
+            ArtworkShapeNavigationItem(
+                currentShape = currentArtworkShape,
+                primaryColor = primaryColor,
+                onClick = onArtworkShapeClick
+            )
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -194,6 +181,74 @@ private fun CustomizationSection(
             modifier = Modifier.padding(bottom = 12.dp)
         )
         content()
+    }
+}
+
+@Composable
+private fun ArtworkShapeNavigationItem(
+    currentShape: ArtworkShape,
+    primaryColor: Color,
+    onClick: () -> Unit
+) {
+    val shapeName = when (currentShape) {
+        ArtworkShape.ROUNDED_SQUARE -> "Rounded"
+        ArtworkShape.CIRCLE -> "Circle"
+        ArtworkShape.VINYL -> "Vinyl"
+        ArtworkShape.SQUARE -> "Square"
+    }
+    
+    val icon = when (currentShape) {
+        ArtworkShape.ROUNDED_SQUARE -> Icons.Rounded.RoundedCorner
+        ArtworkShape.CIRCLE -> Icons.Default.Circle
+        ArtworkShape.VINYL -> Icons.Default.Album
+        ArtworkShape.SQUARE -> Icons.Default.Square
+    }
+    
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = primaryColor,
+                modifier = Modifier.size(28.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Artwork Shape",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Currently: $shapeName",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Open",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
