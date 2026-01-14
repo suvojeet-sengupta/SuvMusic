@@ -63,7 +63,24 @@ class LibraryViewModel @Inject constructor(
     
     private fun loadData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            // 1. Load cache immediately
+            val cachedPlaylists = sessionManager.getCachedLibraryPlaylistsSync()
+            val cachedLikedSongs = sessionManager.getCachedLibraryLikedSongsSync()
+            
+            if (cachedPlaylists.isNotEmpty() || cachedLikedSongs.isNotEmpty()) {
+                // Show cached data immediately, then refresh in background
+                _uiState.update { 
+                    it.copy(
+                        playlists = cachedPlaylists,
+                        likedSongs = cachedLikedSongs,
+                        isLoading = false,
+                        isRefreshing = true,
+                        error = null
+                    ) 
+                }
+            } else {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+            }
             
             try {
                 // Refresh downloads to scan for new files in Downloads/SuvMusic
@@ -72,7 +89,7 @@ class LibraryViewModel @Inject constructor(
                 // Get current source preference
                 val musicSource = sessionManager.getMusicSource()
                 
-                // Fetch from both sources
+                // Fetch fresh data from network
                 val ytPlaylists = try {
                     youTubeRepository.getUserPlaylists()
                 } catch (e: Exception) {
@@ -98,19 +115,28 @@ class LibraryViewModel @Inject constructor(
                     emptyList()
                 }
                 
+                // Save to cache
+                if (allPlaylists.isNotEmpty()) {
+                    sessionManager.saveLibraryPlaylistsCache(allPlaylists)
+                }
+                if (likedSongs.isNotEmpty()) {
+                    sessionManager.saveLibraryLikedSongsCache(likedSongs)
+                }
+                
                 _uiState.update { 
                     it.copy(
                         playlists = allPlaylists,
                         localSongs = localSongs,
                         likedSongs = likedSongs,
                         isLoading = false,
-                        isRefreshing = false
+                        isRefreshing = false,
+                        error = null
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
-                        error = e.message,
+                        error = if (it.playlists.isEmpty() && it.likedSongs.isEmpty()) e.message else null,
                         isLoading = false,
                         isRefreshing = false
                     )
