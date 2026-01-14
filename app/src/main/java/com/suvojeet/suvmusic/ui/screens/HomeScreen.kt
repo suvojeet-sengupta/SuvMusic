@@ -190,8 +190,7 @@ private fun HomeItemCard(
 /**
  * Get greeting based on time of day
  */
-    }
-}
+
 
 private fun getGreeting(userName: String? = null): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
