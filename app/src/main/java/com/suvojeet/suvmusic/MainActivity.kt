@@ -217,12 +217,17 @@ fun SuvMusicApp(
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
-    val playerState by playerViewModel.playerState.collectAsState()
+    
+    // Optimized states to reduce recompositions
+    val playbackInfo by playerViewModel.playbackInfo.collectAsState(initial = com.suvojeet.suvmusic.data.model.PlayerState())
+    val playerState by playerViewModel.playerState.collectAsState() // Still needed for some components
+    
     val lyrics by playerViewModel.lyricsState.collectAsState()
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
     
     // Track if song is playing for Activity-level volume interception
-    val hasSong = playerState.currentSong != null
+    // Use playbackInfo (stable) to avoid recomposing the whole app shell on progress updates
+    val hasSong = playbackInfo.currentSong != null
     LaunchedEffect(hasSong) {
         onPlaybackStateChanged(hasSong)
     }
@@ -387,6 +392,7 @@ fun SuvMusicApp(
             ) {
                 NavGraph(
                     navController = navController,
+                    playbackInfo = playbackInfo,
                     playerState = playerState,
                     sessionManager = sessionManager,
                     onPlaySong = { songs, index ->
@@ -405,7 +411,7 @@ fun SuvMusicApp(
                     onToggleAutoplay = { playerViewModel.toggleAutoplay() },
                     onToggleVideoMode = { playerViewModel.toggleVideoMode() },
                     onStartRadio = { 
-                        playerState.currentSong?.let { song ->
+                        playbackInfo.currentSong?.let { song ->
                             playerViewModel.startRadio(song)
                         }
                     },
@@ -434,7 +440,7 @@ fun SuvMusicApp(
         // But if a new song starts, maybe it should reappear?
         // Let's rely on user explicitly closing it.
         
-        if (!showBottomNav && showMiniPlayer && playerState.currentSong != null) {
+        if (!showBottomNav && showMiniPlayer && playbackInfo.currentSong != null) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = isFloatingMiniPlayerVisible,
                 enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
@@ -444,11 +450,12 @@ fun SuvMusicApp(
                     .padding(horizontal = 12.dp, vertical = 16.dp)
             ) {
                 MiniPlayer(
-                    playerState = playerState,
+                    playerState = playbackInfo,
                     onPlayPauseClick = { playerViewModel.togglePlayPause() },
                     onNextClick = { playerViewModel.seekToNext() },
                     onPlayerClick = { navController.navigate(Destination.Player.route) },
-                    onCloseClick = { isFloatingMiniPlayerVisible = false }
+                    onCloseClick = { isFloatingMiniPlayerVisible = false },
+                    progressProvider = { playerState.progress }
                 )
             }
         }

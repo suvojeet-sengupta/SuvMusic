@@ -112,6 +112,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun PlayerScreen(
+    playbackInfo: PlayerState,
     playerState: PlayerState,
     onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
@@ -142,7 +143,7 @@ fun PlayerScreen(
     ringtoneViewModel: RingtoneViewModel = hiltViewModel()
 ) {
 
-    val song = playerState.currentSong
+    val song = playbackInfo.currentSong
     val context = LocalContext.current
     val playlistUiState by playlistViewModel.uiState.collectAsState()
     
@@ -478,8 +479,8 @@ fun PlayerScreen(
 
                                 // Progress & Waveform
                                 WaveformSeeker(
-                                    progress = playerState.progress,
-                                    isPlaying = playerState.isPlaying,
+                                    progressProvider = { playerState.progress },
+                                    isPlaying = playbackInfo.isPlaying,
                                     onSeek = { progress ->
                                         val newPosition = (progress * playerState.duration).toLong()
                                         onSeekTo(newPosition)
@@ -497,8 +498,8 @@ fun PlayerScreen(
 
                                 // Time labels
                                 TimeLabelsWithQuality(
-                                    currentPosition = playerState.currentPosition,
-                                    duration = playerState.duration,
+                                    currentPositionProvider = { playerState.currentPosition },
+                                    durationProvider = { playerState.duration },
                                     dominantColors = dominantColors
                                 )
 
@@ -617,8 +618,8 @@ fun PlayerScreen(
 
                             // Progress & Waveform
                             WaveformSeeker(
-                                progress = playerState.progress,
-                                isPlaying = playerState.isPlaying,
+                                progressProvider = { playerState.progress },
+                                isPlaying = playbackInfo.isPlaying,
                                 onSeek = { progress ->
                                     val newPosition = (progress * playerState.duration).toLong()
                                     onSeekTo(newPosition)
@@ -636,8 +637,8 @@ fun PlayerScreen(
 
                             // Time labels with quality badge
                             TimeLabelsWithQuality(
-                                currentPosition = playerState.currentPosition,
-                                duration = playerState.duration,
+                                currentPositionProvider = { playerState.currentPosition },
+                                durationProvider = { playerState.duration },
                                 dominantColors = dominantColors
                             )
 
@@ -712,7 +713,7 @@ fun PlayerScreen(
                 LyricsScreen(
                     lyrics = lyrics,
                     isFetching = isFetchingLyrics,
-                    currentTime = playerState.currentPosition,
+                    currentTimeProvider = { playerState.currentPosition },
                     artworkUrl = highResThumbnail,
                     onClose = { showLyrics = false }
                 )

@@ -38,6 +38,7 @@ import androidx.media3.common.Player
 @Composable
 fun NavGraph(
     navController: NavHostController,
+    playbackInfo: PlayerState,
     playerState: PlayerState,
     sessionManager: SessionManager,
     onPlaySong: (List<Song>, Int) -> Unit,
@@ -262,6 +263,7 @@ fun NavGraph(
             }
         ) {
             PlayerScreen(
+                playbackInfo = playbackInfo,
                 playerState = playerState,
                 onPlayPause = onPlayPause,
                 onSeekTo = onSeekTo,
