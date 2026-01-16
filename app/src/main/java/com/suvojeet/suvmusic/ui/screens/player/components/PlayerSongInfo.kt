@@ -166,10 +166,13 @@ fun SongInfoSection(
 
 @Composable
 fun TimeLabelsWithQuality(
-    currentPosition: Long,
-    duration: Long,
+    currentPositionProvider: () -> Long,
+    durationProvider: () -> Long,
     dominantColors: DominantColors
 ) {
+    val currentPosition = currentPositionProvider()
+    val duration = durationProvider()
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()

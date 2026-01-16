@@ -67,7 +67,7 @@ enum class SeekbarStyle {
  */
 @Composable
 fun WaveformSeeker(
-    progress: Float,
+    progressProvider: () -> Float,
     isPlaying: Boolean,
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
@@ -103,12 +103,13 @@ fun WaveformSeeker(
     }
     
     var isDragging by remember { mutableStateOf(false) }
-    var currentProgress by remember { mutableFloatStateOf(progress) }
+    var currentProgress by remember { mutableFloatStateOf(progressProvider()) }
     
     // Update currentProgress from external progress only when NOT dragging
-    LaunchedEffect(progress) {
+    val externalProgress = progressProvider()
+    LaunchedEffect(externalProgress) {
         if (!isDragging) {
-            currentProgress = progress
+            currentProgress = externalProgress
         }
     }
     

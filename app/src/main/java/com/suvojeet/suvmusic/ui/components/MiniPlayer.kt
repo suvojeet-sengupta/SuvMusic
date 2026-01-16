@@ -55,7 +55,8 @@ fun MiniPlayer(
     onNextClick: () -> Unit,
     onPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onCloseClick: (() -> Unit)? = null
+    onCloseClick: (() -> Unit)? = null,
+    progressProvider: () -> Float = { playerState.progress }
 ) {
     val song = playerState.currentSong
 
@@ -187,7 +188,7 @@ fun MiniPlayer(
                     }
                     // Progress bar
                     val animatedProgress by animateFloatAsState(
-                        targetValue = playerState.progress,
+                        targetValue = progressProvider(),
                         animationSpec = spring(stiffness = Spring.StiffnessLow),
                         label = "progress"
                     )

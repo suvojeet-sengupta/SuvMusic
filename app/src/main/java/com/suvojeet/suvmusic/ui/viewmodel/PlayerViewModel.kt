@@ -36,6 +36,12 @@ class PlayerViewModel @Inject constructor(
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
     
+    // Stable player state that ignores frequent progress updates for UI optimization
+    val playbackInfo = musicPlayer.playerState.map { state ->
+        // Return a copy with progress fields reset to avoid triggering changes
+        state.copy(currentPosition = 0L, duration = 0L, bufferedPercentage = 0)
+    }.distinctUntilChanged()
+    
     private val _lyricsState = kotlinx.coroutines.flow.MutableStateFlow<com.suvojeet.suvmusic.data.model.Lyrics?>(null)
     val lyricsState: StateFlow<com.suvojeet.suvmusic.data.model.Lyrics?> = _lyricsState.asStateFlow()
     

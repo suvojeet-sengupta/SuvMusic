@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 fun LyricsScreen(
     lyrics: Lyrics?,
     isFetching: Boolean,
-    currentTime: Long,
+    currentTimeProvider: () -> Long,
     artworkUrl: String?,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -129,7 +129,7 @@ fun LyricsScreen(
                 } else {
                     LyricsList(
                         lyrics = lyrics,
-                        currentTime = currentTime
+                        currentTimeProvider = currentTimeProvider
                     )
                 }
             }
@@ -155,11 +155,12 @@ fun LyricsScreen(
 @Composable
 fun LyricsList(
     lyrics: Lyrics,
-    currentTime: Long
+    currentTimeProvider: () -> Long
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
+    val currentTime = currentTimeProvider()
 
     // Determine active line index
     var activeLineIndex by remember { mutableStateOf(-1) }
