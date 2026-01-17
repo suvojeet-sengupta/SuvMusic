@@ -1,5 +1,14 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -246,10 +255,12 @@ private fun PlaylistDisplayCard(
             .replace(Regex("=w\\d+"), "=w544")
     } ?: playlist.thumbnailUrl
     
-    Column(
+    Box(
         modifier = Modifier
             .width(160.dp)
-            .clickable(onClick = onClick)
+            .height(160.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .bounceClick(onClick = onClick)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -258,25 +269,42 @@ private fun PlaylistDisplayCard(
                 .size(544)  // Request high-res
                 .build(),
             contentDescription = playlist.name,
-            modifier = Modifier
-                .size(160.dp)
-                .clip(RoundedCornerShape(8.dp)),
+            modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = playlist.name,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = playlist.uploaderName,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
-        )
+        
+        // Gradient Overlay for text readability
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.6f),
+                            Color.Black.copy(alpha = 0.9f)
+                        )
+                    )
+                )
+                .padding(12.dp)
+        ) {
+            Column {
+                Text(
+                    text = playlist.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    color = Color.White
+                )
+                Text(
+                    text = playlist.uploaderName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.8f),
+                    maxLines = 1
+                )
+            }
+        }
     }
 }
 
@@ -296,7 +324,7 @@ private fun MediumSongCard(
     Column(
         modifier = Modifier
             .width(160.dp)
-            .clickable(onClick = onClick)
+            .bounceClick(onClick = onClick)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -307,7 +335,7 @@ private fun MediumSongCard(
             contentDescription = song.title,
             modifier = Modifier
                 .size(160.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(RoundedCornerShape(16.dp)),
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -357,3 +385,26 @@ private fun HomeSectionHeader(
     }
 }
 
+// -----------------------------------------------------------------------------
+// Extensions
+// -----------------------------------------------------------------------------
+
+private fun Modifier.bounceClick(
+    scaleDown: Float = 0.95f,
+    onClick: () -> Unit
+): Modifier = composed {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) scaleDown else 1f,
+        label = "bounce"
+    )
+
+    this
+        .scale(scale)
+        .clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = onClick
+        )
+}
