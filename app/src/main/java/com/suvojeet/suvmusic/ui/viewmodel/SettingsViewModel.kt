@@ -8,6 +8,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.ThemeMode
@@ -31,6 +32,7 @@ data class SettingsUiState(
     val audioQuality: AudioQuality = AudioQuality.HIGH,
     val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val appTheme: AppTheme = AppTheme.DEFAULT,
     val dynamicColorEnabled: Boolean = true,
     val gaplessPlaybackEnabled: Boolean = true,
     val automixEnabled: Boolean = true,
@@ -70,6 +72,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(audioQuality = quality) }
             }
         }
+        
+        viewModelScope.launch {
+            sessionManager.appThemeFlow.collect { theme ->
+                _uiState.update { it.copy(appTheme = theme) }
+            }
+        }
     }
     
     private fun loadSettings() {
@@ -80,6 +88,7 @@ class SettingsViewModel @Inject constructor(
                 audioQuality = sessionManager.getAudioQuality(),
                 downloadQuality = sessionManager.getDownloadQuality(),
                 themeMode = sessionManager.getThemeMode(),
+                appTheme = sessionManager.getAppTheme(),
                 dynamicColorEnabled = sessionManager.isDynamicColorEnabled(),
                 gaplessPlaybackEnabled = sessionManager.isGaplessPlaybackEnabled(),
                 automixEnabled = sessionManager.isAutomixEnabled(),
@@ -209,6 +218,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setThemeMode(mode)
             _uiState.update { it.copy(themeMode = mode) }
+        }
+    }
+    
+    fun setAppTheme(theme: AppTheme) {
+        viewModelScope.launch {
+            sessionManager.setAppTheme(theme)
+            _uiState.update { it.copy(appTheme = theme) }
         }
     }
     

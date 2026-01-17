@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.Song
@@ -87,6 +88,9 @@ class SessionManager @Inject constructor(
         // Player Customization
         private val SEEKBAR_STYLE_KEY = stringPreferencesKey("seekbar_style")
         private val ARTWORK_SHAPE_KEY = stringPreferencesKey("artwork_shape")
+        
+        // Static Theme
+        private val APP_THEME_KEY = stringPreferencesKey("app_theme")
         
         // Radio / Endless Queue
         private val ENDLESS_QUEUE_ENABLED_KEY = booleanPreferencesKey("endless_queue_enabled")
@@ -341,6 +345,27 @@ class SessionManager @Inject constructor(
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[THEME_MODE_KEY] = mode.name
+        }
+    }
+
+    // --- App Theme (Static Colors) ---
+
+    fun getAppTheme(): AppTheme = runBlocking {
+        val themeName = context.dataStore.data.first()[APP_THEME_KEY]
+        themeName?.let {
+            try { AppTheme.valueOf(it) } catch (e: Exception) { AppTheme.DEFAULT }
+        } ?: AppTheme.DEFAULT
+    }
+
+    val appThemeFlow: Flow<AppTheme> = context.dataStore.data.map { preferences ->
+        preferences[APP_THEME_KEY]?.let {
+            try { AppTheme.valueOf(it) } catch (e: Exception) { AppTheme.DEFAULT }
+        } ?: AppTheme.DEFAULT
+    }
+
+    suspend fun setAppTheme(theme: AppTheme) {
+        context.dataStore.edit { preferences ->
+            preferences[APP_THEME_KEY] = theme.name
         }
     }
     
