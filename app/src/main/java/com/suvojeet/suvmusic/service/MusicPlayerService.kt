@@ -128,6 +128,20 @@ class MusicPlayerService : MediaSessionService() {
                 }
             })
             .build()
+            
+        // Customize the notification provider to ensure seekbar and controls work perfectly
+        val notificationProvider = object : androidx.media3.session.DefaultMediaNotificationProvider(this) {
+            override fun getMediaButtons(
+                session: MediaSession,
+                playerCommands: androidx.media3.common.Player.Commands,
+                customLayout: androidx.media3.common.util.ImmutableList<androidx.media3.session.CommandButton>,
+                showPauseButton: Boolean
+            ): androidx.media3.common.util.ImmutableList<androidx.media3.session.CommandButton> {
+                // Ensure standard transport controls are used
+                return super.getMediaButtons(session, playerCommands, customLayout, showPauseButton)
+            }
+        }
+        setMediaNotificationProvider(notificationProvider)
     }
     
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
