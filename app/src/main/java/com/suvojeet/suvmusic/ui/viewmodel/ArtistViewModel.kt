@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.Artist
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ data class ArtistUiState(
 @HiltViewModel
 class ArtistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -47,7 +49,14 @@ class ArtistViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val artist = youTubeRepository.getArtist(artistId)
+                // Heuristic to determine source
+                val isYouTubeId = artistId.startsWith("UC") || artistId.startsWith("FE") || artistId.startsWith("VL")
+                
+                val artist = if (isYouTubeId) {
+                    youTubeRepository.getArtist(artistId)
+                } else {
+                    jioSaavnRepository.getArtist(artistId)
+                }
 
                 if (artist != null) {
                     _uiState.update {
@@ -58,7 +67,7 @@ class ArtistViewModel @Inject constructor(
                     }
                 } else {
                     // Determine error type based on session state
-                    val errorType = if (!sessionManager.isLoggedIn()) {
+                    val errorType = if (!sessionManager.isLoggedIn() && isYouTubeId) {
                         ArtistError.AUTH_REQUIRED
                     } else {
                         ArtistError.NETWORK
@@ -84,9 +93,13 @@ class ArtistViewModel @Inject constructor(
 
     fun toggleSubscribe() {
         val currentArtist = _uiState.value.artist ?: return
-        viewModelScope.launch {
-            youTubeRepository.subscribe(currentArtist.id, true)
-            loadArtist()
+        
+        // Only support subscribe for YouTube artists for now
+        if (currentArtist.id.startsWith("UC") || currentArtist.id.startsWith("FE")) {
+            viewModelScope.launch {
+                youTubeRepository.subscribe(currentArtist.id, true)
+                loadArtist()
+            }
         }
     }
 }
