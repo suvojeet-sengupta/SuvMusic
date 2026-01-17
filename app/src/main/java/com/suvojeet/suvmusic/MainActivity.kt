@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.navigation.Destination
@@ -97,6 +98,7 @@ class MainActivity : ComponentActivity() {
             val sessionManager = remember { SessionManager(this) }
             val themeMode by sessionManager.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
             val dynamicColor by sessionManager.dynamicColorFlow.collectAsState(initial = true)
+            val appTheme by sessionManager.appThemeFlow.collectAsState(initial = AppTheme.DEFAULT)
             val systemDarkTheme = isSystemInDarkTheme()
             
             val darkTheme = when (themeMode) {
@@ -105,7 +107,11 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> systemDarkTheme
             }
             
-            SuvMusicTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
+            SuvMusicTheme(
+                darkTheme = darkTheme, 
+                dynamicColor = dynamicColor,
+                appTheme = appTheme
+            ) {
                 SuvMusicApp(
                     initialDeepLink = deepLinkUrl,
                     networkMonitor = networkMonitor,

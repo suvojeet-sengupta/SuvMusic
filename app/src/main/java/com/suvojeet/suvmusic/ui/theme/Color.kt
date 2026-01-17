@@ -90,3 +90,65 @@ val GlassPurple = Color(0x339D4EDD)
 val GradientStart = Purple50
 val GradientMiddle = Magenta50
 val GradientEnd = Cyan50
+
+// --- NEW THEMES ---
+
+// Ocean Blue Theme
+val Blue10 = Color(0xFF001D32)
+val Blue20 = Color(0xFF003355)
+val Blue30 = Color(0xFF004B79)
+val Blue40 = Color(0xFF00649F)
+val Blue80 = Color(0xFF99CBFF)
+val Blue90 = Color(0xFFD0E4FF)
+
+val Teal10 = Color(0xFF002022)
+val Teal20 = Color(0xFF00373A)
+val Teal30 = Color(0xFF004F53)
+val Teal40 = Color(0xFF006A6F)
+val Teal80 = Color(0xFF4CD9E2)
+val Teal90 = Color(0xFF9BF6FF)
+
+// Sunset Orange Theme
+val Orange10 = Color(0xFF3E0500)
+val Orange20 = Color(0xFF630E00)
+val Orange30 = Color(0xFF8B1A00)
+val Orange40 = Color(0xFFB52600)
+val Orange80 = Color(0xFFFFB59D)
+val Orange90 = Color(0xFFFFDBCF)
+
+val Gold10 = Color(0xFF261900)
+val Gold20 = Color(0xFF402D00)
+val Gold30 = Color(0xFF5C4200)
+val Gold40 = Color(0xFF7A5900)
+val Gold80 = Color(0xFFF0C048)
+val Gold90 = Color(0xFFFFDF9C)
+
+// Nature Green Theme
+val Green10 = Color(0xFF00210B)
+val Green20 = Color(0xFF003816)
+val Green30 = Color(0xFF005223)
+val Green40 = Color(0xFF006D31)
+val Green80 = Color(0xFF8CF7A9)
+val Green90 = Color(0xFFA9FBC2)
+
+val Lime10 = Color(0xFF1A1D00)
+val Lime20 = Color(0xFF2D3200)
+val Lime30 = Color(0xFF434900)
+val Lime40 = Color(0xFF5B6100)
+val Lime80 = Color(0xFFC7CD7A)
+val Lime90 = Color(0xFFE3E993)
+
+// Love Pink Theme
+val Pink10 = Color(0xFF3E001D)
+val Pink20 = Color(0xFF630031)
+val Pink30 = Color(0xFF890046)
+val Pink40 = Color(0xFFB0005C)
+val Pink80 = Color(0xFFFFB0CD)
+val Pink90 = Color(0xFFFFD8E4)
+
+val Rose10 = Color(0xFF3F0010)
+val Rose20 = Color(0xFF66001E)
+val Rose30 = Color(0xFF8E002C)
+val Rose40 = Color(0xFFB8003C)
+val Rose80 = Color(0xFFFFB2B9)
+val Rose90 = Color(0xFFFFDAD9)
