@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
@@ -84,6 +85,7 @@ fun SearchScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onArtistClick: (String) -> Unit = {}, // Artist browse ID
     onPlaylistClick: (String) -> Unit = {}, // Playlist ID
+    onAlbumClick: (Album) -> Unit = {},
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -332,6 +334,31 @@ fun SearchScreen(
                                 PlaylistSearchCard(
                                     playlist = playlist,
                                     onClick = { onPlaylistClick(playlist.id) }
+                                )
+                            }
+                        }
+                    }
+                    
+                    item {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
+                // Album Results
+                if (uiState.query.isNotBlank() && uiState.albumResults.isNotEmpty()) {
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        ) {
+                            items(uiState.albumResults) { album ->
+                                AlbumSearchCard(
+                                    album = album,
+                                    onClick = { onAlbumClick(album) }
                                 )
                             }
                         }
@@ -695,6 +722,75 @@ private fun PlaylistSearchCard(
         if (playlist.author.isNotBlank()) {
             Text(
                 text = playlist.author,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlbumSearchCard(
+    album: Album,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Column(
+        modifier = Modifier
+            .width(140.dp)
+            .clickable(onClick = onClick)
+    ) {
+        // Album thumbnail
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            if (album.thumbnailUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(album.thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = album.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Album title
+        Text(
+            text = album.title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        
+        // Artist/Year
+        val artistText = if (album.artist.isNotBlank()) album.artist else ""
+        val yearText = if (album.year != null) " • ${album.year}" else ""
+        val subtitle = artistText + yearText
+        
+        if (subtitle.isNotBlank()) {
+            Text(
+                text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

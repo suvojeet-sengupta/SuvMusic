@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.BrowseCategory
 import com.suvojeet.suvmusic.data.model.Playlist
@@ -44,6 +45,7 @@ data class SearchUiState(
     val filter: String = YouTubeRepository.FILTER_SONGS,
     val results: List<Song> = emptyList(),
     val artistResults: List<Artist> = emptyList(),
+    val albumResults: List<Album> = emptyList(),
     val playlistResults: List<Playlist> = emptyList(),
     val suggestions: List<String> = emptyList(),
     val browseCategories: List<BrowseCategory> = emptyList(),
@@ -342,12 +344,14 @@ class SearchViewModel @Inject constructor(
                         }
                     }
                     SearchTab.JIOSAAVN -> {
-                        // Search JioSaavn (320kbps)
-                        val results = jioSaavnRepository.search(query)
+                        // Search JioSaavn (320kbps) - Comprehensive search
+                        val results = jioSaavnRepository.searchAll(query)
                         _uiState.update { 
                             it.copy(
-                                results = results,
-                                artistResults = emptyList(),
+                                results = results.songs,
+                                artistResults = results.artists,
+                                albumResults = results.albums,
+                                playlistResults = results.playlists,
                                 isLoading = false
                             )
                         }
