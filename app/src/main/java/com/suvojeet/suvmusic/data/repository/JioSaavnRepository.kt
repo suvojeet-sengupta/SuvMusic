@@ -112,6 +112,52 @@ class JioSaavnRepository @Inject constructor(
     }
     
     /**
+     * Get artist details by ID.
+     */
+    suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.data.model.Artist? = withContext(Dispatchers.IO) {
+        try {
+            // Try fetching artist details using webapi.get
+            // JioSaavn uses a "token" (which is the ID we get from search) or a permalink
+            // Usually the ID from search results is the one we need.
+            val url = "$BASE_URL?__call=webapi.get&token=$artistId&type=artist&p=1&n_song=20&n_album=20&sub_type=songs&category=&sort_order=&includeMetaTags=0&ctx=web6dot0&api_version=4&_format=json&_marker=0"
+            val response = makeRequest(url)
+            val json = JsonParser.parseString(response).asJsonObject
+            
+            val name = json.get("name")?.asString ?: "Unknown Artist"
+            val image = json.get("image")?.asString?.toHighResImage()
+            val fans = json.get("fan_count")?.asString
+            val description = json.get("wiki")?.asString?.decodeHtml()
+            
+            // Songs
+            val topSongs = json.getAsJsonArray("topSongs")?.mapNotNull { parseSong(it.asJsonObject) } ?: emptyList()
+            
+            // Albums
+            val topAlbums = json.getAsJsonArray("topAlbums")?.mapNotNull { element ->
+                val obj = element.asJsonObject
+                val albumId = obj.get("id")?.asString ?: return@mapNotNull null
+                val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
+                val albumImage = obj.get("image")?.asString?.toHighResImage()
+                val year = obj.get("year")?.asString
+                
+                com.suvojeet.suvmusic.data.model.Album(albumId, title.decodeHtml(), name.decodeHtml(), albumImage, year)
+            } ?: emptyList()
+            
+            com.suvojeet.suvmusic.data.model.Artist(
+                id = artistId,
+                name = name.decodeHtml(),
+                thumbnailUrl = image,
+                description = description,
+                subscribers = if (fans != null) "$fans Fans" else null,
+                songs = topSongs,
+                albums = topAlbums
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+    
+    /**
      * Get song details by ID.
      */
     suspend fun getSongDetails(songId: String): Song? = withContext(Dispatchers.IO) {
