@@ -451,11 +451,159 @@ class JioSaavnRepository @Inject constructor(
     suspend fun getLyrics(songId: String): String? = getLyricsFromJioSaavn(songId)
     
     /**
-     * Get home sections with real JioSaavn homepage content.
-     * Fetches charts, trending songs, new releases, top albums, featured playlists
-     * directly from JioSaavn API - no pre-configured search strings.
+     * Get home sections with dynamic content from JioSaavn Launch Data.
+     * This provides a "For You" experience with Trending, Charts, New Releases, and customized modules.
      */
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+        val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+        
+        try {
+            // Use the main launch data endpoint for dynamic homepage structure
+            val launchUrl = "$BASE_URL?__call=webapi.getLaunchData&api_version=4&_format=json&_marker=0"
+            val response = makeRequest(launchUrl)
+            val json = JsonParser.parseString(response).asJsonObject
+            
+            // Helper to parse a list of items based on their type
+            fun parseHomeItems(jsonArray: com.google.gson.JsonArray): List<com.suvojeet.suvmusic.data.model.HomeItem> {
+                return jsonArray.mapNotNull { element ->
+                    val obj = element.asJsonObject
+                    val type = obj.get("type")?.asString ?: ""
+                    
+                    when (type) {
+                        "song" -> {
+                            parseSong(obj)?.let { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+                        }
+                        "album" -> {
+                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
+                            val image = obj.get("image")?.asString?.toHighResImage()
+                            val artist = obj.get("primary_artists")?.asString ?: obj.get("music")?.asString ?: ""
+                            val year = obj.get("year")?.asString
+                            
+                            com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
+                                com.suvojeet.suvmusic.data.model.Album(id, title.decodeHtml(), artist.decodeHtml(), image, year)
+                            )
+                        }
+                        "playlist" -> {
+                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
+                            val image = obj.get("image")?.asString?.toHighResImage()
+                            val count = obj.get("song_count")?.asInt ?: obj.get("count")?.asInt ?: 0
+                            
+                            com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn", image, count)
+                            )
+                        }
+                        "chart" -> {
+                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val title = obj.get("title")?.asString ?: "Chart"
+                            val image = obj.get("image")?.asString?.toHighResImage()
+                            val count = obj.get("count")?.asInt ?: 0
+                            
+                            com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn Chart", image, count)
+                            )
+                        }
+                        "radio_station" -> {
+                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val title = obj.get("title")?.asString ?: "Radio"
+                            val image = obj.get("image")?.asString?.toHighResImage()
+                            
+                            com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
+                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem("radio_$id", title.decodeHtml(), "", "Radio", image, 0)
+                            )
+                        }
+                        "artist" -> {
+                             val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
+                            val image = obj.get("image")?.asString?.toHighResImage()
+                             com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(
+                                com.suvojeet.suvmusic.data.model.Artist(id, title.decodeHtml(), image)
+                            )
+                        }
+                        else -> null
+                    }
+                }
+            }
+
+            // 1. New Trending
+            if (json.has("new_trending")) {
+                val trendingList = json.getAsJsonArray("new_trending")
+                val items = parseHomeItems(trendingList)
+                if (items.isNotEmpty()) {
+                    sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Trending Now 🔥", items))
+                }
+            }
+            
+            // 2. Top Charts
+            if (json.has("charts")) {
+                val chartsList = json.getAsJsonArray("charts")
+                val items = parseHomeItems(chartsList)
+                if (items.isNotEmpty()) {
+                    sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Top Charts 📊", items))
+                }
+            }
+            
+            // 3. New Albums
+            if (json.has("new_albums")) {
+                val albumsList = json.getAsJsonArray("new_albums")
+                val items = parseHomeItems(albumsList)
+                if (items.isNotEmpty()) {
+                    sections.add(com.suvojeet.suvmusic.data.model.HomeSection("New Releases 🆕", items))
+                }
+            }
+            
+            // 4. Browse Discover (Dynamic Sections)
+            if (json.has("browse_discover")) {
+                val discoverList = json.getAsJsonArray("browse_discover")
+                discoverList.forEach { element ->
+                    val sectionObj = element.asJsonObject
+                    val title = sectionObj.get("title")?.asString
+                    val data = sectionObj.getAsJsonArray("data")
+                    
+                    if (!title.isNullOrBlank() && data != null && data.size() > 0) {
+                        val items = parseHomeItems(data)
+                        if (items.isNotEmpty()) {
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title.decodeHtml(), items))
+                        }
+                    }
+                }
+            }
+            
+            // 5. Radio
+            if (json.has("radio")) {
+                val radioList = json.getAsJsonArray("radio")
+                val items = parseHomeItems(radioList)
+                if (items.isNotEmpty()) {
+                    sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Radio Stations 📻", items))
+                }
+            }
+            
+            // 6. Top Playlists (Global)
+            if (json.has("top_playlists")) {
+                val plList = json.getAsJsonArray("top_playlists")
+                val items = parseHomeItems(plList)
+                if (items.isNotEmpty()) {
+                    sections.add(com.suvojeet.suvmusic.data.model.HomeSection("Featured Playlists 🎧", items))
+                }
+            }
+
+        } catch (e: Exception) {
+            android.util.Log.e("JioSaavn", "Error fetching dynamic home sections", e)
+        }
+
+        // Fallback if dynamic fetch returns empty or fails
+        if (sections.isEmpty()) {
+            return@withContext fetchStaticHomeSections()
+        }
+        
+        sections
+    }
+    
+    /**
+     * Fallback: Get home sections with manual fetches if Launch Data fails.
+     */
+    private suspend fun fetchStaticHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
         
         try {
