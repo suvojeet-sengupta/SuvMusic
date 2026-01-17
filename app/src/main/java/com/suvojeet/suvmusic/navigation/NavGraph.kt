@@ -84,10 +84,14 @@ fun NavGraph(
             fadeOut(animationSpec = tween(300))
         },
         popEnterTransition = {
-            fadeIn(animationSpec = tween(300)) + slideIntoContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = tween(300)
-            )
+            if (initialState.destination.route == Destination.Player.route) {
+                fadeIn(animationSpec = tween(300))
+            } else {
+                fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(300)
+                )
+            }
         },
         popExitTransition = {
             fadeOut(animationSpec = tween(300))
