@@ -123,16 +123,12 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Seekbar -->
-        <SeekBar
-            android:id="@+id/seekBar"
+        <!-- Custom Seekbar -->
+        <com.suvojeet.suvmusic.ui.views.DynamicSeekbarView
+            android:id="@+id/dynamicSeekbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:max="100"
-            android:progressTint="@android:color/white"
-            android:thumbTint="@android:color/white"
-            android:progressBackgroundTint="#55FFFFFF" />
+            android:layout_height="32dp"
+            android:layout_marginTop="12dp" />
 
         <!-- Controls -->
         <LinearLayout
