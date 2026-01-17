@@ -30,6 +30,7 @@ import com.suvojeet.suvmusic.ui.screens.SettingsScreen
 import com.suvojeet.suvmusic.ui.screens.WelcomeScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharedFlow
 import androidx.media3.common.Player
 
 /**
@@ -66,6 +67,7 @@ fun NavGraph(
     sleepTimerRemainingMs: Long? = null,
     onSetSleepTimer: (com.suvojeet.suvmusic.player.SleepTimerOption, Int?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
+    volumeKeyEvents: SharedFlow<Unit>? = null,
     startDestination: String = Destination.Home.route
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -296,7 +298,8 @@ fun NavGraph(
                 isFetchingLyrics = isFetchingLyrics,
                 sleepTimerOption = sleepTimerOption,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
-                onSetSleepTimer = onSetSleepTimer
+                onSetSleepTimer = onSetSleepTimer,
+                volumeKeyEvents = volumeKeyEvents
             )
         }
         
