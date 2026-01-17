@@ -18,14 +18,16 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import coil.ImageLoader
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.R
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.ui.components.SeekbarStyle
+import com.suvojeet.suvmusic.ui.views.DynamicSeekbarView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +45,9 @@ class DynamicIslandService : Service() {
     
     @Inject
     lateinit var musicPlayer: MusicPlayer
+    
+    @Inject
+    lateinit var sessionManager: SessionManager
     
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
@@ -81,6 +86,7 @@ class DynamicIslandService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
         observePlayerState()
+        observeSeekbarStyle()
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
@@ -89,6 +95,19 @@ class DynamicIslandService : Service() {
         super.onDestroy()
         stateObserverJob?.cancel()
         removeOverlay()
+    }
+
+    private fun observeSeekbarStyle() {
+        serviceScope.launch {
+            sessionManager.seekbarStyleFlow.collectLatest { styleName ->
+                val style = try {
+                    SeekbarStyle.valueOf(styleName)
+                } catch (e: Exception) {
+                    SeekbarStyle.WAVEFORM
+                }
+                overlayView?.findViewById<DynamicSeekbarView>(R.id.dynamicSeekbar)?.style = style
+            }
+        }
     }
     
     private fun createNotificationChannel() {
@@ -168,25 +187,18 @@ class DynamicIslandService : Service() {
     private fun setupOverlayInteractions() {
         val view = overlayView ?: return
         
-        // Seekbar Logic
-        view.findViewById<SeekBar>(R.id.seekBar)?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {}
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+        // Custom Seekbar Logic
+        view.findViewById<DynamicSeekbarView>(R.id.dynamicSeekbar)?.apply {
+            onSeekListener = { progress ->
                 isSeeking = true
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                isSeeking = false
-                seekBar?.let {
-                    val duration = musicPlayer.playerState.value.duration
-                    if (duration > 0) {
-                        val newPosition = (it.progress / 100f * duration).toLong()
-                        musicPlayer.seekTo(newPosition)
-                    }
+                val duration = musicPlayer.playerState.value.duration
+                if (duration > 0) {
+                    val newPosition = (progress * duration).toLong()
+                    musicPlayer.seekTo(newPosition)
                 }
+                isSeeking = false
             }
-        })
+        }
         
         // Collapsed view click - expand
         view.findViewById<View>(R.id.collapsedContainer)?.setOnClickListener {
@@ -266,8 +278,8 @@ class DynamicIslandService : Service() {
         
         // Update Seekbar
         if (!isSeeking && state.duration > 0) {
-            val progress = ((state.currentPosition.toFloat() / state.duration) * 100).toInt()
-            view.findViewById<SeekBar>(R.id.seekBar)?.progress = progress
+            val progress = state.currentPosition.toFloat() / state.duration
+            view.findViewById<DynamicSeekbarView>(R.id.dynamicSeekbar)?.progress = progress
         }
         
         // Update play/pause button
