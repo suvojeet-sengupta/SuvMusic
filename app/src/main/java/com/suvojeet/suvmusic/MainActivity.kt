@@ -445,6 +445,7 @@ fun SuvMusicApp(
                     sleepTimerOption = sleepTimerOption,
                     sleepTimerRemainingMs = sleepTimerRemainingMs,
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
+                    volumeKeyEvents = volumeKeyEvents,
                     startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
                 )
             }
