@@ -103,6 +103,7 @@ import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -140,7 +141,8 @@ fun PlayerScreen(
     sleepTimerRemainingMs: Long? = null,
     onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
-    ringtoneViewModel: RingtoneViewModel = hiltViewModel()
+    ringtoneViewModel: RingtoneViewModel = hiltViewModel(),
+    volumeKeyEvents: SharedFlow<Unit>? = null
 ) {
 
     val song = playbackInfo.currentSong
@@ -258,6 +260,16 @@ fun PlayerScreen(
         maxVolume = newMax
         if (currentVolume != newVol) {
             currentVolume = newVol
+            lastVolumeChangeTime = System.currentTimeMillis()
+        }
+    }
+
+    // Listen for Volume Key Events (Manual Trigger)
+    LaunchedEffect(volumeKeyEvents) {
+        volumeKeyEvents?.collect {
+            // Update current volume (it might have changed, or not if at boundaries)
+            currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            // Show indicator
             lastVolumeChangeTime = System.currentTimeMillis()
         }
     }
