@@ -1053,4 +1053,79 @@ class JioSaavnRepository @Inject constructor(
             .replace("&#039;", "'")
             .replace("&apos;", "'")
     }
+    
+    /**
+     * Comprehensive search for songs, albums, artists, and playlists.
+     * Uses autocomplete endpoint for best "instant search" results.
+     */
+    suspend fun searchAll(query: String): SearchResults = withContext(Dispatchers.IO) {
+        try {
+            val url = "$BASE_URL?__call=autocomplete.get&_format=json&query=${query.encodeUrl()}"
+            val response = makeRequest(url)
+            val json = JsonParser.parseString(response).asJsonObject
+            
+            // Parse Songs
+            val songs = if (json.has("songs")) {
+                json.getAsJsonObject("songs").getAsJsonArray("data").mapNotNull { parseSong(it.asJsonObject) }
+            } else emptyList()
+            
+            // Parse Albums
+            val albums = if (json.has("albums")) {
+                json.getAsJsonObject("albums").getAsJsonArray("data").mapNotNull { element ->
+                    val obj = element.asJsonObject
+                    val id = obj.get("id")?.asString ?: return@mapNotNull null
+                    val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
+                    val image = obj.get("image")?.asString?.toHighResImage()
+                    val artist = obj.get("music")?.asString ?: "" // 'music' key usually holds artist in autocomplete
+                    val year = obj.get("year")?.asString
+                    
+                    com.suvojeet.suvmusic.data.model.Album(id, title.decodeHtml(), artist.decodeHtml(), image, year)
+                }
+            } else emptyList()
+            
+            // Parse Artists
+            val artists = if (json.has("artists")) {
+                json.getAsJsonObject("artists").getAsJsonArray("data").mapNotNull { element ->
+                    val obj = element.asJsonObject
+                    val id = obj.get("id")?.asString ?: return@mapNotNull null
+                    val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
+                    val image = obj.get("image")?.asString?.toHighResImage()
+                    
+                    com.suvojeet.suvmusic.data.model.Artist(id, title.decodeHtml(), image)
+                }
+            } else emptyList()
+            
+            // Parse Playlists
+            val playlists = if (json.has("playlists")) {
+                json.getAsJsonObject("playlists").getAsJsonArray("data").mapNotNull { element ->
+                    val obj = element.asJsonObject
+                    val id = obj.get("id")?.asString ?: return@mapNotNull null
+                    val title = obj.get("title")?.asString ?: ""
+                    val image = obj.get("image")?.asString?.toHighResImage()
+                    
+                    // Create lightweight Playlist object
+                    Playlist(
+                        id = id,
+                        title = title.decodeHtml(),
+                        author = "JioSaavn",
+                        thumbnailUrl = image,
+                        songs = emptyList()
+                    )
+                }
+            } else emptyList()
+            
+            return@withContext SearchResults(songs, albums, artists, playlists)
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext SearchResults()
+        }
+    }
 }
+
+data class SearchResults(
+    val songs: List<Song> = emptyList(),
+    val albums: List<com.suvojeet.suvmusic.data.model.Album> = emptyList(),
+    val artists: List<com.suvojeet.suvmusic.data.model.Artist> = emptyList(),
+    val playlists: List<Playlist> = emptyList()
+)
