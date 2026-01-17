@@ -1,5 +1,10 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +49,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -59,27 +66,18 @@ fun AppearanceSettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showThemeModeSheet by remember { mutableStateOf(false) }
     val themeModeSheetState = rememberModalBottomSheetState()
+    
+    var showAppThemeSheet by remember { mutableStateOf(false) }
+    val appThemeSheetState = rememberModalBottomSheetState()
+    
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     Scaffold(
         topBar = {
-            LargeTopAppBar(
-                title = { Text("Appearance") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
-            )
-        },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+// ...
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -121,6 +119,25 @@ fun AppearanceSettingsScreen(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
+            AnimatedVisibility(
+                visible = !uiState.dynamicColorEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                ListItem(
+                    headlineContent = { Text("App Theme") },
+                    supportingContent = { Text(uiState.appTheme.label) },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.ColorLens,
+                            contentDescription = null
+                        )
+                    },
+                    modifier = Modifier.clickable { showAppThemeSheet = true },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+            }
+            
             Spacer(modifier = Modifier.height(100.dp))
         }
     }
@@ -133,7 +150,7 @@ fun AppearanceSettingsScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Theme",
+                    text = "Theme Mode",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -158,6 +175,47 @@ fun AppearanceSettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(text = mode.label)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    // App Theme Bottom Sheet
+    if (showAppThemeSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAppThemeSheet = false },
+            sheetState = appThemeSheetState
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "App Theme",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                AppTheme.entries.forEach { theme ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setAppTheme(theme)
+                                scope.launch {
+                                    appThemeSheetState.hide()
+                                    showAppThemeSheet = false
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.appTheme == theme,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(text = theme.label)
                     }
                 }
                 
