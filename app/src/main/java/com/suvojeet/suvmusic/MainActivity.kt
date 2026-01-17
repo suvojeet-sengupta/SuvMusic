@@ -54,6 +54,8 @@ import com.suvojeet.suvmusic.service.DynamicIslandService
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -69,6 +71,9 @@ class MainActivity : ComponentActivity() {
     
     // Track whether song is playing for volume key interception
     private var isSongPlaying: Boolean = false
+    
+    // Flow to emit volume key events to the UI
+    private val _volumeKeyEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -105,6 +110,7 @@ class MainActivity : ComponentActivity() {
                     initialDeepLink = deepLinkUrl,
                     networkMonitor = networkMonitor,
                     audioManager = audioManager,
+                    volumeKeyEvents = _volumeKeyEvents,
                     onPlaybackStateChanged = { hasSong -> 
                         isSongPlaying = hasSong
                     }
@@ -131,6 +137,7 @@ class MainActivity : ComponentActivity() {
                         AudioManager.ADJUST_RAISE,
                         0 // No flags = no system UI
                     )
+                    _volumeKeyEvents.tryEmit(Unit)
                 }
                 true // Consume the event
             }
@@ -141,6 +148,7 @@ class MainActivity : ComponentActivity() {
                         AudioManager.ADJUST_LOWER,
                         0 // No flags = no system UI
                     )
+                    _volumeKeyEvents.tryEmit(Unit)
                 }
                 true // Consume the event
             }
@@ -209,6 +217,7 @@ fun SuvMusicApp(
     initialDeepLink: String? = null,
     networkMonitor: NetworkMonitor,
     audioManager: AudioManager,
+    volumeKeyEvents: SharedFlow<Unit>? = null,
     onPlaybackStateChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
@@ -241,6 +250,16 @@ fun SuvMusicApp(
     }
     var showVolumeIndicator by remember { mutableStateOf(false) }
     var lastVolumeChangeTime by remember { mutableStateOf(0L) }
+    
+    // Listen for Volume Key Events (Manual Trigger)
+    LaunchedEffect(volumeKeyEvents) {
+        volumeKeyEvents?.collect {
+            // Update current volume (it might have changed, or not if at boundaries)
+            currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            // Show indicator
+            lastVolumeChangeTime = System.currentTimeMillis()
+        }
+    }
     
     // Listen for System Volume Changes
     SystemVolumeObserver(context = context) { newVol, newMax ->
