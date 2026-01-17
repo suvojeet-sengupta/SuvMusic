@@ -18,6 +18,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import coil.ImageLoader
@@ -46,6 +47,7 @@ class DynamicIslandService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var isExpanded = false
+    private var isSeeking = false
     
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var stateObserverJob: Job? = null
@@ -166,6 +168,26 @@ class DynamicIslandService : Service() {
     private fun setupOverlayInteractions() {
         val view = overlayView ?: return
         
+        // Seekbar Logic
+        view.findViewById<SeekBar>(R.id.seekBar)?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {}
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                isSeeking = true
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                isSeeking = false
+                seekBar?.let {
+                    val duration = musicPlayer.playerState.value.duration
+                    if (duration > 0) {
+                        val newPosition = (it.progress / 100f * duration).toLong()
+                        musicPlayer.seekTo(newPosition)
+                    }
+                }
+            }
+        })
+        
         // Collapsed view click - expand
         view.findViewById<View>(R.id.collapsedContainer)?.setOnClickListener {
             toggleExpanded()
@@ -241,6 +263,12 @@ class DynamicIslandService : Service() {
         view.findViewById<TextView>(R.id.tvArtist)?.text = song.artist
         view.findViewById<TextView>(R.id.tvTitleExpanded)?.text = song.title
         view.findViewById<TextView>(R.id.tvArtistExpanded)?.text = song.artist
+        
+        // Update Seekbar
+        if (!isSeeking && state.duration > 0) {
+            val progress = ((state.currentPosition.toFloat() / state.duration) * 100).toInt()
+            view.findViewById<SeekBar>(R.id.seekBar)?.progress = progress
+        }
         
         // Update play/pause button
         val playPauseBtn = view.findViewById<ImageButton>(R.id.btnPlayPause)
