@@ -245,7 +245,7 @@ fun SongCreditsSheet(
                     ) {
                         val sourceBadge = when (song.source) {
                             com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YOUTUBE"
-                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JIOSAAVN"
+                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "HQ AUDIO"
                             com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "LOCAL"
                             com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> "OFFLINE"
                             else -> "UNKNOWN"
@@ -397,13 +397,13 @@ fun SongCreditsSheet(
                                     // For downloaded songs, show original source + Downloaded suffix
                                     song.source == com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> {
                                         when (song.originalSource) {
-                                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "Cloud HQ (Downloaded)"
+                                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "HQ Audio (Downloaded)"
                                             com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YouTube (Downloaded)"
                                             else -> "Downloaded"
                                         }
                                     }
                                     song.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YouTube Music"
-                                    song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "Cloud (High Quality)"
+                                    song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "HQ Audio (Streaming)"
                                     song.source == com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "Local Storage"
                                     else -> "Unknown"
                                 }
