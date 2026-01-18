@@ -1826,14 +1826,24 @@ class YouTubeRepository @Inject constructor(
                         val cleanId = browseId.removePrefix("VL")
                         val title = getRunText(item.optJSONObject("title")) ?: "Unknown Playlist"
                         val subtitle = getRunText(item.optJSONObject("subtitle")) ?: "Unknown"
+                        
+                        // Parse song count from subtitle (e.g., "Suvojeet • 50 songs")
+                        val parts = subtitle.split("•").map { it.trim() }
+                        val songCountStr = parts.find { it.contains("song", ignoreCase = true) }
+                        val songCount = songCountStr?.filter { it.isDigit() }?.toIntOrNull() ?: 0
+                        
+                        // Uploader is usually the first part if it's not the song count
+                        val uploaderName = parts.firstOrNull { !it.contains("song", ignoreCase = true) } ?: subtitle
+                        
                         val thumbnailUrl = extractThumbnail(item)
 
                         playlists.add(PlaylistDisplayItem(
                             id = cleanId,
                             name = title,
                             url = "https://music.youtube.com/playlist?list=$cleanId",
-                            uploaderName = subtitle,
-                            thumbnailUrl = thumbnailUrl
+                            uploaderName = uploaderName,
+                            thumbnailUrl = thumbnailUrl,
+                            songCount = songCount
                         ))
                     }
                 } catch (e: Exception) { }
