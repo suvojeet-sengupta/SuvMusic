@@ -6,17 +6,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -30,7 +35,10 @@ fun CommentsSheet(
     comments: List<Comment>?,
     isLoading: Boolean,
     onDismiss: () -> Unit,
-    accentColor: Color
+    accentColor: Color,
+    isLoggedIn: Boolean = false,
+    isPostingComment: Boolean = false,
+    onPostComment: (String) -> Unit = {}
 ) {
     if (isVisible) {
         ModalBottomSheet(
@@ -77,26 +85,138 @@ fun CommentsSheet(
                     }
                 }
                 
-                if (isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        PulseLoadingIndicator(modifier = Modifier.size(48.dp), color = accentColor)
-                    }
-                } else if (comments.isNullOrEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No comments available",
-                            color = Color.Gray
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(bottom = 32.dp)
-                    ) {
-                        items(comments) { comment ->
-                            CommentItem(comment = comment, accentColor = accentColor)
+                // Comments list
+                Box(modifier = Modifier.weight(1f)) {
+                    if (isLoading) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            PulseLoadingIndicator(modifier = Modifier.size(48.dp), color = accentColor)
                         }
+                    } else if (comments.isNullOrEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "No comments available",
+                                color = Color.Gray
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            items(comments) { comment ->
+                                CommentItem(comment = comment, accentColor = accentColor)
+                            }
+                        }
+                    }
+                }
+                
+                // Comment input section
+                CommentInputSection(
+                    isLoggedIn = isLoggedIn,
+                    isPosting = isPostingComment,
+                    onPostComment = onPostComment,
+                    accentColor = accentColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentInputSection(
+    isLoggedIn: Boolean,
+    isPosting: Boolean,
+    onPostComment: (String) -> Unit,
+    accentColor: Color
+) {
+    var commentText by remember { mutableStateOf("") }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        color = Color(0xFF2C2C2E),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        if (!isLoggedIn) {
+            // Not logged in message
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Sign in to add a comment",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Comment input field
+                TextField(
+                    value = commentText,
+                    onValueChange = { commentText = it },
+                    placeholder = {
+                        Text("Add a comment...", color = Color.Gray)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = accentColor,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (commentText.isNotBlank() && !isPosting) {
+                                onPostComment(commentText)
+                                commentText = ""
+                                keyboardController?.hide()
+                            }
+                        }
+                    ),
+                    singleLine = true,
+                    enabled = !isPosting
+                )
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                // Send button
+                IconButton(
+                    onClick = {
+                        if (commentText.isNotBlank() && !isPosting) {
+                            onPostComment(commentText)
+                            commentText = ""
+                            keyboardController?.hide()
+                        }
+                    },
+                    enabled = commentText.isNotBlank() && !isPosting
+                ) {
+                    if (isPosting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = accentColor,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Post comment",
+                            tint = if (commentText.isNotBlank()) accentColor else Color.Gray
+                        )
                     }
                 }
             }
@@ -176,3 +296,4 @@ fun CommentItem(
         }
     }
 }
+

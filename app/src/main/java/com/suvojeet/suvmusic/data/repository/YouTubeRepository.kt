@@ -1338,7 +1338,7 @@ class YouTubeRepository @Inject constructor(
                 com.suvojeet.suvmusic.data.model.Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
-                    authorThumbnailUrl = null, // Avatar URL not available in this extractor version
+                    authorThumbnailUrl = item.uploaderAvatars?.firstOrNull()?.url,
                     text = item.commentText?.content ?: "",
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
@@ -1348,6 +1348,51 @@ class YouTubeRepository @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
+        }
+    }
+
+    /**
+     * Post a comment on a YouTube video.
+     * Requires user to be logged in.
+     */
+    suspend fun postComment(videoId: String, commentText: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            if (!sessionManager.isLoggedIn()) return@withContext false
+            if (commentText.isBlank()) return@withContext false
+            
+            val cookies = sessionManager.getCookies() ?: return@withContext false
+            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            
+            val jsonBody = JSONObject().apply {
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB")
+                        put("clientVersion", "2.20240101.00.00")
+                        put("hl", "en")
+                        put("gl", "US")
+                    })
+                })
+                put("createCommentParams", JSONObject().apply {
+                    put("videoId", videoId)
+                    put("text", commentText)
+                })
+            }
+            
+            val request = okhttp3.Request.Builder()
+                .url("https://www.youtube.com/youtubei/v1/comment/create_comment")
+                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                .addHeader("Cookie", cookies)
+                .addHeader("Authorization", authHeader)
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .addHeader("Origin", "https://www.youtube.com")
+                .addHeader("X-Goog-AuthUser", "0")
+                .build()
+            
+            val response = okHttpClient.newCall(request).execute()
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
     
