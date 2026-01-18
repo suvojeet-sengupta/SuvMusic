@@ -388,6 +388,7 @@ fun SuvMusicApp(
                             playerState = playerState,
                             onPlayPauseClick = { playerViewModel.togglePlayPause() },
                             onNextClick = { playerViewModel.seekToNext() },
+                            onPreviousClick = { playerViewModel.seekToPrevious() },
                             onPlayerClick = { navController.navigate(Destination.Player.route) }
                         )
                         
@@ -479,6 +480,7 @@ fun SuvMusicApp(
                     playerState = playbackInfo,
                     onPlayPauseClick = { playerViewModel.togglePlayPause() },
                     onNextClick = { playerViewModel.seekToNext() },
+                    onPreviousClick = { playerViewModel.seekToPrevious() },
                     onPlayerClick = { navController.navigate(Destination.Player.route) },
                     onCloseClick = { isFloatingMiniPlayerVisible = false },
                     progressProvider = { playerState.progress }
