@@ -538,7 +538,6 @@ fun PlayerScreen(
                                 // Bottom Actions
                                 BottomActions(
                                     onLyricsClick = { showLyrics = true },
-                                    onCommentsClick = { showCommentsSheet = true },
                                     onCastClick = { showOutputDeviceSheet = true },
                                     onQueueClick = { showQueue = true },
                                     dominantColors = dominantColors,
@@ -678,7 +677,6 @@ fun PlayerScreen(
                             // Bottom Actions
                             BottomActions(
                                 onLyricsClick = { showLyrics = true },
-                                onCommentsClick = { showCommentsSheet = true },
                                 onCastClick = { showOutputDeviceSheet = true },
                                 onQueueClick = { showQueue = true },
                                 dominantColors = dominantColors,
@@ -781,6 +779,10 @@ fun PlayerScreen(
                 onAddToPlaylist = {
                     showActionsSheet = false
                     playlistViewModel.showAddToPlaylistSheet(song)
+                },
+                onViewComments = {
+                    showActionsSheet = false
+                    showCommentsSheet = true
                 },
                 onSleepTimer = {
                     showActionsSheet = false
