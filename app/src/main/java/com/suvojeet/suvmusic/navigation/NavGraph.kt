@@ -59,6 +59,7 @@ fun NavGraph(
     isLoadingMoreSongs: Boolean = false,
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
     onRefreshDevices: () -> Unit = {},
+    onSetPlaybackSpeed: (Float) -> Unit = {},
     player: Player? = null,
     lyrics: com.suvojeet.suvmusic.data.model.Lyrics?,
     isFetchingLyrics: Boolean,
@@ -308,7 +309,8 @@ fun NavGraph(
                 sleepTimerOption = sleepTimerOption,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 onSetSleepTimer = onSetSleepTimer,
-                volumeKeyEvents = volumeKeyEvents
+                volumeKeyEvents = volumeKeyEvents,
+                onSetPlaybackSpeed = onSetPlaybackSpeed
             )
         }
         
