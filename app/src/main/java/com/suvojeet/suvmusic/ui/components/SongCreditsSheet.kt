@@ -253,12 +253,13 @@ fun SongCreditsSheet(
                         
                         Badge(text = sourceBadge)
                         
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Badge(
-                            text = if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) "HQ AUDIO" else "AAC",
-                            backgroundColor = Color.White.copy(alpha = 0.15f)
-                        )
+                        if (song.source != com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Badge(
+                                text = "AAC",
+                                backgroundColor = Color.White.copy(alpha = 0.15f)
+                            )
+                        }
                     }
                     
                     Spacer(modifier = Modifier.height(24.dp))
