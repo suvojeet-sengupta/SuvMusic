@@ -21,7 +21,8 @@ data class PlayerState(
     val isAutoplayEnabled: Boolean = true,
     val isVideoMode: Boolean = false, // Video playback mode for YouTube songs
     val availableDevices: List<OutputDevice> = emptyList(),
-    val selectedDevice: OutputDevice? = null
+    val selectedDevice: OutputDevice? = null,
+    val playbackSpeed: Float = 1.0f
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f

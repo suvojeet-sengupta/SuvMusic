@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.RingVolume
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -60,7 +61,9 @@ fun SongActionsSheet(
     onSleepTimer: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
     onSetRingtone: () -> Unit = {},
-    onStartRadio: () -> Unit = {}
+    onStartRadio: () -> Unit = {},
+    onPlaybackSpeed: () -> Unit = {},
+    currentSpeed: Float = 1.0f
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
@@ -195,6 +198,14 @@ fun SongActionsSheet(
                     onClick = { onViewComments(); onDismiss() }
                 )
                 
+                // Playback Speed option with current speed display
+                val speedLabel = if (currentSpeed == 1.0f) "Normal" else "${currentSpeed}x"
+                ActionItem(
+                    icon = Icons.Default.Speed,
+                    title = "Playback Speed ($speedLabel)",
+                    iconTint = MaterialTheme.colorScheme.secondary,
+                    onClick = { onPlaybackSpeed(); onDismiss() }
+                )
 
                 ActionItem(
                     icon = Icons.Default.Nightlight,
