@@ -1027,19 +1027,31 @@ class JioSaavnRepository @Inject constructor(
                 ?: json.get("perma_url")?.asString?.substringAfterLast("/")
                 ?: return null
             
+            // Check for more_info object
+            val moreInfo = if (json.has("more_info") && json.get("more_info").isJsonObject) {
+                json.getAsJsonObject("more_info")
+            } else {
+                null
+            }
+
             val title = json.get("song")?.asString 
                 ?: json.get("title")?.asString 
                 ?: json.get("name")?.asString 
                 ?: "Unknown"
             
-            val artistsJson = json.get("primary_artists")?.asString 
+            val artistsJson = moreInfo?.get("primary_artists")?.asString
+                ?: moreInfo?.get("singers")?.asString
+                ?: moreInfo?.get("music")?.asString
+                ?: json.get("primary_artists")?.asString 
                 ?: json.get("singers")?.asString 
                 ?: json.get("music")?.asString 
                 ?: "Unknown Artist"
             
-            val album = json.get("album")?.asString ?: ""
+            val album = moreInfo?.get("album")?.asString
+                ?: json.get("album")?.asString ?: ""
             
-            val durationStr = json.get("duration")?.asString ?: "0"
+            val durationStr = moreInfo?.get("duration")?.asString
+                ?: json.get("duration")?.asString ?: "0"
             val duration = (durationStr.toLongOrNull() ?: 0L) * 1000 // Convert to milliseconds
             
             val image = json.get("image")?.asString?.toHighResImage()
