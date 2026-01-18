@@ -35,6 +35,12 @@ interface ListeningHistoryDao {
     fun getRecentlyPlayed(limit: Int = 20): Flow<List<ListeningHistory>>
     
     /**
+     * Get listening history after a specific timestamp (e.g., for last month).
+     */
+    @Query("SELECT * FROM listening_history WHERE lastPlayed >= :timestamp ORDER BY lastPlayed DESC")
+    fun getHistoryAfter(timestamp: Long): Flow<List<ListeningHistory>>
+    
+    /**
      * Get songs played in the last N days.
      */
     @Query("SELECT * FROM listening_history WHERE lastPlayed > :timestamp ORDER BY playCount DESC")

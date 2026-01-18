@@ -48,10 +48,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -64,12 +65,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecentsScreen(
-    sessionManager: SessionManager,
     onSongClick: (List<Song>, Int) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: RecentsViewModel = hiltViewModel()
 ) {
-    val recentlyPlayed by sessionManager.recentlyPlayedFlow.collectAsState(initial = emptyList())
-    val scope = rememberCoroutineScope()
+    val recentlyPlayed by viewModel.recentSongs.collectAsState()
     var showClearConfirmDialog by remember { mutableStateOf(false) }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -93,7 +93,7 @@ fun RecentsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        scope.launch { sessionManager.clearRecentlyPlayed() }
+                        viewModel.clearHistory()
                         showClearConfirmDialog = false
                     }
                 ) {
@@ -198,7 +198,7 @@ fun RecentsScreen(
                 }
             }
         } else {
-            // Group by date
+            // Group by Month Year
             val groupedByDate = recentlyPlayed.groupBy { recent ->
                 getDateLabel(recent.playedAt)
             }
@@ -215,10 +215,10 @@ fun RecentsScreen(
                     item {
                         Text(
                             text = dateLabel,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
                         )
                     }
                     
@@ -307,24 +307,10 @@ private fun RecentSongItem(
 }
 
 private fun getDateLabel(timestamp: Long): String {
-    val calendar = Calendar.getInstance()
-    val today = calendar.clone() as Calendar
-    
-    calendar.timeInMillis = timestamp
-    
-    val todayDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(today.time)
-    val itemDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(timestamp))
-    
-    today.add(Calendar.DAY_OF_YEAR, -1)
-    val yesterdayDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(today.time)
-    
-    return when (itemDate) {
-        todayDate -> "Today"
-        yesterdayDate -> "Yesterday"
-        else -> SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date(timestamp))
-    }
+    return SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(timestamp))
 }
 
 private fun getTimeLabel(timestamp: Long): String {
-    return SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(timestamp))
+    // Show Date and Time since we are grouping by Month
+    return SimpleDateFormat("d MMM, h:mm a", Locale.getDefault()).format(Date(timestamp))
 }

@@ -16,6 +16,11 @@ data class ListeningHistory(
     val artist: String,
     val thumbnailUrl: String?,
     
+    // Playback details
+    val album: String = "",
+    val duration: Long = 0L,
+    val localUri: String? = null,
+    
     // Listening statistics
     val playCount: Int = 0,
     val totalDurationMs: Long = 0L,

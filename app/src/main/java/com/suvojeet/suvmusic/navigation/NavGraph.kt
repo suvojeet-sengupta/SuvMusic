@@ -225,7 +225,6 @@ fun NavGraph(
         
         composable(Destination.Recents.route) {
             RecentsScreen(
-                sessionManager = sessionManager,
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
                 onBack = { navController.popBackStack() }
             )

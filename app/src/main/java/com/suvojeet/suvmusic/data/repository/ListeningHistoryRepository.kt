@@ -49,7 +49,10 @@ class ListeningHistoryRepository @Inject constructor(
                 completionRate = newCompletionRate,
                 songTitle = song.title, // Update in case metadata changed
                 artist = song.artist,
-                thumbnailUrl = song.thumbnailUrl
+                thumbnailUrl = song.thumbnailUrl,
+                album = song.album,
+                duration = song.duration,
+                localUri = song.localUri?.toString()
             )
         } else {
             // Create new record
@@ -76,7 +79,10 @@ class ListeningHistoryRepository @Inject constructor(
                     com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JIOSAAVN"
                     com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "LOCAL"
                     com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> "DOWNLOADED"
-                }
+                },
+                album = song.album,
+                duration = song.duration,
+                localUri = song.localUri?.toString()
             )
         }
         
@@ -105,6 +111,14 @@ class ListeningHistoryRepository @Inject constructor(
      */
     fun getRecentlyPlayed(limit: Int = 20): Flow<List<ListeningHistory>> {
         return listeningHistoryDao.getRecentlyPlayed(limit)
+    }
+    
+    /**
+     * Get history for the last N days.
+     */
+    fun getHistoryForTimePeriod(days: Int): Flow<List<ListeningHistory>> {
+        val timestamp = System.currentTimeMillis() - (days * 24 * 60 * 60 * 1000L)
+        return listeningHistoryDao.getHistoryAfter(timestamp)
     }
     
     /**
