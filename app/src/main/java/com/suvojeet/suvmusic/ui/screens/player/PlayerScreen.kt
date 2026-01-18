@@ -138,6 +138,9 @@ fun PlayerScreen(
     isFetchingLyrics: Boolean = false,
     comments: List<com.suvojeet.suvmusic.data.model.Comment>? = null,
     isFetchingComments: Boolean = false,
+    isLoggedIn: Boolean = false,
+    isPostingComment: Boolean = false,
+    onPostComment: (String) -> Unit = {},
     // Sleep timer
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -740,7 +743,10 @@ fun PlayerScreen(
                 comments = comments,
                 isLoading = isFetchingComments,
                 onDismiss = { showCommentsSheet = false },
-                accentColor = dominantColors.accent
+                accentColor = dominantColors.accent,
+                isLoggedIn = isLoggedIn,
+                isPostingComment = isPostingComment,
+                onPostComment = onPostComment
             )
         }
 

@@ -54,6 +54,14 @@ class PlayerViewModel @Inject constructor(
     private val _isFetchingComments = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isFetchingComments: StateFlow<Boolean> = _isFetchingComments.asStateFlow()
     
+    private val _isPostingComment = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
+    
+    private val _commentPostSuccess = kotlinx.coroutines.flow.MutableStateFlow<Boolean?>(null)
+    val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
+    
+    fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
+    
     // Sleep Timer
     val sleepTimerOption: StateFlow<SleepTimerOption> = sleepTimerManager.currentOption
     val sleepTimerRemainingMs: StateFlow<Long?> = sleepTimerManager.remainingTimeMs
@@ -440,6 +448,33 @@ class PlayerViewModel @Inject constructor(
             }
             
             _isFetchingComments.value = false
+        }
+    }
+    
+    /**
+     * Post a comment on the current song's video.
+     */
+    fun postComment(commentText: String) {
+        val song = playerState.value.currentSong ?: return
+        if (commentText.isBlank()) return
+        
+        viewModelScope.launch {
+            _isPostingComment.value = true
+            _commentPostSuccess.value = null
+            
+            val success = youTubeRepository.postComment(song.id, commentText)
+            _commentPostSuccess.value = success
+            
+            if (success) {
+                // Refresh comments to show the new comment
+                fetchComments(song.id)
+            }
+            
+            _isPostingComment.value = false
+            
+            // Clear the success state after a delay
+            kotlinx.coroutines.delay(2000)
+            _commentPostSuccess.value = null
         }
     }
     
