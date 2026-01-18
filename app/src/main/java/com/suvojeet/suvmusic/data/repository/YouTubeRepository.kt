@@ -1339,7 +1339,7 @@ class YouTubeRepository @Inject constructor(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
                     authorThumbnailUrl = null, // Avatar URL not available in this extractor version
-                    text = item.commentText?.toString() ?: "",
+                    text = item.commentText?.content ?: "",
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
                     replyCount = 0

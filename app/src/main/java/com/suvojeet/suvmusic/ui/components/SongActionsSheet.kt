@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
@@ -55,6 +56,7 @@ fun SongActionsSheet(
     onDownload: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
     onViewCredits: () -> Unit = {},
+    onViewComments: () -> Unit = {},
     onSleepTimer: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
     onSetRingtone: () -> Unit = {},
@@ -185,6 +187,12 @@ fun SongActionsSheet(
                     icon = Icons.Default.Info,
                     title = "View Credits",
                     onClick = { onViewCredits(); onDismiss() }
+                )
+                
+                ActionItem(
+                    icon = Icons.Default.Comment,
+                    title = "View Comments",
+                    onClick = { onViewComments(); onDismiss() }
                 )
                 
 
