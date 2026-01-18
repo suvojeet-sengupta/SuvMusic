@@ -778,6 +778,15 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
+     * Set playback speed (0.5x to 2.0x).
+     */
+    fun setPlaybackSpeed(speed: Float) {
+        val clampedSpeed = speed.coerceIn(0.5f, 2.0f)
+        mediaController?.setPlaybackSpeed(clampedSpeed)
+        _playerState.update { it.copy(playbackSpeed = clampedSpeed) }
+    }
+    
+    /**
      * Add songs to the end of the current queue.
      * Used for endless radio mode to continuously add recommendations.
      */

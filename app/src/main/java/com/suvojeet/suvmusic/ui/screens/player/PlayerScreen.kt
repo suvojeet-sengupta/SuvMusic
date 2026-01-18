@@ -87,6 +87,7 @@ import com.suvojeet.suvmusic.ui.components.SeekbarStyle
 import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
 import com.suvojeet.suvmusic.ui.components.SongCreditsSheet
+import com.suvojeet.suvmusic.ui.components.PlaybackSpeedSheet
 import com.suvojeet.suvmusic.ui.components.WaveformSeeker
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.screens.LyricsScreen
@@ -134,6 +135,7 @@ fun PlayerScreen(
     onPlayFromQueue: (Int) -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
     onRefreshDevices: () -> Unit = {},
+    onSetPlaybackSpeed: (Float) -> Unit = {},
     lyrics: Lyrics? = null,
     isFetchingLyrics: Boolean = false,
     comments: List<com.suvojeet.suvmusic.data.model.Comment>? = null,
@@ -222,6 +224,7 @@ fun PlayerScreen(
     var showCreditsSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showOutputDeviceSheet by remember { mutableStateOf(false) }
+    var showPlaybackSpeedSheet by remember { mutableStateOf(false) }
 
     // Ringtone states
     var showRingtoneProgress by remember { mutableStateOf(false) }
@@ -798,6 +801,11 @@ fun PlayerScreen(
                     showActionsSheet = false
                     onStartRadio()
                 },
+                onPlaybackSpeed = {
+                    showActionsSheet = false
+                    showPlaybackSpeedSheet = true
+                },
+                currentSpeed = playerState.playbackSpeed,
                 onSetRingtone = {
                     showActionsSheet = false
 
@@ -910,6 +918,16 @@ fun PlayerScreen(
                 onDismiss = { showOutputDeviceSheet = false },
                 onRefreshDevices = onRefreshDevices,
                 accentColor = dominantColors.accent
+            )
+
+            // Playback Speed Sheet
+            PlaybackSpeedSheet(
+                isVisible = showPlaybackSpeedSheet,
+                currentSpeed = playerState.playbackSpeed,
+                onDismiss = { showPlaybackSpeedSheet = false },
+                onSpeedSelected = { speed ->
+                    onSetPlaybackSpeed(speed)
+                }
             )
         }
     }
