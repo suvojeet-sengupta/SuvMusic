@@ -10,7 +10,7 @@ import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
  */
 @Database(
     entities = [ListeningHistory::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
