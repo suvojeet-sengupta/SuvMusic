@@ -756,9 +756,9 @@ class MusicPlayer @Inject constructor(
     fun toggleRepeat() {
         val currentMode = _playerState.value.repeatMode
         val nextMode = when (currentMode) {
-            RepeatMode.OFF -> RepeatMode.ALL
-            RepeatMode.ALL -> RepeatMode.ONE
-            RepeatMode.ONE -> RepeatMode.OFF
+            RepeatMode.OFF -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.OFF
         }
         setRepeatMode(nextMode)
     }
