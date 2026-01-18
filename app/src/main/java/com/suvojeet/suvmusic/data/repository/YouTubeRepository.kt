@@ -18,6 +18,7 @@ import org.json.JSONObject
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
+import org.schabi.newpipe.extractor.comments.CommentsInfoItem
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -1319,6 +1320,34 @@ class YouTubeRepository @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    /**
+     * Fetch comments for a video using NewPipe extractor.
+     */
+    suspend fun getComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        try {
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+                ?: return@withContext emptyList()
+            
+            val commentsExtractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
+            commentsExtractor.fetchPage()
+            
+            commentsExtractor.initialPage.items.filterIsInstance<CommentsInfoItem>().map { item ->
+                com.suvojeet.suvmusic.data.model.Comment(
+                    id = item.url ?: java.util.UUID.randomUUID().toString(),
+                    authorName = item.uploaderName ?: "Unknown",
+                    authorThumbnailUrl = null, // Avatar URL not available in this extractor version
+                    text = item.commentText?.toString() ?: "",
+                    timestamp = item.textualUploadDate ?: "",
+                    likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
+                    replyCount = 0
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
         }
     }
     

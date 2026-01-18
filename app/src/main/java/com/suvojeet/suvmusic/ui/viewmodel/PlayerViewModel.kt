@@ -47,6 +47,12 @@ class PlayerViewModel @Inject constructor(
     
     private val _isFetchingLyrics = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isFetchingLyrics: StateFlow<Boolean> = _isFetchingLyrics.asStateFlow()
+
+    private val _commentsState = kotlinx.coroutines.flow.MutableStateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?>(null)
+    val commentsState: StateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?> = _commentsState.asStateFlow()
+
+    private val _isFetchingComments = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isFetchingComments: StateFlow<Boolean> = _isFetchingComments.asStateFlow()
     
     // Sleep Timer
     val sleepTimerOption: StateFlow<SleepTimerOption> = sleepTimerManager.currentOption
@@ -79,8 +85,10 @@ class PlayerViewModel @Inject constructor(
                         checkLikeStatus(song)
                         checkDownloadStatus(song)
                         fetchLyrics(song.id)
+                        fetchComments(song.id)
                     } else {
                         _lyricsState.value = null
+                        _commentsState.value = null
                     }
                 }
         }
@@ -416,6 +424,22 @@ class PlayerViewModel @Inject constructor(
             _lyricsState.value = lyrics
             
             _isFetchingLyrics.value = false
+        }
+    }
+    
+    private fun fetchComments(videoId: String) {
+        viewModelScope.launch {
+            _isFetchingComments.value = true
+            _commentsState.value = null
+            
+            // Only fetch for YouTube/Downloaded source which have valid video IDs
+            val currentSong = playerState.value.currentSong
+            if (currentSong != null && (currentSong.source == SongSource.YOUTUBE || currentSong.source == SongSource.DOWNLOADED)) {
+                 val comments = youTubeRepository.getComments(videoId)
+                 _commentsState.value = comments
+            }
+            
+            _isFetchingComments.value = false
         }
     }
     

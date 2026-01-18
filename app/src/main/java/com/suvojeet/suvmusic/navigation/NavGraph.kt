@@ -62,6 +62,8 @@ fun NavGraph(
     player: Player? = null,
     lyrics: com.suvojeet.suvmusic.data.model.Lyrics?,
     isFetchingLyrics: Boolean,
+    comments: List<com.suvojeet.suvmusic.data.model.Comment>?,
+    isFetchingComments: Boolean,
     // Sleep timer
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -295,6 +297,8 @@ fun NavGraph(
                 onRefreshDevices = onRefreshDevices,
                 lyrics = lyrics,
                 isFetchingLyrics = isFetchingLyrics,
+                comments = comments,
+                isFetchingComments = isFetchingComments,
                 sleepTimerOption = sleepTimerOption,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 onSetSleepTimer = onSetSleepTimer,

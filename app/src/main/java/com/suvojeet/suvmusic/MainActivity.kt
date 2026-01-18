@@ -240,6 +240,9 @@ fun SuvMusicApp(
     val lyrics by playerViewModel.lyricsState.collectAsState()
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
     
+    val comments by playerViewModel.commentsState.collectAsState()
+    val isFetchingComments by playerViewModel.isFetchingComments.collectAsState()
+    
     // Track if song is playing for Activity-level volume interception
     // Use playbackInfo (stable) to avoid recomposing the whole app shell on progress updates
     val hasSong = playbackInfo.currentSong != null
@@ -449,6 +452,8 @@ fun SuvMusicApp(
                     player = playerViewModel.getPlayer(),
                     lyrics = lyrics,
                     isFetchingLyrics = isFetchingLyrics,
+                    comments = comments,
+                    isFetchingComments = isFetchingComments,
                     sleepTimerOption = sleepTimerOption,
                     sleepTimerRemainingMs = sleepTimerRemainingMs,
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },

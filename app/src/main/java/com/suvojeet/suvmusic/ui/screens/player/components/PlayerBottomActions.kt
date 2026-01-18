@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Videocam
@@ -18,6 +19,7 @@ import com.suvojeet.suvmusic.ui.components.DominantColors
 @Composable
 fun BottomActions(
     onLyricsClick: () -> Unit,
+    onCommentsClick: () -> Unit,
     onCastClick: () -> Unit,
     onQueueClick: () -> Unit,
     dominantColors: DominantColors,
@@ -33,6 +35,14 @@ fun BottomActions(
             Icon(
                 imageVector = Icons.Default.Lyrics,
                 contentDescription = "Lyrics",
+                tint = dominantColors.onBackground.copy(alpha = 0.6f)
+            )
+        }
+
+        IconButton(onClick = onCommentsClick) {
+            Icon(
+                imageVector = Icons.Default.Comment,
+                contentDescription = "Comments",
                 tint = dominantColors.onBackground.copy(alpha = 0.6f)
             )
         }
