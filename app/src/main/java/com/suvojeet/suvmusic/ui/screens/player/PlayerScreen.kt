@@ -136,6 +136,8 @@ fun PlayerScreen(
     onRefreshDevices: () -> Unit = {},
     lyrics: Lyrics? = null,
     isFetchingLyrics: Boolean = false,
+    comments: List<com.suvojeet.suvmusic.data.model.Comment>? = null,
+    isFetchingComments: Boolean = false,
     // Sleep timer
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -212,6 +214,7 @@ fun PlayerScreen(
     // UI States
     var showQueue by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
+    var showCommentsSheet by remember { mutableStateOf(false) }
     var showActionsSheet by remember { mutableStateOf(false) }
     var showCreditsSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
@@ -535,6 +538,7 @@ fun PlayerScreen(
                                 // Bottom Actions
                                 BottomActions(
                                     onLyricsClick = { showLyrics = true },
+                                    onCommentsClick = { showCommentsSheet = true },
                                     onCastClick = { showOutputDeviceSheet = true },
                                     onQueueClick = { showQueue = true },
                                     dominantColors = dominantColors,
@@ -674,6 +678,7 @@ fun PlayerScreen(
                             // Bottom Actions
                             BottomActions(
                                 onLyricsClick = { showLyrics = true },
+                                onCommentsClick = { showCommentsSheet = true },
                                 onCastClick = { showOutputDeviceSheet = true },
                                 onQueueClick = { showQueue = true },
                                 dominantColors = dominantColors,
@@ -730,6 +735,15 @@ fun PlayerScreen(
                     onClose = { showLyrics = false }
                 )
             }
+
+            // Comments Sheet
+            com.suvojeet.suvmusic.ui.screens.player.components.CommentsSheet(
+                isVisible = showCommentsSheet,
+                comments = comments,
+                isLoading = isFetchingComments,
+                onDismiss = { showCommentsSheet = false },
+                accentColor = dominantColors.accent
+            )
         }
 
         // Volume Indicator Overlay (Moved to end to appear on top)
