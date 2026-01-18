@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Copyright
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Headphones
@@ -227,10 +228,40 @@ fun SongCreditsSheet(
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFFFF6B9D), // Apple Music pink
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = song.artistId != null) {
+                                song.artistId?.let { onArtistClick(it) }
+                            }
                     )
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    // Quality & Source Badges
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val sourceBadge = when (song.source) {
+                            com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YOUTUBE"
+                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JIOSAAVN"
+                            com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "LOCAL"
+                            com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> "OFFLINE"
+                            else -> "UNKNOWN"
+                        }
+                        
+                        Badge(text = sourceBadge)
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        Badge(
+                            text = if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) "HQ AUDIO" else "AAC",
+                            backgroundColor = Color.White.copy(alpha = 0.15f)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
                     
                     // PERFORMING ARTISTS Section (Apple Music style)
                     Text(
@@ -383,7 +414,8 @@ fun SongCreditsSheet(
                             CreditItem(
                                 icon = Icons.Default.RecordVoiceOver,
                                 label = "Content ID",
-                                value = song.id
+                                value = song.id,
+                                canCopy = true
                             )
                             
                             CreditDivider()
@@ -415,14 +447,52 @@ fun SongCreditsSheet(
 }
 
 @Composable
+private fun Badge(
+    text: String,
+    backgroundColor: Color = Color.White.copy(alpha = 0.1f),
+    textColor: Color = Color.White.copy(alpha = 0.9f)
+) {
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(4.dp),
+        modifier = Modifier.height(20.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 6.dp)
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    letterSpacing = 0.5.sp
+                ),
+                color = textColor
+            )
+        }
+    }
+}
+
+@Composable
 private fun CreditItem(
     icon: ImageVector,
     label: String,
-    value: String
+    value: String,
+    canCopy: Boolean = false
 ) {
+    val context = LocalContext.current
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(enabled = canCopy) {
+                if (canCopy) {
+                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(value))
+                    android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -448,6 +518,15 @@ private fun CreditItem(
                 color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+        
+        if (canCopy) {
+            Icon(
+                imageVector = Icons.Default.ContentCopy,
+                contentDescription = "Copy",
+                tint = Color.White.copy(alpha = 0.3f),
+                modifier = Modifier.size(16.dp)
             )
         }
     }
