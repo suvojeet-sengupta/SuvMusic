@@ -313,7 +313,7 @@ fun FeaturesPageOne() {
     FeatureItemLarge(
         icon = Icons.Default.Album,
         title = "Dual Music Sources",
-        desc = "The vast library of YouTube Music combined with HQ Audio's catalog."
+        desc = "The vast library of YouTube Music combined with HQ Audio's extensive catalog."
     )
     
     Spacer(modifier = Modifier.height(32.dp))

@@ -96,7 +96,7 @@ fun SongInfoSection(
                         text = when (song.source) {
                             SongSource.JIOSAAVN -> "HQ Audio • 320kbps"
                             SongSource.LOCAL -> "Local"
-                            else -> "YouTube Music"
+                            else -> "Standard Quality"
                         },
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Medium,
