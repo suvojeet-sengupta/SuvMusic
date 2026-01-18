@@ -9,12 +9,15 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,16 +36,24 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.PlayerState
+import kotlin.math.roundToInt
 
 /**
  * Mini player that appears at the bottom of the screen.
@@ -53,6 +64,7 @@ fun MiniPlayer(
     playerState: PlayerState,
     onPlayPauseClick: () -> Unit,
     onNextClick: () -> Unit,
+    onPreviousClick: () -> Unit,
     onPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
     onCloseClick: (() -> Unit)? = null,
@@ -63,6 +75,19 @@ fun MiniPlayer(
     val cornerRadius = 14.dp
     val playerShape = RoundedCornerShape(cornerRadius)
     
+    // Extract dominant colors
+    val dominantColors = rememberDominantColors(
+        imageUrl = song?.thumbnailUrl,
+        isDarkTheme = true // Force dark for miniplayer usually looks better or match system
+    )
+    
+    // Animate background color
+    val backgroundColor by animateColorAsState(
+        targetValue = if (song != null) dominantColors.primary.copy(alpha = 0.9f) 
+                      else MaterialTheme.colorScheme.surfaceContainerHigh,
+        label = "MiniPlayerBackground"
+    )
+
     AnimatedVisibility(
         visible = song != null,
         enter = slideInVertically { it },
@@ -70,6 +95,10 @@ fun MiniPlayer(
         modifier = modifier
     ) {
         song?.let {
+            // Swipe Logic
+            var offsetX by remember { mutableFloatStateOf(0f) }
+            val swipeThreshold = 100f
+
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -77,11 +106,28 @@ fun MiniPlayer(
                     .shadow(
                         elevation = 16.dp,
                         shape = playerShape,
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        spotColor = dominantColors.primary.copy(alpha = 0.5f)
                     )
                     .clip(playerShape)
+                    .offset { IntOffset(offsetX.roundToInt(), 0) }
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                if (offsetX > swipeThreshold) {
+                                    onPreviousClick()
+                                } else if (offsetX < -swipeThreshold) {
+                                    onNextClick()
+                                }
+                                offsetX = 0f
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                offsetX += dragAmount
+                            }
+                        )
+                    }
                     .clickable(onClick = onPlayerClick),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = backgroundColor,
             ) {
                 Column {
                     Row(
@@ -125,14 +171,14 @@ fun MiniPlayer(
                             Text(
                                 text = song.title,
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = dominantColors.onBackground,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = song.artist,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = dominantColors.onBackground.copy(alpha = 0.7f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -151,7 +197,7 @@ fun MiniPlayer(
                                 else 
                                     Icons.Default.PlayArrow,
                                 contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = dominantColors.onBackground,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -166,7 +212,7 @@ fun MiniPlayer(
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Next",
-                                tint = MaterialTheme.colorScheme.onSurface,
+                                tint = dominantColors.onBackground,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -180,7 +226,7 @@ fun MiniPlayer(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Close",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -197,8 +243,8 @@ fun MiniPlayer(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(3.dp),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = dominantColors.onBackground.copy(alpha = 0.2f),
+                        color = dominantColors.accent,
                         strokeCap = StrokeCap.Round
                     )
                 }
