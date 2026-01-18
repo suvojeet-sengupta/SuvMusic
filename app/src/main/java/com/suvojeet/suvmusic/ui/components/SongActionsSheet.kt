@@ -62,7 +62,7 @@ fun SongActionsSheet(
     onSetRingtone: () -> Unit = {},
     onStartRadio: () -> Unit = {}
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     
     // Share function
