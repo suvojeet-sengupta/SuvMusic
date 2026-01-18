@@ -324,6 +324,60 @@ fun AboutScreen(
             }
             
             Spacer(modifier = Modifier.height(28.dp))
+
+            // === SOURCE SECTION ===
+            SectionTitle("Source", primaryColor)
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
+            ) {
+                val uriHandler = LocalUriHandler.current
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic") }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(primaryColor.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub,
+                            contentDescription = null,
+                            tint = primaryColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column {
+                        Text(
+                            text = "GitHub Repository",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = onSurfaceColor
+                        )
+                        Text(
+                            text = "View source code & report issues",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
             
             // === ADVANCED SECTION ===
             SectionTitle("Advanced", primaryColor)
