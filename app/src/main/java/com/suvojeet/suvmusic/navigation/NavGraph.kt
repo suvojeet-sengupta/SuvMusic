@@ -15,6 +15,7 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.ui.screens.AboutScreen
+import com.suvojeet.suvmusic.ui.screens.HowItWorksScreen
 import com.suvojeet.suvmusic.ui.screens.AppearanceSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.ArtworkShapeScreen
 import com.suvojeet.suvmusic.ui.screens.CustomizationScreen
@@ -238,6 +239,13 @@ fun NavGraph(
         
         composable(Destination.About.route) {
             AboutScreen(
+                onBack = { navController.popBackStack() },
+                onHowItWorksClick = { navController.navigate(Destination.HowItWorks.route) }
+            )
+        }
+        
+        composable(Destination.HowItWorks.route) {
+            HowItWorksScreen(
                 onBack = { navController.popBackStack() }
             )
         }

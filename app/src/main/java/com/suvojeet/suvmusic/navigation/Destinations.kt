@@ -20,6 +20,7 @@ sealed class Destination(val route: String) {
     data object Downloads : Destination("downloads")
     data object ListeningStats : Destination("listening_stats")
     data object Welcome : Destination("welcome")
+    data object HowItWorks : Destination("how_it_works")
     
     data class Playlist(
         val playlistId: String,
