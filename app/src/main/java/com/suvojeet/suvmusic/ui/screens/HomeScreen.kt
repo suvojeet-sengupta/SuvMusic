@@ -1,6 +1,11 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.composed
@@ -34,7 +39,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
@@ -423,30 +430,124 @@ private fun Modifier.bounceClick(
 private fun AppFooter(
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+    // Infinite animations for floating effect
+    val infiniteTransition = rememberInfiniteTransition(label = "footer")
+    
+    // Bouncing music note animation
+    val bounceOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = androidx.compose.animation.core.EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bounce"
+    )
+    
+    // Heart pulse animation
+    val heartScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = androidx.compose.animation.core.EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "heartbeat"
+    )
+    
+    // Subtle glow pulse
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+    
+    Column(
+        modifier = modifier.padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Animated Music Notes Row
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left music note
+            Text(
+                text = "🎵",
+                fontSize = 28.sp,
+                modifier = Modifier.offset(y = (-bounceOffset).dp)
+            )
+            
+            // Center headphones
+            Text(
+                text = "🎧",
+                fontSize = 40.sp,
+                modifier = Modifier
+                    .graphicsLayer {
+                        rotationZ = bounceOffset / 2
+                    }
+            )
+            
+            // Right music note (opposite phase)
+            Text(
+                text = "🎶",
+                fontSize = 28.sp,
+                modifier = Modifier.offset(y = bounceOffset.dp)
+            )
+        }
+        
+        // Tagline with gradient effect
         Text(
-            text = "Developed with ",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            text = "That's all for now!",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
         )
         
-        Icon(
-            imageVector = Icons.Default.Favorite,
-            contentDescription = "Love",
-            tint = Color(0xFFFF4081), // Pink/Red color
-            modifier = Modifier
-                .padding(horizontal = 4.dp)
-                .size(14.dp)
+        // Subtext
+        Text(
+            text = "Keep vibing, new music drops daily ✨",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center
         )
         
-        Text(
-            text = " from India \uD83C\uDDEE\uD83C\uDDF3", // India Flag Emoji
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-        )
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Made with love section
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Developed with ",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+            
+            // Animated heart
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Love",
+                tint = Color(0xFFFF4081),
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .size(14.dp)
+                    .scale(heartScale)
+            )
+            
+            Text(
+                text = " from India 🇮🇳",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
