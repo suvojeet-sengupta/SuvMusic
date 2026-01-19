@@ -16,9 +16,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.outlined.Block
@@ -52,6 +54,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
 @Composable
 fun AboutScreen(
     onBack: () -> Unit,
+    onHowItWorksClick: () -> Unit = {},
     viewModel: AboutViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -241,12 +244,17 @@ fun AboutScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         coil.compose.AsyncImage(
-                            model = "https://photos.fife.usercontent.google.com/pw/AP1GczMBNMmsCeKjdZ3Tr0-H6j-c62sKTKRtnWBHPcMMZoeWFmYmFsQQa2TD_A=w1289-h859-s-no-gm?authuser=0",
+                            model = "https://avatars.githubusercontent.com/u/suvojeet-sengupta",
                             contentDescription = "Suvojeet Sengupta",
                             modifier = Modifier
                                 .size(84.dp)
                                 .clip(CircleShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            error = coil.compose.rememberAsyncImagePainter(
+                                model = coil.request.ImageRequest.Builder(LocalContext.current)
+                                    .data(R.drawable.logo)
+                                    .build()
+                            )
                         )
                     }
                     
@@ -374,6 +382,65 @@ fun AboutScreen(
                             color = onSurfaceVariant
                         )
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            
+            // === HOW IT WORKS SECTION ===
+            SectionTitle("Learn More", primaryColor)
+            
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onHowItWorksClick() }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(primaryColor.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = primaryColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "How It Works",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = onSurfaceColor
+                        )
+                        Text(
+                            text = "Learn how SuvMusic works with YouTube Music",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = onSurfaceVariant
+                        )
+                    }
+                    
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = onSurfaceVariant
+                    )
                 }
             }
 
