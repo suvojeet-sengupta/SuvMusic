@@ -34,14 +34,31 @@ data class DominantColors(
 fun rememberDominantColors(
     imageUrl: String?,
     isDarkTheme: Boolean = true,
-    defaultColors: DominantColors = DominantColors()
+    defaultColors: DominantColors? = null
 ): DominantColors {
-    var colors by remember(imageUrl, isDarkTheme) { mutableStateOf(defaultColors) }
+    // Use theme-aware default colors to prevent flickering when song changes
+    val themeAwareDefaults = defaultColors ?: if (isDarkTheme) {
+        DominantColors(
+            primary = Color(0xFF1A1A1A),
+            secondary = Color(0xFF2A2A2A),
+            accent = Color(0xFF888888),
+            onBackground = Color.White
+        )
+    } else {
+        DominantColors(
+            primary = Color(0xFFF5F5F5),
+            secondary = Color(0xFFE8E8E8),
+            accent = Color(0xFF666666),
+            onBackground = Color(0xFF1A1A1A)
+        )
+    }
+    
+    var colors by remember(imageUrl, isDarkTheme) { mutableStateOf(themeAwareDefaults) }
     val context = LocalContext.current
     
     LaunchedEffect(imageUrl, isDarkTheme) {
         if (imageUrl == null) {
-            colors = defaultColors
+            colors = themeAwareDefaults
             return@LaunchedEffect
         }
         
@@ -62,7 +79,7 @@ fun rememberDominantColors(
                     }
                 }
             } catch (e: Exception) {
-                colors = defaultColors
+                colors = themeAwareDefaults
             }
         }
     }
