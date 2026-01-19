@@ -157,7 +157,7 @@ fun AboutScreen(
             
             // Tagline
             Text(
-                text = "Premium music streaming with beautiful design.\nAd-free. High quality. Always.",
+                text = "Proudly Made in India 🇮🇳\nUnlimited Music. Ad-Free. Pure Bliss.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     lineHeight = 22.sp
                 ),
@@ -165,8 +165,37 @@ fun AboutScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 40.dp)
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // === APP DESCRIPTION SECTION ===
+            SectionTitle("About SuvMusic", primaryColor)
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "SuvMusic is a cutting-edge, open-source music player developed in India. Our focus is to deliver a premium, interruption-free music experience by leveraging the vast library of YouTube Music.",
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        color = onSurfaceColor
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Whether you're streaming your favorite tracks, exploring new genres, or downloading for offline playback, SuvMusic ensures high-fidelity audio and a user-centric design without any subscriptions.",
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        color = onSurfaceVariant
+                    )
+                }
+            }
             
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
             // === FEATURES SECTION ===
             SectionTitle("Features", primaryColor)
