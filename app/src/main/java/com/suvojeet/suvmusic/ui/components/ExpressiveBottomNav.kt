@@ -65,35 +65,21 @@ fun ExpressiveBottomNav(
         NavItem(Destination.Settings, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
     
-    // Dynamic colors from Material You
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainer
-    val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    // Spotify-style transparent dark background
+    val transparentDarkBg = Color.Black.copy(alpha = 0.85f)
+    val borderColor = Color.White.copy(alpha = 0.1f)
     
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        surfaceColor.copy(alpha = 0.95f),
-                        surfaceColor
-                    )
-                )
-            )
+            .background(transparentDarkBg)
             .drawBehind {
-                // Top border line - subtle glass edge with dynamic color
+                // Top border line - subtle glass edge
                 drawLine(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            borderColor,
-                            borderColor,
-                            Color.Transparent
-                        )
-                    ),
+                    color = borderColor,
                     start = Offset(0f, 0f),
                     end = Offset(size.width, 0f),
-                    strokeWidth = 1f
+                    strokeWidth = 0.5f
                 )
             }
             .navigationBarsPadding()
