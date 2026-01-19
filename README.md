@@ -1,85 +1,73 @@
 # SuvMusic
 
-<div align="center">
-  <img src="app/src/main/res/drawable/logo.webp" alt="SuvMusic Logo" width="140" height="140" style="border-radius: 20px;">
-  <br>
-  <h1>SuvMusic</h1>
-  <p><b>A Premium, Native Music Client for Android</b></p>
-  <p>
-    <i>Seamlessly blending YouTube Music & HQ Audio in a stunning Material 3 interface.</i>
-  </p>
-</div>
+<p align="center">
+  <img src="app/src/main/res/drawable/logo.webp" alt="SuvMusic" width="120" height="120" style="border-radius: 24px;">
+</p>
 
-<div align="center">
+<p align="center">
+  <b>A clean, fast music player for Android</b><br>
+  <sub>YouTube Music + HQ Audio streaming. No ads. No nonsense.</sub>
+</p>
 
-![Platform](https://img.shields.io/badge/Platform-Android_8.0+-00C853?style=flat-square)
-![Kotlin](https://img.shields.io/badge/Language-Kotlin_1.9-7F52FF?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
-
-</div>
+<p align="center">
+  <img src="https://img.shields.io/badge/Android-8.0+-green?style=flat-square" alt="Android 8+">
+  <img src="https://img.shields.io/badge/Kotlin-1.9-purple?style=flat-square" alt="Kotlin">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT">
+</p>
 
 ---
 
-## Overview
+## What is this?
 
-**SuvMusic** redefines the music streaming experience on Android. Built with modern **Jetpack Compose**, it aggregates content from **YouTube Music** and **HQ Audio** into a single, cohesive, and premium application. Whether you want the vast library of YouTube or the 320kbps high-fidelity audio of HQ Audio, SuvMusic delivers it with style.
+Built this because I wanted a single app that handles YouTube Music and high-quality audio streaming. SuvMusic does both.
 
-## ✨ Key Features
+**Features:**
+- Stream from YouTube Music or HQ sources (320kbps)
+- Synced lyrics
+- Download for offline
+- Local file playback
+- Dynamic Island-style mini player
+- Share via `suvmusic://` deep links
+- Material 3 UI with album colors
+- Sleep timer, playback speed, queue
 
-### 🎵 Dual Music Sources
-*   **YouTube Music Integration**: Full access to charts, mixes, and personalized recommendations.
-*   **HQ Audio Support**: Stream songs in **320kbps MP3** quality directly from HQ Audio.
-*   **Seamless Switching**: Set your primary source in Settings. Search and Home content dynamically adapt to your preference.
+## Screenshots
 
-### 🎧 Premium Playback Experience
-*   **High-Fidelity Audio**: Crystal clear audio engine with gapless playback.
-*   **Smart Quality Badges**: Know exactly what you're listening to (e.g., "HQ Audio • 320kbps" vs "YouTube Music").
-*   **Synchronized Lyrics**: Beautiful, time-synced lyrics with blurred background artistry.
-*   **Song Credits**: Detailed credits sheet inspired by Apple Music (Performing Artists, Production, Source).
+*coming soon*
 
-### 🚀 Smart & Dynamic UI
-*   **Adaptive Search**: Search tabs automatically reorder based on your preferred music source.
-*   **Instant Caching**: Home sections for both YouTube and HQ Audio are cached for instant offline loading.
-*   **Material 3 Design**: A modern, fluid interface that extracts colors from album artwork.
-*   **Apple Music-Style Recents**: A visual history of your listening journey.
+## Tech Stack
 
-### ⚡ Offline & Library
-*   **Unified Library**: Manage downloaded tracks and liked songs in one place.
-*   **Offline Mode**: Download music for data-free listening.
-*   **Local Playback**: Full support for playing local audio files.
+- Kotlin + Jetpack Compose
+- MVVM with Hilt DI
+- Media3 (ExoPlayer)
+- Coil for images
+- Coroutines/Flow
+- NewPipe extractor
 
----
+## Installation
 
-## 🛠️ Technical Architecture
+Grab the APK from [Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases). Needs Android 8.0+.
 
-SuvMusic is engineered with robust, modern Android practices:
+Or build:
+```bash
+git clone https://github.com/suvojeet-sengupta/SuvMusic.git
+cd SuvMusic
+./gradlew assembleDebug
+```
 
-*   **Language**: Kotlin
-*   **UI Toolkit**: Jetpack Compose (Material 3)
-*   **Architecture**: MVVM + Clean Architecture
-*   **Dependency Injection**: Hilt
-*   **Async Processing**: Coroutines & Flows
-*   **Caching**: DataStore & File-based Caching (Custom implementation for Home/Search)
-*   **Network**: Retrofit, OkHttp, NewPipe Extractor
-*   **Media**: Android Media3 (ExoPlayer)
-*   **Image Loading**: Coil (with high-res thumbnail extraction)
+## Deep Links
 
----
+Share songs with custom URLs:
+```
+suvmusic://play?id=VIDEO_ID
+```
 
-## 📥 Installation
+## Note
 
-1.  Download the latest APK from the [Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases) section.
-2.  Install on your Android device (Android 8.0+ required).
-3.  Enjoy premium music streaming!
+Personal project, not affiliated with Google. Use responsibly.
 
 ---
 
-## ⚠️ Disclaimer
-
-This project is an open-source educational initiative. It interfaces with public APIs of YouTube Music and HQ Audio. It is not affiliated with, endorsed by, or associated with Google LLC, YouTube, or HQ Audio. All content is copyright to their respective owners.
-
----
-
-<div align="center">
-  <b>Developed with ❤️ by Suvojeet Sengupta</b>
-</div>
+<p align="center">
+  Built by <a href="https://github.com/suvojeet-sengupta">Suvojeet</a>
+</p>
