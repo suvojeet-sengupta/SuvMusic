@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HeadsetMic
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Smartphone
@@ -74,6 +75,7 @@ fun SettingsScreen(
     onCustomizationClick: () -> Unit = {},
     onStorageClick: () -> Unit = {},
     onStatsClick: () -> Unit = {},
+    onSupportClick: () -> Unit = {},
     onAboutClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -307,6 +309,18 @@ fun SettingsScreen(
             title = "Listening Statistics",
             subtitle = "View your listening history and stats",
             onClick = onStatsClick
+        )
+        
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        
+        // Support Section
+        SectionTitle("Support")
+        
+        SettingsItem(
+            icon = Icons.Default.HeadsetMic,
+            title = "Help & Support",
+            subtitle = "FAQ, report bugs, contact us",
+            onClick = onSupportClick
         )
         
         // About Section
