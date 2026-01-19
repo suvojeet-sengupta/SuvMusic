@@ -66,7 +66,7 @@ fun OutputDeviceSheet(
                             device = device,
                             onClick = {
                                 onDeviceSelected(device)
-                                onDismiss()
+                                // Don't auto-dismiss - let user close manually
                             },
                             accentColor = accentColor
                         )
