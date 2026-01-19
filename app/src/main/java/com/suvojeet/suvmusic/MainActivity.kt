@@ -549,6 +549,11 @@ fun SuvMusicApp(
 private fun extractVideoId(url: String): String? {
     return try {
         when {
+            // SuvMusic custom URL: suvmusic://play?id=VIDEO_ID
+            url.startsWith("suvmusic://play") -> {
+                val uri = android.net.Uri.parse(url)
+                uri.getQueryParameter("id")
+            }
             // youtu.be/VIDEO_ID format
             url.contains("youtu.be/") -> {
                 url.substringAfter("youtu.be/").substringBefore("?").substringBefore("&")
@@ -562,7 +567,7 @@ private fun extractVideoId(url: String): String? {
                 url.substringAfter("v=").substringBefore("&").substringBefore("#")
             }
             else -> null
-        }?.takeIf { it.isNotBlank() && it.length == 11 }
+        }?.takeIf { it.isNotBlank() }
     } catch (e: Exception) {
         null
     }
@@ -585,4 +590,31 @@ private fun isAudioFileIntent(intent: Intent?): Boolean {
 private fun extractAudioUri(intent: Intent?): android.net.Uri? {
     if (!isAudioFileIntent(intent)) return null
     return intent?.data
+}
+
+/**
+ * Extract song ID from SuvMusic custom URL (suvmusic://play?id=VIDEO_ID)
+ */
+private fun extractSuvMusicId(url: String?): String? {
+    if (url == null) return null
+    return try {
+        when {
+            url.startsWith("suvmusic://play") -> {
+                // Extract id parameter from suvmusic://play?id=VIDEO_ID
+                val uri = android.net.Uri.parse(url)
+                uri.getQueryParameter("id")
+            }
+            else -> null
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Generate a SuvMusic share URL for a song.
+ * Format: suvmusic://play?id=VIDEO_ID
+ */
+fun generateSuvMusicShareUrl(songId: String): String {
+    return "suvmusic://play?id=$songId"
 }
