@@ -97,6 +97,9 @@ class SessionManager @Inject constructor(
         
         // Radio / Endless Queue
         private val ENDLESS_QUEUE_ENABLED_KEY = booleanPreferencesKey("endless_queue_enabled")
+        
+        // Offline Mode
+        private val OFFLINE_MODE_ENABLED_KEY = booleanPreferencesKey("offline_mode_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -196,6 +199,22 @@ class SessionManager @Inject constructor(
     suspend fun setEndlessQueue(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ENDLESS_QUEUE_ENABLED_KEY] = enabled
+        }
+    }
+    
+    // --- Offline Mode ---
+    
+    fun isOfflineModeEnabled(): Boolean = runBlocking {
+        context.dataStore.data.first()[OFFLINE_MODE_ENABLED_KEY] ?: false
+    }
+    
+    val offlineModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[OFFLINE_MODE_ENABLED_KEY] ?: false
+    }
+    
+    suspend fun setOfflineMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[OFFLINE_MODE_ENABLED_KEY] = enabled
         }
     }
     
