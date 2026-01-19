@@ -101,6 +101,14 @@
                 <data android:scheme="file" />
                 <data android:mimeType="audio/*" />
             </intent-filter>
+            
+            <!-- Custom SuvMusic URL scheme for sharing (suvmusic://play?id=VIDEO_ID) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="suvmusic" android:host="play" />
+            </intent-filter>
         </activity>
         
         <!-- Music Player Service -->
