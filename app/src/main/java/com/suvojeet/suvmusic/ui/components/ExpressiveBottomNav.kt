@@ -66,13 +66,14 @@ fun ExpressiveBottomNav(
     )
     
     // Spotify-style transparent dark background
-    val transparentDarkBg = Color.Black.copy(alpha = 0.85f)
-    val borderColor = Color.White.copy(alpha = 0.1f)
+    // Glass Bottom Navigation with Dynamic Colors
+    val transparentBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+    val borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
     
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(transparentDarkBg)
+            .background(transparentBg)
             .drawBehind {
                 // Top border line - subtle glass edge
                 drawLine(

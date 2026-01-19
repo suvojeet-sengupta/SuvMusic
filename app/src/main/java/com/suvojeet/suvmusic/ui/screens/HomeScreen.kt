@@ -416,6 +416,7 @@ private fun Modifier.bounceClick(
             interactionSource = interactionSource,
             indication = null,
             onClick = onClick
+        )
 }
 
 @Composable
