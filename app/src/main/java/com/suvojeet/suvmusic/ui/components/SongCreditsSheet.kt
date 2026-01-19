@@ -123,7 +123,7 @@ fun SongCreditsSheet(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF0D0D0D))
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
                 // Get high resolution thumbnail URL
                 val highResThumbnail = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
@@ -147,9 +147,9 @@ fun SongCreditsSheet(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.Transparent,
-                                    Color(0xFF0D0D0D).copy(alpha = 0.7f),
-                                    Color(0xFF0D0D0D)
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                    MaterialTheme.colorScheme.surface
                                 )
                             )
                         )
@@ -170,14 +170,14 @@ fun SongCreditsSheet(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(50),
-                            color = Color.White.copy(alpha = 0.2f),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
                             modifier = Modifier.size(36.dp)
                         ) {
                             IconButton(onClick = onDismiss) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Close",
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -198,7 +198,8 @@ fun SongCreditsSheet(
                             contentDescription = song.title,
                             modifier = Modifier
                                 .size(200.dp)
-                                .clip(RoundedCornerShape(12.dp)),
+                                .clip(RoundedCornerShape(12.dp))
+                                .shadow(8.dp, RoundedCornerShape(12.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -211,7 +212,7 @@ fun SongCreditsSheet(
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -226,7 +227,7 @@ fun SongCreditsSheet(
                     Text(
                         text = song.artist,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFFFF6B9D), // Apple Music pink
+                        color = MaterialTheme.colorScheme.primary, // Use primary color instead of fixed pink
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -257,7 +258,7 @@ fun SongCreditsSheet(
                             Spacer(modifier = Modifier.width(8.dp))
                             Badge(
                                 text = "AAC",
-                                backgroundColor = Color.White.copy(alpha = 0.15f)
+                                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             )
                         }
                     }
@@ -270,7 +271,7 @@ fun SongCreditsSheet(
                         style = MaterialTheme.typography.labelMedium.copy(
                             letterSpacing = 2.sp
                         ),
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                     
@@ -281,7 +282,7 @@ fun SongCreditsSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column {
@@ -298,7 +299,7 @@ fun SongCreditsSheet(
                                 if (index < artistCredits.lastIndex) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(start = 72.dp),
-                                        color = Color.White.copy(alpha = 0.1f)
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                     )
                                 }
                             }
@@ -313,7 +314,7 @@ fun SongCreditsSheet(
                         style = MaterialTheme.typography.labelMedium.copy(
                             letterSpacing = 2.sp
                         ),
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                     
@@ -324,7 +325,7 @@ fun SongCreditsSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -377,7 +378,7 @@ fun SongCreditsSheet(
                         style = MaterialTheme.typography.labelMedium.copy(
                             letterSpacing = 2.sp
                         ),
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                     
@@ -387,7 +388,7 @@ fun SongCreditsSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -435,7 +436,7 @@ fun SongCreditsSheet(
                     Text(
                         text = "Powered by SuvMusic",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.3f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -450,8 +451,8 @@ fun SongCreditsSheet(
 @Composable
 private fun Badge(
     text: String,
-    backgroundColor: Color = Color.White.copy(alpha = 0.1f),
-    textColor: Color = Color.White.copy(alpha = 0.9f)
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    textColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Surface(
         color = backgroundColor,
@@ -500,7 +501,7 @@ private fun CreditItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.6f),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp)
         )
         
@@ -510,13 +511,13 @@ private fun CreditItem(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -526,7 +527,7 @@ private fun CreditItem(
             Icon(
                 imageVector = Icons.Default.ContentCopy,
                 contentDescription = "Copy",
-                tint = Color.White.copy(alpha = 0.3f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -537,7 +538,7 @@ private fun CreditItem(
 private fun CreditDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
-        color = Color.White.copy(alpha = 0.1f)
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
 }
 
@@ -628,7 +629,7 @@ private fun ArtistCreditRow(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF3A3A3C)),
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center
         ) {
             if (thumbnailUrl != null) {
@@ -656,7 +657,7 @@ private fun ArtistCreditRow(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -668,14 +669,14 @@ private fun ArtistCreditRow(
             Text(
                 text = artistName,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = role,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
