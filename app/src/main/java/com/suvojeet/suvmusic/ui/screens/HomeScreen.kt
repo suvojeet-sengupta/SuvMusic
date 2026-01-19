@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -137,6 +138,15 @@ fun HomeScreen(
                                 }
                             }
                         }
+                    }
+
+                    // App Footer
+                    item {
+                        AppFooter(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp)
+                        )
                     }
                 }
             }
@@ -406,5 +416,36 @@ private fun Modifier.bounceClick(
             interactionSource = interactionSource,
             indication = null,
             onClick = onClick
+}
+
+@Composable
+private fun AppFooter(
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Developed with ",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
+        
+        Icon(
+            imageVector = Icons.Default.Favorite,
+            contentDescription = "Love",
+            tint = Color(0xFFFF4081), // Pink/Red color
+            modifier = Modifier
+                .padding(horizontal = 4.dp)
+                .size(14.dp)
+        )
+        
+        Text(
+            text = " from India \uD83C\uDDEE\uD83C\uDDF3", // India Flag Emoji
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+    }
 }
