@@ -21,6 +21,8 @@ import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -504,50 +506,48 @@ class PlayerViewModel @Inject constructor(
     
     /**
      * Restore last playback state if available.
-     * @return true if playback was restored, false otherwise.
      */
-    fun restoreLastPlayback(): Boolean {
-        val lastState = sessionManager.getLastPlaybackState() ?: return false
+    suspend fun restoreLastPlayback() {
+        val lastState = sessionManager.getLastPlaybackState() ?: return
         
         try {
-            val jsonArray = org.json.JSONArray(lastState.queueJson)
-            val queue = mutableListOf<Song>()
-            
-            for (i in 0 until jsonArray.length()) {
-                val obj = jsonArray.getJSONObject(i)
-                queue.add(
-                    Song(
-                        id = obj.getString("id"),
-                        title = obj.getString("title"),
-                        artist = obj.getString("artist"),
-                        album = obj.optString("album", ""),
-                        thumbnailUrl = obj.optString("thumbnailUrl", null),
-                        duration = obj.getLong("duration"),
-                        source = try { 
-                            SongSource.valueOf(obj.getString("source")) 
-                        } catch (e: Exception) { 
-                            SongSource.YOUTUBE 
-                        }
+            val (queue, index) = withContext(Dispatchers.Default) {
+                val jsonArray = org.json.JSONArray(lastState.queueJson)
+                val queueList = mutableListOf<Song>()
+                
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    queueList.add(
+                        Song(
+                            id = obj.getString("id"),
+                            title = obj.getString("title"),
+                            artist = obj.getString("artist"),
+                            album = obj.optString("album", ""),
+                            thumbnailUrl = obj.optString("thumbnailUrl", null),
+                            duration = obj.getLong("duration"),
+                            source = try { 
+                                SongSource.valueOf(obj.getString("source")) 
+                            } catch (e: Exception) { 
+                                SongSource.YOUTUBE 
+                            }
+                        )
                     )
-                )
+                }
+                Pair(queueList, lastState.index)
             }
             
-            if (queue.isNotEmpty() && lastState.index in queue.indices) {
-                val song = queue[lastState.index]
+            if (queue.isNotEmpty() && index in queue.indices) {
+                val song = queue[index]
                 // Load song without auto-playing (user can resume manually)
-                musicPlayer.playSong(song, queue, lastState.index, autoPlay = false)
+                musicPlayer.playSong(song, queue, index, autoPlay = false)
                 
                 // Seek to saved position after a delay (allow media to load)
-                viewModelScope.launch {
-                    kotlinx.coroutines.delay(1000)
-                    musicPlayer.seekTo(lastState.position)
-                }
-                return true
+                kotlinx.coroutines.delay(1000)
+                musicPlayer.seekTo(lastState.position)
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return false
     }
     
     override fun onCleared() {

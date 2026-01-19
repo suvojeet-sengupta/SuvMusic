@@ -20,7 +20,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
@@ -424,7 +427,7 @@ class SessionManager @Inject constructor(
      * Get last saved playback state.
      * @return Quadruple of (songId, position, queueJson, index) or null if not saved.
      */
-    fun getLastPlaybackState(): LastPlaybackState? = runBlocking {
+    suspend fun getLastPlaybackState(): LastPlaybackState? = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
         val songId = prefs[LAST_SONG_ID_KEY]
         val position = prefs[LAST_POSITION_KEY]
@@ -453,9 +456,14 @@ class SessionManager @Inject constructor(
     /**
      * Get recent searches list.
      */
-    fun getRecentSearches(): List<Song> = runBlocking {
-        val json = context.dataStore.data.first()[RECENT_SEARCHES_KEY] ?: return@runBlocking emptyList()
-        parseRecentSearchesJson(json)
+    /**
+     * Get recent searches list.
+     */
+    suspend fun getRecentSearches(): List<Song> = withContext(Dispatchers.IO) {
+        val json = context.dataStore.data.first()[RECENT_SEARCHES_KEY] ?: return@withContext emptyList()
+        withContext(Dispatchers.Default) {
+            parseRecentSearchesJson(json)
+        }
     }
     
     val recentSearchesFlow: Flow<List<Song>> = context.dataStore.data.map { preferences ->
@@ -606,93 +614,125 @@ class SessionManager @Inject constructor(
     // --- Home Cache ---
     
     suspend fun saveHomeCache(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>) {
+        val json = withContext(Dispatchers.Default) {
+            serializeHomeSections(sections)
+        }
         context.dataStore.edit { preferences ->
-            preferences[HOME_CACHE_KEY] = serializeHomeSections(sections)
+            preferences[HOME_CACHE_KEY] = json
         }
     }
     
-    fun getCachedHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data.map { preferences ->
-        parseHomeSections(preferences[HOME_CACHE_KEY])
-    }
+    fun getCachedHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data
+        .map { preferences -> preferences[HOME_CACHE_KEY] }
+        .flowOn(Dispatchers.IO)
+        .map { json -> 
+            withContext(Dispatchers.Default) {
+                parseHomeSections(json)
+            }
+        }
     
-    suspend fun getCachedHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+    suspend fun getCachedHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
-        return parseHomeSections(prefs[HOME_CACHE_KEY])
+        val json = prefs[HOME_CACHE_KEY]
+        withContext(Dispatchers.Default) {
+            parseHomeSections(json)
+        }
     }
     
     suspend fun saveJioSaavnHomeCache(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>) {
+        val json = withContext(Dispatchers.Default) {
+            serializeHomeSections(sections)
+        }
         context.dataStore.edit { preferences ->
-            preferences[JIOSAAVN_HOME_CACHE_KEY] = serializeHomeSections(sections)
+            preferences[JIOSAAVN_HOME_CACHE_KEY] = json
         }
     }
     
-    fun getCachedJioSaavnHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data.map { preferences ->
-        parseHomeSections(preferences[JIOSAAVN_HOME_CACHE_KEY])
-    }
+    fun getCachedJioSaavnHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data
+        .map { preferences -> preferences[JIOSAAVN_HOME_CACHE_KEY] }
+        .flowOn(Dispatchers.IO)
+        .map { json ->
+            withContext(Dispatchers.Default) {
+                parseHomeSections(json)
+            }
+        }
     
-    suspend fun getCachedJioSaavnHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+    suspend fun getCachedJioSaavnHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
-        return parseHomeSections(prefs[JIOSAAVN_HOME_CACHE_KEY])
+        val json = prefs[JIOSAAVN_HOME_CACHE_KEY]
+        withContext(Dispatchers.Default) {
+            parseHomeSections(json)
+        }
     }
     
     // --- Library Cache ---
     
     suspend fun saveLibraryPlaylistsCache(playlists: List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem>) {
-        val array = JSONArray()
-        playlists.forEach { playlist ->
-            array.put(JSONObject().apply {
-                put("id", playlist.id)
-                put("name", playlist.name)
-                put("url", playlist.url)
-                put("uploaderName", playlist.uploaderName)
-                put("thumbnailUrl", playlist.thumbnailUrl ?: "")
-                put("songCount", playlist.songCount)
-            })
+        val json = withContext(Dispatchers.Default) {
+             val array = JSONArray()
+             playlists.forEach { playlist ->
+                 array.put(JSONObject().apply {
+                     put("id", playlist.id)
+                     put("name", playlist.name)
+                     put("url", playlist.url)
+                     put("uploaderName", playlist.uploaderName)
+                     put("thumbnailUrl", playlist.thumbnailUrl ?: "")
+                     put("songCount", playlist.songCount)
+                 })
+             }
+             array.toString()
         }
         context.dataStore.edit { preferences ->
-            preferences[LIBRARY_PLAYLISTS_CACHE_KEY] = array.toString()
+            preferences[LIBRARY_PLAYLISTS_CACHE_KEY] = json
         }
     }
     
-    suspend fun getCachedLibraryPlaylistsSync(): List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> {
+    suspend fun getCachedLibraryPlaylistsSync(): List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
-        val json = prefs[LIBRARY_PLAYLISTS_CACHE_KEY] ?: return emptyList()
-        return try {
-            val array = JSONArray(json)
-            (0 until array.length()).mapNotNull { i ->
-                val obj = array.optJSONObject(i) ?: return@mapNotNull null
-                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
-                    id = obj.optString("id"),
-                    name = obj.optString("name"),
-                    url = obj.optString("url"),
-                    uploaderName = obj.optString("uploaderName"),
-                    thumbnailUrl = obj.optString("thumbnailUrl").takeIf { it.isNotBlank() },
-                    songCount = obj.optInt("songCount", 0)
-                )
+        val json = prefs[LIBRARY_PLAYLISTS_CACHE_KEY] ?: return@withContext emptyList()
+        withContext(Dispatchers.Default) {
+            try {
+                val array = JSONArray(json)
+                (0 until array.length()).mapNotNull { i ->
+                    val obj = array.optJSONObject(i) ?: return@mapNotNull null
+                    com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                        id = obj.optString("id"),
+                        name = obj.optString("name"),
+                        url = obj.optString("url"),
+                        uploaderName = obj.optString("uploaderName"),
+                        thumbnailUrl = obj.optString("thumbnailUrl").takeIf { it.isNotBlank() },
+                        songCount = obj.optInt("songCount", 0)
+                    )
+                }
+            } catch (e: Exception) {
+                emptyList()
             }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
     
     suspend fun saveLibraryLikedSongsCache(songs: List<Song>) {
-        val array = JSONArray()
-        songs.forEach { song -> array.put(songToJson(song)) }
+        val json = withContext(Dispatchers.Default) {
+            val array = JSONArray()
+            songs.forEach { song -> array.put(songToJson(song)) }
+            array.toString()
+        }
         context.dataStore.edit { preferences ->
-            preferences[LIBRARY_LIKED_SONGS_CACHE_KEY] = array.toString()
+            preferences[LIBRARY_LIKED_SONGS_CACHE_KEY] = json
         }
     }
     
-    suspend fun getCachedLibraryLikedSongsSync(): List<Song> {
+    suspend fun getCachedLibraryLikedSongsSync(): List<Song> = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
-        val json = prefs[LIBRARY_LIKED_SONGS_CACHE_KEY] ?: return emptyList()
-        return try {
-            val array = JSONArray(json)
-            (0 until array.length()).mapNotNull { i ->
-                jsonToSong(array.optJSONObject(i) ?: return@mapNotNull null)
+        val json = prefs[LIBRARY_LIKED_SONGS_CACHE_KEY] ?: return@withContext emptyList()
+        withContext(Dispatchers.Default) {
+            try {
+                val array = JSONArray(json)
+                (0 until array.length()).mapNotNull { i ->
+                    jsonToSong(array.optJSONObject(i) ?: return@mapNotNull null)
+                }
+            } catch (e: Exception) {
+                emptyList()
             }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
     

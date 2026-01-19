@@ -3,15 +3,44 @@ package com.suvojeet.suvmusic
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
+import coil.request.CachePolicy
+import coil.util.DebugLogger
+
 /**
  * Application class for SuvMusic.
  * Annotated with @HiltAndroidApp to enable Hilt dependency injection.
  */
 @HiltAndroidApp
-class SuvMusicApplication : Application() {
+class SuvMusicApplication : Application(), ImageLoaderFactory {
     
     override fun onCreate() {
         super.onCreate()
         // Initialize any app-wide components here
+    }
+
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.25) // Use 25% of available memory
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.02) // Use 2% of disk space (approx 1GB on 50GB phone)
+                    .build()
+            }
+            // Aggressive caching for offline support
+            .networkCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .crossfade(true)
+            .logger(DebugLogger())
+            .build()
     }
 }

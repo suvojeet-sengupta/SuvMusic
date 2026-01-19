@@ -95,7 +95,9 @@ class SearchViewModel @Inject constructor(
         loadBrowseCategories()
         
         // Load recent searches
-        loadRecentSearches()
+        viewModelScope.launch {
+            loadRecentSearches()
+        }
         
         // Observe music source
         observeMusicSource()
@@ -131,7 +133,7 @@ class SearchViewModel @Inject constructor(
         }
     }
     
-    private fun loadRecentSearches() {
+    private suspend fun loadRecentSearches() {
         val recentSearches = sessionManager.getRecentSearches()
         _uiState.update { it.copy(recentSearches = recentSearches) }
     }
