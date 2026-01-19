@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -524,68 +523,17 @@ fun AboutScreen(
     
     // Password Dialog
     if (showPasswordDialog) {
-        var password by remember { mutableStateOf("") }
-        var isError by remember { mutableStateOf(false) }
-        
-        AlertDialog(
-            onDismissRequest = { showPasswordDialog = false },
-            title = { 
-                Text(
-                    "Developer Access",
-                    style = MaterialTheme.typography.titleLarge
-                ) 
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Enter password to unlock developer features.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { 
-                            password = it
-                            isError = false
-                        },
-                        label = { Text("Password") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        isError = isError,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    if (isError) {
-                        Text(
-                            text = "Incorrect password",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                        )
-                    }
+        com.suvojeet.suvmusic.ui.components.DeveloperAccessDialog(
+            onDismiss = { showPasswordDialog = false },
+            onUnlock = { password ->
+                if (viewModel.tryUnlockDeveloperMode(password)) {
+                    showPasswordDialog = false
+                    Toast.makeText(context, "Developer Mode Enabled", Toast.LENGTH_SHORT).show()
+                    true
+                } else {
+                    false
                 }
-            },
-            confirmButton = {
-                FilledTonalButton(
-                    onClick = {
-                        if (viewModel.tryUnlockDeveloperMode(password)) {
-                            showPasswordDialog = false
-                            Toast.makeText(context, "Developer Mode Enabled", Toast.LENGTH_SHORT).show()
-                        } else {
-                            isError = true
-                        }
-                    }
-                ) {
-                    Text("Unlock")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPasswordDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(20.dp)
+            }
         )
     }
 }
