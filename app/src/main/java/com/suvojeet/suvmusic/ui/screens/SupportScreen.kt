@@ -48,6 +48,73 @@ fun SupportScreen(
     val onSurfaceColor = colorScheme.onSurface
     val onSurfaceVariant = colorScheme.onSurfaceVariant
 
+    var showTelegramOptions by remember { mutableStateOf(false) }
+
+    if (showTelegramOptions) {
+        AlertDialog(
+            onDismissRequest = { showTelegramOptions = false },
+            title = { Text("Join Telegram", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/TechToli"))
+                                context.startActivity(intent)
+                                showTelegramOptions = false
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram,
+                            contentDescription = null,
+                            tint = Color(0xFF0088CC),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Telegram Channel", fontWeight = FontWeight.Bold)
+                            Text("For Updates (@TechToli)", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/Tech_Toli"))
+                                context.startActivity(intent)
+                                showTelegramOptions = false
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram,
+                            contentDescription = null,
+                            tint = Color(0xFF0088CC),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Telegram Group", fontWeight = FontWeight.Bold)
+                            Text("For Support (@Tech_Toli)", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTelegramOptions = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -140,13 +207,12 @@ fun SupportScreen(
                         }
                     )
                     SupportItem(
-                        icon = Icons.AutoMirrored.Filled.Message,
+                        icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram,
                         title = "Join Telegram",
-                        subtitle = "Get help from the community",
-                        accentColor = primaryColor,
+                        subtitle = "Channel & Support Group",
+                        accentColor = Color(0xFF0088CC),
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/suvmusic_app"))
-                            context.startActivity(intent)
+                            showTelegramOptions = true
                         },
                         showDivider = false
                     )
@@ -217,11 +283,24 @@ fun SupportScreen(
                     SupportItem(
                         icon = Icons.Default.Email,
                         title = "Email",
-                        subtitle = "suvojeet.developer@gmail.com",
+                        subtitle = "Suvojitsengupta21@gmail.com",
                         accentColor = primaryColor,
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:suvojeet.developer@gmail.com")
+                                data = Uri.parse("mailto:Suvojitsengupta21@gmail.com")
+                                putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Support")
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                    SupportItem(
+                        icon = Icons.Default.Email,
+                        title = "Email (Alt)",
+                        subtitle = "suvojeetsengupta@zohomail.in",
+                        accentColor = primaryColor,
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                data = Uri.parse("mailto:suvojeetsengupta@zohomail.in")
                                 putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Support")
                             }
                             context.startActivity(intent)
