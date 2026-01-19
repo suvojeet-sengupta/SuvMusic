@@ -97,6 +97,9 @@ class MainActivity : ComponentActivity() {
         // Handle deep link from intent
         val deepLinkUrl = intent?.data?.toString()
         
+        // Handle audio file from external app
+        val audioFileUri = extractAudioUri(intent)
+        
         setContent {
             val sessionManager = remember { SessionManager(this) }
             val themeMode by sessionManager.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
@@ -116,7 +119,8 @@ class MainActivity : ComponentActivity() {
                 appTheme = appTheme
             ) {
                 SuvMusicApp(
-                    initialDeepLink = deepLinkUrl,
+                    initialDeepLink = if (audioFileUri == null) deepLinkUrl else null,
+                    initialAudioUri = audioFileUri,
                     networkMonitor = networkMonitor,
                     audioManager = audioManager,
                     volumeKeyEvents = _volumeKeyEvents,
@@ -225,6 +229,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SuvMusicApp(
     initialDeepLink: String? = null,
+    initialAudioUri: android.net.Uri? = null,
     networkMonitor: NetworkMonitor,
     audioManager: AudioManager,
     volumeKeyEvents: SharedFlow<Unit>? = null,
@@ -327,8 +332,13 @@ fun SuvMusicApp(
     var deepLinkHandled by remember { mutableStateOf(false) }
     var restoreAttempted by remember { mutableStateOf(false) }
     
-    LaunchedEffect(initialDeepLink) {
-        if (initialDeepLink != null && !deepLinkHandled) {
+    LaunchedEffect(initialDeepLink, initialAudioUri) {
+        if (initialAudioUri != null && !deepLinkHandled) {
+            // Handle audio file from external app
+            deepLinkHandled = true
+            playerViewModel.playFromLocalUri(context, initialAudioUri)
+            navController.navigate(Destination.Player.route)
+        } else if (initialDeepLink != null && !deepLinkHandled) {
             deepLinkHandled = true
             val videoId = extractVideoId(initialDeepLink)
             if (videoId != null) {
@@ -337,7 +347,7 @@ fun SuvMusicApp(
                 // Navigate to player screen
                 navController.navigate(Destination.Player.route)
             }
-        } else if (!restoreAttempted && initialDeepLink == null) {
+        } else if (!restoreAttempted && initialDeepLink == null && initialAudioUri == null) {
             restoreAttempted = true
             // Only restore if no song is currently playing (i.e., app was force-stopped/crashed)
             // If app is running normally in background, currentSong will not be null
@@ -556,4 +566,23 @@ private fun extractVideoId(url: String): String? {
     } catch (e: Exception) {
         null
     }
+}
+
+/**
+ * Check if the intent is an audio file intent from external app.
+ */
+private fun isAudioFileIntent(intent: Intent?): Boolean {
+    if (intent == null) return false
+    val action = intent.action
+    val type = intent.type
+    
+    return action == Intent.ACTION_VIEW && type?.startsWith("audio/") == true
+}
+
+/**
+ * Extract audio file URI from an intent.
+ */
+private fun extractAudioUri(intent: Intent?): android.net.Uri? {
+    if (!isAudioFileIntent(intent)) return null
+    return intent?.data
 }
