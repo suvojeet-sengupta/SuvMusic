@@ -62,7 +62,7 @@ fun SleepTimerSheet(
     onSelectOption: (SleepTimerOption, Int?) -> Unit,
     onDismiss: () -> Unit,
     accentColor: Color = MaterialTheme.colorScheme.primary,
-    backgroundColor: Color = Color(0xFF1C1C1E)
+    backgroundColor: Color = MaterialTheme.colorScheme.surface
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
@@ -93,7 +93,7 @@ fun SleepTimerSheet(
                         .width(36.dp)
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Color.White.copy(alpha = 0.3f))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                 )
             }
         ) {
@@ -118,7 +118,7 @@ fun SleepTimerSheet(
                     text = "Sleep Timer",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 // Show countdown if active
@@ -284,13 +284,13 @@ private fun TimerChip(
     )
     
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor else Color.White.copy(alpha = 0.08f),
+        targetValue = if (isSelected) accentColor else MaterialTheme.colorScheme.surfaceContainerHigh,
         animationSpec = tween(200),
         label = "bg"
     )
     
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color.Black else Color.White,
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
         animationSpec = tween(200),
         label = "content"
     )
@@ -305,7 +305,7 @@ private fun TimerChip(
             .then(
                 if (!isSelected) Modifier.border(
                     width = 1.dp,
-                    color = Color.White.copy(alpha = 0.1f),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                     shape = RoundedCornerShape(16.dp)
                 ) else Modifier
             ),
@@ -356,7 +356,7 @@ private fun CustomTimerDialog(
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         androidx.compose.material3.Surface(
             shape = RoundedCornerShape(26.dp),
-            color = Color(0xFF2C2C2E),
+            color = MaterialTheme.colorScheme.surfaceContainer,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -366,7 +366,7 @@ private fun CustomTimerDialog(
                 Text(
                     text = "Custom Timer",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 
@@ -375,7 +375,7 @@ private fun CustomTimerDialog(
                 Text(
                     text = "Enter duration in minutes",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -388,9 +388,9 @@ private fun CustomTimerDialog(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = accentColor,
-                        unfocusedIndicatorColor = Color.Gray,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -411,7 +411,7 @@ private fun CustomTimerDialog(
                             .weight(1f)
                             .height(50.dp)
                     ) {
-                        Text("Cancel", color = Color.White)
+                        Text("Cancel", color = MaterialTheme.colorScheme.primary)
                     }
                     
                     androidx.compose.material3.Button(
