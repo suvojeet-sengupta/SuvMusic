@@ -43,7 +43,7 @@ fun CommentsSheet(
     if (isVisible) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
-            containerColor = Color(0xFF1C1C1E),
+            containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = Color.Black.copy(alpha = 0.5f),
             dragHandle = {
                 Box(
@@ -52,7 +52,7 @@ fun CommentsSheet(
                         .width(36.dp)
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Color.White.copy(alpha = 0.3f))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                 )
             }
         ) {
@@ -73,14 +73,14 @@ fun CommentsSheet(
                         text = "Comments",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     
                     if (comments != null) {
                         Text(
                             text = "${comments.size}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -95,7 +95,7 @@ fun CommentsSheet(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
                                 text = "No comments available",
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     } else {
@@ -137,7 +137,7 @@ private fun CommentInputSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp),
-        color = Color(0xFF2C2C2E),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(24.dp)
     ) {
         if (!isLoggedIn) {
@@ -150,7 +150,7 @@ private fun CommentInputSection(
             ) {
                 Text(
                     text = "Sign in to add a comment",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -166,14 +166,14 @@ private fun CommentInputSection(
                     value = commentText,
                     onValueChange = { commentText = it },
                     placeholder = {
-                        Text("Add a comment...", color = Color.Gray)
+                        Text("Add a comment...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     },
                     modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         cursorColor = accentColor,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
@@ -215,7 +215,7 @@ private fun CommentInputSection(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Post comment",
-                            tint = if (commentText.isNotBlank()) accentColor else Color.Gray
+                            tint = if (commentText.isNotBlank()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -240,7 +240,7 @@ fun CommentItem(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.Gray.copy(alpha = 0.3f)),
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
             contentScale = ContentScale.Crop
         )
         
@@ -253,7 +253,7 @@ fun CommentItem(
                     text = comment.authorName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.9f)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -261,7 +261,7 @@ fun CommentItem(
                 Text(
                     text = comment.timestamp,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -271,7 +271,7 @@ fun CommentItem(
             Text(
                 text = comment.text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onSurface
             )
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -281,7 +281,7 @@ fun CommentItem(
                 Icon(
                     imageVector = Icons.Default.ThumbUp,
                     contentDescription = "Likes",
-                    tint = Color.Gray,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(14.dp)
                 )
                 
@@ -290,7 +290,7 @@ fun CommentItem(
                 Text(
                     text = comment.likeCount,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
