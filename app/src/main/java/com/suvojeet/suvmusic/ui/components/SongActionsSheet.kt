@@ -78,19 +78,16 @@ fun SongActionsSheet(
             }
             append("\n")
             
-            // SuvMusic direct link (opens in SuvMusic app)
-            append("▶️ Play in SuvMusic:\n")
-            append("suvmusic://play?id=${song.id}\n\n")
-            
-            // Fallback link for users without SuvMusic
+            // Clickable link first
             if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
-                append("🔗 Or search online:\n")
                 val query = "${song.title} ${song.artist}".replace(" ", "+")
                 append("https://www.google.com/search?q=$query")
             } else {
-                append("🔗 Or listen on YouTube Music:\n")
                 append("https://music.youtube.com/watch?v=${song.id}")
             }
+            
+            // SuvMusic users note
+            append("\n\n▶️ SuvMusic users: suvmusic://play?id=${song.id}")
         }
         
         val sendIntent = Intent().apply {
