@@ -17,54 +17,211 @@
 
 ---
 
-## What is this?
+## About
 
-Built this because I wanted a single app that handles YouTube Music and high-quality audio streaming. SuvMusic does both.
+SuvMusic is a music streaming app that combines YouTube Music with HQ audio sources into one seamless experience. Built entirely in Kotlin with Jetpack Compose, it focuses on clean design and fast performance.
 
-**Features:**
-- Stream from YouTube Music or HQ sources (320kbps)
-- Synced lyrics
-- Download for offline
-- Local file playback
-- Dynamic Island-style mini player
-- Share via `suvmusic://` deep links
-- Material 3 UI with album colors
-- Sleep timer, playback speed, queue
+The app started as a personal project when I wanted a single place to stream music without dealing with multiple apps or ads.
 
-## Screenshots
+---
 
-*coming soon*
+## Features
+
+### Playback
+- Stream from YouTube Music or HQ sources (up to 320kbps)
+- Gapless playback with preloading
+- Background playback with media controls
+- Adjustable playback speed (0.5x - 2.0x)
+- Sleep timer with custom duration support
+- Queue management with drag-to-reorder
+
+### Player
+- Full-screen player with album art color extraction
+- Apple Music-style playback controls with press animations
+- Synced lyrics display
+- Song credits (artists, producers, writers)
+- Video mode toggle for YouTube content
+- Output device selection (Bluetooth, wired, etc.)
+
+### Library
+- Downloads with quality selection (128k/256k/320k)
+- Local file playback (MP3, WAV, M4A, FLAC)
+- Playlist creation and management
+- Recently played history
+- Listening statistics
+
+### UI/UX
+- Material 3 design with dynamic theming
+- Album art-based color extraction
+- Custom seekbar styles (waveform, pill, classic)
+- Artwork shape customization
+- Light/Dark/System theme modes
+- Dynamic Island-style floating player
+- Smooth animations throughout
+
+### Sharing
+- Custom `suvmusic://play?id=` deep links
+- Direct share to any app
+- Open audio files from file managers
+
+---
+
+## Architecture
+
+```
+com.suvojeet.suvmusic/
+├── MainActivity.kt              # Entry point, deep link handling
+├── SuvMusicApplication.kt       # Hilt application class
+├── data/
+│   ├── model/                   # Data classes (Song, Playlist, PlayerState, etc.)
+│   ├── repository/
+│   │   ├── YouTubeRepository    # NewPipe extractor, stream URLs, search
+│   │   ├── JioSaavnRepository   # HQ audio streaming, lyrics
+│   │   ├── DownloadRepository   # Offline downloads, file management
+│   │   ├── LocalAudioRepository # Device music scanning
+│   │   ├── ListeningHistoryRepository
+│   │   └── UpdateRepository     # App updates from GitHub releases
+│   ├── local/                   # Room database, DAOs
+│   └── SessionManager.kt        # DataStore preferences, auth state
+├── player/
+│   ├── MusicPlayer.kt           # MediaController wrapper, playback logic
+│   └── SleepTimerManager.kt     # Timer functionality
+├── service/
+│   ├── MusicPlayerService.kt    # Media3 MediaSessionService
+│   ├── DynamicIslandService.kt  # Floating overlay player
+│   └── CoilBitmapLoader.kt      # Artwork loading for notifications
+├── ui/
+│   ├── screens/                 # 21 composable screens
+│   ├── components/              # Reusable UI components
+│   ├── viewmodel/               # PlayerViewModel
+│   └── theme/                   # Material 3 theming
+├── navigation/
+│   ├── NavGraph.kt              # Navigation setup
+│   └── Destinations.kt          # Route definitions
+├── recommendation/
+│   └── RecommendationEngine.kt  # Radio mode, similar songs
+├── di/
+│   └── AppModule.kt             # Hilt dependency injection
+└── util/                        # Network monitor, helpers
+```
+
+---
+
+## Key Components
+
+### Repositories
+
+| Repository | Purpose | Size |
+|------------|---------|------|
+| `YouTubeRepository` | Search, streaming, playlists, lyrics, comments | ~108KB |
+| `JioSaavnRepository` | HQ audio, synced lyrics, Indian content | ~56KB |
+| `DownloadRepository` | Progressive downloads, queue management | ~36KB |
+| `SessionManager` | All user preferences, auth, playback state | ~35KB |
+| `LocalAudioRepository` | Device music, metadata extraction | ~6KB |
+| `ListeningHistoryRepository` | Play counts, stats | ~6KB |
+
+### Screens
+
+- **HomeScreen** - Personalized feed, quick picks, mixes
+- **SearchScreen** - Multi-tab search (songs, albums, artists, playlists)
+- **LibraryScreen** - Downloads, playlists, local files, liked songs
+- **PlayerScreen** - Full playback UI with lyrics, queue, credits
+- **SettingsScreen** - App configuration, appearance, playback settings
+- **PlaylistScreen** - Playlist details with shuffle/play
+- **ArtistScreen** - Artist page with albums, tracks
+- **AlbumScreen** - Album track list
+
+### UI Components
+
+- `MiniPlayer` - Compact player for non-player screens
+- `WaveformSeeker` - Custom seekbar with waveform visualization
+- `SongCreditsSheet` - Apple Music-style credits display
+- `PlaylistDialogs` - Create, edit, add to playlist flows
+- `SleepTimerSheet` - Timer with presets and custom input
+- `DominantColorExtractor` - Palette extraction from artwork
+
+---
 
 ## Tech Stack
 
-- Kotlin + Jetpack Compose
-- MVVM with Hilt DI
-- Media3 (ExoPlayer)
-- Coil for images
-- Coroutines/Flow
-- NewPipe extractor
+| Category | Technology |
+|----------|------------|
+| Language | Kotlin 1.9 |
+| UI | Jetpack Compose, Material 3 |
+| Architecture | MVVM + Clean Architecture |
+| DI | Hilt |
+| Async | Coroutines, Flow |
+| Media | Media3 (ExoPlayer) |
+| Network | OkHttp, NewPipe Extractor |
+| Images | Coil |
+| Storage | DataStore, Room |
+| Navigation | Compose Navigation |
 
-## Installation
+---
 
-Grab the APK from [Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases). Needs Android 8.0+.
+## Building
 
-Or build:
+Requirements:
+- Android Studio Hedgehog or newer
+- JDK 17
+- Android SDK 34
+
 ```bash
 git clone https://github.com/suvojeet-sengupta/SuvMusic.git
 cd SuvMusic
 ./gradlew assembleDebug
 ```
 
+APK will be in `app/build/outputs/apk/debug/`
+
+---
+
+## Installation
+
+Download the latest APK from [Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases).
+
+Requirements:
+- Android 8.0 (API 26) or higher
+- ~50MB storage for the app
+- Internet connection for streaming
+
+---
+
 ## Deep Links
 
-Share songs with custom URLs:
+SuvMusic registers a custom URL scheme for sharing:
+
 ```
 suvmusic://play?id=VIDEO_ID
 ```
 
-## Note
+Clicking this link on any device with SuvMusic installed will open the app and start playing that song immediately.
 
-Personal project, not affiliated with Google. Use responsibly.
+Shared messages include both the custom link and a fallback YouTube Music link for users without the app.
+
+---
+
+## Permissions
+
+| Permission | Usage |
+|------------|-------|
+| `INTERNET` | Streaming, search, API calls |
+| `READ_MEDIA_AUDIO` | Local music playback |
+| `POST_NOTIFICATIONS` | Playback controls |
+| `FOREGROUND_SERVICE` | Background playback |
+| `SYSTEM_ALERT_WINDOW` | Dynamic Island overlay (optional) |
+
+---
+
+## Contributing
+
+PRs welcome. For major changes, open an issue first.
+
+---
+
+## Disclaimer
+
+This is a personal project for educational purposes. Not affiliated with Google, YouTube, or any streaming service. Use responsibly.
 
 ---
 
