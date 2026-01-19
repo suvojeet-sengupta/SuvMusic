@@ -736,7 +736,9 @@ fun PlayerScreen(
                     isFetching = isFetchingLyrics,
                     currentTimeProvider = { playerState.currentPosition },
                     artworkUrl = highResThumbnail,
-                    onClose = { showLyrics = false }
+                    onClose = { showLyrics = false },
+                    isDarkTheme = isAppInDarkTheme,
+                    onSeekTo = onSeekTo
                 )
             }
 

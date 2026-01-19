@@ -38,12 +38,19 @@ fun LyricsScreen(
     currentTimeProvider: () -> Long,
     artworkUrl: String?,
     onClose: () -> Unit,
+    isDarkTheme: Boolean = true,
+    onSeekTo: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Theme-aware colors
+    val backgroundColor = if (isDarkTheme) Color.Black else Color.White
+    val textColor = if (isDarkTheme) Color.White else Color.Black
+    val overlayColor = if (isDarkTheme) Color.Black else Color.White
+    
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(backgroundColor)
     ) {
         // Blurred Background
         if (artworkUrl != null) {
@@ -53,7 +60,7 @@ fun LyricsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .blur(80.dp)
-                    .alpha(0.6f),
+                    .alpha(if (isDarkTheme) 0.6f else 0.4f),
                 contentScale = ContentScale.Crop
             )
         }
@@ -65,9 +72,9 @@ fun LyricsScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.4f),
-                            Color.Black.copy(alpha = 0.7f),
-                            Color.Black.copy(alpha = 0.9f)
+                            overlayColor.copy(alpha = 0.4f),
+                            overlayColor.copy(alpha = 0.7f),
+                            overlayColor.copy(alpha = 0.9f)
                         )
                     )
                 )
@@ -90,12 +97,12 @@ fun LyricsScreen(
                     onClick = onClose,
                     modifier = Modifier
                         .size(32.dp)
-                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                        .background(textColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = Color.White,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -115,21 +122,23 @@ fun LyricsScreen(
                         Icon(
                             imageVector = Icons.Default.ErrorOutline,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.5f),
+                            tint = textColor.copy(alpha = 0.5f),
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Lyrics not available",
                             style = MaterialTheme.typography.titleLarge,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = textColor.copy(alpha = 0.7f),
                             fontWeight = FontWeight.Medium
                         )
                     }
                 } else {
                     LyricsList(
                         lyrics = lyrics,
-                        currentTimeProvider = currentTimeProvider
+                        currentTimeProvider = currentTimeProvider,
+                        isDarkTheme = isDarkTheme,
+                        onSeekTo = onSeekTo
                     )
                 }
             }
@@ -155,11 +164,14 @@ fun LyricsScreen(
 @Composable
 fun LyricsList(
     lyrics: Lyrics,
-    currentTimeProvider: () -> Long
+    currentTimeProvider: () -> Long,
+    isDarkTheme: Boolean = true,
+    onSeekTo: (Long) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
+    val textColor = if (isDarkTheme) Color.White else Color.Black
     val currentTime = currentTimeProvider()
 
     // Determine active line index
@@ -218,15 +230,16 @@ fun LyricsList(
                     fontWeight = FontWeight.Bold,
                     lineHeight = 36.sp
                 ),
-                color = Color.White.copy(alpha = alpha),
+                color = textColor.copy(alpha = alpha),
                 textAlign = TextAlign.Start,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp, vertical = 12.dp)
-                    // .scale(scale) // Scaling text layout can be jittery, consider fontSize change or simple opacity
-                    .clickable { 
-                        // Seek to this line if synced?
-                        // onClick(line.startTimeMs) 
+                    .clickable(enabled = lyrics.isSynced) { 
+                        // Seek to this line's timestamp
+                        if (lyrics.isSynced && line.startTimeMs > 0) {
+                            onSeekTo(line.startTimeMs)
+                        }
                     }
             )
         }
