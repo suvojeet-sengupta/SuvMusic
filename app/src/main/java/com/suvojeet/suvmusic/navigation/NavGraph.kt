@@ -29,6 +29,7 @@ import com.suvojeet.suvmusic.ui.screens.SearchScreen
 import com.suvojeet.suvmusic.ui.screens.SeekbarStyleScreen
 import com.suvojeet.suvmusic.ui.screens.SettingsScreen
 import com.suvojeet.suvmusic.ui.screens.StorageScreen
+import com.suvojeet.suvmusic.ui.screens.SupportScreen
 import com.suvojeet.suvmusic.ui.screens.WelcomeScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
 import kotlinx.coroutines.launch
@@ -197,6 +198,7 @@ fun NavGraph(
                 onCustomizationClick = { navController.navigate(Destination.CustomizationSettings.route) },
                 onStorageClick = { navController.navigate(Destination.Storage.route) },
                 onStatsClick = { navController.navigate(Destination.ListeningStats.route) },
+                onSupportClick = { navController.navigate(Destination.Support.route) },
                 onAboutClick = { navController.navigate(Destination.About.route) }
             )
         }
@@ -258,6 +260,12 @@ fun NavGraph(
         
         composable(Destination.HowItWorks.route) {
             HowItWorksScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        
+        composable(Destination.Support.route) {
+            SupportScreen(
                 onBack = { navController.popBackStack() }
             )
         }
