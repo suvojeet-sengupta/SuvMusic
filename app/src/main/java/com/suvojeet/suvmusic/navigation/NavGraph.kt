@@ -28,6 +28,7 @@ import com.suvojeet.suvmusic.ui.screens.RecentsScreen
 import com.suvojeet.suvmusic.ui.screens.SearchScreen
 import com.suvojeet.suvmusic.ui.screens.SeekbarStyleScreen
 import com.suvojeet.suvmusic.ui.screens.SettingsScreen
+import com.suvojeet.suvmusic.ui.screens.StorageScreen
 import com.suvojeet.suvmusic.ui.screens.WelcomeScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
 import kotlinx.coroutines.launch
@@ -75,6 +76,7 @@ fun NavGraph(
     onSetSleepTimer: (com.suvojeet.suvmusic.player.SleepTimerOption, Int?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     volumeKeyEvents: SharedFlow<Unit>? = null,
+    downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: String = Destination.Home.route
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -193,9 +195,19 @@ fun NavGraph(
                 onPlaybackClick = { navController.navigate(Destination.PlaybackSettings.route) },
                 onAppearanceClick = { navController.navigate(Destination.AppearanceSettings.route) },
                 onCustomizationClick = { navController.navigate(Destination.CustomizationSettings.route) },
+                onStorageClick = { navController.navigate(Destination.Storage.route) },
                 onStatsClick = { navController.navigate(Destination.ListeningStats.route) },
                 onAboutClick = { navController.navigate(Destination.About.route) }
             )
+        }
+        
+        composable(Destination.Storage.route) {
+            downloadRepository?.let { repo ->
+                StorageScreen(
+                    downloadRepository = repo,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
         }
         
         composable(Destination.PlaybackSettings.route) {
