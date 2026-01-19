@@ -91,6 +91,16 @@
                 <data android:scheme="http" android:host="youtube.com" />
                 <data android:scheme="http" android:host="youtu.be" />
             </intent-filter>
+            
+            <!-- Audio file handling from external apps (mp3, wav, m4a, etc.) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
         </activity>
         
         <!-- Music Player Service -->

@@ -330,6 +330,107 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    /**
+     * Play an audio file from a local URI (opened from external file manager).
+     * Extracts metadata using MediaMetadataRetriever and creates a local Song.
+     */
+    fun playFromLocalUri(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                // Take persistent permission if it's a content URI
+                if (uri.scheme == "content") {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    } catch (e: SecurityException) {
+                        // Permission might not be grantable, continue anyway
+                        android.util.Log.w("PlayerViewModel", "Could not take persistent permission: ${e.message}")
+                    }
+                }
+                
+                // Extract metadata from the audio file
+                val retriever = android.media.MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, uri)
+                    
+                    val title = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE)
+                        ?: getFileNameFromUri(context, uri)
+                        ?: "Unknown Title"
+                    
+                    val artist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                        ?: retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)
+                        ?: "Unknown Artist"
+                    
+                    val album = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ALBUM)
+                        ?: ""
+                    
+                    val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    val duration = durationStr?.toLongOrNull() ?: 0L
+                    
+                    // Try to get album art
+                    val embeddedArt = retriever.embeddedPicture
+                    val albumArtUri: android.net.Uri? = if (embeddedArt != null) {
+                        // Create a temporary file for album art or use a content URI approach
+                        // For simplicity, we'll use the audio URI itself as a reference
+                        null // Album art will be extracted by Coil if needed
+                    } else {
+                        null
+                    }
+                    
+                    // Create a unique ID from the URI
+                    val songId = uri.toString().hashCode().toLong()
+                    
+                    val song = Song.fromLocal(
+                        id = songId,
+                        title = title,
+                        artist = artist,
+                        album = album,
+                        duration = duration,
+                        albumArtUri = albumArtUri,
+                        contentUri = uri
+                    )
+                    
+                    // Play the song
+                    playSong(song)
+                    
+                } finally {
+                    retriever.release()
+                }
+                
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerViewModel", "Error playing local file", e)
+                e.printStackTrace()
+            }
+        }
+    }
+    
+    /**
+     * Extract filename from a content URI.
+     */
+    private fun getFileNameFromUri(context: android.content.Context, uri: android.net.Uri): String? {
+        var fileName: String? = null
+        
+        if (uri.scheme == "content") {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val displayNameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (displayNameIndex != -1) {
+                        fileName = cursor.getString(displayNameIndex)
+                    }
+                }
+            }
+        }
+        
+        if (fileName == null) {
+            fileName = uri.lastPathSegment
+        }
+        
+        // Remove file extension
+        return fileName?.substringBeforeLast(".")
+    }
+    
     fun downloadCurrentSong() {
         val song = playerState.value.currentSong ?: return
         if (downloadRepository.isDownloaded(song.id) || downloadRepository.isDownloading(song.id)) return
