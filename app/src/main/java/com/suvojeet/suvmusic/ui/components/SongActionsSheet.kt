@@ -78,13 +78,17 @@ fun SongActionsSheet(
             }
             append("\n")
             
+            // SuvMusic direct link (opens in SuvMusic app)
+            append("▶️ Play in SuvMusic:\n")
+            append("suvmusic://play?id=${song.id}\n\n")
+            
+            // Fallback link for users without SuvMusic
             if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
-                append("Listen via search:\n")
-                // Use a generic search link instead of direct URL
+                append("🔗 Or search online:\n")
                 val query = "${song.title} ${song.artist}".replace(" ", "+")
                 append("https://www.google.com/search?q=$query")
             } else {
-                append("Listen on YouTube Music:\n")
+                append("🔗 Or listen on YouTube Music:\n")
                 append("https://music.youtube.com/watch?v=${song.id}")
             }
         }
