@@ -53,6 +53,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import com.suvojeet.suvmusic.utils.NetworkMonitor
 import com.suvojeet.suvmusic.service.DynamicIslandService
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
