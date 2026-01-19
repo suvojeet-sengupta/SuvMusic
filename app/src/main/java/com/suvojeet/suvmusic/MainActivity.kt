@@ -260,6 +260,35 @@ fun SuvMusicApp(
     LaunchedEffect(hasSong) {
         onPlaybackStateChanged(hasSong)
     }
+
+    // Dialog State for Restricted HQ Audio
+    var showRestrictedDialog by remember { mutableStateOf(false) }
+
+    // Error Observer
+    LaunchedEffect(playerState.error) {
+        if (playerState.error == "RESTRICTED_HQ_AUDIO") {
+            showRestrictedDialog = true
+        }
+    }
+
+    if (showRestrictedDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRestrictedDialog = false },
+            title = { androidx.compose.material3.Text("Restricted Access", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+            text = { androidx.compose.material3.Text("You are not authorised to play HQ audio.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showRestrictedDialog = false }) {
+                    androidx.compose.material3.Text("OK")
+                }
+            },
+            icon = {
+                androidx.compose.material3.Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.Lock,
+                    contentDescription = null
+                )
+            }
+        )
+    }
     
     // Volume control states for global indicator
     var maxVolume by remember {

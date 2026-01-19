@@ -376,6 +376,17 @@ class MusicPlayer @Inject constructor(
         try {
             _playerState.update { it.copy(isLoading = true) }
             
+            // Check for Developer Mode restriction for JioSaavn
+            if (song.source == SongSource.JIOSAAVN && !sessionManager.isDeveloperMode()) {
+                 _playerState.update {
+                    it.copy(
+                        error = "RESTRICTED_HQ_AUDIO",
+                        isLoading = false
+                    )
+                 }
+                 return
+            }
+            
             // Resolve stream URL for the song based on source
             val streamUrl = when (song.source) {
                 SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
