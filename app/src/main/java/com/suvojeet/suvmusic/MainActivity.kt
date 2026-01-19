@@ -68,6 +68,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var sessionManager: SessionManager
     
+    @Inject
+    lateinit var downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
+    
     private lateinit var audioManager: AudioManager
     
     // Track whether song is playing for volume key interception
@@ -117,6 +120,7 @@ class MainActivity : ComponentActivity() {
                     networkMonitor = networkMonitor,
                     audioManager = audioManager,
                     volumeKeyEvents = _volumeKeyEvents,
+                    downloadRepository = downloadRepository,
                     onPlaybackStateChanged = { hasSong -> 
                         isSongPlaying = hasSong
                     }
@@ -224,6 +228,7 @@ fun SuvMusicApp(
     networkMonitor: NetworkMonitor,
     audioManager: AudioManager,
     volumeKeyEvents: SharedFlow<Unit>? = null,
+    downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     onPlaybackStateChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
@@ -463,6 +468,7 @@ fun SuvMusicApp(
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
                     onSetPlaybackSpeed = { speed -> playerViewModel.setPlaybackSpeed(speed) },
                     volumeKeyEvents = volumeKeyEvents,
+                    downloadRepository = downloadRepository,
                     startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
                 )
             }

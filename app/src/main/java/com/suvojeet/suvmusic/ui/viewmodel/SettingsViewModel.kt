@@ -57,8 +57,15 @@ class SettingsViewModel @Inject constructor(
     // Dynamic Island enabled state
     val dynamicIslandEnabled = sessionManager.dynamicIslandEnabledFlow
     
+    // Offline Mode enabled state
+    val offlineModeEnabled = sessionManager.offlineModeFlow
+    
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
+    }
+    
+    suspend fun setOfflineMode(enabled: Boolean) {
+        sessionManager.setOfflineMode(enabled)
     }
     
     private var downloadJob: Job? = null

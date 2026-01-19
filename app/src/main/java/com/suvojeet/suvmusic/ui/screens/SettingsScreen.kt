@@ -21,9 +21,11 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -70,6 +72,7 @@ fun SettingsScreen(
     onPlaybackClick: () -> Unit = {},
     onAppearanceClick: () -> Unit = {},
     onCustomizationClick: () -> Unit = {},
+    onStorageClick: () -> Unit = {},
     onStatsClick: () -> Unit = {},
     onAboutClick: () -> Unit = {}
 ) {
@@ -253,6 +256,47 @@ fun SettingsScreen(
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        
+        // Storage & Downloads Section
+        SectionTitle("Storage & Downloads")
+        
+        // Offline Mode Toggle
+        val offlineModeEnabled by viewModel.offlineModeEnabled.collectAsState(initial = false)
+        
+        ListItem(
+            headlineContent = { Text("Offline Mode") },
+            supportingContent = { 
+                Text("Only play downloaded songs") 
+            },
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Default.WifiOff,
+                    contentDescription = null
+                )
+            },
+            trailingContent = {
+                Switch(
+                    checked = offlineModeEnabled,
+                    onCheckedChange = { enabled ->
+                        scope.launch { viewModel.setOfflineMode(enabled) }
+                    }
+                )
+            },
+            modifier = Modifier.clickable {
+                scope.launch { viewModel.setOfflineMode(!offlineModeEnabled) }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        
+        // Storage Info
+        SettingsItem(
+            icon = Icons.Default.Storage,
+            title = "Storage",
+            subtitle = "Manage downloads and clear cache",
+            onClick = onStorageClick
         )
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
