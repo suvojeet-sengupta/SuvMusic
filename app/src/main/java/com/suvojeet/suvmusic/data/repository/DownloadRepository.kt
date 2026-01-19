@@ -740,4 +740,137 @@ class DownloadRepository @Inject constructor(
             else -> originalUrl
         }
     }
+    
+    // --- Storage Management ---
+    
+    /**
+     * Data class for storage breakdown information.
+     */
+    data class StorageInfo(
+        val downloadedSongsBytes: Long = 0L,
+        val downloadedSongsCount: Int = 0,
+        val thumbnailsBytes: Long = 0L,
+        val cacheBytes: Long = 0L,
+        val totalBytes: Long = 0L
+    ) {
+        fun formatSize(bytes: Long): String {
+            return when {
+                bytes >= 1024 * 1024 * 1024 -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+                bytes >= 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+                bytes >= 1024 -> String.format("%.0f KB", bytes / 1024.0)
+                else -> "$bytes B"
+            }
+        }
+    }
+    
+    /**
+     * Get detailed storage usage breakdown.
+     */
+    fun getStorageInfo(): StorageInfo {
+        var downloadedSongsBytes = 0L
+        var thumbnailsBytes = 0L
+        var cacheBytes = 0L
+        
+        // Calculate downloaded songs size
+        val publicFolder = getPublicDownloadsFolder()
+        if (publicFolder.exists()) {
+            publicFolder.listFiles()?.forEach { file ->
+                if (file.isFile) {
+                    downloadedSongsBytes += file.length()
+                }
+            }
+        }
+        
+        // Calculate thumbnails size
+        val thumbnailsDir = File(context.filesDir, "thumbnails")
+        if (thumbnailsDir.exists()) {
+            thumbnailsDir.listFiles()?.forEach { file ->
+                thumbnailsBytes += file.length()
+            }
+        }
+        
+        // Calculate cache size (progressive downloads temp files)
+        val progressiveCacheDir = File(context.cacheDir, "progressive_downloads")
+        if (progressiveCacheDir.exists()) {
+            progressiveCacheDir.listFiles()?.forEach { file ->
+                cacheBytes += file.length()
+            }
+        }
+        
+        // Also count image cache from Coil
+        context.cacheDir.listFiles()?.forEach { file ->
+            if (file.isDirectory && (file.name.contains("coil") || file.name.contains("image"))) {
+                file.walkTopDown().forEach { cacheFile ->
+                    if (cacheFile.isFile) {
+                        cacheBytes += cacheFile.length()
+                    }
+                }
+            }
+        }
+        
+        return StorageInfo(
+            downloadedSongsBytes = downloadedSongsBytes,
+            downloadedSongsCount = _downloadedSongs.value.size,
+            thumbnailsBytes = thumbnailsBytes,
+            cacheBytes = cacheBytes,
+            totalBytes = downloadedSongsBytes + thumbnailsBytes + cacheBytes
+        )
+    }
+    
+    /**
+     * Clear cached files (thumbnails and temp downloads).
+     * Does NOT delete downloaded songs.
+     */
+    fun clearCache() {
+        // Clear thumbnails
+        val thumbnailsDir = File(context.filesDir, "thumbnails")
+        if (thumbnailsDir.exists()) {
+            thumbnailsDir.deleteRecursively()
+            thumbnailsDir.mkdirs()
+        }
+        
+        // Clear progressive downloads cache
+        val progressiveCacheDir = File(context.cacheDir, "progressive_downloads")
+        if (progressiveCacheDir.exists()) {
+            progressiveCacheDir.deleteRecursively()
+        }
+        
+        // Clear Coil image cache
+        context.cacheDir.listFiles()?.forEach { file ->
+            if (file.isDirectory && (file.name.contains("coil") || file.name.contains("image"))) {
+                file.deleteRecursively()
+            }
+        }
+        
+        Log.d(TAG, "Cache cleared")
+    }
+    
+    /**
+     * Delete all downloaded songs.
+     */
+    suspend fun deleteAllDownloads() = withContext(Dispatchers.IO) {
+        val songs = _downloadedSongs.value.toList()
+        
+        songs.forEach { song ->
+            try {
+                deleteDownload(song.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting ${song.id}", e)
+            }
+        }
+        
+        // Also clean up the public folder in case there are orphan files
+        val publicFolder = getPublicDownloadsFolder()
+        if (publicFolder.exists()) {
+            publicFolder.listFiles()?.forEach { file ->
+                if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac")) {
+                    file.delete()
+                }
+            }
+        }
+        
+        _downloadedSongs.value = emptyList()
+        saveDownloads()
+        Log.d(TAG, "All downloads deleted")
+    }
 }
