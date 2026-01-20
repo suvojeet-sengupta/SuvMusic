@@ -516,7 +516,8 @@ fun PlayerScreen(
                                         coroutineScope.launch(Dispatchers.IO) {
                                             sessionManager.setSeekbarStyle(style.name)
                                         }
-                                    }
+                                    },
+                                    duration = playerState.duration
                                 )
 
                                 // Time labels
@@ -655,7 +656,8 @@ fun PlayerScreen(
                                     coroutineScope.launch(Dispatchers.IO) {
                                         sessionManager.setSeekbarStyle(style.name)
                                     }
-                                }
+                                },
+                                duration = playerState.duration
                             )
 
                             // Time labels with quality badge
