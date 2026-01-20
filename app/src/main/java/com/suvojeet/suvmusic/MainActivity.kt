@@ -77,6 +77,9 @@ class MainActivity : ComponentActivity() {
     // Track whether song is playing for volume key interception
     private var isSongPlaying: Boolean = false
     
+    // Track whether in-app volume slider is enabled (if false, show system UI)
+    private var isVolumeSliderEnabled: Boolean = true
+    
     // Flow to emit volume key events to the UI
     private val _volumeKeyEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     
@@ -128,6 +131,9 @@ class MainActivity : ComponentActivity() {
                     downloadRepository = downloadRepository,
                     onPlaybackStateChanged = { hasSong -> 
                         isSongPlaying = hasSong
+                    },
+                    onVolumeSliderEnabledChanged = { enabled ->
+                        isVolumeSliderEnabled = enabled
                     }
                 )
             }
@@ -136,11 +142,13 @@ class MainActivity : ComponentActivity() {
     
     /**
      * Intercept hardware volume keys to control music volume
-     * without showing the system volume UI panel - only when song is playing.
+     * without showing the system volume UI panel - only when song is playing
+     * and in-app volume slider is enabled.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // Only intercept volume keys when a song is playing
-        if (!isSongPlaying) {
+        // Only intercept volume keys when a song is playing AND in-app volume slider is enabled
+        // When volume slider is disabled, let system handle it (shows system volume UI)
+        if (!isSongPlaying || !isVolumeSliderEnabled) {
             return super.dispatchKeyEvent(event)
         }
         
@@ -235,7 +243,8 @@ fun SuvMusicApp(
     audioManager: AudioManager,
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
-    onPlaybackStateChanged: (Boolean) -> Unit
+    onPlaybackStateChanged: (Boolean) -> Unit,
+    onVolumeSliderEnabledChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -264,6 +273,11 @@ fun SuvMusicApp(
     val hasSong = playbackInfo.currentSong != null
     LaunchedEffect(hasSong) {
         onPlaybackStateChanged(hasSong)
+    }
+    
+    // Sync volume slider enabled state to Activity
+    LaunchedEffect(volumeSliderEnabled) {
+        onVolumeSliderEnabledChanged(volumeSliderEnabled)
     }
 
     // Dialog State for Restricted HQ Audio
