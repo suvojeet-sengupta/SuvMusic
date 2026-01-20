@@ -107,4 +107,13 @@ object AppModule {
     ): MusicPlayer {
         return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository)
     }
+    @Provides
+    @Singleton
+    fun provideLyricsRepository(
+        okHttpClient: OkHttpClient,
+        youTubeRepository: YouTubeRepository,
+        jioSaavnRepository: JioSaavnRepository
+    ): com.suvojeet.suvmusic.data.repository.LyricsRepository {
+        return com.suvojeet.suvmusic.data.repository.LyricsRepository(okHttpClient, youTubeRepository, jioSaavnRepository)
+    }
 }
