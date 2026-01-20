@@ -16,11 +16,13 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,7 +76,8 @@ fun WaveformSeeker(
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     initialStyle: SeekbarStyle = SeekbarStyle.WAVEFORM,
-    onStyleChange: ((SeekbarStyle) -> Unit)? = null
+    onStyleChange: ((SeekbarStyle) -> Unit)? = null,
+    duration: Long = 0L
 ) {
     // Current seekbar style - uses initial style from settings
     var currentStyle by remember { mutableStateOf(initialStyle) }
@@ -104,6 +107,7 @@ fun WaveformSeeker(
     
     var isDragging by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableFloatStateOf(progressProvider()) }
+    var dragX by remember { mutableFloatStateOf(0f) }
     
     // Update currentProgress from external progress only when NOT dragging
     val externalProgress = progressProvider()
@@ -113,7 +117,44 @@ fun WaveformSeeker(
         }
     }
     
-    Box(modifier = modifier) {
+    BoxWithConstraints(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val maxWidthPx = with(density) { maxWidth.toPx() }
+
+        // Time Tooltip when dragging
+        if (isDragging && duration > 0) {
+            val seekTime = (currentProgress * duration).toLong()
+            val minutes = seekTime / 1000 / 60
+            val seconds = (seekTime / 1000) % 60
+            val timeText = String.format("%d:%02d", minutes, seconds)
+            
+            // Calculate horizontal offset to follow finger, constrained to seeker width
+            val tooltipOffset = with(density) {
+                (dragX - (maxWidthPx / 2)).toDp()
+            }
+            
+            Surface(
+                modifier = Modifier
+                    .offset(x = tooltipOffset, y = (-45).dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(8.dp),
+                tonalElevation = 4.dp,
+                shadowElevation = 8.dp
+            ) {
+                Text(
+                    text = timeText,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = activeColor
+                )
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -133,7 +174,10 @@ fun WaveformSeeker(
                 }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
-                        onDragStart = { isDragging = true },
+                        onDragStart = { offset ->
+                            isDragging = true
+                            dragX = offset.x
+                        },
                         onDragEnd = { 
                             onSeek(currentProgress)
                             isDragging = false
@@ -141,6 +185,7 @@ fun WaveformSeeker(
                         onHorizontalDrag = { change, _ ->
                             val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
                             currentProgress = newProgress
+                            dragX = change.position.x
                         }
                     )
                 }
