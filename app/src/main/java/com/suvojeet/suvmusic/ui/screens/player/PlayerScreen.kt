@@ -162,6 +162,7 @@ fun PlayerScreen(
     val sessionManager = remember { SessionManager(context) }
     val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
     val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
+    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
     
     val currentSeekbarStyle = try {
         SeekbarStyle.valueOf(savedSeekbarStyleString)
@@ -762,24 +763,26 @@ fun PlayerScreen(
         }
 
         // Volume Indicator Overlay (Moved to end to appear on top)
-        VolumeIndicator(
-            isVisible = showVolumeIndicator,
-            currentVolume = currentVolume,
-            maxVolume = maxVolume,
-            dominantColors = dominantColors,
-            onVolumeChange = { newVolume ->
-                audioManager.setStreamVolume(
-                    AudioManager.STREAM_MUSIC,
-                    newVolume,
-                    0
-                )
-                currentVolume = newVolume
-                lastVolumeChangeTime = System.currentTimeMillis()
-            },
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 16.dp)
-        )
+        if (volumeSliderEnabled) {
+            VolumeIndicator(
+                isVisible = showVolumeIndicator,
+                currentVolume = currentVolume,
+                maxVolume = maxVolume,
+                dominantColors = dominantColors,
+                onVolumeChange = { newVolume ->
+                    audioManager.setStreamVolume(
+                        AudioManager.STREAM_MUSIC,
+                        newVolume,
+                        0
+                    )
+                    currentVolume = newVolume
+                    lastVolumeChangeTime = System.currentTimeMillis()
+                },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp)
+            )
+        }
 
         // Song Actions Bottom Sheet
         if (song != null) {

@@ -100,6 +100,9 @@ class SessionManager @Inject constructor(
         
         // Offline Mode
         private val OFFLINE_MODE_ENABLED_KEY = booleanPreferencesKey("offline_mode_enabled")
+        
+        // Volume Slider
+        private val VOLUME_SLIDER_ENABLED_KEY = booleanPreferencesKey("volume_slider_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -215,6 +218,22 @@ class SessionManager @Inject constructor(
     suspend fun setOfflineMode(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[OFFLINE_MODE_ENABLED_KEY] = enabled
+        }
+    }
+    
+    // --- Volume Slider ---
+    
+    fun isVolumeSliderEnabled(): Boolean = runBlocking {
+        context.dataStore.data.first()[VOLUME_SLIDER_ENABLED_KEY] ?: true
+    }
+    
+    val volumeSliderEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[VOLUME_SLIDER_ENABLED_KEY] ?: true
+    }
+    
+    suspend fun setVolumeSliderEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[VOLUME_SLIDER_ENABLED_KEY] = enabled
         }
     }
     

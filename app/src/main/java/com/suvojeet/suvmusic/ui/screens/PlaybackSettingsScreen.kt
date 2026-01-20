@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -184,6 +185,34 @@ fun PlaybackSettingsScreen(
                     Switch(
                         checked = uiState.automixEnabled,
                         onCheckedChange = { viewModel.setAutomix(it) }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            // Volume Controls
+            SectionTitle("Volume")
+            
+            ListItem(
+                headlineContent = { Text("In-app volume slider") },
+                supportingContent = { 
+                    Text("Show volume slider overlay when adjusting volume in the app.") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    val scope = rememberCoroutineScope()
+                    Switch(
+                        checked = uiState.volumeSliderEnabled,
+                        onCheckedChange = { 
+                            scope.launch {
+                                viewModel.setVolumeSliderEnabled(it)
+                            }
+                        }
                     )
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
