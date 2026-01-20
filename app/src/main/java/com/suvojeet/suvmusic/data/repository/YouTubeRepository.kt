@@ -52,6 +52,11 @@ class YouTubeRepository @Inject constructor(
     private val streamCache = LruCache<String, CachedStream>(50)
     private val CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
 
+    // Comments Pagination State
+    private var currentCommentsExtractor: org.schabi.newpipe.extractor.comments.CommentsExtractor? = null
+    private var currentCommentsPage: org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage<*>? = null
+    private var currentVideoIdForComments: String? = null
+
     init {
         initializeNewPipe()
     }
@@ -1328,13 +1333,15 @@ class YouTubeRepository @Inject constructor(
      */
     suspend fun getComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
         try {
+            currentVideoIdForComments = videoId
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: return@withContext emptyList()
             
-            val commentsExtractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
-            commentsExtractor.fetchPage()
+            currentCommentsExtractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
+            currentCommentsExtractor?.fetchPage()
+            currentCommentsPage = currentCommentsExtractor?.initialPage
             
-            commentsExtractor.initialPage.items.filterIsInstance<CommentsInfoItem>().map { item ->
+            currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
                 com.suvojeet.suvmusic.data.model.Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
@@ -1344,7 +1351,35 @@ class YouTubeRepository @Inject constructor(
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
                     replyCount = 0
                 )
-            }
+            } ?: emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch more comments for the current video.
+     */
+    suspend fun getMoreComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        if (videoId != currentVideoIdForComments || currentCommentsExtractor == null || currentCommentsPage == null || !currentCommentsPage!!.hasNextPage()) {
+            return@withContext emptyList()
+        }
+
+        try {
+            currentCommentsPage = currentCommentsExtractor!!.getPage(currentCommentsPage!!.nextPage)
+            
+            currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
+                com.suvojeet.suvmusic.data.model.Comment(
+                    id = item.url ?: java.util.UUID.randomUUID().toString(),
+                    authorName = item.uploaderName ?: "Unknown",
+                    authorThumbnailUrl = item.uploaderAvatars?.firstOrNull()?.url,
+                    text = item.commentText?.content ?: "",
+                    timestamp = item.textualUploadDate ?: "",
+                    likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
+                    replyCount = 0
+                )
+            } ?: emptyList()
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
