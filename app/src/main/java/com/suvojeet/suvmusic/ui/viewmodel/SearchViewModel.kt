@@ -322,7 +322,10 @@ class SearchViewModel @Inject constructor(
                         // Search songs, artists, and playlists in parallel
                         coroutineScope {
                             val songsDeferred = async { 
-                                youTubeRepository.search(query, _uiState.value.filter) 
+                                youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS) 
+                            }
+                            val videosDeferred = async {
+                                youTubeRepository.search(query, YouTubeRepository.FILTER_VIDEOS)
                             }
                             val artistsDeferred = async { 
                                 youTubeRepository.searchArtists(query) 
@@ -332,12 +335,16 @@ class SearchViewModel @Inject constructor(
                             }
                             
                             val songs = songsDeferred.await()
+                            val videos = videosDeferred.await()
                             val artists = artistsDeferred.await()
                             val playlists = playlistsDeferred.await()
                             
+                            // Combine songs and videos, removing duplicates based on id
+                            val combinedResults = (songs + videos).distinctBy { it.id }
+                            
                             _uiState.update { 
                                 it.copy(
-                                    results = songs,
+                                    results = combinedResults,
                                     artistResults = artists,
                                     playlistResults = playlists,
                                     isLoading = false
