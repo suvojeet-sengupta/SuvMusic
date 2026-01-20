@@ -38,7 +38,9 @@ fun CommentsSheet(
     accentColor: Color,
     isLoggedIn: Boolean = false,
     isPostingComment: Boolean = false,
-    onPostComment: (String) -> Unit = {}
+    onPostComment: (String) -> Unit = {},
+    isLoadingMore: Boolean = false,
+    onLoadMore: () -> Unit = {}
 ) {
     if (isVisible) {
         ModalBottomSheet(
@@ -99,13 +101,54 @@ fun CommentsSheet(
                             )
                         }
                     } else {
+                        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                        
+                        // Check for infinite scroll
+                        val isAtBottom by remember {
+                            derivedStateOf {
+                                val layoutInfo = listState.layoutInfo
+                                val visibleItemsInfo = layoutInfo.visibleItemsInfo
+                                if (layoutInfo.totalItemsCount == 0) {
+                                    false
+                                } else {
+                                    val lastVisibleItem = visibleItemsInfo.last()
+                                    val viewportHeight = layoutInfo.viewportEndOffset + layoutInfo.viewportStartOffset
+                                    (lastVisibleItem.index + 1 == layoutInfo.totalItemsCount) &&
+                                    (lastVisibleItem.offset + lastVisibleItem.size <= viewportHeight)
+                                }
+                            }
+                        }
+                        
+                        LaunchedEffect(isAtBottom) {
+                            if (isAtBottom && !isLoadingMore && !isLoading) {
+                                onLoadMore()
+                            }
+                        }
+                        
+                        // Scroll to top when a new comment is posted (optimistic)
+                        LaunchedEffect(comments.size) {
+                            if (comments.isNotEmpty() && comments.first().id.startsWith("temp_")) {
+                                listState.animateScrollToItem(0)
+                            }
+                        }
+
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
+                            state = listState,
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
                             items(comments) { comment ->
-                                CommentItem(comment = comment, accentColor = accentColor)
+                                val isHighlighted = comment.id.startsWith("temp_")
+                                CommentItem(comment = comment, accentColor = accentColor, isHighlighted = isHighlighted)
+                            }
+                            
+                            if (isLoadingMore) {
+                                item {
+                                    Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = accentColor, strokeWidth = 2.dp)
+                                    }
+                                }
                             }
                         }
                     }
@@ -227,9 +270,18 @@ private fun CommentInputSection(
 @Composable
 fun CommentItem(
     comment: Comment,
-    accentColor: Color
+    accentColor: Color,
+    isHighlighted: Boolean = false
 ) {
-    Row(modifier = Modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (isHighlighted) accentColor.copy(alpha = 0.1f) else Color.Transparent,
+                RoundedCornerShape(12.dp)
+            )
+            .padding(8.dp)
+    ) {
         // Avatar
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
