@@ -703,10 +703,25 @@ class MusicPlayer @Inject constructor(
              if (state.repeatMode == RepeatMode.ALL) {
                  playSong(queue[0], queue, 0)
              } else if (state.isAutoplayEnabled) {
-                 // Mock Autoplay: Just pick a random song from queue to mimic 'radio'
-                 if (queue.isNotEmpty()) {
-                     val random = queue.indices.random()
-                     playSong(queue[random], queue, random)
+                 // Infinite Autoplay: The ViewModel automatically loads more songs when nearing the end.
+                 // Check if queue has grown (new songs added by autoplay observer)
+                 scope.launch {
+                     delay(500) // Brief delay to allow autoplay to add songs
+                     val updatedState = _playerState.value
+                     val updatedQueue = updatedState.queue
+                     val updatedIndex = updatedState.currentIndex
+                     
+                     // If queue has more songs now, play the next one
+                     if (updatedIndex + 1 < updatedQueue.size) {
+                         playSong(updatedQueue[updatedIndex + 1], updatedQueue, updatedIndex + 1)
+                     } else if (updatedQueue.size > queue.size) {
+                         // New songs were added, play the first new one
+                         val newSongIndex = queue.size
+                         if (newSongIndex < updatedQueue.size) {
+                             playSong(updatedQueue[newSongIndex], updatedQueue, newSongIndex)
+                         }
+                     }
+                     // If still no new songs, playback naturally stops (rare edge case)
                  }
              }
              // Else: Stop or do nothing
