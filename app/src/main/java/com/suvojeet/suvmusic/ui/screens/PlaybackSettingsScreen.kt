@@ -205,13 +205,10 @@ fun PlaybackSettingsScreen(
                     )
                 },
                 trailingContent = {
-                    val scope = rememberCoroutineScope()
                     Switch(
                         checked = uiState.volumeSliderEnabled,
                         onCheckedChange = { 
-                            scope.launch {
-                                viewModel.setVolumeSliderEnabled(it)
-                            }
+                            viewModel.setVolumeSliderEnabled(it)
                         }
                     )
                 },
