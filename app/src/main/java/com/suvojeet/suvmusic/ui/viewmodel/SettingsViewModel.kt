@@ -72,8 +72,11 @@ class SettingsViewModel @Inject constructor(
         sessionManager.setOfflineMode(enabled)
     }
     
-    suspend fun setVolumeSliderEnabled(enabled: Boolean) {
-        sessionManager.setVolumeSliderEnabled(enabled)
+    fun setVolumeSliderEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setVolumeSliderEnabled(enabled)
+            _uiState.update { it.copy(volumeSliderEnabled = enabled) }
+        }
     }
     
     private var downloadJob: Job? = null
