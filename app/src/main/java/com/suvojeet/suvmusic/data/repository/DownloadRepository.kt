@@ -735,7 +735,7 @@ class DownloadRepository @Inject constructor(
                 val ytVideoId = if (originalUrl.contains("/vi/")) {
                     originalUrl.substringAfter("/vi/").substringBefore("/")
                 } else videoId
-                "https://img.youtube.com/vi/$ytVideoId/maxresdefault.jpg"
+                "https://img.youtube.com/vi/$ytVideoId/hqdefault.jpg"
             }
             else -> originalUrl
         }
