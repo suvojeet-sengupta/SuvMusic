@@ -36,6 +36,7 @@ data class SettingsUiState(
     val dynamicColorEnabled: Boolean = true,
     val gaplessPlaybackEnabled: Boolean = true,
     val automixEnabled: Boolean = true,
+    val volumeSliderEnabled: Boolean = true,
     val musicSource: MusicSource = MusicSource.YOUTUBE,
     val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = ""
@@ -60,12 +61,19 @@ class SettingsViewModel @Inject constructor(
     // Offline Mode enabled state
     val offlineModeEnabled = sessionManager.offlineModeFlow
     
+    // Volume Slider enabled state
+    val volumeSliderEnabled = sessionManager.volumeSliderEnabledFlow
+    
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
     }
     
     suspend fun setOfflineMode(enabled: Boolean) {
         sessionManager.setOfflineMode(enabled)
+    }
+    
+    suspend fun setVolumeSliderEnabled(enabled: Boolean) {
+        sessionManager.setVolumeSliderEnabled(enabled)
     }
     
     private var downloadJob: Job? = null
@@ -99,6 +107,7 @@ class SettingsViewModel @Inject constructor(
                 dynamicColorEnabled = sessionManager.isDynamicColorEnabled(),
                 gaplessPlaybackEnabled = sessionManager.isGaplessPlaybackEnabled(),
                 automixEnabled = sessionManager.isAutomixEnabled(),
+                volumeSliderEnabled = sessionManager.isVolumeSliderEnabled(),
                 musicSource = sessionManager.getMusicSource(),
                 currentVersion = updateRepository.getCurrentVersionName()
             )
