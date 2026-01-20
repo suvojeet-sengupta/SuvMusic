@@ -87,6 +87,7 @@ class PlayerViewModel @Inject constructor(
     init {
         observeCurrentSong()
         observeDownloads()
+        observeQueuePositionForAutoplay()
     }
     
     private fun observeCurrentSong() {
@@ -264,12 +265,31 @@ class PlayerViewModel @Inject constructor(
     }
     
     /**
-     * Load more songs for endless radio queue.
-     * Called automatically when near end of queue (infinite scroll).
+     * Observe queue position and automatically load more songs when autoplay is enabled
+     * and the user is approaching the end of the queue.
      */
-    fun loadMoreRadioSongs() {
-        if (!_isRadioMode.value) return
-        if (!sessionManager.isEndlessQueueEnabled()) return
+    private fun observeQueuePositionForAutoplay() {
+        viewModelScope.launch {
+            playerState
+                .map { Triple(it.currentIndex, it.queue.size, it.isAutoplayEnabled) }
+                .distinctUntilChanged()
+                .collect { (currentIndex, queueSize, isAutoplayEnabled) ->
+                    // When autoplay is enabled and we're within 3 songs of the end, load more
+                    if (isAutoplayEnabled && queueSize > 0 && currentIndex >= queueSize - 3) {
+                        loadMoreAutoplaySongs()
+                    }
+                }
+        }
+    }
+    
+    /**
+     * Load more songs for autoplay/radio queue.
+     * Called automatically when near end of queue (infinite scroll) or when autoplay needs more songs.
+     */
+    fun loadMoreAutoplaySongs() {
+        val isAutoplayEnabled = playerState.value.isAutoplayEnabled
+        // Allow loading if radio mode OR autoplay is enabled
+        if (!_isRadioMode.value && !isAutoplayEnabled) return
         if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
         
         val currentSong = playerState.value.currentSong ?: return
@@ -304,6 +324,15 @@ class PlayerViewModel @Inject constructor(
                 _isLoadingMoreSongs.value = false
             }
         }
+    }
+    
+    /**
+     * Load more songs for endless radio queue.
+     * Called automatically when near end of queue (infinite scroll).
+     * @deprecated Use loadMoreAutoplaySongs() instead
+     */
+    fun loadMoreRadioSongs() {
+        loadMoreAutoplaySongs()
     }
     
     /**
