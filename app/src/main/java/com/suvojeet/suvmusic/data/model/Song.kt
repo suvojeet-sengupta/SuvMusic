@@ -18,7 +18,8 @@ data class Song(
     val localUri: Uri? = null, // For local files
     val setVideoId: String? = null, // Unique ID for this song instance in a playlist (for reordering)
     val artistId: String? = null, // Artist browse ID for navigation to artist screen
-    val originalSource: SongSource? = null // Original source before download (for credits display)
+    val originalSource: SongSource? = null, // Original source before download (for credits display)
+    val isVideo: Boolean = false // Whether this item is a video (vs official song)
 ) {
     companion object {
         /**
@@ -32,7 +33,8 @@ data class Song(
             duration: Long,
             thumbnailUrl: String?,
             setVideoId: String? = null,
-            artistId: String? = null
+            artistId: String? = null,
+            isVideo: Boolean = false
         ): Song? {
             if (videoId.isBlank()) return null
             return Song(
@@ -44,7 +46,8 @@ data class Song(
                 thumbnailUrl = thumbnailUrl ?: "https://img.youtube.com/vi/$videoId/maxresdefault.jpg",
                 source = SongSource.YOUTUBE,
                 setVideoId = setVideoId,
-                artistId = artistId
+                artistId = artistId,
+                isVideo = isVideo
             )
         }
         
