@@ -143,6 +143,8 @@ fun PlayerScreen(
     isLoggedIn: Boolean = false,
     isPostingComment: Boolean = false,
     onPostComment: (String) -> Unit = {},
+    isLoadingMoreComments: Boolean = false,
+    onLoadMoreComments: () -> Unit = {},
     // Sleep timer
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -751,7 +753,9 @@ fun PlayerScreen(
                 accentColor = dominantColors.accent,
                 isLoggedIn = isLoggedIn,
                 isPostingComment = isPostingComment,
-                onPostComment = onPostComment
+                onPostComment = onPostComment,
+                isLoadingMore = isLoadingMoreComments,
+                onLoadMore = onLoadMoreComments
             )
         }
 
