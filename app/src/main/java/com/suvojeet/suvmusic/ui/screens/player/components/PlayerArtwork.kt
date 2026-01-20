@@ -66,6 +66,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
+import com.suvojeet.suvmusic.ui.screens.player.getHighResThumbnail
 
 /**
  * Artwork display modes
@@ -194,11 +195,21 @@ fun AlbumArtwork(
         ) {
             // Main artwork image
             if (imageUrl != null) {
+                // Try high-res first, fallback to original on error
+                var model by remember(imageUrl) { mutableStateOf<Any?>(getHighResThumbnail(imageUrl)) }
+
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(imageUrl)
+                        .data(model)
                         .crossfade(true)
                         .size(600)
+                        .listener(
+                            onError = { _, _ ->
+                                if (model != imageUrl) {
+                                    model = imageUrl
+                                }
+                            }
+                        )
                         .build(),
                     contentDescription = title,
                     modifier = Modifier.fillMaxSize(),

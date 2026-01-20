@@ -245,8 +245,7 @@ fun PlayerScreen(
     val screenHeight = configuration.screenHeightDp.dp
     val screenHeightPx = with(LocalDensity.current) { screenHeight.toPx() }
 
-    // High-res thumbnail
-    val highResThumbnail = getHighResThumbnail(song?.thumbnailUrl)
+
 
     // Use pure black for dark mode, pure white for light mode
     val playerBackgroundColor = if (isAppInDarkTheme) Color.Black else Color.White
@@ -434,7 +433,7 @@ fun PlayerScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 AlbumArtwork(
-                                    imageUrl = highResThumbnail,
+                                    imageUrl = song?.thumbnailUrl,
                                     title = song?.title,
                                     dominantColors = dominantColors,
                                     isLoading = playerState.isLoading,
@@ -611,7 +610,7 @@ fun PlayerScreen(
                             } else {
                                 // Album artwork
                                 AlbumArtwork(
-                                    imageUrl = highResThumbnail,
+                                    imageUrl = song?.thumbnailUrl,
                                     title = song?.title,
                                     dominantColors = dominantColors,
                                     isLoading = playerState.isLoading,
@@ -740,7 +739,7 @@ fun PlayerScreen(
                     lyrics = lyrics,
                     isFetching = isFetchingLyrics,
                     currentTimeProvider = { playerState.currentPosition },
-                    artworkUrl = highResThumbnail,
+                    artworkUrl = song?.thumbnailUrl,
                     onClose = { showLyrics = false },
                     isDarkTheme = isAppInDarkTheme,
                     onSeekTo = onSeekTo
