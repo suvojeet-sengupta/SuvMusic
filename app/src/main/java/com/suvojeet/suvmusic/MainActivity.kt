@@ -254,6 +254,7 @@ fun SuvMusicApp(
     val comments by playerViewModel.commentsState.collectAsState()
     val isFetchingComments by playerViewModel.isFetchingComments.collectAsState()
     val isPostingComment by playerViewModel.isPostingComment.collectAsState()
+    val isLoadingMoreComments by playerViewModel.isLoadingMoreComments.collectAsState()
     
     // Track if song is playing for Activity-level volume interception
     // Use playbackInfo (stable) to avoid recomposing the whole app shell on progress updates
@@ -503,6 +504,8 @@ fun SuvMusicApp(
                     isLoggedIn = playerViewModel.isLoggedIn(),
                     isPostingComment = isPostingComment,
                     onPostComment = { commentText -> playerViewModel.postComment(commentText) },
+                    isLoadingMoreComments = isLoadingMoreComments,
+                    onLoadMoreComments = { playerViewModel.loadMoreComments() },
                     sleepTimerOption = sleepTimerOption,
                     sleepTimerRemainingMs = sleepTimerRemainingMs,
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },

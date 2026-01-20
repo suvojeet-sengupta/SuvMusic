@@ -55,6 +55,9 @@ class PlayerViewModel @Inject constructor(
 
     private val _isFetchingComments = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isFetchingComments: StateFlow<Boolean> = _isFetchingComments.asStateFlow()
+
+    private val _isLoadingMoreComments = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isLoadingMoreComments: StateFlow<Boolean> = _isLoadingMoreComments.asStateFlow()
     
     private val _isPostingComment = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
@@ -558,6 +561,21 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    fun loadMoreComments() {
+        if (_isLoadingMoreComments.value || _isFetchingComments.value) return
+        val currentSong = playerState.value.currentSong ?: return
+        
+        viewModelScope.launch {
+            _isLoadingMoreComments.value = true
+            val moreComments = youTubeRepository.getMoreComments(currentSong.id)
+            if (moreComments.isNotEmpty()) {
+                val currentComments = _commentsState.value ?: emptyList()
+                _commentsState.value = currentComments + moreComments
+            }
+            _isLoadingMoreComments.value = false
+        }
+    }
+
     /**
      * Post a comment on the current song's video.
      */
@@ -573,8 +591,21 @@ class PlayerViewModel @Inject constructor(
             _commentPostSuccess.value = success
             
             if (success) {
-                // Refresh comments to show the new comment
-                fetchComments(song.id)
+                // Optimistically add comment
+                val userAvatar = sessionManager.getUserAvatar()
+                
+                val newComment = com.suvojeet.suvmusic.data.model.Comment(
+                    id = "temp_${System.currentTimeMillis()}",
+                    authorName = "You", 
+                    authorThumbnailUrl = userAvatar,
+                    text = commentText,
+                    timestamp = "Just now",
+                    likeCount = "0",
+                    replyCount = 0
+                )
+                
+                val currentComments = _commentsState.value ?: emptyList()
+                _commentsState.value = listOf(newComment) + currentComments
             }
             
             _isPostingComment.value = false

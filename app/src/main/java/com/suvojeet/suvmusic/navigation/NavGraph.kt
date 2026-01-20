@@ -71,6 +71,8 @@ fun NavGraph(
     isLoggedIn: Boolean = false,
     isPostingComment: Boolean = false,
     onPostComment: (String) -> Unit = {},
+    isLoadingMoreComments: Boolean = false,
+    onLoadMoreComments: () -> Unit = {},
     // Sleep timer
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -334,6 +336,8 @@ fun NavGraph(
                 isLoggedIn = isLoggedIn,
                 isPostingComment = isPostingComment,
                 onPostComment = onPostComment,
+                isLoadingMoreComments = isLoadingMoreComments,
+                onLoadMoreComments = onLoadMoreComments,
                 sleepTimerOption = sleepTimerOption,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 onSetSleepTimer = onSetSleepTimer,
