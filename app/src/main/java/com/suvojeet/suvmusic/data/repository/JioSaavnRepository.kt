@@ -16,6 +16,9 @@ import javax.crypto.spec.DESKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.util.Base64
+import com.suvojeet.suvmusic.util.encodeUrl
+import com.suvojeet.suvmusic.util.decodeHtml
+import com.suvojeet.suvmusic.util.toHighResImage
 
 /**
  * Repository for fetching music from JioSaavn.
@@ -479,7 +482,10 @@ class JioSaavnRepository @Inject constructor(
     /**
      * Get plain lyrics from JioSaavn (internal fallback).
      */
-    private suspend fun getLyricsFromJioSaavn(songId: String): String? = withContext(Dispatchers.IO) {
+    /**
+     * Get plain lyrics from JioSaavn (internal fallback).
+     */
+    suspend fun getLyricsFromJioSaavn(songId: String): String? = withContext(Dispatchers.IO) {
         try {
             val url = "$BASE_URL?__call=lyrics.getLyrics&_format=json&lyrics_id=$songId"
             val response = makeRequest(url)
@@ -1092,25 +1098,7 @@ class JioSaavnRepository @Inject constructor(
         }
     }
     
-    // Extension functions
-    private fun String.encodeUrl(): String {
-        return java.net.URLEncoder.encode(this, "UTF-8")
-    }
-    
-    private fun String.toHighResImage(): String {
-        // JioSaavn images: replace resolution suffix for higher quality
-        return this.replace("150x150", "500x500")
-            .replace("50x50", "500x500")
-    }
-    
-    private fun String.decodeHtml(): String {
-        return this.replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&#039;", "'")
-            .replace("&apos;", "'")
-    }
+    // Extension functions moved to util/Extensions.kt
     
     /**
      * Comprehensive search for songs, albums, artists, and playlists.
