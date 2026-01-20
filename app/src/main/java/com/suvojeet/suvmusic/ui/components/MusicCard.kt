@@ -66,10 +66,6 @@ private fun getHighResThumbnail(url: String?): Any? {
     // Handle remote URLs
     return when {
         url.contains("ytimg.com") -> url
-            .replace("hqdefault", "maxresdefault")
-            .replace("mqdefault", "maxresdefault")
-            .replace("sddefault", "maxresdefault")
-            .replace("default", "maxresdefault")
             .replace(Regex("w\\d+-h\\d+"), "w226-h226")
         url.contains("lh3.googleusercontent.com") -> 
             url.replace(Regex("=w\\d+-h\\d+"), "=w226-h226")

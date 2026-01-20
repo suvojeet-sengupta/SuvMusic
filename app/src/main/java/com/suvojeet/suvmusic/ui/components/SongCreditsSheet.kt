@@ -579,7 +579,7 @@ private fun getHighResThumbnailUrl(originalUrl: String?, videoId: String): Strin
             }
             else -> videoId
         }
-        return "https://img.youtube.com/vi/$ytVideoId/maxresdefault.jpg"
+        return "https://img.youtube.com/vi/$ytVideoId/hqdefault.jpg"
     }
     
     // For non-YouTube URLs, return original

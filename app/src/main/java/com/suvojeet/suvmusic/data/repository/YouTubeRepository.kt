@@ -101,7 +101,7 @@ class YouTubeRepository @Inject constructor(
                         artist = item.uploaderName ?: "Unknown Artist",
                         album = "",
                         duration = item.duration * 1000L,
-                        thumbnailUrl = item.thumbnails?.firstOrNull()?.url,
+                        thumbnailUrl = item.thumbnails?.maxByOrNull { it.width * it.height }?.url,
                         artistId = artistId
                     )
                 } catch (e: Exception) {
@@ -361,6 +361,7 @@ class YouTubeRepository @Inject constructor(
             val title = streamExtractor.name ?: "Unknown Title"
             val artist = streamExtractor.uploaderName ?: "Unknown Artist"
             val thumbnailUrl = streamExtractor.thumbnails.maxByOrNull { it.width * it.height }?.url
+
             val duration = streamExtractor.length * 1000 // Convert to milliseconds
             
             Song(
