@@ -11,7 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Android-8.0+-green?style=flat-square" alt="Android 8+">
-  <img src="https://img.shields.io/badge/Kotlin-1.9-purple?style=flat-square" alt="Kotlin">
+  <img src="https://img.shields.io/badge/Kotlin-2.3-purple?style=flat-square" alt="Kotlin">
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT">
 </p>
 
@@ -146,7 +146,7 @@ com.suvojeet.suvmusic/
 
 | Category | Technology |
 |----------|------------|
-| Language | Kotlin 1.9 |
+| Language | Kotlin 2.3 |
 | UI | Jetpack Compose, Material 3 |
 | Architecture | MVVM + Clean Architecture |
 | DI | Hilt |
@@ -164,7 +164,7 @@ com.suvojeet.suvmusic/
 Requirements:
 - Android Studio Hedgehog or newer
 - JDK 17
-- Android SDK 34
+- Android SDK 36
 
 ```bash
 git clone https://github.com/suvojeet-sengupta/SuvMusic.git
