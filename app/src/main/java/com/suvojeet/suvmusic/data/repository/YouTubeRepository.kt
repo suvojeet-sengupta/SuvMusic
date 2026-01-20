@@ -102,7 +102,8 @@ class YouTubeRepository @Inject constructor(
                         album = "",
                         duration = item.duration * 1000L,
                         thumbnailUrl = item.thumbnails?.maxByOrNull { it.width * it.height }?.url,
-                        artistId = artistId
+                        artistId = artistId,
+                        isVideo = filter == FILTER_VIDEOS
                     )
                 } catch (e: Exception) {
                     null

@@ -558,7 +558,7 @@ private fun SearchResultItem(
             
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Song",
+                    text = if (song.isVideo) "Video" else "Song",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
