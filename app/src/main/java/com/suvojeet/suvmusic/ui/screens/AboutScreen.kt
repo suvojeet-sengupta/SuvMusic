@@ -145,7 +145,7 @@ fun AboutScreen(
                 color = primaryColor.copy(alpha = 0.1f)
             ) {
                 Text(
-                    text = if (isDeveloperMode) "v1.0.3 • Dev Mode" else "Version 1.0.3",
+                    text = if (isDeveloperMode) "v1.0.4 • Dev Mode" else "Version 1.0.4",
                     style = MaterialTheme.typography.labelMedium,
                     color = primaryColor,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
