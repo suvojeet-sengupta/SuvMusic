@@ -241,6 +241,9 @@ fun SuvMusicApp(
     val sessionManager = remember { SessionManager(context) }
     val snackbarHostState = remember { SnackbarHostState() }
     
+    // Collect volume slider enabled preference
+    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
+    
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
     
@@ -548,7 +551,7 @@ fun SuvMusicApp(
         }
         
         // Global Volume Indicator (shows on all screens except PlayerScreen when song is playing)
-        if (showGlobalVolumeIndicator) {
+        if (showGlobalVolumeIndicator && volumeSliderEnabled) {
             VolumeIndicator(
                 isVisible = showVolumeIndicator,
                 currentVolume = currentVolume,
