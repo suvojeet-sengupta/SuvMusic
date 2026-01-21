@@ -15,6 +15,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.VolumeUp
@@ -65,9 +68,11 @@ fun PlaybackSettingsScreen(
     var showQualitySheet by remember { mutableStateOf(false) }
     var showDownloadQualitySheet by remember { mutableStateOf(false) }
     var showMusicSourceSheet by remember { mutableStateOf(false) }
+    var showDoubleTapSeekSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val downloadSheetState = rememberModalBottomSheetState()
     val musicSourceSheetState = rememberModalBottomSheetState()
+    val doubleTapSeekSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -212,6 +217,25 @@ fun PlaybackSettingsScreen(
                         }
                     )
                 },
+
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            // Gestures
+            SectionTitle("Gestures")
+            
+            ListItem(
+                headlineContent = { Text("Double tap to seek") },
+                supportingContent = { 
+                    Text("${uiState.doubleTapSeekSeconds} seconds") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Gesture,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { showDoubleTapSeekSheet = true },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
@@ -358,6 +382,50 @@ fun PlaybackSettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(text = label)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    
+    // Double Tap Seek Sheet
+    if (showDoubleTapSeekSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showDoubleTapSeekSheet = false },
+            sheetState = doubleTapSeekSheetState
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Double Tap to Seek",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                val options = listOf(5, 10, 15, 30)
+                
+                options.forEach { seconds ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setDoubleTapSeekSeconds(seconds)
+                                scope.launch {
+                                    doubleTapSeekSheetState.hide()
+                                    showDoubleTapSeekSheet = false
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.doubleTapSeekSeconds == seconds,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(text = "$seconds seconds")
                     }
                 }
                 

@@ -107,6 +107,9 @@ class SessionManager @Inject constructor(
 
         // Mini Player Visibility
         private val MINI_PLAYER_ALPHA_KEY = androidx.datastore.preferences.core.floatPreferencesKey("mini_player_alpha")
+        
+        // Double Tap Seek
+        private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -271,6 +274,22 @@ class SessionManager @Inject constructor(
     suspend fun setMiniPlayerAlpha(alpha: Float) {
         context.dataStore.edit { preferences ->
             preferences[MINI_PLAYER_ALPHA_KEY] = alpha
+        }
+    }
+    
+    // --- Double Tap Seek ---
+    
+    fun getDoubleTapSeekSeconds(): Int = runBlocking {
+        context.dataStore.data.first()[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
+    }
+    
+    val doubleTapSeekSecondsFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
+    }
+    
+    suspend fun setDoubleTapSeekSeconds(seconds: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] = seconds
         }
     }
     
