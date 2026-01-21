@@ -31,32 +31,36 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
         scope.launch {
             try {
-                val request = ImageRequest.Builder(context)
-                    .data(uri)
-                    .allowHardware(false) // Hardware bitmaps are not accessible by other processes/notifications
-                    .build()
-
-                val result = imageLoader.execute(request)
-                val drawable = result.drawable
-
-                if (drawable == null) {
-                    future.setException(Exception("Failed to load image: drawable result is null for URI: $uri"))
+                // Try loading the original URI
+                val bitmap = loadBitmapInternal(uri)
+                if (bitmap != null) {
+                    future.set(bitmap)
                     return@launch
                 }
+            } catch (e: Exception) {
+                // Initial load failed, try fallback
+            }
 
-                if (drawable is BitmapDrawable) {
-                    // If image is already a valid Bitmap, return it
-                    val bitmap = drawable.bitmap
-                    if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
-                        future.set(bitmap)
-                    } else {
-                        // If BitmapDrawable is empty, broken, or has a null bitmap
-                        future.set(createFallbackBitmap(drawable))
+            // Fallback logic
+            try {
+                val fallbackUri = getFallbackUri(uri)
+                if (fallbackUri != null && fallbackUri != uri) {
+                    val fallbackBitmap = loadBitmapInternal(fallbackUri)
+                    if (fallbackBitmap != null) {
+                        future.set(fallbackBitmap)
+                        return@launch
                     }
-                } else {
-                    // Convert Drawable (Vector, Color, etc.) to Bitmap
-                    future.set(createFallbackBitmap(drawable))
                 }
+            } catch (e: Exception) {
+                // Fallback failed
+            }
+            
+            // If all else fails, return a default placeholder
+            try {
+                val placeholder = Bitmap.createBitmap(DEFAULT_BITMAP_SIZE, DEFAULT_BITMAP_SIZE, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(placeholder)
+                canvas.drawColor(android.graphics.Color.DKGRAY) 
+                future.set(placeholder)
             } catch (e: Exception) {
                 future.setException(e)
             }
@@ -102,5 +106,40 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             }
         }
         return future
+    }
+
+
+    private suspend fun loadBitmapInternal(uri: Uri): Bitmap? {
+        return try {
+            val request = ImageRequest.Builder(context)
+                .data(uri)
+                .allowHardware(false)
+                .build()
+
+            val result = imageLoader.execute(request)
+            val drawable = result.drawable ?: return null
+
+            if (drawable is BitmapDrawable && drawable.bitmap != null && drawable.bitmap.width > 0 && drawable.bitmap.height > 0) {
+                drawable.bitmap
+            } else {
+                createFallbackBitmap(drawable)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getFallbackUri(uri: Uri): Uri? {
+        val uriString = uri.toString()
+        // Check for Google/YouTube thumbnail pattern
+        if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com")) {
+            // Replace resolution parameters with fallback size (544x544) which is standard backup
+            return if (uriString.contains("=w")) {
+                Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544"))
+            } else {
+                null
+            }
+        }
+        return null
     }
 }
