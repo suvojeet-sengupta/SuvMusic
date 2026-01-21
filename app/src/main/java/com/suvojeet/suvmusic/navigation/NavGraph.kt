@@ -437,11 +437,53 @@ fun NavGraph(
             arguments = listOf(
                 navArgument(Destination.Artist.ARG_ARTIST_ID) { type = NavType.StringType }
             )
-        ) {
+        ) { backStackEntry ->
             com.suvojeet.suvmusic.ui.screens.ArtistScreen(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { onPlaySong(listOf(it), 0) },
                 onAlbumClick = { album -> 
+                    navController.navigate(
+                        Destination.Album(
+                            albumId = album.id,
+                            name = album.title,
+                            thumbnailUrl = album.thumbnailUrl
+                        ).route
+                    )
+                },
+                onSeeAllAlbumsClick = {
+                    val currentId = backStackEntry.arguments?.getString(Destination.Artist.ARG_ARTIST_ID)
+                    if (currentId != null) {
+                        navController.navigate(
+                            Destination.ArtistDiscography(currentId, Destination.ArtistDiscography.TYPE_ALBUMS).route
+                        )
+                    }
+                },
+                onSeeAllSinglesClick = {
+                    val currentId = backStackEntry.arguments?.getString(Destination.Artist.ARG_ARTIST_ID)
+                    if (currentId != null) {
+                        navController.navigate(
+                            Destination.ArtistDiscography(currentId, Destination.ArtistDiscography.TYPE_SINGLES).route
+                        )
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Destination.ArtistDiscography.ROUTE,
+            arguments = listOf(
+                navArgument(Destination.ArtistDiscography.ARG_ARTIST_ID) { type = NavType.StringType },
+                navArgument(Destination.ArtistDiscography.ARG_TYPE) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val artistId = backStackEntry.arguments?.getString(Destination.ArtistDiscography.ARG_ARTIST_ID) ?: ""
+            val type = backStackEntry.arguments?.getString(Destination.ArtistDiscography.ARG_TYPE) ?: ""
+            
+            com.suvojeet.suvmusic.ui.screens.ArtistDiscographyScreen(
+                artistId = artistId,
+                type = type,
+                onBackClick = { navController.popBackStack() },
+                onAlbumClick = { album ->
                     navController.navigate(
                         Destination.Album(
                             albumId = album.id,

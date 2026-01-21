@@ -51,6 +51,19 @@ sealed class Destination(val route: String) {
         }
     }
 
+    data class ArtistDiscography(
+        val artistId: String,
+        val type: String // "albums" or "singles"
+    ) : Destination("artist_discography/$artistId/$type") {
+        companion object {
+            const val ROUTE = "artist_discography/{artistId}/{type}"
+            const val ARG_ARTIST_ID = "artistId"
+            const val ARG_TYPE = "type"
+            const val TYPE_ALBUMS = "albums"
+            const val TYPE_SINGLES = "singles"
+        }
+    }
+
     data class Album(
         val albumId: String,
         val name: String? = null,
