@@ -62,6 +62,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
 import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
+import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientMiddle
 import com.suvojeet.suvmusic.ui.theme.GradientStart
@@ -81,7 +82,8 @@ fun CustomizationScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onBack: () -> Unit,
     onSeekbarStyleClick: () -> Unit = {},
-    onArtworkShapeClick: () -> Unit = {}
+    onArtworkShapeClick: () -> Unit = {},
+    onArtworkSizeClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -99,6 +101,13 @@ fun CustomizationScreen(
         ArtworkShape.valueOf(artworkShapeString)
     } catch (e: Exception) {
         ArtworkShape.ROUNDED_SQUARE
+    }
+    
+    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
+    val currentArtworkSize = try {
+        ArtworkSize.valueOf(artworkSizeString)
+    } catch (e: Exception) {
+        ArtworkSize.LARGE
     }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -141,6 +150,15 @@ fun CustomizationScreen(
                 currentShape = currentArtworkShape,
                 primaryColor = primaryColor,
                 onClick = onArtworkShapeClick
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Artwork Size - Navigate to separate screen
+            ArtworkSizeNavigationItem(
+                currentSize = currentArtworkSize,
+                primaryColor = primaryColor,
+                onClick = onArtworkSizeClick
             )
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -290,6 +308,76 @@ private fun ArtworkShapeNavigationItem(
                 )
                 Text(
                     text = "Currently: $shapeName",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Open",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArtworkSizeNavigationItem(
+    currentSize: ArtworkSize,
+    primaryColor: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Simple size indicator boxes
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val boxCount = when (currentSize) {
+                    ArtworkSize.SMALL -> 1
+                    ArtworkSize.MEDIUM -> 2
+                    ArtworkSize.LARGE -> 3
+                }
+                repeat(3) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(if (index < boxCount) 8.dp else 6.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(
+                                if (index < boxCount) primaryColor 
+                                else MaterialTheme.colorScheme.outlineVariant
+                            )
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Artwork Size",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Currently: ${currentSize.label}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

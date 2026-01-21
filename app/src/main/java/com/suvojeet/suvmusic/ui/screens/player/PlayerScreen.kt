@@ -93,6 +93,7 @@ import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.screens.LyricsScreen
 import com.suvojeet.suvmusic.ui.screens.player.components.AlbumArtwork
 import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
+import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
 import com.suvojeet.suvmusic.ui.screens.player.components.BottomActions
 import com.suvojeet.suvmusic.ui.screens.player.components.PlaybackControls
 import com.suvojeet.suvmusic.ui.screens.player.components.PlayerTopBar
@@ -162,6 +163,7 @@ fun PlayerScreen(
     val sessionManager = remember { SessionManager(context) }
     val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
     val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
+    val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
     
     val currentSeekbarStyle = try {
@@ -174,6 +176,12 @@ fun PlayerScreen(
         ArtworkShape.valueOf(savedArtworkShapeString) 
     } catch (e: Exception) {
         ArtworkShape.ROUNDED_SQUARE
+    }
+    
+    val currentArtworkSize = try {
+        ArtworkSize.valueOf(savedArtworkSizeString)
+    } catch (e: Exception) {
+        ArtworkSize.LARGE
     }
 
     // Show toast messages from playlist operations
@@ -440,6 +448,7 @@ fun PlayerScreen(
                                     onSwipeLeft = onNext,
                                     onSwipeRight = onPrevious,
                                     initialShape = currentArtworkShape,
+                                    artworkSize = currentArtworkSize,
                                     onShapeChange = { shape ->
                                         coroutineScope.launch(Dispatchers.IO) {
                                             sessionManager.setArtworkShape(shape.name)
@@ -617,6 +626,7 @@ fun PlayerScreen(
                                     onSwipeLeft = onNext,
                                     onSwipeRight = onPrevious,
                                     initialShape = currentArtworkShape,
+                                    artworkSize = currentArtworkSize,
                                     onShapeChange = { shape ->
                                         coroutineScope.launch(Dispatchers.IO) {
                                             sessionManager.setArtworkShape(shape.name)
