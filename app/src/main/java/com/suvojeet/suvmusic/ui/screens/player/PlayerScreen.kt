@@ -165,6 +165,7 @@ fun PlayerScreen(
     val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
     val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
+    val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsState(initial = 10)
     
     val currentSeekbarStyle = try {
         SeekbarStyle.valueOf(savedSeekbarStyleString)
@@ -453,6 +454,14 @@ fun PlayerScreen(
                                         coroutineScope.launch(Dispatchers.IO) {
                                             sessionManager.setArtworkShape(shape.name)
                                         }
+                                    },
+                                    onDoubleTapLeft = {
+                                        val newPos = (playerState.currentPosition - doubleTapSeekSeconds * 1000).coerceAtLeast(0)
+                                        onSeekTo(newPos)
+                                    },
+                                    onDoubleTapRight = {
+                                        val newPos = (playerState.currentPosition + doubleTapSeekSeconds * 1000).coerceAtMost(playerState.duration)
+                                        onSeekTo(newPos)
                                     }
                                 )
                             }
@@ -631,6 +640,14 @@ fun PlayerScreen(
                                         coroutineScope.launch(Dispatchers.IO) {
                                             sessionManager.setArtworkShape(shape.name)
                                         }
+                                    },
+                                    onDoubleTapLeft = {
+                                        val newPos = (playerState.currentPosition - doubleTapSeekSeconds * 1000).coerceAtLeast(0)
+                                        onSeekTo(newPos)
+                                    },
+                                    onDoubleTapRight = {
+                                        val newPos = (playerState.currentPosition + doubleTapSeekSeconds * 1000).coerceAtMost(playerState.duration)
+                                        onSeekTo(newPos)
                                     }
                                 )
                             }

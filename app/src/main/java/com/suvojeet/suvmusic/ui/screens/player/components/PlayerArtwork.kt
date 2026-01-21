@@ -97,7 +97,9 @@ fun AlbumArtwork(
     onSwipeRight: () -> Unit = {},
     initialShape: ArtworkShape = ArtworkShape.ROUNDED_SQUARE,
     artworkSize: ArtworkSize = ArtworkSize.LARGE,
-    onShapeChange: ((ArtworkShape) -> Unit)? = null
+    onShapeChange: ((ArtworkShape) -> Unit)? = null,
+    onDoubleTapLeft: () -> Unit = {},
+    onDoubleTapRight: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -170,6 +172,13 @@ fun AlbumArtwork(
                 }
                 .pointerInput(Unit) {
                     detectTapGestures(
+                        onDoubleTap = { offset ->
+                            if (offset.x < size.width / 2) {
+                                onDoubleTapLeft()
+                            } else {
+                                onDoubleTapRight()
+                            }
+                        },
                         onLongPress = {
                             showShapeMenu = true
                         }
