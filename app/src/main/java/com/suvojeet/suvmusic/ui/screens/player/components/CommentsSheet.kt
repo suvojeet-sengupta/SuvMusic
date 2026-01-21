@@ -43,7 +43,10 @@ fun CommentsSheet(
     onLoadMore: () -> Unit = {}
 ) {
     if (isVisible) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        
         ModalBottomSheet(
+            sheetState = sheetState,
             onDismissRequest = onDismiss,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = Color.Black.copy(alpha = 0.5f),
