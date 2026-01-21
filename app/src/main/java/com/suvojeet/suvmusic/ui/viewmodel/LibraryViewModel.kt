@@ -24,7 +24,8 @@ data class LibraryUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val importState: ImportState = ImportState.Idle,
-    val error: String? = null
+    val error: String? = null,
+    val isLoggedIn: Boolean = false
 )
 
 sealed class ImportState {
@@ -49,6 +50,8 @@ class LibraryViewModel @Inject constructor(
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     
     init {
+        // Set initial login state
+        _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
         loadData()
         observeDownloads()
     }

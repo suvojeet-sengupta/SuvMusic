@@ -23,7 +23,8 @@ data class PlaylistUiState(
     val isRenaming: Boolean = false,
     val isCreating: Boolean = false,
     val isDeleting: Boolean = false,
-    val deleteSuccess: Boolean = false
+    val deleteSuccess: Boolean = false,
+    val isLoggedIn: Boolean = false
 ) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
@@ -49,6 +50,9 @@ class PlaylistViewModel @Inject constructor(
     val uiState: StateFlow<PlaylistUiState> = _uiState.asStateFlow()
 
     init {
+        // Set initial login state
+        _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
+        
         // Show initial data from navigation immediately
         if (initialName != null || initialThumbnail != null) {
             _uiState.update {
