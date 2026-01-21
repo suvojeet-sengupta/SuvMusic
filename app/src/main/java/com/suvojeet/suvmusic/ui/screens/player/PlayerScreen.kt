@@ -884,7 +884,8 @@ fun PlayerScreen(
             SongCreditsSheet(
                 song = song,
                 isVisible = showCreditsSheet,
-                onDismiss = { showCreditsSheet = false }
+                onDismiss = { showCreditsSheet = false },
+                audioFormatDisplay = playerState.audioFormatDisplay
             )
 
             // Add to Playlist Sheet
