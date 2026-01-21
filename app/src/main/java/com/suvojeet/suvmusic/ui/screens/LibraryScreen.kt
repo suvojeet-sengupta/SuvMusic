@@ -168,7 +168,8 @@ fun LibraryScreen(
                     isCreatingPlaylist = false
                     showCreatePlaylistDialog = false
                 }
-            }
+            },
+            isLoggedIn = uiState.isLoggedIn
         )
 
         // Import Spotify Dialog
