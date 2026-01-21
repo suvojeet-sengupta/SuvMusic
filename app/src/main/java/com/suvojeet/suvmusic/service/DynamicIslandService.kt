@@ -203,12 +203,7 @@ class DynamicIslandService : Service() {
             }
         }
         
-        // Collapsed view click - expand
-        view.findViewById<View>(R.id.collapsedContainer)?.setOnClickListener {
-            toggleExpanded()
-        }
-        
-        // Expanded controls
+        // Expanded controls - these still use click listeners
         view.findViewById<ImageButton>(R.id.btnPlayPause)?.setOnClickListener {
             musicPlayer.togglePlayPause()
         }
@@ -226,60 +221,69 @@ class DynamicIslandService : Service() {
             removeOverlay()
         }
         
-        // Open app
-        view.findViewById<View>(R.id.expandedContainer)?.setOnClickListener {
-            openApp()
-        }
-        
-        // Drag to move - works freely anywhere on screen
+        // Drag state variables
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
-        val touchSlop = 10 // pixels to consider a drag vs click
+        val touchSlop = 15 // pixels to consider a drag vs click
         
-        view.setOnTouchListener { v, event ->
-            val params = v.layoutParams as? WindowManager.LayoutParams ?: return@setOnTouchListener false
-            
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialX = params.x
-                    initialY = params.y
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
-                    isDragging = false
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = (event.rawX - initialTouchX).toInt()
-                    val dy = (event.rawY - initialTouchY).toInt()
-                    
-                    // Only start dragging after moving beyond touch slop
-                    if (!isDragging && (kotlin.math.abs(dx) > touchSlop || kotlin.math.abs(dy) > touchSlop)) {
-                        isDragging = true
+        // Helper function to setup drag on a container
+        fun setupDragOnView(containerView: View, onClickAction: () -> Unit) {
+            containerView.setOnTouchListener { _, event ->
+                val params = view.layoutParams as? WindowManager.LayoutParams 
+                    ?: return@setOnTouchListener false
+                
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = params.x
+                        initialY = params.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        isDragging = false
+                        true
                     }
-                    
-                    if (isDragging) {
-                        params.x = initialX + dx
-                        params.y = initialY + dy
-                        try {
-                            windowManager?.updateViewLayout(v, params)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = (event.rawX - initialTouchX).toInt()
+                        val dy = (event.rawY - initialTouchY).toInt()
+                        
+                        // Only start dragging after moving beyond touch slop
+                        if (!isDragging && (kotlin.math.abs(dx) > touchSlop || kotlin.math.abs(dy) > touchSlop)) {
+                            isDragging = true
                         }
+                        
+                        if (isDragging) {
+                            params.x = initialX + dx
+                            params.y = initialY + dy
+                            try {
+                                windowManager?.updateViewLayout(view, params)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                        true
                     }
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
-                        // It was a click, not a drag - toggle expanded
-                        v.performClick()
+                    MotionEvent.ACTION_UP -> {
+                        if (!isDragging) {
+                            // It was a click, not a drag
+                            onClickAction()
+                        }
+                        true
                     }
-                    true
+                    else -> false
                 }
-                else -> false
             }
+        }
+        
+        // Setup drag + click for collapsed container (click = expand)
+        view.findViewById<View>(R.id.collapsedContainer)?.let { collapsed ->
+            setupDragOnView(collapsed) { toggleExpanded() }
+        }
+        
+        // Setup drag + click for expanded container (click = open app)
+        view.findViewById<View>(R.id.expandedContainer)?.let { expanded ->
+            setupDragOnView(expanded) { openApp() }
         }
     }
     
