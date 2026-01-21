@@ -242,6 +242,46 @@ fun AboutScreen(
             }
             
             Spacer(modifier = Modifier.height(28.dp))
+
+            // === AUDIO QUALITY SECTION ===
+            SectionTitle("Why Opus Audio?", primaryColor)
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "SuvMusic streams audio using the Opus codec from YouTube Music, widely regarded as a superior modern format.",
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                        color = onSurfaceColor
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    QualityPoint(
+                        title = "Better than 320kbps MP3",
+                        description = "Opus is extremely efficient. 160kbps Opus offers audio quality that is often indistinguishable from or better than 320kbps MP3, preserving more detail with less data.",
+                        primaryColor = primaryColor,
+                        onSurfaceVariant = onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    QualityPoint(
+                        title = "Superior to AAC",
+                        description = "Compared to AAC, Opus supports a wider frequency range (Fullband), delivering deeper bass, crisper highs, and lower latency.",
+                        primaryColor = primaryColor,
+                        onSurfaceVariant = onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(28.dp))
             
             // === DEVELOPER SECTION ===
             SectionTitle("Developer", primaryColor)
@@ -355,7 +395,7 @@ fun AboutScreen(
                     InfoRow("Language", "Kotlin")
                     InfoRow("UI Framework", "Jetpack Compose")
                     InfoRow("Audio Engine", "Media3 ExoPlayer")
-                    InfoRow("Data Source", "YouTube + HQ Audio", showDivider = false)
+                    InfoRow("Data Source", "YouTube Music", showDivider = false)
                 }
             }
             
@@ -767,3 +807,29 @@ private fun DeveloperModeRow(
         }
     }
 }
+
+@Composable
+private fun QualityPoint(
+    title: String,
+    description: String,
+    primaryColor: Color,
+    onSurfaceVariant: Color
+) {
+    Column {
+        Text(
+            text = "• $title",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = primaryColor
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp),
+            color = onSurfaceVariant,
+            modifier = Modifier.padding(start = 12.dp)
+        )
+    }
+}
+
