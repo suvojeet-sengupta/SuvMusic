@@ -101,6 +101,7 @@ fun SongCreditsSheet(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onArtistClick: (String) -> Unit = {},
+    audioFormatDisplay: String = "Unknown", // e.g., "OPUS • 256kbps"
     viewModel: SongCreditsViewModel = hiltViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -254,10 +255,13 @@ fun SongCreditsSheet(
                         
                         Badge(text = sourceBadge)
                         
-                        if (song.source != com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
+                        // Show actual codec from player
+                        if (audioFormatDisplay != "Unknown") {
                             Spacer(modifier = Modifier.width(8.dp))
+                            // Extract just the codec name for badge (e.g., "OPUS" from "OPUS • 256kbps")
+                            val codecBadge = audioFormatDisplay.substringBefore(" •").uppercase()
                             Badge(
-                                text = "AAC",
+                                text = codecBadge,
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             )
                         }
@@ -357,7 +361,7 @@ fun SongCreditsSheet(
                             CreditItem(
                                 icon = Icons.Default.MusicNote,
                                 label = "Format",
-                                value = if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) "MP3 • 320kbps" else "M4A / AAC"
+                                value = audioFormatDisplay
                             )
                             
                             CreditDivider()
