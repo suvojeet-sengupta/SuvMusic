@@ -37,6 +37,13 @@ import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.screens.player.formatDuration
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+
 @Composable
 fun SongInfoSection(
     song: Song?,
@@ -47,6 +54,16 @@ fun SongInfoSection(
     onMoreClick: () -> Unit,
     dominantColors: DominantColors
 ) {
+    var showQualityDialog by remember { mutableStateOf(false) }
+
+    if (showQualityDialog) {
+        AudioQualityDialog(
+            showDialog = showQualityDialog,
+            onDismiss = { showQualityDialog = false },
+            dominantColors = dominantColors
+        )
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -79,10 +96,12 @@ fun SongInfoSection(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
                         .background(
                             color = dominantColors.onBackground.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(4.dp)
                         )
+                        .clickable { showQualityDialog = true }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
