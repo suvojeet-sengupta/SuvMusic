@@ -22,7 +22,9 @@ data class PlayerState(
     val isVideoMode: Boolean = false, // Video playback mode for YouTube songs
     val availableDevices: List<OutputDevice> = emptyList(),
     val selectedDevice: OutputDevice? = null,
-    val playbackSpeed: Float = 1.0f
+    val playbackSpeed: Float = 1.0f,
+    val audioCodec: String? = null, // e.g., "opus", "aac", "mp3"
+    val audioBitrate: Int? = null // in kbps, e.g., 256
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f
@@ -32,6 +34,14 @@ data class PlayerState(
     
     val hasPrevious: Boolean
         get() = currentIndex > 0 || repeatMode == RepeatMode.ALL
+    
+    /** Returns formatted audio format string like "Opus • 256kbps" */
+    val audioFormatDisplay: String
+        get() {
+            val codec = audioCodec?.uppercase() ?: return "Unknown"
+            val bitrate = audioBitrate?.let { "${it}kbps" } ?: ""
+            return if (bitrate.isNotEmpty()) "$codec • $bitrate" else codec
+        }
 }
 
 enum class DownloadState {

@@ -276,7 +276,14 @@ class MusicPlayer @Inject constructor(
             
             if (playbackState == Player.STATE_READY) {
                 startPositionUpdates()
+                // Update audio format info when playback is ready
+                updateAudioFormatInfo()
             }
+        }
+        
+        override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+            // Update audio format when tracks change
+            updateAudioFormatInfo()
         }
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -810,6 +817,62 @@ class MusicPlayer @Inject constructor(
         val clampedSpeed = speed.coerceIn(0.1f, 5.0f)
         mediaController?.setPlaybackSpeed(clampedSpeed)
         _playerState.update { it.copy(playbackSpeed = clampedSpeed) }
+    }
+    
+    /**
+     * Update audio format info (codec and bitrate) from the current track.
+     * Called when tracks change or playback becomes ready.
+     */
+    private fun updateAudioFormatInfo() {
+        val player = mediaController ?: return
+        val tracks = player.currentTracks
+        
+        // Find audio track group and extract format
+        var audioFormat: androidx.media3.common.Format? = null
+        for (group in tracks.groups) {
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && group.isSelected) {
+                // Get the selected format from this group
+                for (i in 0 until group.length) {
+                    if (group.isTrackSelected(i)) {
+                        audioFormat = group.getTrackFormat(i)
+                        break
+                    }
+                }
+                if (audioFormat != null) break
+            }
+        }
+        
+        if (audioFormat == null) return
+        
+        // Extract codec from MIME type (e.g., "audio/opus" -> "opus")
+        val mimeType = audioFormat.sampleMimeType ?: audioFormat.containerMimeType
+        val codec = when {
+            mimeType?.contains("opus") == true -> "opus"
+            mimeType?.contains("mp4a") == true -> "aac"
+            mimeType?.contains("aac") == true -> "aac"
+            mimeType?.contains("mp3") == true -> "mp3"
+            mimeType?.contains("mpeg") == true -> "mp3"
+            mimeType?.contains("flac") == true -> "flac"
+            mimeType?.contains("vorbis") == true -> "vorbis"
+            mimeType?.contains("wav") == true -> "wav"
+            mimeType?.contains("webm") == true -> "webm"
+            else -> mimeType?.substringAfter("audio/")?.substringBefore(";")
+        }
+        
+        // Extract bitrate (ExoPlayer provides it in bits per second, convert to kbps)
+        val bitrateKbps = if (audioFormat.bitrate > 0) {
+            audioFormat.bitrate / 1000
+        } else {
+            // Fallback: estimate from sample rate and channels for some formats
+            null
+        }
+        
+        _playerState.update { 
+            it.copy(
+                audioCodec = codec,
+                audioBitrate = bitrateKbps
+            )
+        }
     }
     
     /**
