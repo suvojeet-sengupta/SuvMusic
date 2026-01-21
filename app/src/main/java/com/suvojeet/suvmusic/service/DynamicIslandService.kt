@@ -154,7 +154,9 @@ class DynamicIslandService : Service() {
         if (overlayView != null) return
         if (!Settings.canDrawOverlays(this)) return
         
-        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        // Wrap context with theme to allow attribute resolution
+        val themeContext = android.view.ContextThemeWrapper(this, R.style.Theme_SuvMusic)
+        val inflater = LayoutInflater.from(themeContext)
         overlayView = inflater.inflate(R.layout.dynamic_island_layout, null)
         
         val params = WindowManager.LayoutParams(

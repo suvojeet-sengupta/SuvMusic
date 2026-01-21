@@ -148,11 +148,13 @@
 
             <ImageButton
                 android:id="@+id/btnPlayPause"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:layout_marginHorizontal="24dp"
-                android:background="@drawable/play_button_bg"
+                android:background="@android:color/transparent"
                 android:contentDescription="Play/Pause"
+                android:scaleType="fitCenter"
+                android:padding="0dp"
                 android:src="@drawable/ic_pause" />
 
             <ImageButton
