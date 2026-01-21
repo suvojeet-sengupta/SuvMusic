@@ -188,18 +188,86 @@ fun PlaylistScreen(
                     )
                 }
                 
-                // Song List
-                itemsIndexed(playlist.songs) { index, song ->
-                    SongListItem(
-                        song = song,
-                        isEditable = uiState.isEditable,
-                        onReorder = { fromIndex, toIndex -> viewModel.reorderSong(fromIndex, toIndex) },
-                        index = index,
-                        totalSongs = playlist.songs.size,
-                        onClick = { onSongClick(playlist.songs, index) },
-                        titleColor = contentColor,
-                        subtitleColor = secondaryContentColor
-                    )
+                // Empty State or Song List
+                if (playlist.songs.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp, horizontal = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(
+                                        if (isDarkTheme) Color.White.copy(alpha = 0.1f)
+                                        else Color.Black.copy(alpha = 0.05f)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = secondaryContentColor,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(20.dp))
+                            
+                            Text(
+                                text = "No songs yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = contentColor,
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Text(
+                                text = "Add songs to this playlist to start listening",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = secondaryContentColor,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                            )
+                            
+                            Button(
+                                onClick = { /* Open search or add songs */ },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                shape = RoundedCornerShape(24.dp),
+                                modifier = Modifier.height(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Add Songs",
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Song List
+                    itemsIndexed(playlist.songs) { index, song ->
+                        SongListItem(
+                            song = song,
+                            isEditable = uiState.isEditable,
+                            onReorder = { fromIndex, toIndex -> viewModel.reorderSong(fromIndex, toIndex) },
+                            index = index,
+                            totalSongs = playlist.songs.size,
+                            onClick = { onSongClick(playlist.songs, index) },
+                            titleColor = contentColor,
+                            subtitleColor = secondaryContentColor
+                        )
+                    }
                 }
             }
             
@@ -227,7 +295,8 @@ fun PlaylistScreen(
                 onCreate = { title, desc, isPrivate ->
                     viewModel.createPlaylist(title, desc, isPrivate)
                     showCreateDialog = false
-                }
+                },
+                isLoggedIn = uiState.isLoggedIn
             )
         }
         
