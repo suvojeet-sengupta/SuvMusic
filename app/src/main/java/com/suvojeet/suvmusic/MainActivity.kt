@@ -221,7 +221,7 @@ class MainActivity : ComponentActivity() {
     
     override fun onPause() {
         super.onPause()
-        // Start Dynamic Island if enabled and music might be playing
+        // Start Floating Player if enabled and music might be playing
         if (sessionManager.isDynamicIslandEnabled() && 
             DynamicIslandService.hasOverlayPermission(this)) {
             DynamicIslandService.start(this)
@@ -230,7 +230,7 @@ class MainActivity : ComponentActivity() {
     
     override fun onResume() {
         super.onResume()
-        // Stop Dynamic Island when app comes to foreground
+        // Stop Floating Player when app comes to foreground
         DynamicIslandService.stop(this)
     }
 }
