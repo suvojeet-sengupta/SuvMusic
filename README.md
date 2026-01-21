@@ -119,4 +119,14 @@ Based in **India 🇮🇳**, I specialize in building scalable, performance-crit
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+
+## ⚠️ DMCA / Copyright Disclaimer
+
+This application is developed specifically for educational and research purposes. It organizes and presents content available from third-party services (YouTube Music, JioSaavn) in a unified interface.
+
+**To Copyright Holders (YouTube, Google, JioSaavn, and Record Labels):**
+If you identify any content within this application that violates your copyright or terms of service, **please contact the developer directly before initiating any legal action or DMCA takedowns.**
+
+We respect intellectual property rights and are committed to resolving any valid concerns amicably and promptly, including removing specific content or features if necessary.
+
 *Disclaimer: This application is for educational and research purposes only. It interacts with third-party services and users must verify their compliance with relevant terms of service.*
