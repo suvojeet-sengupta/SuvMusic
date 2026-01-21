@@ -450,14 +450,7 @@ fun SuvMusicApp(
             bottomBar = {
                 if (showBottomNav) {
                     Column {
-                        // Mini player on main screens
-                        MiniPlayer(
-                            playerState = playerState,
-                            onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                            onNextClick = { playerViewModel.seekToNext() },
-                            onPreviousClick = { playerViewModel.seekToPrevious() },
-                            onPlayerClick = { navController.navigate(Destination.Player.route) }
-                        )
+
                         
                         // Bottom navigation
                         ExpressiveBottomNav(
@@ -483,6 +476,7 @@ fun SuvMusicApp(
                         bottom = if (showBottomNav) innerPadding.calculateBottomPadding() else innerPadding.calculateBottomPadding()
                     )
             ) {
+
                 NavGraph(
                     navController = navController,
                     playbackInfo = playbackInfo,
@@ -531,36 +525,18 @@ fun SuvMusicApp(
                     downloadRepository = downloadRepository,
                     startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
                 )
-            }
-        }
-        
-        // Floating MiniPlayer for detail screens (Playlist, Album, etc.)
-        // Only show if bottom nav is hidden, it's not player screen, logic allows it, AND song is playing
-        var isFloatingMiniPlayerVisible by remember { mutableStateOf(true) }
-        
-        // Reset visibility when song changes or significant navigation happens? 
-        // For now, let's keep it simple: if song is playing and user hasn't closed it.
-        // But if a new song starts, maybe it should reappear?
-        // Let's rely on user explicitly closing it.
-        
-        if (!showBottomNav && showMiniPlayer && playbackInfo.currentSong != null) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = isFloatingMiniPlayerVisible,
-                enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
-                exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 12.dp, vertical = 16.dp)
-            ) {
-                MiniPlayer(
-                    playerState = playbackInfo,
-                    onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                    onNextClick = { playerViewModel.seekToNext() },
-                    onPreviousClick = { playerViewModel.seekToPrevious() },
-                    onPlayerClick = { navController.navigate(Destination.Player.route) },
-                    onCloseClick = { isFloatingMiniPlayerVisible = false },
-                    progressProvider = { playerState.progress }
-                )
+
+                // MiniPlayer floating content overlay
+                if (showMiniPlayer) {
+                    MiniPlayer(
+                        playerState = playerState,
+                        onPlayPauseClick = { playerViewModel.togglePlayPause() },
+                        onNextClick = { playerViewModel.seekToNext() },
+                        onPreviousClick = { playerViewModel.seekToPrevious() },
+                        onPlayerClick = { navController.navigate(Destination.Player.route) },
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                }
             }
         }
         
