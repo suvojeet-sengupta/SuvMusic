@@ -80,7 +80,7 @@ fun DeveloperAccessDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "This area contains experimental features like HQ Audio (JioSaavn). Please enter the developer password to continue.",
+                    text = "This area contains experimental features like HQ Audio. Please enter the developer password to continue.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
