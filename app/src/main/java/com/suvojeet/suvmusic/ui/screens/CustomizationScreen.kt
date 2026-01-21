@@ -30,6 +30,10 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Square
 import androidx.compose.material.icons.rounded.RoundedCorner
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -109,8 +113,12 @@ fun CustomizationScreen(
     } catch (e: Exception) {
         ArtworkSize.LARGE
     }
+
+    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 1f)
+    val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     val primaryColor = MaterialTheme.colorScheme.primary
     val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
     
@@ -155,10 +163,24 @@ fun CustomizationScreen(
             Spacer(modifier = Modifier.height(8.dp))
             
             // Artwork Size - Navigate to separate screen
+
             ArtworkSizeNavigationItem(
                 currentSize = currentArtworkSize,
                 primaryColor = primaryColor,
                 onClick = onArtworkSizeClick
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Mini Player Transparency
+            MiniPlayerTransparencyItem(
+                alpha = miniPlayerAlpha,
+                primaryColor = primaryColor,
+                onAlphaChange = { newAlpha ->
+                    scope.launch {
+                        sessionManager.setMiniPlayerAlpha(newAlpha)
+                    }
+                }
             )
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -387,6 +409,70 @@ private fun ArtworkSizeNavigationItem(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Open",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun MiniPlayerTransparencyItem(
+    alpha: Float,
+    primaryColor: Color,
+    onAlphaChange: (Float) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = primaryColor,
+                    modifier = Modifier.size(28.dp)
+                )
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Mini Player Transparency",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Opacity: ${(alpha * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            androidx.compose.material3.Slider(
+                value = alpha,
+                onValueChange = onAlphaChange,
+                valueRange = 0.2f..1f, // Minimum 20% opacity so it's not invisible
+                steps = 15,
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = primaryColor,
+                    activeTrackColor = primaryColor,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
+                )
             )
         }
     }
