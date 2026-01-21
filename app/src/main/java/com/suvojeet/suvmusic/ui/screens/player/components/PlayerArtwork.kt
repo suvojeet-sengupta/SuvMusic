@@ -78,6 +78,15 @@ enum class ArtworkShape {
     SQUARE           // Sharp corners
 }
 
+/**
+ * Artwork size options for player screen
+ */
+enum class ArtworkSize(val fraction: Float, val label: String) {
+    SMALL(0.65f, "Small"),
+    MEDIUM(0.75f, "Medium"),
+    LARGE(0.85f, "Large")
+}
+
 @Composable
 fun AlbumArtwork(
     imageUrl: String?,
@@ -87,6 +96,7 @@ fun AlbumArtwork(
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
     initialShape: ArtworkShape = ArtworkShape.ROUNDED_SQUARE,
+    artworkSize: ArtworkSize = ArtworkSize.LARGE,
     onShapeChange: ((ArtworkShape) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -147,9 +157,9 @@ fun AlbumArtwork(
             modifier = Modifier
                 .then(
                     if (isWideLayout) {
-                        Modifier.fillMaxHeight(0.85f).aspectRatio(1f)
+                        Modifier.fillMaxHeight(artworkSize.fraction).aspectRatio(1f)
                     } else {
-                        Modifier.fillMaxWidth(0.85f).aspectRatio(1f)
+                        Modifier.fillMaxWidth(artworkSize.fraction).aspectRatio(1f)
                     }
                 )
                 .graphicsLayer {

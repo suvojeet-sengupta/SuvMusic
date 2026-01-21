@@ -18,6 +18,7 @@ import com.suvojeet.suvmusic.ui.screens.AboutScreen
 import com.suvojeet.suvmusic.ui.screens.HowItWorksScreen
 import com.suvojeet.suvmusic.ui.screens.AppearanceSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.ArtworkShapeScreen
+import com.suvojeet.suvmusic.ui.screens.ArtworkSizeScreen
 import com.suvojeet.suvmusic.ui.screens.CustomizationScreen
 import com.suvojeet.suvmusic.ui.screens.HomeScreen
 import com.suvojeet.suvmusic.ui.screens.LibraryScreen
@@ -230,7 +231,8 @@ fun NavGraph(
             CustomizationScreen(
                 onBack = { navController.popBackStack() },
                 onSeekbarStyleClick = { navController.navigate(Destination.SeekbarStyleSettings.route) },
-                onArtworkShapeClick = { navController.navigate(Destination.ArtworkShapeSettings.route) }
+                onArtworkShapeClick = { navController.navigate(Destination.ArtworkShapeSettings.route) },
+                onArtworkSizeClick = { navController.navigate(Destination.ArtworkSizeSettings.route) }
             )
         }
         
@@ -242,6 +244,12 @@ fun NavGraph(
         
         composable(Destination.SeekbarStyleSettings.route) {
             SeekbarStyleScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        
+        composable(Destination.ArtworkSizeSettings.route) {
+            ArtworkSizeScreen(
                 onBack = { navController.popBackStack() }
             )
         }
