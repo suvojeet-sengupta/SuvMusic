@@ -193,6 +193,44 @@ fun YouTubeLoginScreen(
                             }
                             
                             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                val url = request?.url?.toString() ?: return false
+                                
+                                // Handle intent:// URLs (like Play Store redirects)
+                                if (url.startsWith("intent://")) {
+                                    try {
+                                        val intent = android.content.Intent.parseUri(url, android.content.Intent.URI_INTENT_SCHEME)
+                                        if (intent != null) {
+                                            // Try to find an app that can handle this intent
+                                            val packageManager = view?.context?.packageManager
+                                            val info = packageManager?.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                                            if (info != null) {
+                                                view?.context?.startActivity(intent)
+                                            } else {
+                                                // Fallback to Play Store if app not installed
+                                                val fallbackUrl = intent.getStringExtra("browser_fallback_url")
+                                                if (!fallbackUrl.isNullOrEmpty()) {
+                                                    view?.loadUrl(fallbackUrl)
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        // Silently ignore - don't crash the WebView
+                                    }
+                                    return true
+                                }
+                                
+                                // Handle market:// URLs (Play Store links)
+                                if (url.startsWith("market://")) {
+                                    try {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, request.url)
+                                        view?.context?.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        // Play Store not available, ignore
+                                    }
+                                    return true
+                                }
+                                
+                                // Allow normal http/https URLs to load in WebView
                                 return false
                             }
                         }
