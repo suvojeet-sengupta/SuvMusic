@@ -104,6 +104,9 @@ class SessionManager @Inject constructor(
         
         // Volume Slider
         private val VOLUME_SLIDER_ENABLED_KEY = booleanPreferencesKey("volume_slider_enabled")
+
+        // Mini Player Visibility
+        private val MINI_PLAYER_ALPHA_KEY = androidx.datastore.preferences.core.floatPreferencesKey("mini_player_alpha")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -252,6 +255,22 @@ class SessionManager @Inject constructor(
     suspend fun setVolumeSliderEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[VOLUME_SLIDER_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- Mini Player Transparency ---
+
+    fun getMiniPlayerAlpha(): Float = runBlocking {
+        context.dataStore.data.first()[MINI_PLAYER_ALPHA_KEY] ?: 1f
+    }
+
+    val miniPlayerAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[MINI_PLAYER_ALPHA_KEY] ?: 1f
+    }
+
+    suspend fun setMiniPlayerAlpha(alpha: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[MINI_PLAYER_ALPHA_KEY] = alpha
         }
     }
     
