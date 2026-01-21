@@ -197,21 +197,26 @@ fun YouTubeLoginScreen(
                                 
                                 // Handle intent:// URLs (like Play Store redirects)
                                 if (url.startsWith("intent://")) {
+                                    // Parse the intent to check what it's for
                                     try {
                                         val intent = android.content.Intent.parseUri(url, android.content.Intent.URI_INTENT_SCHEME)
+                                        val packageName = intent?.`package`
+                                        
+                                        // If it's trying to open YouTube Music app, just ignore it
+                                        // This prevents the "install YT Music" prompt during login
+                                        if (packageName == "com.google.android.apps.youtube.music") {
+                                            // Simply ignore this redirect - stay on current page
+                                            return true
+                                        }
+                                        
+                                        // For other intents, try to handle them
                                         if (intent != null) {
-                                            // Try to find an app that can handle this intent
                                             val packageManager = view?.context?.packageManager
                                             val info = packageManager?.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
                                             if (info != null) {
                                                 view?.context?.startActivity(intent)
-                                            } else {
-                                                // Fallback to Play Store if app not installed
-                                                val fallbackUrl = intent.getStringExtra("browser_fallback_url")
-                                                if (!fallbackUrl.isNullOrEmpty()) {
-                                                    view?.loadUrl(fallbackUrl)
-                                                }
                                             }
+                                            // If can't handle, just ignore rather than showing error
                                         }
                                     } catch (e: Exception) {
                                         // Silently ignore - don't crash the WebView
@@ -219,14 +224,9 @@ fun YouTubeLoginScreen(
                                     return true
                                 }
                                 
-                                // Handle market:// URLs (Play Store links)
+                                // Handle market:// URLs (Play Store links) - ignore them during login
                                 if (url.startsWith("market://")) {
-                                    try {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, request.url)
-                                        view?.context?.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        // Play Store not available, ignore
-                                    }
+                                    // Don't redirect to Play Store during login
                                     return true
                                 }
                                 
