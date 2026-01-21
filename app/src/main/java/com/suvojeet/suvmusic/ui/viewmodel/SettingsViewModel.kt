@@ -39,7 +39,8 @@ data class SettingsUiState(
     val volumeSliderEnabled: Boolean = true,
     val musicSource: MusicSource = MusicSource.YOUTUBE,
     val updateState: UpdateState = UpdateState.Idle,
-    val currentVersion: String = ""
+    val currentVersion: String = "",
+    val doubleTapSeekSeconds: Int = 10
 )
 
 @HiltViewModel
@@ -96,6 +97,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(appTheme = theme) }
             }
         }
+        
+        viewModelScope.launch {
+            sessionManager.doubleTapSeekSecondsFlow.collect { seconds ->
+                _uiState.update { it.copy(doubleTapSeekSeconds = seconds) }
+            }
+        }
     }
     
     private fun loadSettings() {
@@ -112,7 +119,8 @@ class SettingsViewModel @Inject constructor(
                 automixEnabled = sessionManager.isAutomixEnabled(),
                 volumeSliderEnabled = sessionManager.isVolumeSliderEnabled(),
                 musicSource = sessionManager.getMusicSource(),
-                currentVersion = updateRepository.getCurrentVersionName()
+                currentVersion = updateRepository.getCurrentVersionName(),
+                doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds()
             )
         }
     }
@@ -277,6 +285,13 @@ class SettingsViewModel @Inject constructor(
                     userAvatarUrl = null
                 )
             }
+        }
+    }
+    
+    fun setDoubleTapSeekSeconds(seconds: Int) {
+        viewModelScope.launch {
+            sessionManager.setDoubleTapSeekSeconds(seconds)
+            _uiState.update { it.copy(doubleTapSeekSeconds = seconds) }
         }
     }
 }
