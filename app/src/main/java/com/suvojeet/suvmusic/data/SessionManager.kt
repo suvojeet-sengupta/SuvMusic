@@ -91,6 +91,7 @@ class SessionManager @Inject constructor(
         // Player Customization
         private val SEEKBAR_STYLE_KEY = stringPreferencesKey("seekbar_style")
         private val ARTWORK_SHAPE_KEY = stringPreferencesKey("artwork_shape")
+        private val ARTWORK_SIZE_KEY = stringPreferencesKey("artwork_size")
         
         // Static Theme
         private val APP_THEME_KEY = stringPreferencesKey("app_theme")
@@ -186,6 +187,23 @@ class SessionManager @Inject constructor(
     suspend fun setArtworkShape(shape: String) {
         context.dataStore.edit { preferences ->
             preferences[ARTWORK_SHAPE_KEY] = shape
+        }
+    }
+    
+    /**
+     * Get saved artwork size (defaults to LARGE)
+     */
+    fun getArtworkSize(): String = runBlocking {
+        context.dataStore.data.first()[ARTWORK_SIZE_KEY] ?: "LARGE"
+    }
+    
+    val artworkSizeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[ARTWORK_SIZE_KEY] ?: "LARGE"
+    }
+    
+    suspend fun setArtworkSize(size: String) {
+        context.dataStore.edit { preferences ->
+            preferences[ARTWORK_SIZE_KEY] = size
         }
     }
     
