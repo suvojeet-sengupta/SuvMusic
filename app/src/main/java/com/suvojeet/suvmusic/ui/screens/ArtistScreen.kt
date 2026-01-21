@@ -81,6 +81,8 @@ fun ArtistScreen(
     onBackClick: () -> Unit,
     onSongClick: (Song) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onSeeAllAlbumsClick: () -> Unit,
+    onSeeAllSinglesClick: () -> Unit,
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -169,7 +171,8 @@ fun ArtistScreen(
                             Spacer(modifier = Modifier.height(28.dp))
                             ArtistSectionHeader(
                                 title = stringResource(R.string.header_albums),
-                                showSeeAll = artist.albums.size > 4
+                                showSeeAll = artist.albums.size > 4,
+                                onSeeAllClick = onSeeAllAlbumsClick
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
@@ -193,7 +196,8 @@ fun ArtistScreen(
                             Spacer(modifier = Modifier.height(28.dp))
                             ArtistSectionHeader(
                                 title = stringResource(R.string.header_singles_eps),
-                                showSeeAll = artist.singles.size > 4
+                                showSeeAll = artist.singles.size > 4,
+                                onSeeAllClick = onSeeAllSinglesClick
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
