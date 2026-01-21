@@ -37,8 +37,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Service that displays a Dynamic Island-style overlay when music is playing
- * and the app is in the background.
+ * Service that displays a Floating Player overlay when music is playing
+ * and the app is in the background. Draggable to any position on screen.
  */
 @AndroidEntryPoint
 class DynamicIslandService : Service() {
@@ -58,7 +58,7 @@ class DynamicIslandService : Service() {
     private var stateObserverJob: Job? = null
     
     companion object {
-        private const val CHANNEL_ID = "dynamic_island_channel"
+        private const val CHANNEL_ID = "floating_player_channel"
         private const val NOTIFICATION_ID = 2001
         
         fun hasOverlayPermission(context: Context): Boolean {
@@ -114,7 +114,7 @@ class DynamicIslandService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Dynamic Island",
+                "Floating Player",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Shows floating player controls"
@@ -127,8 +127,8 @@ class DynamicIslandService : Service() {
     
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Dynamic Island Active")
-            .setContentText("Music controls overlay is running")
+            .setContentTitle("Floating Player Active")
+            .setContentText("Drag to move anywhere on screen")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
@@ -170,8 +170,9 @@ class DynamicIslandService : Service() {
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = 40 // Offset from top for camera cutout area
+            gravity = Gravity.TOP or Gravity.START
+            x = 0  // Will be centered initially
+            y = 100 // Offset from top
         }
         
         setupOverlayInteractions()
@@ -230,14 +231,16 @@ class DynamicIslandService : Service() {
             openApp()
         }
         
-        // Drag to move
+        // Drag to move - works freely anywhere on screen
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
+        var isDragging = false
+        val touchSlop = 10 // pixels to consider a drag vs click
         
-        view.setOnTouchListener { _, event ->
-            val params = view.layoutParams as? WindowManager.LayoutParams ?: return@setOnTouchListener false
+        view.setOnTouchListener { v, event ->
+            val params = v.layoutParams as? WindowManager.LayoutParams ?: return@setOnTouchListener false
             
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -245,12 +248,34 @@ class DynamicIslandService : Service() {
                     initialY = params.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    isDragging = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager?.updateViewLayout(view, params)
+                    val dx = (event.rawX - initialTouchX).toInt()
+                    val dy = (event.rawY - initialTouchY).toInt()
+                    
+                    // Only start dragging after moving beyond touch slop
+                    if (!isDragging && (kotlin.math.abs(dx) > touchSlop || kotlin.math.abs(dy) > touchSlop)) {
+                        isDragging = true
+                    }
+                    
+                    if (isDragging) {
+                        params.x = initialX + dx
+                        params.y = initialY + dy
+                        try {
+                            windowManager?.updateViewLayout(v, params)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        // It was a click, not a drag - toggle expanded
+                        v.performClick()
+                    }
                     true
                 }
                 else -> false

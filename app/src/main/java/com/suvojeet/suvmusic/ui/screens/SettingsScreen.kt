@@ -81,10 +81,10 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
     
-    // Dynamic Island
+    // Floating Player
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val dynamicIslandEnabled by viewModel.dynamicIslandEnabled.collectAsState(initial = false)
+    val floatingPlayerEnabled by viewModel.dynamicIslandEnabled.collectAsState(initial = false)
     
     Column(
         modifier = Modifier
@@ -213,11 +213,11 @@ fun SettingsScreen(
             onClick = onCustomizationClick
         )
         
-        // Dynamic Island Toggle
+        // Floating Player Toggle
         ListItem(
-            headlineContent = { Text("Dynamic Island") },
+            headlineContent = { Text("Floating Player") },
             supportingContent = { 
-                Text("Floating mini-player near camera when minimized") 
+                Text("Draggable mini-player when app is minimized") 
             },
             leadingContent = {
                 Icon(
@@ -227,7 +227,7 @@ fun SettingsScreen(
             },
             trailingContent = {
                 Switch(
-                    checked = dynamicIslandEnabled,
+                    checked = floatingPlayerEnabled,
                     onCheckedChange = { enabled ->
                         if (enabled) {
                             // Check permission first
@@ -249,7 +249,7 @@ fun SettingsScreen(
                 )
             },
             modifier = Modifier.clickable {
-                if (!dynamicIslandEnabled && !DynamicIslandService.hasOverlayPermission(context)) {
+                if (!floatingPlayerEnabled && !DynamicIslandService.hasOverlayPermission(context)) {
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:${context.packageName}")

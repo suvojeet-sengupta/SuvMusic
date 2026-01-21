@@ -22,7 +22,7 @@
     <!-- Wake lock for continuous playback -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     
-    <!-- Overlay permission for Dynamic Island -->
+    <!-- Overlay permission for Floating Player -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     
@@ -121,7 +121,7 @@
             </intent-filter>
         </service>
         
-        <!-- Dynamic Island Overlay Service -->
+        <!-- Floating Player Overlay Service -->
         <service
             android:name=".service.DynamicIslandService"
             android:exported="false"
