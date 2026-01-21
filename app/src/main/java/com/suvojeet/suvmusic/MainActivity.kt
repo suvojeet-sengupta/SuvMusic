@@ -252,6 +252,7 @@ fun SuvMusicApp(
     
     // Collect volume slider enabled preference
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
+    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 1f)
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
@@ -534,7 +535,9 @@ fun SuvMusicApp(
                         onNextClick = { playerViewModel.seekToNext() },
                         onPreviousClick = { playerViewModel.seekToPrevious() },
                         onPlayerClick = { navController.navigate(Destination.Player.route) },
-                        modifier = Modifier.align(Alignment.BottomCenter)
+
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        alpha = miniPlayerAlpha
                     )
                 }
             }

@@ -68,7 +68,8 @@ fun MiniPlayer(
     onPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
     onCloseClick: (() -> Unit)? = null,
-    progressProvider: () -> Float = { playerState.progress }
+    progressProvider: () -> Float = { playerState.progress },
+    alpha: Float = 1f
 ) {
     val song = playerState.currentSong
 
@@ -83,8 +84,8 @@ fun MiniPlayer(
     
     // Animate background color
     val backgroundColor by animateColorAsState(
-        targetValue = if (song != null) dominantColors.primary.copy(alpha = 0.9f) 
-                      else MaterialTheme.colorScheme.surfaceContainerHigh,
+        targetValue = if (song != null) dominantColors.primary.copy(alpha = alpha) 
+                      else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = alpha),
         label = "MiniPlayerBackground"
     )
 
