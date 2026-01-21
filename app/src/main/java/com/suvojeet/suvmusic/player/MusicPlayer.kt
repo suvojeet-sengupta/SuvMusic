@@ -863,8 +863,15 @@ class MusicPlayer @Inject constructor(
         val bitrateKbps = if (audioFormat.bitrate > 0) {
             audioFormat.bitrate / 1000
         } else {
-            // Fallback: estimate from sample rate and channels for some formats
-            null
+            // Fallback: estimate typical bitrates for known codecs
+            // YouTube uses VBR for Opus so ExoPlayer doesn't report bitrate
+            when (codec) {
+                "opus" -> 256  // YouTube Music typically uses ~256kbps Opus
+                "aac" -> 256   // Fallback for AAC
+                "mp3" -> 320   // Fallback for MP3
+                "flac" -> null // Lossless, no bitrate shown
+                else -> null
+            }
         }
         
         _playerState.update { 
