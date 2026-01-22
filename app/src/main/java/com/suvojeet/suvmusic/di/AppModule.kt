@@ -31,9 +31,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideYouTubeRepository(
-        sessionManager: SessionManager
+        sessionManager: SessionManager,
+        jsonParser: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
     ): YouTubeRepository {
-        return YouTubeRepository(sessionManager)
+        return YouTubeRepository(sessionManager, jsonParser)
     }
     
     @Provides
