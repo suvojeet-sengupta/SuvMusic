@@ -605,6 +605,7 @@ class YouTubeRepository @Inject constructor(
 
     private fun extractContinuationToken(json: JSONObject): String? {
         try {
+            // 1. Try SectionListRenderer (Home, Mixed Lists)
             val sectionListRenderer = json.optJSONObject("contents")
                 ?.optJSONObject("singleColumnBrowseResultsRenderer")
                 ?.optJSONArray("tabs")
@@ -615,10 +616,29 @@ class YouTubeRepository @Inject constructor(
                 ?: json.optJSONObject("continuationContents")
                 ?.optJSONObject("sectionListContinuation")
             
-            val continuations = sectionListRenderer?.optJSONArray("continuations")
-            return continuations?.optJSONObject(0)
-                ?.optJSONObject("nextContinuationData")
-                ?.optString("continuation")
+            val sectionContinuations = sectionListRenderer?.optJSONArray("continuations")
+            if (sectionContinuations != null) {
+                return sectionContinuations.optJSONObject(0)
+                    ?.optJSONObject("nextContinuationData")
+                    ?.optString("continuation")
+            }
+
+            // 2. Try MusicPlaylistShelfRenderer (Playlists, Liked Songs)
+            // It might be nested in sectionListRenderer -> contents -> [0]
+            val playlistShelfRenderer = sectionListRenderer?.optJSONArray("contents")
+                ?.optJSONObject(0)
+                ?.optJSONObject("musicPlaylistShelfRenderer")
+                ?: json.optJSONObject("continuationContents")
+                ?.optJSONObject("musicPlaylistShelfContinuation")
+
+            val playlistContinuations = playlistShelfRenderer?.optJSONArray("continuations")
+            if (playlistContinuations != null) {
+                return playlistContinuations.optJSONObject(0)
+                    ?.optJSONObject("nextContinuationData")
+                    ?.optString("continuation")
+            }
+            
+            return null
         } catch (e: Exception) {
             return null
         }
@@ -719,12 +739,41 @@ class YouTubeRepository @Inject constructor(
         playlists
     }
 
-    suspend fun getLikedMusic(): List<Song> = withContext(Dispatchers.IO) {
+    suspend fun getLikedMusic(fetchAll: Boolean = false): List<Song> = withContext(Dispatchers.IO) {
         if (sessionManager.isLoggedIn()) {
             try {
-                val json = fetchInternalApi("FEmusic_liked_videos")
-                val songs = parseSongsFromInternalJson(json)
-                if (songs.isNotEmpty()) return@withContext songs
+                val songs = mutableListOf<Song>()
+                var jsonResponse = fetchInternalApi("FEmusic_liked_videos")
+                songs.addAll(parseSongsFromInternalJson(jsonResponse))
+                
+                if (fetchAll) {
+                    var currentJson = JSONObject(jsonResponse)
+                    var continuationToken = extractContinuationToken(currentJson)
+                    var pageCount = 0
+                    val maxPages = 100 // Limit to ~10000 songs
+
+                    while (continuationToken != null && pageCount < maxPages) {
+                         try {
+                            val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                            if (continuationResponse.isNotEmpty()) {
+                                val newSongs = parseSongsFromInternalJson(continuationResponse)
+                                if (newSongs.isEmpty()) break
+                                
+                                songs.addAll(newSongs)
+                                
+                                currentJson = JSONObject(continuationResponse)
+                                continuationToken = extractContinuationToken(currentJson)
+                                pageCount++
+                            } else {
+                                break
+                            }
+                         } catch (e: Exception) {
+                             break
+                         }
+                    }
+                }
+                
+                if (songs.isNotEmpty()) return@withContext songs.distinctBy { it.id }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
