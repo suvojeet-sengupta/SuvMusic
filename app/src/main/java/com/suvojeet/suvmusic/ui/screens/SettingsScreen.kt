@@ -7,15 +7,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HeadsetMic
@@ -81,6 +84,7 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
+    var showAccountsDialog by remember { mutableStateOf(false) }
     
     // Floating Player
     val context = LocalContext.current
@@ -163,7 +167,7 @@ fun SettingsScreen(
                 },
                 supportingContent = { 
                     Text(
-                        text = "Use a different YouTube Music account",
+                        text = "Manage multiple accounts",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     ) 
                 },
@@ -175,12 +179,7 @@ fun SettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable {
-                    // Clear WebView cookies to force account chooser
-                    android.webkit.CookieManager.getInstance().removeAllCookies(null)
-                    android.webkit.CookieManager.getInstance().flush()
-                    
-                    viewModel.logout()
-                    onLoginClick()
+                    showAccountsDialog = true
                 },
                 colors = ListItemDefaults.colors(
                     containerColor = Color.Transparent
@@ -399,17 +398,17 @@ fun SettingsScreen(
             },
             text = {
                 Text(
-                    text = "You will be disconnected from YouTube Music. Your playlists and recommendations will no longer be available until you sign in again."
+                    text = "You will be disconnected from the current account."
                 )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // Clear cookies on sign out too
+                        // Clear WebView cookies to force account chooser next time
                         android.webkit.CookieManager.getInstance().removeAllCookies(null)
                         android.webkit.CookieManager.getInstance().flush()
                         
-                        viewModel.logout()
+                        viewModel.prepareAddAccount()
                         showSignOutDialog = false
                     }
                 ) {
@@ -421,6 +420,96 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Accounts Dialog
+    if (showAccountsDialog) {
+        AlertDialog(
+            onDismissRequest = { showAccountsDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.SwitchAccount,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(text = "Switch Account")
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Select an account to switch or add a new one.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Saved Accounts List
+                    if (uiState.storedAccounts.isNotEmpty()) {
+                        uiState.storedAccounts.forEach { account ->
+                            ListItem(
+                                headlineContent = { Text(account.name) },
+                                supportingContent = { Text(account.email) },
+                                leadingContent = {
+                                    AsyncImage(
+                                        model = account.avatarUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                    )
+                                },
+                                modifier = Modifier
+                                    .clickable {
+                                        viewModel.switchAccount(account)
+                                        showAccountsDialog = false
+                                    }
+                                    .padding(vertical = 4.dp),
+                                colors = ListItemDefaults.colors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                ),
+                                trailingContent = {
+                                    androidx.compose.material.icons.Icons.Default.Close.let { icon ->
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = "Remove",
+                                            modifier = Modifier.clickable {
+                                                viewModel.removeAccount(account.email)
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    
+                    // Add Account Button
+                    TextButton(
+                        onClick = {
+                            viewModel.prepareAddAccount()
+                            showAccountsDialog = false
+                            onLoginClick()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add another account")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAccountsDialog = false }) {
                     Text("Cancel")
                 }
             }

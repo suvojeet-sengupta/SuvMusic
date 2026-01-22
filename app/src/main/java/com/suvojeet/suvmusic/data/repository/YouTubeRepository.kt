@@ -72,6 +72,67 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    /**
+     * Fetch user account info (Name, Email, Avatar) from account menu.
+     */
+    suspend fun fetchAccountInfo(): com.suvojeet.suvmusic.data.SessionManager.StoredAccount? = withContext(Dispatchers.IO) {
+        try {
+            if (!sessionManager.isLoggedIn()) return@withContext null
+            val cookies = sessionManager.getCookies() ?: return@withContext null
+            
+            // Use account_menu endpoint
+            val jsonResponse = fetchInternalApi("account/account_menu")
+            if (jsonResponse.isBlank()) return@withContext null
+            
+            val root = JSONObject(jsonResponse)
+            
+            // Parse response to find account info
+            // Structure: actions -> openPopupAction -> popup -> multiPageMenuRenderer -> header -> activeAccountHeaderRenderer
+            
+            val actions = root.optJSONArray("actions")
+            var accountHeader: JSONObject? = null
+            
+            if (actions != null) {
+                for (i in 0 until actions.length()) {
+                    val action = actions.optJSONObject(i)
+                    val header = action?.optJSONObject("openPopupAction")
+                        ?.optJSONObject("popup")
+                        ?.optJSONObject("multiPageMenuRenderer")
+                        ?.optJSONObject("header")
+                        ?.optJSONObject("activeAccountHeaderRenderer")
+                    
+                    if (header != null) {
+                        accountHeader = header
+                        break
+                    }
+                }
+            }
+            
+            if (accountHeader != null) {
+                val name = getRunText(accountHeader.optJSONObject("accountName")) ?: "User"
+                val email = getRunText(accountHeader.optJSONObject("email")) ?: ""
+                
+                val thumbnails = accountHeader.optJSONObject("avatar")
+                    ?.optJSONArray("thumbnails")
+                val avatarUrl = thumbnails?.let { 
+                    it.optJSONObject(it.length() - 1)?.optString("url") 
+                } ?: ""
+                
+                return@withContext com.suvojeet.suvmusic.data.SessionManager.StoredAccount(
+                    name = name,
+                    email = email,
+                    avatarUrl = avatarUrl,
+                    cookies = cookies
+                )
+            }
+            
+            return@withContext null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     // ============================================================================================
     // Search & Stream (NewPipe)
     // ============================================================================================
