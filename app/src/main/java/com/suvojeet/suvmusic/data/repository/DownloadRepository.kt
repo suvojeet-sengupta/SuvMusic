@@ -32,7 +32,7 @@ class DownloadRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
-    private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
+    @com.suvojeet.suvmusic.di.DownloadDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
 ) {
     companion object {
         private const val TAG = "DownloadRepository"
