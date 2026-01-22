@@ -465,6 +465,9 @@ fun NavGraph(
                             Destination.ArtistDiscography(currentId, Destination.ArtistDiscography.TYPE_SINGLES).route
                         )
                     }
+                },
+                onArtistClick = { artist ->
+                    navController.navigate(Destination.Artist(artist.id).route)
                 }
             )
         }
