@@ -35,7 +35,8 @@ class PlayerViewModel @Inject constructor(
     private val lyricsRepository: LyricsRepository,
     private val sleepTimerManager: SleepTimerManager,
     private val sessionManager: SessionManager,
-    private val recommendationEngine: RecommendationEngine
+    private val recommendationEngine: RecommendationEngine,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
@@ -470,14 +471,9 @@ class PlayerViewModel @Inject constructor(
         if (downloadRepository.isDownloaded(song.id) || downloadRepository.isDownloading(song.id)) return
         
         musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
-        viewModelScope.launch {
-            val success = downloadRepository.downloadSong(song)
-            if (success) {
-                musicPlayer.updateDownloadState(DownloadState.DOWNLOADED)
-            } else {
-                musicPlayer.updateDownloadState(DownloadState.FAILED)
-            }
-        }
+        
+        // Start foreground service for background download with notification
+        com.suvojeet.suvmusic.service.DownloadService.startDownload(context, song)
     }
     
     /**
