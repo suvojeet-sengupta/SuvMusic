@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
@@ -152,6 +153,40 @@ fun SettingsScreen(
                 )
             )
             
+            // Switch Account
+            ListItem(
+                headlineContent = { 
+                    Text(
+                        text = "Switch Account",
+                        color = MaterialTheme.colorScheme.primary
+                    ) 
+                },
+                supportingContent = { 
+                    Text(
+                        text = "Use a different YouTube Music account",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ) 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.SwitchAccount,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                modifier = Modifier.clickable {
+                    // Clear WebView cookies to force account chooser
+                    android.webkit.CookieManager.getInstance().removeAllCookies(null)
+                    android.webkit.CookieManager.getInstance().flush()
+                    
+                    viewModel.logout()
+                    onLoginClick()
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = Color.Transparent
+                )
+            )
+
             // Sign Out button with warning
             ListItem(
                 headlineContent = { 
@@ -370,6 +405,10 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        // Clear cookies on sign out too
+                        android.webkit.CookieManager.getInstance().removeAllCookies(null)
+                        android.webkit.CookieManager.getInstance().flush()
+                        
                         viewModel.logout()
                         showSignOutDialog = false
                     }
