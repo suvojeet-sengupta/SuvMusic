@@ -5,6 +5,7 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.YouTubeAuthUtils
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
+import com.suvojeet.suvmusic.data.model.ArtistPreview
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
@@ -2128,11 +2129,17 @@ class YouTubeRepository @Inject constructor(
             }
         }
         
-        val subscribers = getRunText(header?.optJSONObject("subscriptionButton")?.optJSONObject("subscribeButtonRenderer")?.optJSONObject("subscriberCountText"))
+        val subscriptionButton = header?.optJSONObject("subscriptionButton")?.optJSONObject("subscribeButtonRenderer")
+    val subscribers = getRunText(subscriptionButton?.optJSONObject("subscriberCountText"))
+    val isSubscribed = subscriptionButton?.optBoolean("subscribed") ?: false
+    val channelId = subscriptionButton?.optString("channelId") ?: artistId
 
-        val songs = mutableListOf<Song>()
-        val albums = mutableListOf<Album>()
-        val singles = mutableListOf<Album>()
+    val songs = mutableListOf<Song>()
+    val albums = mutableListOf<Album>()
+    val singles = mutableListOf<Album>()
+    val videos = mutableListOf<Song>()
+    val relatedArtists = mutableListOf<ArtistPreview>()
+    val featuredPlaylists = mutableListOf<Playlist>()
 
         // Find sections
         val sections = mutableListOf<JSONObject>()
@@ -2164,6 +2171,28 @@ class YouTubeRepository @Inject constructor(
                 parseAlbums(contents, albums, name)
             } else if (title?.contains("Singles", ignoreCase = true) == true) {
                 parseAlbums(contents, singles, name)
+            } else if (title?.contains("Videos", ignoreCase = true) == true) {
+                 for (i in 0 until contents.length()) {
+                     val item = contents.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+                     val videoId = item.optJSONObject("navigationEndpoint")?.optJSONObject("watchEndpoint")?.optString("videoId")
+                     if (videoId != null) {
+                         Song.fromYouTube(
+                             videoId = videoId,
+                            title = getRunText(item.optJSONObject("title")) ?: "Unknown",
+                            artist = name,
+                            album = "",
+                            duration = 0L, // Duration might not be readily available in video cards
+                             thumbnailUrl = item.optJSONObject("thumbnailRenderer")?.optJSONObject("musicThumbnailRenderer")
+                                 ?.optJSONObject("thumbnail")?.optJSONArray("thumbnails")?.let { arr ->
+                                     if (arr.length() > 0) arr.optJSONObject(arr.length() - 1)?.optString("url") else null
+                                 }
+                         )?.let { videos.add(it) }
+                     }
+                 }
+            } else if (title?.contains("Fans might also like", ignoreCase = true) == true || title?.contains("Related", ignoreCase = true) == true) {
+                 parseRelatedArtists(contents, relatedArtists)
+            } else if (title?.contains("Featured on", ignoreCase = true) == true) {
+                 parseFeaturedPlaylists(contents, featuredPlaylists)
             }
         }
 
@@ -2175,7 +2204,12 @@ class YouTubeRepository @Inject constructor(
             subscribers = subscribers,
             songs = songs,
             albums = albums,
-            singles = singles
+            singles = singles,
+            isSubscribed = isSubscribed,
+            channelId = channelId,
+            videos = videos,
+            relatedArtists = relatedArtists,
+            featuredPlaylists = featuredPlaylists
         )
     }
 
@@ -2581,5 +2615,67 @@ class YouTubeRepository @Inject constructor(
             pattern.find(url)?.groupValues?.getOrNull(1)?.let { return it }
         }
         return url
+    }
+
+    private fun parseRelatedArtists(contents: JSONArray, targetList: MutableList<ArtistPreview>) {
+        for (i in 0 until contents.length()) {
+            val item = contents.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+            val browseEndpoint = item.optJSONObject("navigationEndpoint")?.optJSONObject("browseEndpoint")
+            val browseId = browseEndpoint?.optString("browseId") ?: continue
+            
+            // Skip if not artist
+            if (browseEndpoint.optString("browseEndpointContextSupportedConfigs")?.contains("MUSIC_PAGE_TYPE_ARTIST") != true &&
+                !browseId.startsWith("UC")) continue
+
+            val name = getRunText(item.optJSONObject("title")) ?: "Unknown"
+            val subtitle = getRunText(item.optJSONObject("subtitle")) // Often contains "Subscriber count"
+            
+            val thumbnailUrl = item.optJSONObject("thumbnailRenderer")?.optJSONObject("musicThumbnailRenderer")
+                ?.optJSONObject("thumbnail")?.optJSONArray("thumbnails")?.let { arr ->
+                    if (arr.length() > 0) arr.optJSONObject(arr.length() - 1)?.optString("url") else null
+                }
+                
+            targetList.add(ArtistPreview(browseId, name, thumbnailUrl, subtitle))
+        }
+    }
+
+    private fun parseFeaturedPlaylists(contents: JSONArray, targetList: MutableList<Playlist>) {
+        for (i in 0 until contents.length()) {
+            val item = contents.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+            val browseId = item.optJSONObject("navigationEndpoint")?.optJSONObject("browseEndpoint")?.optString("browseId") ?: continue
+            
+            if (!browseId.startsWith("VL")) continue // Only playlists
+            
+            val playlistId = browseId.removePrefix("VL")
+            val title = getRunText(item.optJSONObject("title")) ?: "Unknown"
+            val author = getRunText(item.optJSONObject("subtitle")) ?: "Unknown"
+            
+            val thumbnailUrl = item.optJSONObject("thumbnailRenderer")?.optJSONObject("musicThumbnailRenderer")
+                ?.optJSONObject("thumbnail")?.optJSONArray("thumbnails")?.let { arr ->
+                    if (arr.length() > 0) arr.optJSONObject(arr.length() - 1)?.optString("url") else null
+                }
+                
+            targetList.add(Playlist(playlistId, title, author, thumbnailUrl, emptyList()))
+        }
+    }
+
+    suspend fun getArtistRadioId(artistId: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val json = fetchInternalApi(artistId)
+            val root = JSONObject(json)
+            val header = root.optJSONObject("header")?.optJSONObject("musicImmersiveHeaderRenderer")
+                ?: root.optJSONObject("header")?.optJSONObject("musicVisualHeaderRenderer")
+                
+            // Search in buttons for radio
+            val buttons = header?.optJSONObject("startRadioButton")?.optJSONObject("buttonRenderer")
+            
+            val navigationEndpoint = buttons?.optJSONObject("navigationEndpoint")
+            val watchEndpoint = navigationEndpoint?.optJSONObject("watchEndpoint")
+            
+            watchEndpoint?.optString("playlistId")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 }

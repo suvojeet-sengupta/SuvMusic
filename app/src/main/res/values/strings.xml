@@ -23,6 +23,14 @@
     <string name="header_albums">Albums</string>
     <string name="header_singles_eps">Singles &amp; EPs</string>
     <string name="header_about_artist">About %1$s</string>
+    <string name="header_videos">Videos</string>
+    <string name="header_featured_on">Featured on</string>
+    <string name="header_fans_also_like">Fans also like</string>
+    <string name="header_related_artists">Related artists</string>
+    <string name="action_follow">Follow</string>
+    <string name="action_following">Following</string>
+    <string name="action_start_radio">Start Radio</string>
+    <string name="action_visit_artist">Visit Artist</string>
 
     <!-- Error Messages -->
     <string name="error_restricted_title">Restricted Content</string>
