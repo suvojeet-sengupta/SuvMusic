@@ -39,7 +39,9 @@ class DownloadRepository @Inject constructor(
         private const val SUVMUSIC_FOLDER = "SuvMusic"
     }
     
-    private val gson = Gson()
+    private val gson = com.google.gson.GsonBuilder()
+        .registerTypeAdapter(Uri::class.java, com.suvojeet.suvmusic.utils.UriTypeAdapter())
+        .create()
     private val downloadsMetaFile = File(context.filesDir, "downloads_meta.json")
     
     // Old internal storage location (for migration)
@@ -513,21 +515,52 @@ class DownloadRepository @Inject constructor(
             val songs: List<Song> = gson.fromJson(json, type) ?: emptyList()
             
             // Verify files still exist
-            val validSongs = songs.filter { song ->
-                song.localUri?.let { uri ->
-                    try {
-                        // Check if file exists (works for both file:// and content:// URIs)
+            // Verify files still exist and repair broken URIs if possible
+            val validSongs = songs.mapNotNull { song ->
+                val uri = song.localUri
+                
+                // Case 1: Valid URI (check existence)
+                if (uri != null && uri != Uri.EMPTY) {
+                   try {
                         if (uri.scheme == "file") {
-                            File(uri.path ?: "").exists()
+                            val file = File(uri.path ?: "")
+                            if (file.exists()) return@mapNotNull song
                         } else {
+                            // Check content URI access
                             context.contentResolver.openInputStream(uri)?.close()
-                            true
+                            return@mapNotNull song
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "File not found for ${song.title}, removing from list")
-                        false
+                        Log.w(TAG, "File check failed for ${song.title}: $uri")
                     }
-                } ?: false
+                }
+                
+                // Case 2: Broken/Empty URI or File Not Found - Attempt Repair
+                // Try to find the file in public Music folder
+                try {
+                    val folder = getPublicMusicFolder()
+                    val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
+                    val file = File(folder, fileName)
+                    
+                    if (file.exists()) {
+                        Log.d(TAG, "Repaired URI for ${song.title}: ${file.toUri()}")
+                        return@mapNotNull song.copy(localUri = file.toUri())
+                    }
+                    
+                    // Try legacy folder
+                    val legacyFolder = getLegacyDownloadsFolder()
+                    val legacyFile = File(legacyFolder, fileName)
+                    if (legacyFile.exists()) {
+                         Log.d(TAG, "Repaired URI (Legacy) for ${song.title}: ${legacyFile.toUri()}")
+                         return@mapNotNull song.copy(localUri = legacyFile.toUri())
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error repairing song ${song.title}", e)
+                }
+                
+                // Case 3: Completely missing
+                Log.w(TAG, "Song ${song.title} missing, removing from list")
+                null
             }
             
             _downloadedSongs.value = validSongs
