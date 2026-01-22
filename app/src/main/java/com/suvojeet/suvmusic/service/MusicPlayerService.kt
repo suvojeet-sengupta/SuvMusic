@@ -12,6 +12,8 @@ import androidx.media3.session.MediaSessionService
 import com.suvojeet.suvmusic.MainActivity
 import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -25,6 +27,9 @@ class MusicPlayerService : MediaSessionService() {
     lateinit var sessionManager: SessionManager
     
     private var mediaSession: MediaSession? = null
+    
+    private val serviceScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+    private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
     
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -68,7 +73,38 @@ class MusicPlayerService : MediaSessionService() {
                     // Add small pause between tracks when gapless is disabled
                     pauseAtEndOfMediaItems = false
                 }
+                
+                // Add listener to attach LoudnessEnhancer when audio session changes
+                addListener(object : androidx.media3.common.Player.Listener {
+                    override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                        if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+                            setupLoudnessEnhancer(audioSessionId)
+                        }
+                    }
+                })
             }
+        
+        // Observe Volume Normalization setting
+        serviceScope.launch {
+            sessionManager.volumeNormalizationEnabledFlow.collect { enabled ->
+                if (enabled) {
+                    // Apply effect if player is ready
+                    val sessionId = (mediaSession?.player as? ExoPlayer)?.audioSessionId
+                    if (sessionId != null && sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        setupLoudnessEnhancer(sessionId)
+                    }
+                } else {
+                    // Release enhancer
+                     try {
+                        loudnessEnhancer?.enabled = false
+                        loudnessEnhancer?.release()
+                        loudnessEnhancer = null
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
         
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this,
@@ -155,7 +191,31 @@ class MusicPlayerService : MediaSessionService() {
         }
     }
     
+    private fun setupLoudnessEnhancer(sessionId: Int) {
+        if (!sessionManager.isVolumeNormalizationEnabled()) return
+        
+        try {
+            loudnessEnhancer?.release()
+            loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
+            // Target gain in millibels. 500mB to 800mB is a reasonable boost for normalization without distortion
+            loudnessEnhancer?.setTargetGain(800) 
+            loudnessEnhancer?.enabled = true
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onDestroy() {
+        serviceScope.cancel() // Cancel scope
+        
+        try {
+            loudnessEnhancer?.enabled = false
+            loudnessEnhancer?.release()
+            loudnessEnhancer = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         mediaSession?.run {
             player.release()
             release()

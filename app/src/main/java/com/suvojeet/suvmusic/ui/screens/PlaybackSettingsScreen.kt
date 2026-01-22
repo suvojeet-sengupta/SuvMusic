@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Gesture
@@ -218,6 +219,28 @@ fun PlaybackSettingsScreen(
                     )
                 },
 
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
+                headlineContent = { Text("Volume Normalization") },
+                supportingContent = { 
+                    Text("Adjust volume to a standard level") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Equalizer,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.volumeNormalizationEnabled,
+                        onCheckedChange = { 
+                            viewModel.setVolumeNormalizationEnabled(it)
+                        }
+                    )
+                },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             

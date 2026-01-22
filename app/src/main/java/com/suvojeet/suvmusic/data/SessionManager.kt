@@ -105,6 +105,9 @@ class SessionManager @Inject constructor(
         // Volume Slider
         private val VOLUME_SLIDER_ENABLED_KEY = booleanPreferencesKey("volume_slider_enabled")
 
+        // Volume Normalization
+        private val VOLUME_NORMALIZATION_ENABLED_KEY = booleanPreferencesKey("volume_normalization_enabled")
+
         // Mini Player Visibility
         private val MINI_PLAYER_ALPHA_KEY = androidx.datastore.preferences.core.floatPreferencesKey("mini_player_alpha")
         
@@ -388,6 +391,22 @@ class SessionManager @Inject constructor(
     suspend fun setAutomix(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[AUTOMIX_KEY] = enabled
+        }
+    }
+
+    // --- Volume Normalization ---
+
+    fun isVolumeNormalizationEnabled(): Boolean = runBlocking {
+        context.dataStore.data.first()[VOLUME_NORMALIZATION_ENABLED_KEY] ?: false
+    }
+
+    val volumeNormalizationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[VOLUME_NORMALIZATION_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setVolumeNormalizationEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[VOLUME_NORMALIZATION_ENABLED_KEY] = enabled
         }
     }
     
