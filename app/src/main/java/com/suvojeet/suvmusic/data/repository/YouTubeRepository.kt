@@ -32,7 +32,8 @@ import android.util.LruCache
 @Singleton
 class YouTubeRepository @Inject constructor(
     private val sessionManager: SessionManager,
-    private val jsonParser: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
+    private val jsonParser: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser,
+    private val apiClient: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
 ) {
     companion object {
         private var isInitialized = false
@@ -668,39 +669,8 @@ class YouTubeRepository @Inject constructor(
 
     private fun extractContinuationToken(json: JSONObject): String? = jsonParser.extractContinuationToken(json)
 
-    private fun fetchInternalApiWithContinuation(continuationToken: String): String {
-        val cookies = sessionManager.getCookies() ?: return ""
-        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
-        
-        val jsonBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20230102.01.00",
-                        "hl": "en",
-                        "gl": "US"
-                    }
-                }
-            }
-        """.trimIndent()
-
-        val request = okhttp3.Request.Builder()
-            .url("https://music.youtube.com/youtubei/v1/browse?ctoken=$continuationToken&continuation=$continuationToken")
-            .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addHeader("Cookie", cookies)
-            .addHeader("Authorization", authHeader)
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
-            .build()
-
-        return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-    }
+    private fun fetchInternalApiWithContinuation(continuationToken: String): String =
+        apiClient.fetchInternalApiWithContinuation(continuationToken)
 
     private fun parseChartsSectionsFromJson(json: String): List<com.suvojeet.suvmusic.data.model.HomeSection> {
         val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
@@ -972,41 +942,8 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-    private fun fetchInternalApiWithParams(browseId: String, params: String): String {
-        val cookies = sessionManager.getCookies() ?: return ""
-        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
-        
-        val jsonBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20230102.01.00",
-                        "hl": "en",
-                        "gl": "US"
-                    }
-                },
-                "browseId": "$browseId",
-                "params": "$params"
-            }
-        """.trimIndent()
-
-        val request = okhttp3.Request.Builder()
-            .url("https://music.youtube.com/youtubei/v1/browse")
-            .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addHeader("Cookie", cookies)
-            .addHeader("Authorization", authHeader)
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
-            .build()
-
-        return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-    }
+    private fun fetchInternalApiWithParams(browseId: String, params: String): String =
+        apiClient.fetchInternalApiWithParams(browseId, params)
 
     private fun parseMoodsAndGenresFromJson(json: String): List<com.suvojeet.suvmusic.data.model.BrowseCategory> {
         val categories = mutableListOf<com.suvojeet.suvmusic.data.model.BrowseCategory>()
@@ -1743,129 +1680,15 @@ class YouTubeRepository @Inject constructor(
     }
 
     // ============================================================================================
-    // Internal API Helpers
+    // Internal API Helpers (Delegated to YouTubeApiClient)
     // ============================================================================================
 
-    private fun fetchInternalApi(endpoint: String): String {
-        val cookies = sessionManager.getCookies() ?: return ""
-        val isBrowse = !endpoint.contains("/")
-        
-        val url = if (isBrowse) {
-            "https://music.youtube.com/youtubei/v1/browse"
-        } else {
-            "https://music.youtube.com/youtubei/v1/$endpoint"
-        }
-        
-        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
-        
-        val contextJson = """
-            "context": {
-                "client": {
-                    "clientName": "WEB_REMIX",
-                    "clientVersion": "1.20230102.01.00",
-                    "hl": "en",
-                    "gl": "US"
-                }
-            }
-        """.trimIndent()
+    private fun fetchInternalApi(endpoint: String): String = apiClient.fetchInternalApi(endpoint)
 
-        val jsonBody = if (isBrowse) {
-            "{ $contextJson, \"browseId\": \"$endpoint\" }"
-        } else {
-            "{ $contextJson }"
-        }
+    private fun fetchPublicApi(browseId: String): String = apiClient.fetchPublicApi(browseId)
 
-        val request = okhttp3.Request.Builder()
-            .url(url)
-            .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addHeader("Cookie", cookies)
-            .addHeader("Authorization", authHeader)
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
-            .build()
-
-        return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-    }
-
-    /**
-     * Fetch public YouTube Music API without authentication.
-     * Used for charts, trending, and public browse content.
-     */
-    private fun fetchPublicApi(browseId: String): String {
-        val url = "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false"
-        
-        val jsonBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20240101.01.00",
-                        "hl": "en",
-                        "gl": "IN"
-                    }
-                },
-                "browseId": "$browseId"
-            }
-        """.trimIndent()
-
-        val request = okhttp3.Request.Builder()
-            .url(url)
-            .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("Referer", "https://music.youtube.com/")
-            .build()
-
-        return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-    }
-
-    private fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean {
-        if (!sessionManager.isLoggedIn()) return false
-        val cookies = sessionManager.getCookies() ?: return false
-        
-        val url = "https://music.youtube.com/youtubei/v1/$endpoint"
-        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: return false
-
-        val fullBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20230102.01.00",
-                        "hl": "en",
-                        "gl": "US"
-                    }
-                },
-                ${innerBody.removePrefix("{").removeSuffix("}")}
-            }
-        """.trimIndent()
-
-        val request = okhttp3.Request.Builder()
-            .url(url)
-            .post(fullBody.toRequestBody("application/json".toMediaType()))
-            .addHeader("Cookie", cookies)
-            .addHeader("Authorization", authHeader)
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
-            .build()
-
-        return try {
-            val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
-        } catch (e: Exception) {
-            false
-        }
-    }
+    private fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean =
+        apiClient.performAuthenticatedAction(endpoint, innerBody)
 
     // ============================================================================================
     // Parsers
