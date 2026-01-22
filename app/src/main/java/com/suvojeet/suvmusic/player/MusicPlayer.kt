@@ -415,18 +415,26 @@ class MusicPlayer @Inject constructor(
                 .build()
             
             mediaController?.let { controller ->
-                // Replace current item with resolved stream and play
+                // Verify that the item at this index is still the one we resolved
+                // This prevents race conditions where queue changed while we were fetching
                 if (index < controller.mediaItemCount) {
-                     controller.replaceMediaItem(index, newMediaItem)
-                     // If we are replacing the currently playing item that just started (position ~0),
-                     // we might need to ensure it plays if it was paused or if replace pauses it.
-                     // Usually replaceMediaItem keeps state, but explicit play() checks hurt nothing.
-                     if (controller.playbackState == Player.STATE_IDLE || controller.playbackState == Player.STATE_ENDED) {
-                         controller.prepare()
-                     }
-                     if (shouldPlay) {
-                         controller.play()
-                     }
+                    val currentItem = controller.getMediaItemAt(index)
+                    if (currentItem.mediaId == song.id) {
+                        // Replace current item with resolved stream and play
+                        controller.replaceMediaItem(index, newMediaItem)
+                        
+                        // If we are replacing the currently playing item that just started (position ~0),
+                        // we might need to ensure it plays if it was paused or if replace pauses it.
+                        if (controller.playbackState == Player.STATE_IDLE || controller.playbackState == Player.STATE_ENDED) {
+                             controller.prepare()
+                        }
+                        if (shouldPlay) {
+                             controller.play()
+                        }
+                    } else {
+                        // Queue changed, discard this update
+                        _playerState.update { it.copy(isLoading = false) }
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -595,7 +603,12 @@ class MusicPlayer @Inject constructor(
         }
     }
     
+    private var playJob: Job? = null
+
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true) {
+        // Cancel any pending play request
+        playJob?.cancel()
+        
         // IMMEDIATELY pause current playback for instant response
         mediaController?.pause()
         
@@ -604,7 +617,7 @@ class MusicPlayer @Inject constructor(
         preloadedStreamUrl = null
         isPreloading = false
         
-        scope.launch {
+        playJob = scope.launch {
             _playerState.update { 
                 it.copy(
                     queue = queue,
@@ -628,6 +641,8 @@ class MusicPlayer @Inject constructor(
                     _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
                 }
             } catch (e: Exception) {
+                // Ignore cancellations
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _playerState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
