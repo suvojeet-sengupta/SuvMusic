@@ -138,7 +138,8 @@ fun PlayerScreen(
     onPlayFromQueue: (Int) -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
     onRefreshDevices: () -> Unit = {},
-    onSetPlaybackSpeed: (Float) -> Unit = {},
+
+    onSetPlaybackParameters: (Float, Float) -> Unit = { _, _ -> },
     lyrics: Lyrics? = null,
     isFetchingLyrics: Boolean = false,
     comments: List<com.suvojeet.suvmusic.data.model.Comment>? = null,
@@ -985,9 +986,10 @@ fun PlayerScreen(
             PlaybackSpeedSheet(
                 isVisible = showPlaybackSpeedSheet,
                 currentSpeed = playerState.playbackSpeed,
+                currentPitch = playerState.pitch,
                 onDismiss = { showPlaybackSpeedSheet = false },
-                onSpeedSelected = { speed ->
-                    onSetPlaybackSpeed(speed)
+                onApply = { speed, pitch ->
+                    onSetPlaybackParameters(speed, pitch)
                 }
             )
         }

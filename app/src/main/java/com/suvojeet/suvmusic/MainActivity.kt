@@ -524,7 +524,7 @@ fun SuvMusicApp(
                     sleepTimerOption = sleepTimerOption,
                     sleepTimerRemainingMs = sleepTimerRemainingMs,
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
-                    onSetPlaybackSpeed = { speed -> playerViewModel.setPlaybackSpeed(speed) },
+                    onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
                     volumeKeyEvents = volumeKeyEvents,
                     downloadRepository = downloadRepository,
                     startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
