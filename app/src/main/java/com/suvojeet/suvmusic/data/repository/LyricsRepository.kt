@@ -144,29 +144,70 @@ class LyricsRepository @Inject constructor(
                 val searchBody = searchResponse.body?.string()
                 if (!searchBody.isNullOrBlank() && searchBody != "[]") {
                     val results = JsonParser.parseString(searchBody).asJsonArray
-                    if (results.size() > 0) {
-                        val firstResult = results[0].asJsonObject
-                        val syncedLyrics = firstResult.get("syncedLyrics")?.asString
+                    
+                    // Iterate through all results and find the best match
+                    var bestMatch: com.google.gson.JsonObject? = null
+                    var bestScore = 0.0
+                    
+                    for (i in 0 until results.size()) {
+                        val result = results[i].asJsonObject
+                        val resultTitle = result.get("trackName")?.asString ?: ""
+                        val resultArtist = result.get("artistName")?.asString ?: ""
+                        val resultDuration = result.get("duration")?.asDouble ?: 0.0 // LRCLIB returns duration in seconds
+                        
+                        // Calculate score
+                        val titleScore = calculateSimilarity(cleanTitle, resultTitle)
+                        val artistScore = calculateSimilarity(cleanArtist, resultArtist)
+                        
+                        // critical check: if major mismatch in title or artist, skip
+                        if (titleScore < 0.3 || artistScore < 0.3) continue
+                        
+                        var totalScore = (titleScore * 0.6) + (artistScore * 0.4)
+                        
+                        // Duration penalty
+                        val durationDiff = kotlin.math.abs(durationSeconds - resultDuration)
+                        if (durationDiff < 5) {
+                            totalScore += 0.2 // Bonus for exact duration match
+                        } else if (durationDiff > 20) {
+                            totalScore -= 0.3 // Heavy penalty for large duration mismatch
+                        } else {
+                            // Linear penalty for difference between 5s and 20s
+                            val penalty = (durationDiff - 5) / 15.0 * 0.3
+                            totalScore -= penalty
+                        }
+                        
+                        android.util.Log.d("LyricsRepo", "Match candidate: $resultTitle by $resultArtist, score: $totalScore")
+                        
+                        if (totalScore > bestScore) {
+                            bestScore = totalScore
+                            bestMatch = result
+                        }
+                    }
+                    
+                    // Threshold for accepting a match
+                    if (bestMatch != null && bestScore > 0.65) {
+                         android.util.Log.d("LyricsRepo", "Selected best match with score $bestScore: ${bestMatch.get("trackName")}")
+                         
+                         val syncedLyrics = bestMatch.get("syncedLyrics")?.asString
                         if (!syncedLyrics.isNullOrBlank()) {
                             val lines = parseLrcLyrics(syncedLyrics)
                             if (lines.isNotEmpty()) {
-                                android.util.Log.d("LyricsRepo", "Found synced lyrics via search")
                                 return Lyrics(
                                     lines = lines,
-                                    sourceCredit = "Lyrics from LRCLIB",
+                                    sourceCredit = "Lyrics from LRCLIB (Best Match)",
                                     isSynced = true
                                 )
                             }
                         }
                         
-                         val plainLyrics = firstResult.get("plainLyrics")?.asString
+                         val plainLyrics = bestMatch.get("plainLyrics")?.asString
                         if (!plainLyrics.isNullOrBlank()) {
                             val lines = plainLyrics.split("\n").map { line ->
                                 LyricsLine(text = line.trim())
                             }
                             return Lyrics(
                                 lines = lines,
-                                sourceCredit = "Lyrics from LRCLIB",
+                                sourceCredit = "Lyrics from LRCLIB (Best Match)",
                                 isSynced = false
                             )
                         }
@@ -223,5 +264,50 @@ class LyricsRepository @Inject constructor(
         }
         
         return lines
+    }
+}
+
+    /**
+     * Calculate similarity between two strings (0.0 to 1.0)
+     * Uses Levenshtein distance
+     */
+    private fun calculateSimilarity(s1: String, s2: String): Double {
+        val n1 = normalizeString(s1)
+        val n2 = normalizeString(s2)
+        
+        if (n1.isEmpty() && n2.isEmpty()) return 1.0
+        if (n1.isEmpty() || n2.isEmpty()) return 0.0
+        if (n1 == n2) return 1.0
+        
+        val distance = levenshteinDistance(n1, n2)
+        val maxLength = kotlin.math.max(n1.length, n2.length)
+        
+        return 1.0 - (distance.toDouble() / maxLength)
+    }
+    
+    // Helper to clean strings for comparison
+    private fun normalizeString(s: String): String {
+        return s.lowercase().replace(Regex("[^a-z0-9]"), "")
+    }
+    
+    // Standard Levenshtein implementation
+    private fun levenshteinDistance(s1: String, s2: String): Int {
+        val dp = Array(s1.length + 1) { IntArray(s2.length + 1) }
+        
+        for (i in 0..s1.length) dp[i][0] = i
+        for (j in 0..s2.length) dp[0][j] = j
+        
+        for (i in 1..s1.length) {
+            for (j in 1..s2.length) {
+                val cost = if (s1[i - 1] == s2[j - 1]) 0 else 1
+                dp[i][j] = minOf(
+                    dp[i - 1][j] + 1,       // deletion
+                    dp[i][j - 1] + 1,       // insertion
+                    dp[i - 1][j - 1] + cost // substitution
+                )
+            }
+        }
+        
+        return dp[s1.length][s2.length]
     }
 }
