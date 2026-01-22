@@ -40,7 +40,8 @@ data class SettingsUiState(
     val musicSource: MusicSource = MusicSource.YOUTUBE,
     val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = "",
-    val doubleTapSeekSeconds: Int = 10
+    val doubleTapSeekSeconds: Int = 10,
+    val volumeNormalizationEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -120,7 +121,8 @@ class SettingsViewModel @Inject constructor(
                 volumeSliderEnabled = sessionManager.isVolumeSliderEnabled(),
                 musicSource = sessionManager.getMusicSource(),
                 currentVersion = updateRepository.getCurrentVersionName(),
-                doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds()
+                doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds(),
+                volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled()
             )
         }
     }
@@ -292,6 +294,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setDoubleTapSeekSeconds(seconds)
             _uiState.update { it.copy(doubleTapSeekSeconds = seconds) }
+        }
+    }
+
+    fun setVolumeNormalizationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setVolumeNormalizationEnabled(enabled)
+            _uiState.update { it.copy(volumeNormalizationEnabled = enabled) }
         }
     }
 }

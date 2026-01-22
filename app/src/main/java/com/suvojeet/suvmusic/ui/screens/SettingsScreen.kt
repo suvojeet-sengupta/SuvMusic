@@ -514,3 +514,33 @@ private fun SettingsItem(
         )
     )
 }
+
+@Composable
+private fun SwitchPreference(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(subtitle) },
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null
+            )
+        },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        },
+        modifier = Modifier.clickable { onCheckedChange(!checked) },
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent
+        )
+    )
+}
