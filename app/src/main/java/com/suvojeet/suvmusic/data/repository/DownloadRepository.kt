@@ -78,8 +78,11 @@ class DownloadRepository @Inject constructor(
      */
     private fun scanDownloadsFolder() {
         try {
-            val folder = getPublicDownloadsFolder()
+            val folder = getPublicMusicFolder()
             if (!folder.exists()) return
+            
+            // Also scan legacy Downloads folder for migration
+            scanAndMigrateLegacyFolder()
             
             val audioFiles = folder.listFiles { file ->
                 file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac", "wav", "ogg", "opus")
@@ -134,15 +137,110 @@ class DownloadRepository @Inject constructor(
     }
 
     /**
-     * Get the public Downloads/SuvMusic folder
+     * Get the public Music/SuvMusic folder
      */
-    private fun getPublicDownloadsFolder(): File {
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val suvMusicDir = File(downloadsDir, SUVMUSIC_FOLDER)
+    private fun getPublicMusicFolder(): File {
+        val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+        val suvMusicDir = File(musicDir, SUVMUSIC_FOLDER)
         if (!suvMusicDir.exists()) {
             suvMusicDir.mkdirs()
         }
         return suvMusicDir
+    }
+    
+    /**
+     * Legacy: Get old Downloads/SuvMusic folder for migration
+     */
+    private fun getLegacyDownloadsFolder(): File {
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        return File(downloadsDir, SUVMUSIC_FOLDER)
+    }
+    
+    /**
+     * Scan and migrate files from legacy Downloads/SuvMusic folder to Music/SuvMusic
+     */
+    private fun scanAndMigrateLegacyFolder() {
+        try {
+            val legacyFolder = getLegacyDownloadsFolder()
+            if (!legacyFolder.exists()) return
+            
+            val legacyFiles = legacyFolder.listFiles { file ->
+                file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac", "wav", "ogg", "opus")
+            } ?: return
+            
+            if (legacyFiles.isEmpty()) return
+            
+            Log.d(TAG, "Found ${legacyFiles.size} files in legacy Downloads folder to migrate")
+            
+            val newFolder = getPublicMusicFolder()
+            for (file in legacyFiles) {
+                try {
+                    val newFile = File(newFolder, file.name)
+                    if (!newFile.exists()) {
+                        file.copyTo(newFile, overwrite = false)
+                        file.delete()
+                        Log.d(TAG, "Migrated ${file.name} to Music/SuvMusic")
+                    } else {
+                        // File already exists in new location, just delete legacy
+                        file.delete()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error migrating file: ${file.name}", e)
+                }
+            }
+            
+            // Clean up empty legacy folder
+            if (legacyFolder.listFiles()?.isEmpty() == true) {
+                legacyFolder.delete()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in legacy folder migration", e)
+        }
+    }
+    
+    /**
+     * Helper to delete a song file from a specific folder
+     */
+    private fun deleteFromFolder(folder: File, song: Song): Boolean {
+        if (!folder.exists()) return false
+        
+        try {
+            // Try exact filename match first
+            val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
+            val file = File(folder, fileName)
+            if (file.exists()) {
+                val deleted = file.delete()
+                Log.d(TAG, "Deleted file from ${folder.name}: $deleted - ${file.absolutePath}")
+                if (deleted) return true
+            }
+            
+            // Try alternate extensions
+            listOf("mp3", "aac", "flac", "wav", "ogg").forEach { ext ->
+                val altFile = File(folder, "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.$ext")
+                if (altFile.exists()) {
+                    val deleted = altFile.delete()
+                    if (deleted) {
+                        Log.d(TAG, "Deleted file with ext $ext: ${altFile.name}")
+                        return true
+                    }
+                }
+            }
+            
+            // Fallback: search by partial title match
+            folder.listFiles()?.forEach { f ->
+                if (f.nameWithoutExtension.contains(song.title.take(20), ignoreCase = true)) {
+                    val deleted = f.delete()
+                    if (deleted) {
+                        Log.d(TAG, "Deleted matching file: ${f.name}")
+                        return true
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting from folder ${folder.name}", e)
+        }
+        
+        return false
     }
 
     /**
@@ -223,7 +321,7 @@ class DownloadRepository @Inject constructor(
             val contentValues = ContentValues().apply {
                 put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
-                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$SUVMUSIC_FOLDER")
+                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER")
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
             }
 
@@ -252,21 +350,21 @@ class DownloadRepository @Inject constructor(
     }
 
     /**
-     * Save to public Downloads folder directly (Android 9 and below)
+     * Save to public Music folder directly (Android 9 and below)
      */
     private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream): Uri? {
         return try {
-            val folder = getPublicDownloadsFolder()
+            val folder = getPublicMusicFolder()
             val file = File(folder, fileName)
             
             FileOutputStream(file).use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
             
-            Log.d(TAG, "Saved to public folder: ${file.absolutePath}")
+            Log.d(TAG, "Saved to Music folder: ${file.absolutePath}")
             file.toUri()
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving to public folder", e)
+            Log.e(TAG, "Error saving to Music folder", e)
             null
         }
     }
@@ -633,32 +731,14 @@ class DownloadRepository @Inject constructor(
                 }
             }
             
-            // If URI delete didn't work, try finding the file in public Downloads folder
+            // If URI delete didn't work, try finding the file in public Music folder
             if (!deleted) {
-                try {
-                    val publicFolder = getPublicDownloadsFolder()
-                    val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
-                    val file = File(publicFolder, fileName)
-                    if (file.exists()) {
-                        deleted = file.delete()
-                        Log.d(TAG, "Deleted file from public folder: $deleted - ${file.absolutePath}")
-                    }
-                    
-                    // Also try without extension variations
-                    if (!deleted) {
-                        publicFolder.listFiles()?.forEach { f ->
-                            if (f.nameWithoutExtension.contains(song.title.take(20), ignoreCase = true)) {
-                                deleted = f.delete()
-                                if (deleted) {
-                                    Log.d(TAG, "Deleted matching file: ${f.name}")
-                                    return@forEach
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error deleting from public folder", e)
-                }
+                deleted = deleteFromFolder(getPublicMusicFolder(), song)
+            }
+            
+            // Also try legacy Downloads folder
+            if (!deleted) {
+                deleted = deleteFromFolder(getLegacyDownloadsFolder(), song)
             }
             
             // Delete local thumbnail if exists
@@ -669,13 +749,14 @@ class DownloadRepository @Inject constructor(
                 Log.d(TAG, "Deleted thumbnail: ${thumbFile.name}")
             }
             
-            // Also try to delete thumbnail from public folder (if it was saved there before)
+            // Also try to delete thumbnail from public folders (if it was saved there before)
             try {
-                val publicFolder = getPublicDownloadsFolder()
-                val thumbFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.jpg"
-                val publicThumbFile = File(publicFolder, thumbFileName)
-                if (publicThumbFile.exists()) {
-                    publicThumbFile.delete()
+                listOf(getPublicMusicFolder(), getLegacyDownloadsFolder()).forEach { publicFolder ->
+                    val thumbFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.jpg"
+                    val publicThumbFile = File(publicFolder, thumbFileName)
+                    if (publicThumbFile.exists()) {
+                        publicThumbFile.delete()
+                    }
                 }
             } catch (e: Exception) {
                 // Ignore
@@ -772,7 +853,7 @@ class DownloadRepository @Inject constructor(
         var cacheBytes = 0L
         
         // Calculate downloaded songs size
-        val publicFolder = getPublicDownloadsFolder()
+        val publicFolder = getPublicMusicFolder()
         if (publicFolder.exists()) {
             publicFolder.listFiles()?.forEach { file ->
                 if (file.isFile) {
@@ -859,12 +940,13 @@ class DownloadRepository @Inject constructor(
             }
         }
         
-        // Also clean up the public folder in case there are orphan files
-        val publicFolder = getPublicDownloadsFolder()
-        if (publicFolder.exists()) {
-            publicFolder.listFiles()?.forEach { file ->
-                if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac")) {
-                    file.delete()
+        // Also clean up the public folders in case there are orphan files
+        listOf(getPublicMusicFolder(), getLegacyDownloadsFolder()).forEach { publicFolder ->
+            if (publicFolder.exists()) {
+                publicFolder.listFiles()?.forEach { file ->
+                    if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac")) {
+                        file.delete()
+                    }
                 }
             }
         }
