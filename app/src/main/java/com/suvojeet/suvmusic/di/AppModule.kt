@@ -33,9 +33,10 @@ object AppModule {
     fun provideYouTubeRepository(
         sessionManager: SessionManager,
         jsonParser: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser,
-        apiClient: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
+        apiClient: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient,
+        streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
     ): YouTubeRepository {
-        return YouTubeRepository(sessionManager, jsonParser, apiClient)
+        return YouTubeRepository(sessionManager, jsonParser, apiClient, streamingService)
     }
     
     @Provides
