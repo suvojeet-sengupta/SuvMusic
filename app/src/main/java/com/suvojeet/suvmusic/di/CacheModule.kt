@@ -50,12 +50,16 @@ object CacheModule {
     @Singleton
     @OptIn(UnstableApi::class)
     fun provideDataSourceFactory(
+        @ApplicationContext context: Context,
         cache: Cache
     ): DataSource.Factory {
         // Upstream factory for network requests
-        val upstreamFactory = DefaultHttpDataSource.Factory()
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setUserAgent("SuvMusic-User-Agent")
             .setAllowCrossProtocolRedirects(true)
+        
+        // DefaultDataSource handles http/https/file/content/asset/etc.
+        val upstreamFactory = androidx.media3.datasource.DefaultDataSource.Factory(context, httpDataSourceFactory)
         
         // CacheDataSource Factory
         return CacheDataSource.Factory()
