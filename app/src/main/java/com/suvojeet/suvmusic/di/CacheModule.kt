@@ -48,8 +48,9 @@ object CacheModule {
 
     @Provides
     @Singleton
+    @PlayerDataSource
     @OptIn(UnstableApi::class)
-    fun provideDataSourceFactory(
+    fun providePlayerDataSourceFactory(
         @ApplicationContext context: Context,
         cache: Cache
     ): DataSource.Factory {
@@ -60,6 +61,25 @@ object CacheModule {
         
         // DefaultDataSource handles http/https/file/content/asset/etc.
         val upstreamFactory = androidx.media3.datasource.DefaultDataSource.Factory(context, httpDataSourceFactory)
+        
+        // CacheDataSource Factory
+        return CacheDataSource.Factory()
+            .setCache(cache)
+            .setUpstreamDataSourceFactory(upstreamFactory)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    @Provides
+    @Singleton
+    @DownloadDataSource
+    @OptIn(UnstableApi::class)
+    fun provideDownloadDataSourceFactory(
+        cache: Cache
+    ): DataSource.Factory {
+        // Upstream factory for network requests
+        val upstreamFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent("SuvMusic-User-Agent")
+            .setAllowCrossProtocolRedirects(true)
         
         // CacheDataSource Factory
         return CacheDataSource.Factory()

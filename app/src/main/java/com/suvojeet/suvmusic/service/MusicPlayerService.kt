@@ -27,6 +27,7 @@ class MusicPlayerService : MediaSessionService() {
     lateinit var sessionManager: SessionManager
     
     @Inject
+    @com.suvojeet.suvmusic.di.PlayerDataSource
     lateinit var dataSourceFactory: androidx.media3.datasource.DataSource.Factory
     
     private var mediaSession: MediaSession? = null
