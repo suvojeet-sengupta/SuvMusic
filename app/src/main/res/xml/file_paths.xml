@@ -2,4 +2,6 @@
 <paths>
     <!-- Cache directory for update APKs -->
     <cache-path name="updates" path="updates/" />
+    <!-- Cache directory for shared images -->
+    <cache-path name="images" path="images/" />
 </paths>

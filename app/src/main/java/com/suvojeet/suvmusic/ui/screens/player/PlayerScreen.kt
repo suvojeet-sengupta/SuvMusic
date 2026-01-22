@@ -790,7 +790,9 @@ fun PlayerScreen(
                     artworkUrl = song?.thumbnailUrl,
                     onClose = { showLyrics = false },
                     isDarkTheme = isAppInDarkTheme,
-                    onSeekTo = onSeekTo
+                    onSeekTo = onSeekTo,
+                    songTitle = song?.title ?: "",
+                    artistName = song?.artist ?: ""
                 )
             }
 
