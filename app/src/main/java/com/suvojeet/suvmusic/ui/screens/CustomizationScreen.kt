@@ -115,6 +115,7 @@ fun CustomizationScreen(
     }
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 1f)
+    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -179,6 +180,19 @@ fun CustomizationScreen(
                 onAlphaChange = { newAlpha ->
                     scope.launch {
                         sessionManager.setMiniPlayerAlpha(newAlpha)
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Navigation Bar Transparency
+            NavBarTransparencyItem(
+                alpha = navBarAlpha,
+                primaryColor = primaryColor,
+                onAlphaChange = { newAlpha ->
+                    scope.launch {
+                        sessionManager.setNavBarAlpha(newAlpha)
                     }
                 }
             )
@@ -468,6 +482,70 @@ private fun MiniPlayerTransparencyItem(
                 onValueChange = onAlphaChange,
                 valueRange = 0.2f..1f, // Minimum 20% opacity so it's not invisible
                 steps = 15,
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = primaryColor,
+                    activeTrackColor = primaryColor,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavBarTransparencyItem(
+    alpha: Float,
+    primaryColor: Color,
+    onAlphaChange: (Float) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Square,
+                    contentDescription = null,
+                    tint = primaryColor,
+                    modifier = Modifier.size(28.dp)
+                )
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Navigation Bar Transparency",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Opacity: ${(alpha * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            androidx.compose.material3.Slider(
+                value = alpha,
+                onValueChange = onAlphaChange,
+                valueRange = 0f..1f, // Full range allowed
+                steps = 20,
                 colors = androidx.compose.material3.SliderDefaults.colors(
                     thumbColor = primaryColor,
                     activeTrackColor = primaryColor,

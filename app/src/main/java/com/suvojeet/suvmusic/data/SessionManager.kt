@@ -110,6 +110,9 @@ class SessionManager @Inject constructor(
 
         // Mini Player Visibility
         private val MINI_PLAYER_ALPHA_KEY = androidx.datastore.preferences.core.floatPreferencesKey("mini_player_alpha")
+
+        // Navigation Bar Transparency
+        private val NAV_BAR_ALPHA_KEY = androidx.datastore.preferences.core.floatPreferencesKey("nav_bar_alpha")
         
         // Double Tap Seek
         private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
@@ -277,6 +280,22 @@ class SessionManager @Inject constructor(
     suspend fun setMiniPlayerAlpha(alpha: Float) {
         context.dataStore.edit { preferences ->
             preferences[MINI_PLAYER_ALPHA_KEY] = alpha
+        }
+    }
+
+    // --- Navigation Bar Transparency ---
+
+    fun getNavBarAlpha(): Float = runBlocking {
+        context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 0.9f
+    }
+
+    val navBarAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[NAV_BAR_ALPHA_KEY] ?: 0.9f
+    }
+
+    suspend fun setNavBarAlpha(alpha: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[NAV_BAR_ALPHA_KEY] = alpha
         }
     }
     
