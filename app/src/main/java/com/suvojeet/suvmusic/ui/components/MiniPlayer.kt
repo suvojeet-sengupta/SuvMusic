@@ -10,7 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -98,6 +98,7 @@ fun MiniPlayer(
         song?.let {
             // Swipe Logic
             var offsetX by remember { mutableFloatStateOf(0f) }
+            var offsetY by remember { mutableFloatStateOf(0f) }
             val swipeThreshold = 100f
 
             Surface(
@@ -110,20 +111,27 @@ fun MiniPlayer(
                         spotColor = dominantColors.primary.copy(alpha = 0.5f)
                     )
                     .clip(playerShape)
-                    .offset { IntOffset(offsetX.roundToInt(), 0) }
+                    .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
                     .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
+                        detectDragGestures(
                             onDragEnd = {
-                                if (offsetX > swipeThreshold) {
+                                // Vertical swipe (Up) - Open Player
+                                if (offsetY < -swipeThreshold) {
+                                    onPlayerClick()
+                                }
+                                // Horizontal swipe - Previous/Next
+                                else if (offsetX > swipeThreshold) {
                                     onPreviousClick()
                                 } else if (offsetX < -swipeThreshold) {
                                     onNextClick()
                                 }
                                 offsetX = 0f
+                                offsetY = 0f
                             },
-                            onHorizontalDrag = { change, dragAmount ->
+                            onDrag = { change, dragAmount ->
                                 change.consume()
-                                offsetX += dragAmount
+                                offsetX += dragAmount.x
+                                offsetY += dragAmount.y
                             }
                         )
                     }
