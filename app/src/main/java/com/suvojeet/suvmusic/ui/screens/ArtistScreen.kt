@@ -535,96 +535,106 @@ private fun ArtistHeroHeader(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Action Buttons Row
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                contentPadding = PaddingValues(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Play Button
-                Button(
-                    onClick = onPlayAll,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.height(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.action_play),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                // Shuffle Button
-                OutlinedButton(
-                    onClick = onShuffle,
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.height(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Shuffle,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.action_shuffle),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                // Radio Button
-                OutlinedButton(
-                    onClick = onStartRadio,
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.height(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Radio,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.action_start_radio),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                // Subscribe Button
-                Button(
-                    onClick = onSubscribe,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSubscribed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.onSurface,
-                        contentColor = if (isSubscribed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.surface
-                    ),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.height(44.dp),
-                    enabled = !isSubscribing
-                ) {
-                    if (isSubscribing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = Color.White
-                        )
-                    } else {
-                        val icon = if (isSubscribed) Icons.Default.Check else Icons.Default.Add
+                item {
+                    // Play Button
+                    Button(
+                        onClick = onPlayAll,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.height(44.dp)
+                    ) {
                         Icon(
-                            imageVector = icon,
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.action_play),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                item {
+                    // Shuffle Button
+                    OutlinedButton(
+                        onClick = onShuffle,
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shuffle,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.action_shuffle),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                item {
+                    // Radio Button
+                    OutlinedButton(
+                        onClick = onStartRadio,
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Radio,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),
+                            text = stringResource(R.string.action_start_radio),
                             fontWeight = FontWeight.SemiBold
                         )
+                    }
+                }
+
+                item {
+                    // Subscribe Button
+                    Button(
+                        onClick = onSubscribe,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSubscribed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.onSurface,
+                            contentColor = if (isSubscribed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.surface
+                        ),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.height(44.dp),
+                        enabled = !isSubscribing
+                    ) {
+                        if (isSubscribing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            val icon = if (isSubscribed) Icons.Default.Check else Icons.Default.Add
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
