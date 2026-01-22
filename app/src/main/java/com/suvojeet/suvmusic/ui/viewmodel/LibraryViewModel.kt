@@ -25,7 +25,8 @@ data class LibraryUiState(
     val isRefreshing: Boolean = false,
     val importState: ImportState = ImportState.Idle,
     val error: String? = null,
-    val isLoggedIn: Boolean = false
+    val isLoggedIn: Boolean = false,
+    val isSyncingLikedSongs: Boolean = false
 )
 
 sealed class ImportState {
@@ -112,10 +113,17 @@ class LibraryViewModel @Inject constructor(
                 
                 val allPlaylists = ytPlaylists + jioPlaylists
                 val localSongs = localAudioRepository.getAllLocalSongs()
+                
+                // Fetch only first page of liked songs and merge with cache to preserve older songs
                 val likedSongs = try {
-                    youTubeRepository.getLikedMusic()
+                    val freshSongs = youTubeRepository.getLikedMusic(fetchAll = false)
+                    if (freshSongs.isNotEmpty()) {
+                        (freshSongs + cachedLikedSongs).distinctBy { it.id }
+                    } else {
+                        cachedLikedSongs.ifEmpty { emptyList() }
+                    }
                 } catch (e: Exception) {
-                    emptyList()
+                    cachedLikedSongs.ifEmpty { emptyList() }
                 }
                 
                 // Save to cache
@@ -144,6 +152,28 @@ class LibraryViewModel @Inject constructor(
                         isRefreshing = false
                     )
                 }
+            }
+        }
+    }
+    
+    fun syncLikedSongs() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncingLikedSongs = true) }
+            try {
+                val songs = youTubeRepository.getLikedMusic(fetchAll = true)
+                if (songs.isNotEmpty()) {
+                    sessionManager.saveLibraryLikedSongsCache(songs)
+                    _uiState.update { 
+                        it.copy(
+                            likedSongs = songs,
+                            isSyncingLikedSongs = false
+                        )
+                    }
+                } else {
+                     _uiState.update { it.copy(isSyncingLikedSongs = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSyncingLikedSongs = false) }
             }
         }
     }

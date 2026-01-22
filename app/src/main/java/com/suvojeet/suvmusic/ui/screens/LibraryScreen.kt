@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -152,7 +154,9 @@ fun LibraryScreen(
                 )
                 2 -> LikedTab(
                     songs = uiState.likedSongs,
-                    onSongClick = onSongClick
+                    isSyncing = uiState.isSyncingLikedSongs,
+                    onSongClick = onSongClick,
+                    onSync = { viewModel.syncLikedSongs() }
                 )
             }
         }
@@ -607,7 +611,9 @@ private fun DownloadedSongsCard(
 @Composable
 private fun LikedTab(
     songs: List<Song>,
-    onSongClick: (List<Song>, Int) -> Unit
+    isSyncing: Boolean,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onSync: () -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(
@@ -617,6 +623,38 @@ private fun LikedTab(
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "LIKED SONGS",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
+                
+                IconButton(onClick = onSync, enabled = !isSyncing) {
+                    if (isSyncing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Sync",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
         if (songs.isEmpty()) {
             item {
                 Text(
