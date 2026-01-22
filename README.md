@@ -76,23 +76,213 @@ Enhances discovery by merging distinct data pipelines:
 ## 🛠 Technology Stack
 
 ### Language & Runtime
-*   **Kotlin 2.0+**: Leveraging K2 compiler improvements.
-*   **Coroutines**: For managing background threads and strict structured concurrency.
+*   **Kotlin 2.0+**: Leveraging K2 compiler improvements with strict null safety
+*   **Coroutines**: For managing background threads and strict structured concurrency
+*   **Kotlin Flow**: Reactive streams for asynchronous data handling
 
 ### User Interface
-*   **Jetpack Compose**: 100% declarative UI.
-*   **Material 3**: Implementation of the latest Material Design guidelines.
-*   **Coil**: Memory-efficient image loading with hardware-backed bitmap pooling.
+*   **Jetpack Compose**: 100% declarative UI with Material 3
+*   **Material 3**: Latest Material Design guidelines implementation
+*   **Coil 3.x**: Memory-efficient image loading with hardware-backed bitmap pooling
+*   **Compose Navigation**: Type-safe navigation between screens
+*   **Compose Animation**: Smooth transitions and animations
+
+### Architecture & Dependency Injection
+*   **Hilt**: Compile-time dependency injection built on Dagger
+*   **Hilt Navigation Compose**: ViewModel injection for Compose
+*   **MVVM Pattern**: Model-View-ViewModel with Clean Architecture
+*   **Repository Pattern**: Abstraction layer for data sources
 
 ### Media & Playback
-*   **Media3 (ExoPlayer)**: The core industry standard for media playback.
-*   **FFmpeg (via library)**: Support for esoteric audio formats.
+*   **Media3 (ExoPlayer 1.5+)**: Industry-standard media playback engine
+  - `media3-exoplayer`: Core playback functionality
+  - `media3-session`: MediaSession for background playback
+  - `media3-ui`: Player UI components
+  - `media3-common`: Common utilities
+*   **MediaRouter**: Casting and external display support
 
 ### Data & Network
-*   **Retrofit / OkHttp**: Type-safe HTTP clients with custom interceptors for header manipulation and caching.
-*   **NewPipe Extractor**: Core logic for parsing YouTube internal APIs without API keys.
-*   **Room Persistence Library**: Abstraction layer over SQLite for robust local data storage.
-*   **Proto DataStore**: Type-safe data storage for user preferences.
+*   **OkHttp 4.x**: High-performance HTTP client
+  - Custom interceptors for header manipulation
+  - Connection pooling and caching
+  - Logging interceptor for debugging
+*   **NewPipe Extractor**: YouTube parsing without API keys
+*   **Retrofit** (Implicit via OkHttp): Type-safe HTTP client
+*   **Gson**: JSON serialization/deserialization
+*   **Jsoup**: HTML parsing for web scraping
+
+### Local Data & Persistence
+*   **Room 2.6+**: Abstraction layer over SQLite
+  - Type-safe database access
+  - Compile-time query verification
+  - Flow-based reactive queries
+*   **DataStore Preferences**: Type-safe key-value storage
+*   **Security Crypto**: Encrypted SharedPreferences
+*   **Core Library Desugaring**: Java 8+ API support on older Android
+
+### Testing
+*   **JUnit**: Unit testing framework
+*   **Espresso**: UI testing
+*   **Compose UI Testing**: Compose-specific UI tests
+
+---
+
+## 📦 Complete Dependency Map
+
+### Core Dependencies
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `androidx.core:core-ktx` | Latest | Kotlin extensions for Android framework |
+| `androidx.lifecycle:lifecycle-runtime-ktx` | Latest | Lifecycle-aware components |
+| `androidx.lifecycle:lifecycle-viewmodel-compose` | Latest | ViewModel integration with Compose |
+| `androidx.lifecycle:lifecycle-runtime-compose` | Latest | Lifecycle utilities for Compose |
+
+### UI Dependencies
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `androidx.compose.ui:ui` | Latest (BOM) | Core Compose UI |
+| `androidx.compose.material3:material3` | Latest | Material 3 components |
+| `androidx.compose.ui:ui-tooling-preview` | Latest | Compose preview support |
+| `androidx.compose.material:material-icons-extended` | Latest | Extended Material icons |
+| `androidx.compose.animation:animation` | Latest | Animation APIs |
+| `androidx.navigation:navigation-compose` | Latest | Compose navigation |
+| `io.coil-kt:coil-compose` | Latest | Image loading library |
+
+### Media Dependencies
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `androidx.media3:media3-exoplayer` | 1.5+ | Media playback engine |
+| `androidx.media3:media3-session` | 1.5+ | Background playback support |
+| `androidx.media3:media3-ui` | 1.5+ | Player UI components |
+| `androidx.media3:media3-common` | 1.5+ | Common media utilities |
+| `androidx.mediarouter:mediarouter` | Latest | Casting support |
+
+### Networking Dependencies
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `com.squareup.okhttp3:okhttp` | 4.x | HTTP client |
+| `com.squareup.okhttp3:logging-interceptor` | 4.x | Network logging |
+| `com.github.TeamNewPipe:NewPipeExtractor` | Latest | YouTube API extraction |
+| `org.jsoup:jsoup` | Latest | HTML parsing |
+| `com.google.code.gson:gson` | Latest | JSON processing |
+
+### Dependency Injection
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `com.google.dagger:hilt-android` | Latest | DI framework |
+| `com.google.dagger:hilt-compiler` | Latest | Hilt annotation processor |
+| `androidx.hilt:hilt-navigation-compose` | Latest | Hilt + Compose Navigation |
+
+### Data Storage
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `androidx.room:room-runtime` | 2.6+ | Database runtime |
+| `androidx.room:room-ktx` | 2.6+ | Kotlin extensions for Room |
+| `androidx.room:room-compiler` | 2.6+ | Room annotation processor |
+| `androidx.datastore:datastore-preferences` | Latest | Key-value storage |
+| `androidx.security:security-crypto` | Latest | Encrypted storage |
+
+### Build & Tooling
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `com.android.tools:desugar_jdk_libs_nio` | 2.0.4 | Java 8+ API support (minSdk 26) |
+| `com.google.devtools.ksp` | Latest | Kotlin Symbol Processing |
+
+---
+
+## 🏗 Refactored Architecture
+
+The application follows **Clean Architecture** with a modular **MVVM** pattern. The recent refactoring extracted YouTube-related logic into specialized services:
+
+```mermaid
+graph TB
+    subgraph "UI Layer"
+        UI[Compose UI]
+        VM[ViewModels]
+    end
+    
+    subgraph "Repository Layer"
+        YTRepo[YouTubeRepository<br/>Facade Pattern]
+        JSRepo[JioSaavnRepository]
+        LocalRepo[LocalAudioRepository]
+        LyricsRepo[LyricsRepository]
+    end
+    
+    subgraph "YouTube Services"
+        YTSearch[YouTubeSearchService<br/>Search & Recommendations]
+        YTStream[YouTubeStreamingService<br/>Stream URLs & Caching]
+        YTApiClient[YouTubeApiClient<br/>API Communication]
+        YTParser[YouTubeJsonParser<br/>JSON Parsing]
+    end
+    
+    subgraph "Data Sources"
+        NewPipe[NewPipe Extractor]
+        YTAPI[YouTube Music API]
+        Room[Room Database]
+        DataStore[DataStore]
+    end
+    
+    UI --> VM
+    VM --> YTRepo
+    VM --> JSRepo
+    VM --> LocalRepo
+    VM --> LyricsRepo
+    
+    YTRepo --> YTSearch
+    YTRepo --> YTStream
+    YTRepo --> YTApiClient
+    YTRepo --> YTParser
+    
+    YTSearch --> NewPipe
+    YTSearch --> YTParser
+    YTStream --> NewPipe
+    YTApiClient --> YTAPI
+    
+    JSRepo --> OkHttp[OkHttp Client]
+    LocalRepo --> Room
+    LyricsRepo --> OkHttp
+    
+    style YTRepo fill:#4CAF50
+    style YTSearch fill:#81C784
+    style YTStream fill:#81C784
+    style YTApiClient fill:#81C784
+    style YTParser fill:#81C784
+```
+
+### Repository Layer Structure
+
+```
+data/repository/
+├── YouTubeRepository.kt          (1,873 lines - Main facade)
+├── JioSaavnRepository.kt         (Music streaming from JioSaavn)
+├── LocalAudioRepository.kt       (Local audio file scanning)
+├── LyricsRepository.kt           (Lyrics from multiple sources)
+├── ListeningHistoryRepository.kt (Playback history tracking)
+└── youtube/
+    ├── internal/
+    │   ├── YouTubeJsonParser.kt  (291 lines - JSON utilities)
+    │   └── YouTubeApiClient.kt   (237 lines - API communication)
+    ├── streaming/
+    │   └── YouTubeStreamingService.kt (190 lines - Stream handling)
+    └── search/
+        └── YouTubeSearchService.kt (310 lines - Search functionality)
+```
+
+### Key Architectural Decisions
+
+*   **Single Activity Architecture**: One `MainActivity` with Compose Navigation
+*   **Reactive Data Flow**: `StateFlow` and `Flow` for reactive UI updates
+*   **Dependency Injection**: Hilt manages all singletons and scoped instances
+*   **Offline-First**: Room as single source of truth with network sync
+*   **Service Extraction**: YouTube logic split into 4 specialized services (30% code reduction)
+*   **Facade Pattern**: YouTubeRepository acts as a simple facade delegating to services
 
 ---
 
