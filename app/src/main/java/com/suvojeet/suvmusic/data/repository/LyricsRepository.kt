@@ -265,7 +265,7 @@ class LyricsRepository @Inject constructor(
         
         return lines
     }
-}
+
 
     /**
      * Calculate similarity between two strings (0.0 to 1.0)
