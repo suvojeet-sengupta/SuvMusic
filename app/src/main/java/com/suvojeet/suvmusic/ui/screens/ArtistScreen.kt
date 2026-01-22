@@ -72,9 +72,16 @@ import coil.request.ImageRequest
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
+import com.suvojeet.suvmusic.data.model.ArtistPreview
+import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 
 @Composable
 fun ArtistScreen(
@@ -126,11 +133,12 @@ fun ArtistScreen(
                                 }
                             },
                             onShuffle = {
-                                if (artist.songs.isNotEmpty()) {
-                                    onSongClick(artist.songs.random())
-                                }
+                                onSongClick(artist.songs.random())
                             },
-                            onSubscribe = viewModel::toggleSubscribe
+                            onSubscribe = viewModel::toggleSubscribe,
+                            isSubscribed = artist.isSubscribed,
+                            isSubscribing = uiState.isSubscribing,
+                            onStartRadio = { viewModel.startRadio { /* Handle radio start */ } }
                         )
                     }
 
@@ -162,6 +170,27 @@ fun ArtistScreen(
                                 song = song,
                                 onClick = { onSongClick(song) }
                             )
+                        }
+                    }
+
+                    // Videos Section
+                    if (artist.videos.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(28.dp))
+                            ArtistSectionHeader(title = stringResource(R.string.header_videos))
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(artist.videos) { video ->
+                                    ArtistVideoCard(
+                                        video = video,
+                                        onClick = { onSongClick(video) }
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -209,6 +238,48 @@ fun ArtistScreen(
                                     ArtistAlbumCard(
                                         album = single,
                                         onClick = { onAlbumClick(single) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Featured Playlists Section
+                    if (artist.featuredPlaylists.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(28.dp))
+                            ArtistSectionHeader(title = stringResource(R.string.header_featured_on))
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(artist.featuredPlaylists) { playlist ->
+                                    FeaturedPlaylistCard(
+                                        playlist = playlist,
+                                        onClick = { /* Navigate to playlist */ }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Related Artists Section
+                    if (artist.relatedArtists.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(28.dp))
+                            ArtistSectionHeader(title = stringResource(R.string.header_fans_also_like))
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(artist.relatedArtists) { related ->
+                                    RelatedArtistCard(
+                                        artist = related,
+                                        onClick = { /* Navigate to related artist */ }
                                     )
                                 }
                             }
@@ -344,7 +415,10 @@ private fun ArtistHeroHeader(
     onBackClick: () -> Unit,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
-    onSubscribe: () -> Unit
+    onSubscribe: () -> Unit,
+    isSubscribed: Boolean = false,
+    isSubscribing: Boolean = false,
+    onStartRadio: () -> Unit
 ) {
     val context = LocalContext.current
     val highResThumbnail = artist.thumbnailUrl?.let { url ->
@@ -503,19 +577,54 @@ private fun ArtistHeroHeader(
                     )
                 }
 
-                // Subscribe Button
-                IconButton(
-                    onClick = onSubscribe,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                // Radio Button
+                OutlinedButton(
+                    onClick = onStartRadio,
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.height(44.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.NotificationsActive,
-                        contentDescription = stringResource(R.string.cd_subscribe),
-                        tint = MaterialTheme.colorScheme.primary
+                        imageVector = Icons.Default.Radio,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.action_start_radio),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Subscribe Button
+                Button(
+                    onClick = onSubscribe,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSubscribed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        contentColor = if (isSubscribed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.surface
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.height(44.dp),
+                    enabled = !isSubscribing
+                ) {
+                    if (isSubscribing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        val icon = if (isSubscribed) Icons.Default.Check else Icons.Default.Add
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -847,5 +956,160 @@ private fun AboutSection(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ArtistVideoCard(
+    video: Song,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Column(
+        modifier = Modifier
+            .width(220.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f/9f)
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(video.thumbnailUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = video.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            
+            // Play icon overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = video.title,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun RelatedArtistCard(
+    artist: ArtistPreview,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(100.dp)
+            .clickable(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(artist.thumbnailUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = artist.name,
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = artist.name,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        
+        if (artist.subscribers != null) {
+            Text(
+                text = artist.subscribers,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeaturedPlaylistCard(
+    playlist: Playlist,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Column(
+        modifier = Modifier
+            .width(150.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(150.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(playlist.thumbnailUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = playlist.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = playlist.title,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        
+        Text(
+            text = playlist.author,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

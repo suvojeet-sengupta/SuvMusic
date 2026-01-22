@@ -22,10 +22,12 @@ enum class ArtistError {
     UNKNOWN
 }
 
-data class ArtistUiState(
+    data class ArtistUiState(
     val artist: Artist? = null,
     val isLoading: Boolean = false,
-    val error: ArtistError? = null
+    val error: ArtistError? = null,
+    val isSubscribing: Boolean = false,
+    val isStartingRadio: Boolean = false
 )
 
 @HiltViewModel
@@ -93,13 +95,46 @@ class ArtistViewModel @Inject constructor(
 
     fun toggleSubscribe() {
         val currentArtist = _uiState.value.artist ?: return
-        
-        // Only support subscribe for YouTube artists for now
         if (currentArtist.id.startsWith("UC") || currentArtist.id.startsWith("FE")) {
             viewModelScope.launch {
-                youTubeRepository.subscribe(currentArtist.id, true)
-                loadArtist()
+                _uiState.update { it.copy(isSubscribing = true) }
+                val newStatus = !currentArtist.isSubscribed
+                val success = youTubeRepository.subscribe(currentArtist.id, newStatus)
+                
+                if (success) {
+                    // Update local state immediately for responsiveness
+                    _uiState.update { 
+                        it.copy(
+                            artist = currentArtist.copy(isSubscribed = newStatus),
+                            isSubscribing = false 
+                        ) 
+                    }
+                    // Background refresh to get latest count/status
+                    loadArtist()
+                } else {
+                    _uiState.update { it.copy(isSubscribing = false) }
+                }
             }
+        }
+    }
+
+    fun startRadio(onPlaylistReady: (String) -> Unit) {
+        val currentArtist = _uiState.value.artist ?: return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isStartingRadio = true) }
+            // Try to get radio ID from artist page
+            var radioId = currentArtist.channelId?.let { youTubeRepository.getArtistRadioId(it) }
+            
+            // Fallback: search for "Artist Name Radio" or just play top songs
+            if (radioId == null) {
+                // For now, if we can't find specific radio, we can just return
+                 _uiState.update { it.copy(isStartingRadio = false) }
+                 return@launch
+            }
+            
+            _uiState.update { it.copy(isStartingRadio = false) }
+            onPlaylistReady(radioId)
         }
     }
 }
