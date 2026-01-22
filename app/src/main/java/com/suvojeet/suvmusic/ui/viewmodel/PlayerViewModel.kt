@@ -218,8 +218,8 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.refreshDevices()
     }
     
-    fun setPlaybackSpeed(speed: Float) {
-        musicPlayer.setPlaybackSpeed(speed)
+    fun setPlaybackParameters(speed: Float, pitch: Float) {
+        musicPlayer.setPlaybackParameters(speed, pitch)
     }
     
     fun getPlayer() = musicPlayer.getPlayer()

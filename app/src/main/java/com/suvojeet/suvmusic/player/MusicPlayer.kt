@@ -826,12 +826,20 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
-     * Set playback speed (0.5x to 2.0x).
+     * Set playback parameters (speed and pitch).
      */
-    fun setPlaybackSpeed(speed: Float) {
+    fun setPlaybackParameters(speed: Float, pitch: Float) {
         val clampedSpeed = speed.coerceIn(0.1f, 5.0f)
-        mediaController?.setPlaybackSpeed(clampedSpeed)
-        _playerState.update { it.copy(playbackSpeed = clampedSpeed) }
+        val clampedPitch = pitch.coerceIn(0.1f, 5.0f)
+        
+        mediaController?.playbackParameters = androidx.media3.common.PlaybackParameters(clampedSpeed, clampedPitch)
+        
+        _playerState.update { 
+            it.copy(
+                playbackSpeed = clampedSpeed,
+                pitch = clampedPitch
+            ) 
+        }
     }
     
     /**

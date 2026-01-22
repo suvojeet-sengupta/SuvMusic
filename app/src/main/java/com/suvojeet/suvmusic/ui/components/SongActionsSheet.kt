@@ -199,11 +199,10 @@ fun SongActionsSheet(
                     onClick = { onViewComments(); onDismiss() }
                 )
                 
-                // Playback Speed option with current speed display
-                val speedLabel = if (currentSpeed == 1.0f) "Normal" else "${currentSpeed}x"
+                val speedLabel = if (currentSpeed == 1.0f) "" else "($currentSpeed x)"
                 ActionItem(
                     icon = Icons.Default.Speed,
-                    title = "Playback Speed ($speedLabel)",
+                    title = "Speed & Tempo $speedLabel",
                     iconTint = MaterialTheme.colorScheme.secondary,
                     onClick = { onPlaybackSpeed(); onDismiss() }
                 )

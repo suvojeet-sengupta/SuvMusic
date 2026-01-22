@@ -23,6 +23,7 @@ data class PlayerState(
     val availableDevices: List<OutputDevice> = emptyList(),
     val selectedDevice: OutputDevice? = null,
     val playbackSpeed: Float = 1.0f,
+    val pitch: Float = 1.0f,
     val audioCodec: String? = null, // e.g., "opus", "aac", "mp3"
     val audioBitrate: Int? = null // in kbps, e.g., 256
 ) {
