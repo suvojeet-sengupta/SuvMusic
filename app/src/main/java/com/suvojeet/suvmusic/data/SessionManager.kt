@@ -296,6 +296,84 @@ class SessionManager @Inject constructor(
         }
     }
     
+    // --- User Accounts ---
+    
+    data class StoredAccount(
+        val name: String,
+        val email: String,
+        val avatarUrl: String,
+        val cookies: String
+    )
+    
+    private val SAVED_ACCOUNTS_KEY = "saved_accounts"
+    
+    fun getStoredAccounts(): List<StoredAccount> {
+        val json = encryptedPrefs.getString(SAVED_ACCOUNTS_KEY, null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).mapNotNull { i ->
+                val obj = array.optJSONObject(i) ?: return@mapNotNull null
+                StoredAccount(
+                    name = obj.optString("name"),
+                    email = obj.optString("email"),
+                    avatarUrl = obj.optString("avatarUrl"),
+                    cookies = obj.optString("cookies")
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    
+    private fun saveStoredAccounts(accounts: List<StoredAccount>) {
+        val array = JSONArray()
+        accounts.forEach { account ->
+            array.put(JSONObject().apply {
+                put("name", account.name)
+                put("email", account.email)
+                put("avatarUrl", account.avatarUrl)
+                put("cookies", account.cookies)
+            })
+        }
+        encryptedPrefs.edit().putString(SAVED_ACCOUNTS_KEY, array.toString()).apply()
+    }
+    
+    fun saveCurrentAccountToHistory(name: String, email: String, avatarUrl: String) {
+        val currentCookies = getCookies() ?: return
+        val newAccount = StoredAccount(name, email, avatarUrl, currentCookies)
+        
+        val accounts = getStoredAccounts().toMutableList()
+        // Remove if exists (update)
+        accounts.removeAll { it.email == email } // Identify by email
+        accounts.add(0, newAccount) // Add to top
+        
+        saveStoredAccounts(accounts)
+        
+        // Update current avatar in DataStore just in case
+        runBlocking { saveUserAvatar(avatarUrl) }
+    }
+    
+    fun switchAccount(account: StoredAccount) {
+        // Save current session if valid before switching? 
+        // Ideally the UI should prompt or we save automatically if we have info.
+        // For now, we assume the user just wants to switch TO this account.
+        
+        // 1. Set cookies
+        encryptedPrefs.edit().putString("cookies", account.cookies).apply()
+        
+        // 2. Set Avatar
+        runBlocking { saveUserAvatar(account.avatarUrl) }
+        
+        // 3. Ensure this account is at the top of the list (recently used)
+        saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
+    }
+    
+    fun removeAccount(email: String) {
+        val accounts = getStoredAccounts().toMutableList()
+        accounts.removeAll { it.email == email }
+        saveStoredAccounts(accounts)
+    }
+    
     // --- Cookies ---
     
     fun getCookies(): String? {

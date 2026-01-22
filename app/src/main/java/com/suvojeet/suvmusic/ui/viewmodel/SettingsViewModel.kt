@@ -29,6 +29,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val isLoggedIn: Boolean = false,
     val userAvatarUrl: String? = null,
+    val storedAccounts: List<SessionManager.StoredAccount> = emptyList(),
     val audioQuality: AudioQuality = AudioQuality.HIGH,
     val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -47,7 +48,8 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
-    private val updateRepository: UpdateRepository,
+    private val updateRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository, // Use YouTubeRepository for account info
+    private val updateRepo: UpdateRepository, // Renamed to avoid conflict
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -64,7 +66,7 @@ class SettingsViewModel @Inject constructor(
     val offlineModeEnabled = sessionManager.offlineModeFlow
     
     // Volume Slider enabled state
-    val volumeSliderEnabled = sessionManager.volumeSliderEnabledFlow
+    val volumeSliderEnabledFlow = sessionManager.volumeSliderEnabledFlow // Renamed to avoid name clash
     
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -104,6 +106,13 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(doubleTapSeekSeconds = seconds) }
             }
         }
+        
+        // Refresh account info if logged in
+        viewModelScope.launch {
+            if (sessionManager.isLoggedIn()) {
+                fetchAndSaveAccountInfo()
+            }
+        }
     }
     
     private fun loadSettings() {
@@ -111,6 +120,7 @@ class SettingsViewModel @Inject constructor(
             it.copy(
                 isLoggedIn = sessionManager.isLoggedIn(),
                 userAvatarUrl = sessionManager.getUserAvatar(),
+                storedAccounts = sessionManager.getStoredAccounts(),
                 audioQuality = sessionManager.getAudioQuality(),
                 downloadQuality = sessionManager.getDownloadQuality(),
                 themeMode = sessionManager.getThemeMode(),
@@ -120,7 +130,7 @@ class SettingsViewModel @Inject constructor(
                 automixEnabled = sessionManager.isAutomixEnabled(),
                 volumeSliderEnabled = sessionManager.isVolumeSliderEnabled(),
                 musicSource = sessionManager.getMusicSource(),
-                currentVersion = updateRepository.getCurrentVersionName(),
+                currentVersion = updateRepo.getCurrentVersionName(),
                 doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds(),
                 volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled()
             )
@@ -128,13 +138,82 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
+     * Fetch account info (name, email) and save to history.
+     */
+    fun fetchAndSaveAccountInfo() {
+        viewModelScope.launch {
+            val account = updateRepository.fetchAccountInfo()
+            if (account != null) {
+                sessionManager.saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
+                _uiState.update { 
+                    it.copy(
+                        userAvatarUrl = account.avatarUrl,
+                        storedAccounts = sessionManager.getStoredAccounts()
+                    ) 
+                }
+            }
+        }
+    }
+    
+    /**
+     * Switch to a saved account.
+     */
+    fun switchAccount(account: SessionManager.StoredAccount) {
+        viewModelScope.launch {
+            // Save current before switching (if we have info)
+            // Ideally we should have info if fetchAndSaveAccountInfo ran
+            
+            sessionManager.switchAccount(account)
+            
+            _uiState.update { 
+                it.copy(
+                    isLoggedIn = true,
+                    userAvatarUrl = account.avatarUrl,
+                    storedAccounts = sessionManager.getStoredAccounts()
+                )
+            }
+            
+            // Refresh info to be sure (cookies might be old?)
+            fetchAndSaveAccountInfo()
+        }
+    }
+    
+    /**
+     * Prepare for adding a new account (logout current, save it).
+     */
+    fun prepareAddAccount() {
+        viewModelScope.launch {
+            // Current is already saved via fetchAndSaveAccountInfo if it was successful.
+            // But let's try to ensure it's saved if possible, though we might not have name/email if offline.
+            // Assuming it was saved when loaded.
+            
+            sessionManager.clearCookies()
+            _uiState.update { 
+                it.copy(
+                    isLoggedIn = false,
+                    userAvatarUrl = null
+                )
+            }
+        }
+    }
+    
+    fun removeAccount(email: String) {
+        viewModelScope.launch {
+            sessionManager.removeAccount(email)
+            _uiState.update { 
+                it.copy(storedAccounts = sessionManager.getStoredAccounts())
+            }
+        }
+    }
+
+    /**
      * Check for updates from GitHub Releases.
      */
     fun checkForUpdates() {
         viewModelScope.launch {
             _uiState.update { it.copy(updateState = UpdateState.Checking) }
             
-            updateRepository.checkForUpdate()
+            updateRepo.checkForUpdate()
                 .onSuccess { update ->
                     if (update != null) {
                         _uiState.update { it.copy(updateState = UpdateState.UpdateAvailable(update)) }
@@ -157,7 +236,7 @@ class SettingsViewModel @Inject constructor(
         downloadJob = viewModelScope.launch {
             _uiState.update { it.copy(updateState = UpdateState.Downloading(0)) }
             
-            updateRepository.downloadApk(
+            updateRepo.downloadApk(
                 downloadUrl = downloadUrl,
                 versionName = versionName,
                 onProgress = { progress ->
