@@ -59,6 +59,8 @@ fun LyricsScreen(
     val textColor = if (isDarkTheme) Color.White else Color.Black
     val overlayColor = if (isDarkTheme) Color.Black else Color.White
     
+    val context = LocalContext.current
+    
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -102,9 +104,42 @@ fun LyricsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Share Button (Top Left)
+                IconButton(
+                    onClick = {
+                        val shareText = buildString {
+                            append("$songTitle - $artistName\n\n")
+                            lyrics?.lines?.forEach { line ->
+                                append(line.text)
+                                append("\n")
+                            }
+                            append("\nShared via SuvMusic")
+                        }
+                        
+                        val sendIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, shareText)
+                            type = "text/plain"
+                        }
+                        val shareIntent = Intent.createChooser(sendIntent, "Share Lyrics")
+                        context.startActivity(shareIntent)
+                    },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(textColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share Lyrics",
+                        tint = textColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Close Button (Top Right)
                 IconButton(
                     onClick = onClose,
                     modifier = Modifier
