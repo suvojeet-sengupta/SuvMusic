@@ -105,6 +105,8 @@ import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -247,6 +249,29 @@ fun PlayerScreen(
 
     // Coroutine scope for animations and async tasks
     val coroutineScope = rememberCoroutineScope()
+
+    // Optimistic seek state for rapid double-taps
+    var pendingSeekPosition by remember { mutableStateOf<Long?>(null) }
+    var seekDebounceJob by remember { mutableStateOf<Job?>(null) }
+
+    val handleDoubleTapSeek: (Boolean) -> Unit = { forward ->
+        val current = pendingSeekPosition ?: playerState.currentPosition
+        val seekAmount = doubleTapSeekSeconds * 1000L
+        val newPos = if (forward) {
+            (current + seekAmount).coerceAtMost(playerState.duration)
+        } else {
+            (current - seekAmount).coerceAtLeast(0)
+        }
+        pendingSeekPosition = newPos
+        onSeekTo(newPos)
+
+        // Reset pending position after 1 sec to sync back with real player
+        seekDebounceJob?.cancel()
+        seekDebounceJob = coroutineScope.launch {
+            delay(1000)
+            pendingSeekPosition = null
+        }
+    }
 
     // Swipe to dismiss variables
     val offsetY = remember { Animatable(0f) }
@@ -456,12 +481,10 @@ fun PlayerScreen(
                                         }
                                     },
                                     onDoubleTapLeft = {
-                                        val newPos = (playerState.currentPosition - doubleTapSeekSeconds * 1000).coerceAtLeast(0)
-                                        onSeekTo(newPos)
+                                        handleDoubleTapSeek(false)
                                     },
                                     onDoubleTapRight = {
-                                        val newPos = (playerState.currentPosition + doubleTapSeekSeconds * 1000).coerceAtMost(playerState.duration)
-                                        onSeekTo(newPos)
+                                        handleDoubleTapSeek(true)
                                     }
                                 )
                             }
@@ -642,12 +665,10 @@ fun PlayerScreen(
                                         }
                                     },
                                     onDoubleTapLeft = {
-                                        val newPos = (playerState.currentPosition - doubleTapSeekSeconds * 1000).coerceAtLeast(0)
-                                        onSeekTo(newPos)
+                                        handleDoubleTapSeek(false)
                                     },
                                     onDoubleTapRight = {
-                                        val newPos = (playerState.currentPosition + doubleTapSeekSeconds * 1000).coerceAtMost(playerState.duration)
-                                        onSeekTo(newPos)
+                                        handleDoubleTapSeek(true)
                                     }
                                 )
                             }
