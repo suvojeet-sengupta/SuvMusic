@@ -26,6 +26,9 @@ class MusicPlayerService : MediaSessionService() {
     @Inject
     lateinit var sessionManager: SessionManager
     
+    @Inject
+    lateinit var dataSourceFactory: androidx.media3.datasource.DataSource.Factory
+    
     private var mediaSession: MediaSession? = null
     
     private val serviceScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
@@ -51,6 +54,9 @@ class MusicPlayerService : MediaSessionService() {
             .build()
             
         val player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(
+                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
+            )
             .setLoadControl(loadControl)
             .setAudioAttributes(
                 AudioAttributes.Builder()

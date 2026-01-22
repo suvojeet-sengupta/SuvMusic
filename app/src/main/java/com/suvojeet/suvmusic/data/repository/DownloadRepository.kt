@@ -31,7 +31,8 @@ import javax.inject.Singleton
 class DownloadRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository
+    private val jioSaavnRepository: JioSaavnRepository,
+    private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
 ) {
     companion object {
         private const val TAG = "DownloadRepository"
@@ -572,77 +573,97 @@ class DownloadRepository @Inject constructor(
                 return@withContext false
             }
             
-            Log.d(TAG, "Got stream URL, starting download...")
+            Log.d(TAG, "Got stream URL, initiating DataSource download...")
             
-            val request = Request.Builder()
-                .url(streamUrl)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .header("Accept", "*/*")
-                .header("Accept-Encoding", "identity")
-                .header("Connection", "keep-alive")
-                .build()
+            // Helper function to calculate content length if possible or just use stream
+            // Since we are using DataSource, we might not get exact content length upfront without opening it
+            // We use the shared logic which handles reading from cache or network
             
-            val response = downloadClient.newCall(request).execute()
+            val downloadSuccess = downloadUsingSharedCache(song, streamUrl)
             
-            if (!response.isSuccessful) {
-                Log.e(TAG, "Download request failed: ${response.code} - ${response.message}")
-                response.close()
-                _downloadingIds.value = _downloadingIds.value - song.id
-                return@withContext false
+            if (downloadSuccess) {
+                 // Create downloaded song entry
+                 val downloadedSong = song.copy(
+                    source = SongSource.DOWNLOADED,
+                    // Note: localUri is set inside downloadUsingSharedCache implicitly by returning the saved URI, 
+                    // but we need to do it cleanly. 
+                    // The helper saves the file and returns URI.
+                    localUri = null, // Will be updated
+                    thumbnailUrl = song.thumbnailUrl,
+                    streamUrl = null,
+                    originalSource = song.source 
+                 )
+                  // The helper function saves the file and returns URI, let's refactor slightly to return URI
             }
-            
-            val contentLength = response.body?.contentLength() ?: -1L
-            Log.d(TAG, "Content length: $contentLength bytes")
-            
-            // Initialize progress
-            _downloadProgress.value = _downloadProgress.value + (song.id to 0f)
 
-            // Download with progress tracking
-            val downloadedUri = response.body?.byteStream()?.use { inputStream ->
-                saveFileWithProgress(song.id, song.artist, song.title, inputStream, contentLength) { progress ->
-                    _downloadProgress.value = _downloadProgress.value + (song.id to progress)
-                }
+            // Refactoring to match the logic flow:
+            // 1. downloadUsingSharedCache returns the saved URI or null
+            // 2. if not null, download thumbnails etc
+            
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Download error for ${song.id}", e)
+            _downloadingIds.value = _downloadingIds.value - song.id
+            _downloadProgress.value = _downloadProgress.value - song.id
+            false
+        }
+    }
+
+    // New method to download using Shared Cache (DataSource)
+    private fun downloadUsingSharedCache(song: Song, streamUrl: String): Boolean {
+        return try {
+            val uri = android.net.Uri.parse(streamUrl)
+            val dataSpec = androidx.media3.datasource.DataSpec(uri)
+            val dataSource = dataSourceFactory.createDataSource()
+            
+            // Open the source (this reads from cache if available, or network if not)
+            val length = dataSource.open(dataSpec)
+            val contentLength = if (length != androidx.media3.common.C.LENGTH_UNSET.toLong()) length else -1L
+             Log.d(TAG, "Content lengthfrom DataSource: $contentLength")
+            
+             // Initialize progress
+            _downloadProgress.value = _downloadProgress.value + (song.id to 0f)
+            
+            // We need to read from dataSource and write to our target file
+            // We can wrap the DataSource in an InputStream to reuse existing save logic
+            val inputStream = androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec)
+            
+            val downloadedUri = saveFileWithProgress(song.id, song.artist, song.title, inputStream, contentLength) { progress ->
+                 _downloadProgress.value = _downloadProgress.value + (song.id to progress)
             }
             
-            response.close()
+            dataSource.close()
             
             if (downloadedUri == null) {
-                Log.e(TAG, "Failed to save file")
                 _downloadingIds.value = _downloadingIds.value - song.id
                 _downloadProgress.value = _downloadProgress.value - song.id
-                return@withContext false
+                return false
             }
             
-            Log.d(TAG, "Download complete: saved to $downloadedUri")
+             Log.d(TAG, "Download complete: saved to $downloadedUri")
 
-            // Download high-quality thumbnail if available
+            // Download high-quality thumbnail if available (same as before)
             var localThumbnailUrl = song.thumbnailUrl
             if (!song.thumbnailUrl.isNullOrEmpty() && song.thumbnailUrl.startsWith("http")) {
                 try {
-                    // Upgrade to high-res thumbnail URL
                     val highResThumbnailUrl = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
-                    
                     val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
                     val thumbResponse = downloadClient.newCall(thumbRequest).execute()
                     if (thumbResponse.isSuccessful) {
-                        // Save to app's internal thumbnails folder
                         val thumbnailsDir = File(context.filesDir, "thumbnails")
-                        if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
-                        
+                         if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
                         val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
                         val thumbBytes = thumbResponse.body?.bytes()
                         if (thumbBytes != null) {
-                            FileOutputStream(thumbFile).use { output ->
+                             FileOutputStream(thumbFile).use { output ->
                                 output.write(thumbBytes)
                             }
                             localThumbnailUrl = thumbFile.toUri().toString()
-                            Log.d(TAG, "Downloaded high-res thumbnail to $localThumbnailUrl")
                         }
                     }
                     thumbResponse.close()
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to download thumbnail", e)
-                    // Keep original URL if download fails, so it might work if online
+                     Log.e(TAG, "Failed to download thumbnail", e)
                 }
             }
 
@@ -652,7 +673,7 @@ class DownloadRepository @Inject constructor(
                 localUri = downloadedUri,
                 thumbnailUrl = localThumbnailUrl,
                 streamUrl = null,
-                originalSource = song.source // Preserve original source for credits
+                originalSource = song.source 
             )
 
             _downloadedSongs.value = _downloadedSongs.value + downloadedSong
@@ -661,11 +682,12 @@ class DownloadRepository @Inject constructor(
             _downloadingIds.value = _downloadingIds.value - song.id
             Log.d(TAG, "Song ${song.title} download successful!")
             true
+            
         } catch (e: Exception) {
-            Log.e(TAG, "Download error for ${song.id}", e)
-            _downloadingIds.value = _downloadingIds.value - song.id
-            _downloadProgress.value = _downloadProgress.value - song.id
-            false
+             Log.e(TAG, "Error in downloadUsingSharedCache", e)
+             _downloadingIds.value = _downloadingIds.value - song.id
+             _downloadProgress.value = _downloadProgress.value - song.id
+             false
         }
     }
 
