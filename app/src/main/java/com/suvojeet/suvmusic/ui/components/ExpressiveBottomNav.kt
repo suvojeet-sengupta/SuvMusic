@@ -56,7 +56,8 @@ import com.suvojeet.suvmusic.navigation.Destination
 fun ExpressiveBottomNav(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    alpha: Float = 0.9f
 ) {
     val navItems = listOf(
         NavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
@@ -67,7 +68,7 @@ fun ExpressiveBottomNav(
     
     // Spotify-style transparent dark background
     // Glass Bottom Navigation with Dynamic Colors
-    val transparentBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+    val transparentBg = MaterialTheme.colorScheme.surface.copy(alpha = alpha)
     val borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
     
     Box(

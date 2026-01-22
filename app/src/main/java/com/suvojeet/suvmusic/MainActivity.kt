@@ -454,6 +454,8 @@ fun SuvMusicApp(
 
                         
                         // Bottom navigation
+                        val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
+                        
                         ExpressiveBottomNav(
                             currentDestination = currentDestination,
                             onDestinationChange = { destination ->
@@ -464,7 +466,8 @@ fun SuvMusicApp(
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
+                            },
+                            alpha = navBarAlpha
                         )
                     }
                 }
