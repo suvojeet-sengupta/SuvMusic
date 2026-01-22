@@ -17,6 +17,7 @@
     <!-- Foreground service for music playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
     <!-- Wake lock for continuous playback -->
@@ -131,6 +132,12 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="floating_music_controls" />
         </service>
+        
+        <!-- Download Service for background downloads with progress -->
+        <service
+            android:name=".service.DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         
         <!-- FileProvider for APK installation -->
         <provider

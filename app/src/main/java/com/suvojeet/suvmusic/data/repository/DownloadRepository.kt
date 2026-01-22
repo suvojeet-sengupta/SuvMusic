@@ -368,6 +368,131 @@ class DownloadRepository @Inject constructor(
             null
         }
     }
+    
+    /**
+     * Save file with progress tracking for notification updates.
+     * Streams bytes while emitting progress callbacks.
+     */
+    private fun saveFileWithProgress(
+        songId: String,
+        artist: String,
+        title: String,
+        inputStream: InputStream,
+        contentLength: Long,
+        onProgress: (Float) -> Unit
+    ): Uri? {
+        val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.m4a"
+        
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10+ use MediaStore with progress
+                saveToMediaStoreWithProgress(fileName, inputStream, contentLength, onProgress)
+            } else {
+                // Android 9 and below use direct file access
+                saveToPublicFolderWithProgress(fileName, inputStream, contentLength, onProgress)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving file with progress", e)
+            null
+        }
+    }
+    
+    /**
+     * Save to MediaStore with progress tracking (Android 10+)
+     */
+    private fun saveToMediaStoreWithProgress(
+        fileName: String,
+        inputStream: InputStream,
+        contentLength: Long,
+        onProgress: (Float) -> Unit
+    ): Uri? {
+        return try {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
+                put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
+                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER")
+                put(MediaStore.Audio.Media.IS_PENDING, 1)
+            }
+
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+            uri?.let { mediaUri ->
+                resolver.openOutputStream(mediaUri)?.use { outputStream ->
+                    copyWithProgress(inputStream, outputStream, contentLength, onProgress)
+                }
+
+                // Mark as complete
+                contentValues.clear()
+                contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
+                resolver.update(mediaUri, contentValues, null, null)
+                
+                Log.d(TAG, "Saved to MediaStore with progress: $fileName")
+            }
+            
+            uri
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving to MediaStore with progress", e)
+            null
+        }
+    }
+    
+    /**
+     * Save to public folder with progress (Android 9 and below)
+     */
+    private fun saveToPublicFolderWithProgress(
+        fileName: String,
+        inputStream: InputStream,
+        contentLength: Long,
+        onProgress: (Float) -> Unit
+    ): Uri? {
+        return try {
+            val folder = getPublicMusicFolder()
+            val file = File(folder, fileName)
+            
+            FileOutputStream(file).use { outputStream ->
+                copyWithProgress(inputStream, outputStream, contentLength, onProgress)
+            }
+            
+            Log.d(TAG, "Saved to Music folder with progress: ${file.absolutePath}")
+            file.toUri()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving to Music folder with progress", e)
+            null
+        }
+    }
+    
+    /**
+     * Copy input to output with progress callbacks
+     */
+    private fun copyWithProgress(
+        input: InputStream,
+        output: java.io.OutputStream,
+        contentLength: Long,
+        onProgress: (Float) -> Unit
+    ) {
+        val buffer = ByteArray(8192)
+        var bytesRead: Int
+        var totalBytesRead = 0L
+        var lastProgressUpdate = 0L
+        
+        while (input.read(buffer).also { bytesRead = it } != -1) {
+            output.write(buffer, 0, bytesRead)
+            totalBytesRead += bytesRead
+            
+            // Update progress every 50KB to avoid too frequent updates
+            if (contentLength > 0 && totalBytesRead - lastProgressUpdate > 50 * 1024) {
+                val progress = (totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f)
+                onProgress(progress)
+                lastProgressUpdate = totalBytesRead
+            }
+        }
+        
+        // Final progress update
+        if (contentLength > 0) {
+            onProgress(1f)
+        }
+    }
 
     /**
      * Sanitize filename to remove invalid characters
@@ -468,10 +593,15 @@ class DownloadRepository @Inject constructor(
             
             val contentLength = response.body?.contentLength() ?: -1L
             Log.d(TAG, "Content length: $contentLength bytes")
+            
+            // Initialize progress
+            _downloadProgress.value = _downloadProgress.value + (song.id to 0f)
 
-            // Save to public Downloads/SuvMusic folder
+            // Download with progress tracking
             val downloadedUri = response.body?.byteStream()?.use { inputStream ->
-                saveFileToPublicDownloads(song.id, song.artist, song.title, inputStream)
+                saveFileWithProgress(song.id, song.artist, song.title, inputStream, contentLength) { progress ->
+                    _downloadProgress.value = _downloadProgress.value + (song.id to progress)
+                }
             }
             
             response.close()
@@ -479,6 +609,7 @@ class DownloadRepository @Inject constructor(
             if (downloadedUri == null) {
                 Log.e(TAG, "Failed to save file")
                 _downloadingIds.value = _downloadingIds.value - song.id
+                _downloadProgress.value = _downloadProgress.value - song.id
                 return@withContext false
             }
             
