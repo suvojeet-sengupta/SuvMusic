@@ -141,7 +141,7 @@ fun AlbumArtwork(
     
     // Track horizontal drag offset
     var offsetX by remember { mutableStateOf(0f) }
-    val swipeThreshold = 150f
+    val swipeThreshold = 300f
 
     val animatedOffsetX by animateFloatAsState(
         targetValue = offsetX,
