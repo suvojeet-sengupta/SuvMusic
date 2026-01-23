@@ -60,9 +60,11 @@ fun HomeScreen(
     onAlbumClick: (com.suvojeet.suvmusic.data.model.Album) -> Unit,
     onRecentsClick: () -> Unit = {},
     onExploreClick: (String) -> Unit = {},
+    onStartRadio: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     
     Box(
         modifier = Modifier
@@ -160,7 +162,11 @@ fun HomeScreen(
                                     section = section,
                                     onSongClick = onSongClick,
                                     onPlaylistClick = onPlaylistClick,
-                                    onAlbumClick = onAlbumClick
+                                    onAlbumClick = onAlbumClick,
+                                    onStartRadio = onStartRadio,
+                                    onSavePlaylist = { playlist ->
+                                        android.widget.Toast.makeText(context, "Saved ${playlist.name} to Library", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
                                 )
                             }
                             com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid -> {
