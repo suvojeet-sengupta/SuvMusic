@@ -64,3 +64,29 @@
 -keep class org.jsoup.** { *; }
 -dontwarn org.jsoup.**
 -dontwarn com.google.re2j.**
+# Ktor Client
+-keep class io.ktor.** { *; }
+-keep class kotlinx.coroutines.** { *; }
+-dontwarn io.ktor.**
+-dontwarn kotlinx.coroutines.**
+
+# SLF4J (used by Ktor, but we don't need it on Android)
+-dontwarn org.slf4j.**
+-dontwarn org.apache.log4j.**
+
+# Kotlinx Serialization
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.suvojeet.suvmusic.**$$serializer { *; }
+-keepclassmembers class com.suvojeet.suvmusic.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.suvojeet.suvmusic.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
