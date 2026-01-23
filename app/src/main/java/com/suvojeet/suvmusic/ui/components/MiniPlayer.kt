@@ -142,14 +142,14 @@ fun MiniPlayer(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Album Art
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
@@ -157,7 +157,7 @@ fun MiniPlayer(
                                 AsyncImage(
                                     model = song.thumbnailUrl,
                                     contentDescription = song.title,
-                                    modifier = Modifier.size(48.dp),
+                                    modifier = Modifier.size(42.dp),
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
