@@ -3,7 +3,7 @@ package com.suvojeet.suvmusic.ui.screens.player
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.rememberSharedContentState
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -351,16 +351,7 @@ fun PlayerScreen(
         }
     }
 
-    val sharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-             Modifier.sharedBounds(
-                rememberSharedContentState(key = "player_bound"),
-                animatedVisibilityScope = animatedVisibilityScope,
-                resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.ScaleToBounds(androidx.compose.ui.layout.ContentScale.FillWidth),
-                placeHolderSize = androidx.compose.animation.SharedTransitionScope.PlaceHolderSize.animatedSize
-            )
-        }
-    } else Modifier
+    val sharedModifier = Modifier
 
     Box(
         modifier = Modifier
@@ -501,14 +492,7 @@ fun PlayerScreen(
                                     .padding(end = 16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val artworkModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                                    with(sharedTransitionScope) {
-                                        Modifier.sharedElement(
-                                            rememberSharedContentState(key = "album_art"),
-                                            animatedVisibilityScope = animatedVisibilityScope
-                                        )
-                                    }
-                                } else Modifier
+                                val artworkModifier = Modifier
 
                                 AlbumArtwork(
                                     imageUrl = song?.thumbnailUrl,
@@ -695,14 +679,7 @@ fun PlayerScreen(
                                 }
                             } else {
                                 // Album artwork
-                                val artworkModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                                    with(sharedTransitionScope) {
-                                        Modifier.sharedElement(
-                                            rememberSharedContentState(key = "album_art"),
-                                            animatedVisibilityScope = animatedVisibilityScope
-                                        )
-                                    }
-                                } else Modifier
+                                val artworkModifier = Modifier
 
                                 AlbumArtwork(
                                     imageUrl = song?.thumbnailUrl,

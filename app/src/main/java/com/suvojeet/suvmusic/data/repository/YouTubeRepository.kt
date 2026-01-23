@@ -230,7 +230,14 @@ class YouTubeRepository @Inject constructor(
                     val songs = search(query, FILTER_SONGS).take(10)
                         .map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
                     if (songs.isNotEmpty()) {
-                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, songs))
+                        val type = when {
+                            title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                            title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
+                            title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
+                            title.contains("Trending", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                             else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                        }
+                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, songs, type))
                     }
                 } catch (e: Exception) {
                     // Skip failed section
@@ -325,7 +332,13 @@ class YouTubeRepository @Inject constructor(
                             }
 
                             if (items.isNotEmpty()) {
-                                sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                                val type = when {
+                                    title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                                    title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
+                                    title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
+                                    else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                                }
+                                sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
                             }
                         }
                     }
@@ -1657,7 +1670,13 @@ class YouTubeRepository @Inject constructor(
                         }
 
                         if (items.isNotEmpty() && title.isNotEmpty()) {
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                            val type = when {
+                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                                title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
+                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
+                                else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                            }
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
                         }
                     }
                     
@@ -1676,7 +1695,13 @@ class YouTubeRepository @Inject constructor(
                          }
                          
                          if (items.isNotEmpty() && title.isNotEmpty()) {
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                            val type = when {
+                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                                title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
+                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
+                                else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                            }
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
                         }
                     }
                     
@@ -1695,7 +1720,13 @@ class YouTubeRepository @Inject constructor(
                          }
                          
                          if (items.isNotEmpty() && title.isNotEmpty()) {
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items))
+                            val type = when {
+                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                                title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
+                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
+                                else -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
+                            }
+                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
                         }
                     }
                 }

@@ -121,28 +121,38 @@ fun HomeScreen(
                     }
                     
                     items(uiState.homeSections) { section ->
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            HomeSectionHeader(title = section.title)
-                            
-                            if (section.title.contains("Quick picks", ignoreCase = true) || 
-                                section.title.contains("Listen again", ignoreCase = true)) {
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    items(section.items) { item ->
-                                        HomeItemCard(item, onSongClick, onPlaylistClick, onAlbumClick, sectionItems = section.items)
-                                    }
-                                }
-                            } else {
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    items(section.items) { item ->
-                                        HomeItemCard(item, onSongClick, onPlaylistClick, onAlbumClick, sectionItems = section.items)
-                                    }
-                                }
+                        when (section.type) {
+                            com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList -> {
+                                com.suvojeet.suvmusic.ui.components.LargeCardWithListSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick
+                                )
+                            }
+                            com.suvojeet.suvmusic.data.model.HomeSectionType.Grid -> {
+                                com.suvojeet.suvmusic.ui.components.GridSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick
+                                )
+                            }
+                            com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList -> {
+                                com.suvojeet.suvmusic.ui.components.VerticalListSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick
+                                )
+                            }
+                            com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel -> {
+                                com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick
+                                )
                             }
                         }
                     }
