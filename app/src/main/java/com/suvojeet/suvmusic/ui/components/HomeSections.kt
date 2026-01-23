@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier 
 import androidx.compose.foundation.border
@@ -29,6 +31,7 @@ import com.suvojeet.suvmusic.data.model.HomeSection
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -347,7 +350,9 @@ fun CommunityCarouselSection(
     section: HomeSection,
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (Album) -> Unit
+    onAlbumClick: (Album) -> Unit,
+    onStartRadio: () -> Unit = {},
+    onSavePlaylist: (PlaylistDisplayItem) -> Unit = {}
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HomeSectionHeader(title = section.title)
@@ -360,7 +365,9 @@ fun CommunityCarouselSection(
                 CommunityPlaylistCard(
                     item = item,
                     onPlaylistClick = onPlaylistClick,
-                    onSongClick = onSongClick
+                    onSongClick = onSongClick,
+                    onStartRadio = onStartRadio,
+                    onSave = { onSavePlaylist(item.playlist) }
                 )
             }
         }
@@ -371,8 +378,12 @@ fun CommunityCarouselSection(
 fun CommunityPlaylistCard(
     item: HomeItem.PlaylistItem,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onSongClick: (List<Song>, Int) -> Unit
+    onSongClick: (List<Song>, Int) -> Unit,
+    onStartRadio: () -> Unit,
+    onSave: () -> Unit
 ) {
+    var isSaved by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    
     Box(
         modifier = Modifier
             .width(320.dp)
@@ -423,9 +434,14 @@ fun CommunityPlaylistCard(
             
             // Songs Preview
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item.previewSongs.take(3).forEach { song ->
+                item.previewSongs.take(3).forEachIndexed { index, song ->
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                // Play this song within the preview context
+                                onSongClick(item.previewSongs, index)
+                            },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -447,7 +463,7 @@ fun CommunityPlaylistCard(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = song.artist, // + " • 14 crore plays" if we had plays
+                                text = song.artist, 
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.6f),
                                 maxLines = 1,
@@ -473,8 +489,12 @@ fun CommunityPlaylistCard(
                 // Play Button
                 FilledIconButton(
                     onClick = { 
-                         // Play playlist logic - typically handled by caller, but here we trigger playlist click or specific play action
-                         onPlaylistClick(item.playlist)
+                         // Play all preview songs
+                         if (item.previewSongs.isNotEmpty()) {
+                             onSongClick(item.previewSongs, 0)
+                         } else {
+                             onPlaylistClick(item.playlist)
+                         }
                     },
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White),
                     modifier = Modifier.size(48.dp)
@@ -488,32 +508,33 @@ fun CommunityPlaylistCard(
                 
                 // Radio Button
                 IconButton(
-                    onClick = { /* TODO: Start Radio */ },
+                    onClick = { onStartRadio() },
                     modifier = Modifier
                         .size(48.dp)
                         .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50)),
                     colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
                 ) {
                     Icon(
-                         // Using Radio icon if available, or similar
-                        imageVector = Icons.Outlined.Radio, // Requires dependency or workaround
-                         // Fallback if Outlined.Radio not found:
-                         // imageVector = Icons.Rounded.Radio (if available) or Icons.Rounded.Sensors
-                         contentDescription = "Radio"
+                        imageVector = Icons.Outlined.Radio,
+                        contentDescription = "Radio"
                     )
                 }
                 
                 // Save Button
                 IconButton(
-                    onClick = { /* TODO: Save to Library */ },
+                    onClick = { 
+                        isSaved = !isSaved
+                        onSave() 
+                    },
                     modifier = Modifier
                         .size(48.dp)
                         .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50)),
                     colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.BookmarkBorder,
-                        contentDescription = "Save"
+                        imageVector = if (isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                        contentDescription = "Save",
+                        tint = if (isSaved) Color.White else Color.White
                     )
                 }
             }

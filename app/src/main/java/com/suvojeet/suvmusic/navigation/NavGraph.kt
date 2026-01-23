@@ -140,7 +140,8 @@ fun NavGraph(
                 },
                 onRecentsClick = {
                     navController.navigate(Destination.Recents.route)
-                }
+                },
+                onStartRadio = onStartRadio
             )
         }
         
