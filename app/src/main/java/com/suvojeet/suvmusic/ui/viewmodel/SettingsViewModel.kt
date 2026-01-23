@@ -44,7 +44,8 @@ data class SettingsUiState(
     val doubleTapSeekSeconds: Int = 10,
     val volumeNormalizationEnabled: Boolean = false,
     val betterLyricsEnabled: Boolean = true,
-    val simpMusicEnabled: Boolean = true
+    val simpMusicEnabled: Boolean = true,
+    val playerCacheLimit: Long = 500L * 1024 * 1024 // Default 500MB
 )
 
 @HiltViewModel
@@ -120,6 +121,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(simpMusicEnabled = enabled) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.playerCacheLimitFlow.collect { limit ->
+                _uiState.update { it.copy(playerCacheLimit = limit) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -148,7 +155,8 @@ class SettingsViewModel @Inject constructor(
                 doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds(),
                 volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled(),
                 betterLyricsEnabled = sessionManager.enableBetterLyrics,
-                simpMusicEnabled = sessionManager.enableSimpMusic
+                simpMusicEnabled = sessionManager.enableSimpMusic,
+                playerCacheLimit = sessionManager.getPlayerCacheLimit()
             )
         }
     }
@@ -410,6 +418,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setEnableSimpMusic(enabled)
             _uiState.update { it.copy(simpMusicEnabled = enabled) }
+        }
+    }
+
+
+    fun setPlayerCacheLimit(limit: Long) {
+        viewModelScope.launch {
+            sessionManager.setPlayerCacheLimit(limit)
+            _uiState.update { it.copy(playerCacheLimit = limit) }
         }
     }
 }

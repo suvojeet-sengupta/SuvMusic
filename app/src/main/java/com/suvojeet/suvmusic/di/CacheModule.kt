@@ -34,10 +34,14 @@ object CacheModule {
     @OptIn(UnstableApi::class)
     fun provideCache(
         @ApplicationContext context: Context,
-        databaseProvider: DatabaseProvider
+        databaseProvider: DatabaseProvider,
+        sessionManager: com.suvojeet.suvmusic.data.SessionManager
     ): Cache {
-        // 500 MB cache size
-        val cacheSize = 500L * 1024 * 1024
+        // Dynamic cache size from settings
+        val limitPreference = sessionManager.getPlayerCacheLimit()
+        // If -1, use Long.MAX_VALUE for effectively unlimited
+        val cacheSize = if (limitPreference == -1L) Long.MAX_VALUE else limitPreference
+        
         val cacheEvictor = LeastRecentlyUsedCacheEvictor(cacheSize)
         val cacheDir = File(context.cacheDir, "media_cache")
         if (!cacheDir.exists()) {
