@@ -87,25 +87,20 @@ class SuvMusicWidget : GlanceAppWidget() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Album Art (Left Side)
-                        // Using a placeholder/fallback mechanism as loading Bitmaps in Glance is complex without WorkManager
-                        // Ideally, we'd pass the bitmap URI to a custom ImageProvider, but standard resource for now.
-                        // If currentSong has thumbnail, we rely on the system or app to have cached it, 
-                        // but Glance ImageProvider(url) isn't standard.
-                        // For EXACT look, we use the app icon or a generic music placeholder if art isn't available via resource.
-                        // (To do this 'properly' in Glance requires a worker to fetch bitmap -> update widget state)
-                        // For now sticking to resource/drawable logic for stability.
-                        
+                        // Use a solid colored box with music icon as placeholder
+                        // This avoids the transparent/checkered look
                         Box(
                             modifier = GlanceModifier
-                                .size(80.dp) // Large square
+                                .size(80.dp)
                                 .cornerRadius(12.dp)
-                                .background(ColorProvider(Color.DarkGray))
+                                .background(ColorProvider(Color(0xFF3D3D50))), // Solid dark purple-grey
+                            contentAlignment = Alignment.Center
                         ) {
                              Image(
-                                provider = ImageProvider(R.drawable.ic_launcher_foreground),
+                                provider = ImageProvider(R.drawable.ic_music_note),
                                 contentDescription = "Artwork",
-                                contentScale = ContentScale.Fit,
-                                modifier = GlanceModifier.fillMaxSize()
+                                colorFilter = ColorFilter.tint(ColorProvider(Color.White.copy(alpha = 0.8f))),
+                                modifier = GlanceModifier.size(40.dp)
                             )
                         }
 
