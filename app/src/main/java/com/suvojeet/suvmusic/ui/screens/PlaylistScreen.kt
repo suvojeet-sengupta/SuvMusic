@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
@@ -101,6 +102,7 @@ fun PlaylistScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showMediaMenu by remember { mutableStateOf(false) }
 
     // Handle delete success
     androidx.compose.runtime.LaunchedEffect(uiState.deleteSuccess) {
@@ -182,6 +184,7 @@ fun PlaylistScreen(
                         playlist = playlist,
                         onPlayAll = { onPlayAll(playlist.songs) },
                         onShufflePlay = { onShufflePlay(playlist.songs) },
+                        onMoreClick = { showMediaMenu = true },
                         contentColor = contentColor,
                         secondaryContentColor = secondaryContentColor,
                         isDarkTheme = isDarkTheme
@@ -275,15 +278,28 @@ fun PlaylistScreen(
             TopBar(
                 title = playlist.title,
                 isScrolled = isScrolled,
-                isEditable = uiState.isEditable,
                 onBackClick = onBackClick,
-                onCreatePlaylist = { showCreateDialog = true },
-                onRenamePlaylist = { showRenameDialog = true },
-                onDeletePlaylist = { showDeleteDialog = true },
-                onShareClick = { sharePlaylist(playlist) },
-                isDarkTheme = isDarkTheme,
-                contentColor = contentColor
+                contentColor = contentColor,
+                isDarkTheme = isDarkTheme
             )
+            
+            // Media Menu Bottom Sheet
+            if (showMediaMenu) {
+                com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet(
+                    isVisible = showMediaMenu,
+                    onDismiss = { showMediaMenu = false },
+                    title = playlist.title,
+                    subtitle = "${playlist.songs.size} songs",
+                    thumbnailUrl = playlist.thumbnailUrl,
+                    onShuffle = { onShufflePlay(playlist.songs) },
+                    onStartRadio = { onShufflePlay(playlist.songs) },
+                    onPlayNext = { viewModel.playNext(playlist.songs) },
+                    onAddToQueue = { viewModel.addToQueue(playlist.songs) },
+                    onAddToPlaylist = { /* TODO: Show add to playlist dialog */ },
+                    onDownload = { viewModel.downloadPlaylist(playlist.songs) },
+                    onShare = { sharePlaylist(playlist) }
+                )
+            }
         }
 
         // Dialogs
@@ -331,17 +347,10 @@ fun PlaylistScreen(
 private fun TopBar(
     title: String,
     isScrolled: Boolean,
-    isEditable: Boolean,
     onBackClick: () -> Unit,
-    onCreatePlaylist: (() -> Unit)? = null,
-    onRenamePlaylist: (() -> Unit)? = null,
-    onDeletePlaylist: (() -> Unit)? = null,
-    onShareClick: () -> Unit,
-    isDarkTheme: Boolean,
-    contentColor: Color
+    contentColor: Color,
+    isDarkTheme: Boolean
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
     // Determine background color when scrolled
     val scrolledColor = if (isDarkTheme) Color(0xFF1D1D1D) else Color.White
 
@@ -378,65 +387,6 @@ private fun TopBar(
                 modifier = Modifier.weight(1f)
             )
         }
-        
-        if (!isScrolled) {
-            Spacer(modifier = Modifier.weight(1f))
-        }
-        
-        // Action buttons
-        IconButton(onClick = onShareClick) {
-            Icon(
-                imageVector = Icons.Default.Share,
-                contentDescription = "Share",
-                tint = contentColor
-            )
-        }
-   
-        // Menu
-        Box {
-            IconButton(onClick = { showMenu = true }) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More",
-                    tint = contentColor
-                )
-            }
-            androidx.compose.material3.DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false },
-                containerColor = if (isDarkTheme) Color(0xFF2A2A2A) else Color.White
-            ) {
-                if (onCreatePlaylist != null) {
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text("Create new playlist", color = contentColor) },
-                        onClick = {
-                            showMenu = false
-                            onCreatePlaylist()
-                        }
-                    )
-                }
-                if (isEditable) {
-                    if (onRenamePlaylist != null) {
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text("Rename playlist", color = contentColor) },
-                            onClick = {
-                                showMenu = false
-                                onRenamePlaylist()
-                            }
-                        )
-                    }
-                    if (onDeletePlaylist != null) {
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text("Delete playlist", color = contentColor) },
-                            onClick = {
-                                showMenu = false
-                                onDeletePlaylist()
-                            }
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -445,6 +395,7 @@ private fun PlaylistHeader(
     playlist: Playlist,
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
+    onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color,
     isDarkTheme: Boolean
@@ -511,66 +462,65 @@ private fun PlaylistHeader(
             modifier = Modifier.padding(top = 4.dp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Play & Shuffle Buttons (YouTube Music style)
-        // Adjust button colors based on theme so they are visible
-        val buttonContainerColor = if (isDarkTheme)
-            Color.White.copy(alpha = 0.15f)
-        else
-            Color.Black.copy(alpha = 0.05f)
-
-        val buttonContentColor = contentColor
-
+        // Actions Row (Heart, Play, More)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Play Button
-            Button(
-                onClick = onPlayAll,
+            // Favorite Button (Placeholder)
+            IconButton(
+                onClick = { /* TODO: Follow/Favorite Playlist */ },
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonContainerColor,
-                    contentColor = buttonContentColor
-                ),
-                shape = RoundedCornerShape(24.dp)
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.FavoriteBorder, 
+                    contentDescription = "Favorite",
+                    tint = contentColor
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(24.dp))
+            
+            // Play Button (Big)
+            androidx.compose.material3.FilledIconButton(
+                onClick = onPlayAll,
+                modifier = Modifier.size(64.dp),
+                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Play",
-                    fontWeight = FontWeight.Medium
+                    contentDescription = "Play",
+                    modifier = Modifier.size(32.dp)
                 )
             }
-
-            // Shuffle Button
-            Button(
-                onClick = onShufflePlay,
+            
+            Spacer(modifier = Modifier.width(24.dp))
+            
+            // More Button
+            IconButton(
+                onClick = onMoreClick,
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonContainerColor,
-                    contentColor = buttonContentColor
-                ),
-                shape = RoundedCornerShape(24.dp)
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
             ) {
                 Icon(
-                    imageVector = Icons.Default.Shuffle,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Shuffle",
-                    fontWeight = FontWeight.Medium
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More",
+                    tint = contentColor
                 )
             }
         }

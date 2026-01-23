@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.Playlist
+import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,6 +36,8 @@ class PlaylistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
+    private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
+    private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -193,6 +196,24 @@ class PlaylistViewModel @Inject constructor(
             _uiState.update { it.copy(isDeleting = true) }
             val success = youTubeRepository.deletePlaylist(playlistId)
             _uiState.update { it.copy(isDeleting = false, deleteSuccess = success) }
+        }
+    }
+
+    fun playNext(songs: List<Song>) {
+        musicPlayer.playNext(songs)
+    }
+
+    fun addToQueue(songs: List<Song>) {
+        musicPlayer.addToQueue(songs)
+    }
+
+    fun downloadPlaylist(songs: List<Song>) {
+        viewModelScope.launch {
+            songs.forEach { song ->
+                launch {
+                    downloadRepository.downloadSong(song)
+                }
+            }
         }
     }
 }

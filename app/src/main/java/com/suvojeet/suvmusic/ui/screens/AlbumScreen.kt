@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
@@ -39,6 +40,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -82,6 +85,10 @@ fun AlbumScreen(
     val isScrolled by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100 }
     }
+    
+    // Dialog/Menu states
+    var showMenu by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Box(
         modifier = Modifier
@@ -151,6 +158,7 @@ fun AlbumScreen(
                             album = album,
                             onPlayAll = { onPlayAll(album.songs) },
                             onShufflePlay = { onShufflePlay(album.songs) },
+                            onMoreClick = { showMenu = true },
                             contentColor = contentColor,
                             secondaryContentColor = secondaryContentColor,
                             isDarkTheme = isDarkTheme
@@ -177,6 +185,33 @@ fun AlbumScreen(
                     isDarkTheme = isDarkTheme,
                     contentColor = contentColor
                 )
+                
+                // Menu Bottom Sheet
+                if (showMenu) {
+                    com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet(
+                        isVisible = showMenu,
+                        onDismiss = { showMenu = false },
+                        title = album.title,
+                        subtitle = "${album.songs.size} songs",
+                        thumbnailUrl = album.thumbnailUrl,
+                        onShuffle = { onShufflePlay(album.songs) },
+                        onStartRadio = { onShufflePlay(album.songs) },
+                        onPlayNext = { viewModel.playNext(album.songs) },
+                        onAddToQueue = { viewModel.addToQueue(album.songs) },
+                        onAddToPlaylist = { /* TODO: Show add to playlist dialog */ },
+                        onDownload = { viewModel.downloadAlbum(album.songs) },
+                        onShare = { 
+                            val shareText = "Check out this album: ${album.title} by ${album.artist}\n\nhttps://music.youtube.com/playlist?list=${album.id}"
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Album")
+                            androidx.core.content.ContextCompat.startActivity(context, shareIntent, null)
+                        }
+                    )
+                }
             }
         }
     }
@@ -231,13 +266,7 @@ private fun AlbumTopBar(
             Spacer(modifier = Modifier.weight(1f))
         }
         
-        IconButton(onClick = { }) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More",
-                tint = contentColor
-            )
-        }
+        // No Actions in Top Bar anymore, moved to header area
     }
 }
 
@@ -246,6 +275,7 @@ private fun AlbumHeader(
     album: Album,
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
+    onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color,
     isDarkTheme: Boolean
@@ -326,63 +356,65 @@ private fun AlbumHeader(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Play & Shuffle Buttons
-        val buttonContainerColor = if (isDarkTheme)
-            Color.White.copy(alpha = 0.15f)
-        else
-            Color.Black.copy(alpha = 0.05f)
-
+        // Actions Row (Heart, Play, More)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Play Button
-            Button(
-                onClick = onPlayAll,
+            // Favorite Button (Placeholder)
+            IconButton(
+                onClick = { /* TODO: Toggle favorite */ },
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonContainerColor,
-                    contentColor = contentColor
-                ),
-                shape = RoundedCornerShape(24.dp)
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.FavoriteBorder, // Or Favorite if active
+                    contentDescription = "Favorite",
+                    tint = contentColor
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(24.dp))
+            
+            // Play Button (Big)
+            androidx.compose.material3.FilledIconButton(
+                onClick = onPlayAll,
+                modifier = Modifier.size(64.dp),
+                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Play",
-                    fontWeight = FontWeight.Medium
+                    contentDescription = "Play",
+                    modifier = Modifier.size(32.dp)
                 )
             }
-
-            // Shuffle Button
-            Button(
-                onClick = onShufflePlay,
+            
+            Spacer(modifier = Modifier.width(24.dp))
+            
+            // More Button
+            IconButton(
+                onClick = onMoreClick,
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonContainerColor,
-                    contentColor = contentColor
-                ),
-                shape = RoundedCornerShape(24.dp)
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
             ) {
                 Icon(
-                    imageVector = Icons.Default.Shuffle,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Shuffle",
-                    fontWeight = FontWeight.Medium
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More",
+                    tint = contentColor
                 )
             }
         }
