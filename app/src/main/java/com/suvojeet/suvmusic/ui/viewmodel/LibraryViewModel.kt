@@ -153,6 +153,11 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
+            
+            // Auto-sync all liked songs in background
+            if (sessionManager.isLoggedIn()) {
+                syncLikedSongs()
+            }
         }
     }
     
