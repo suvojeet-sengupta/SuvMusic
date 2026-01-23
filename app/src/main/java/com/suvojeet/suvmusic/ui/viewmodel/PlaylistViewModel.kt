@@ -51,6 +51,8 @@ class PlaylistViewModel @Inject constructor(
     
     private val _uiState = MutableStateFlow(PlaylistUiState())
     val uiState: StateFlow<PlaylistUiState> = _uiState.asStateFlow()
+    
+    val batchProgress = downloadRepository.batchProgress
 
     init {
         // Set initial login state

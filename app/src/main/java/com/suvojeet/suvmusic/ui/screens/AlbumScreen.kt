@@ -70,6 +70,7 @@ fun AlbumScreen(
     viewModel: AlbumViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val batchProgress by viewModel.batchProgress.collectAsState()
     val album = uiState.album
 
     // Check if we are in dark theme based on background luminance
@@ -156,6 +157,7 @@ fun AlbumScreen(
                     item {
                         AlbumHeader(
                             album = album,
+                            batchProgress = batchProgress,
                             onPlayAll = { onPlayAll(album.songs) },
                             onShufflePlay = { onShufflePlay(album.songs) },
                             onMoreClick = { showMenu = true },
@@ -273,6 +275,7 @@ private fun AlbumTopBar(
 @Composable
 private fun AlbumHeader(
     album: Album,
+    batchProgress: Pair<Int, Int>,
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
     onMoreClick: () -> Unit,
@@ -280,6 +283,8 @@ private fun AlbumHeader(
     secondaryContentColor: Color,
     isDarkTheme: Boolean
 ) {
+    val (current, total) = batchProgress
+    val isDownloading = total > 0 && current < total
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -354,6 +359,29 @@ private fun AlbumHeader(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 8.dp)
             )
+        }
+
+        // Batch Download Progress
+        if (isDownloading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+            ) {
+                Text(
+                    text = "Downloading $current / $total",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = contentColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { if (total > 0) current.toFloat() / total.toFloat() else 0f },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
