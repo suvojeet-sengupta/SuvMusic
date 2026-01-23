@@ -55,8 +55,16 @@ class MusicPlayer @Inject constructor(
     private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,
     private val sleepTimerManager: SleepTimerManager,
-    private val listeningHistoryRepository: ListeningHistoryRepository
+    private val listeningHistoryRepository: ListeningHistoryRepository,
+    private val cache: androidx.media3.datasource.cache.Cache,
+    @com.suvojeet.suvmusic.di.PlayerDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
 ) {
+    
+    // ... (existing properties)
+
+    // Caching
+    private var cachingJob: Job? = null
+
     
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
@@ -348,6 +356,13 @@ class MusicPlayer @Inject constructor(
                         preloadedStreamUrl = null
                         isPreloading = false
                         
+                        // Start aggressive caching for this preloaded/resolved song
+                        if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
+                            // Cancel previous job first just in case
+                            cachingJob?.cancel()
+                            startAggressiveCaching(song.id, currentUri)
+                        }
+                        
                         // Ensure playback continues for SEEK transitions (notification controls)
                         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
                             controller.play()
@@ -394,6 +409,9 @@ class MusicPlayer @Inject constructor(
                  return
             }
             
+            // Cancel previous caching job
+            cachingJob?.cancel()
+            
             // Resolve stream URL for the song based on source with timeout protection
             val streamUrl = kotlinx.coroutines.withTimeoutOrNull(15_000L) {
                 when (song.source) {
@@ -415,9 +433,15 @@ class MusicPlayer @Inject constructor(
                 return
             }
             
+            // Start aggressive caching in background
+            if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
+                startAggressiveCaching(song.id, streamUrl)
+            }
+
             val newMediaItem = MediaItem.Builder()
                 .setUri(streamUrl)
                 .setMediaId(song.id)
+                .setCustomCacheKey(song.id) // CRITICAL: Stable cache key
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(song.title)
@@ -459,6 +483,40 @@ class MusicPlayer @Inject constructor(
             }
         } catch (e: Exception) {
             _playerState.update { it.copy(error = e.message, isLoading = false) }
+        }
+    }
+
+    private fun startAggressiveCaching(contentId: String, streamUrl: String) {
+        cachingJob = scope.launch(Dispatchers.IO) {
+            try {
+                val dataSpec = androidx.media3.datasource.DataSpec.Builder()
+                    .setUri(streamUrl)
+                    .setKey(contentId) // Must match the player's custom cache key
+                    .setFlags(androidx.media3.datasource.DataSpec.FLAG_ALLOW_CACHE_FRAGMENTATION)
+                    .build()
+                
+                // Create a temporary CacheDataSource just for this writer
+                // We reuse the factory's upstream logic but build a new instance
+                val dataSource = dataSourceFactory.createDataSource() as? androidx.media3.datasource.cache.CacheDataSource
+                
+                if (dataSource != null) {
+                    val cacheWriter = androidx.media3.datasource.cache.CacheWriter(
+                        dataSource,
+                        dataSpec,
+                        null // default buffer
+                    ) { requestLength, bytesCached, newBytesCached ->
+                        // Optional: progress update
+                        // val percent = if (requestLength > 0) (bytesCached * 100 / requestLength).toInt() else 0
+                    }
+                    
+                    cacheWriter.cache()
+                }
+            } catch (e: Exception) {
+                // Caching failed or was cancelled - ignore
+                if (e !is kotlinx.coroutines.CancellationException) {
+                     android.util.Log.e("MusicPlayer", "Aggressive caching failed: ${e.message}")
+                }
+            }
         }
     }
     
@@ -606,6 +664,7 @@ class MusicPlayer @Inject constructor(
                 val newMediaItem = MediaItem.Builder()
                     .setUri(streamUrl)
                     .setMediaId(song.id)
+                    .setCustomCacheKey(song.id) // CRITICAL: Stable cache key
                     .setMediaMetadata(
                         MediaMetadata.Builder()
                             .setTitle(song.title)
@@ -702,6 +761,7 @@ class MusicPlayer @Inject constructor(
         return MediaItem.Builder()
             .setUri(uri)
             .setMediaId(song.id)
+            .setCustomCacheKey(song.id) // CRITICAL: Stable cache key
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(song.title)
