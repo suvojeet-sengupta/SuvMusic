@@ -305,7 +305,7 @@ private fun AlbumHeader(
         Text(
             text = buildString {
                 album.year?.let { append("$it • ") }
-                append("${album.songs.size} songs")
+                append(com.suvojeet.suvmusic.util.TimeUtil.formatSongCountAndDuration(album.songs))
             },
             style = MaterialTheme.typography.bodySmall,
             color = secondaryContentColor.copy(alpha = 0.5f),
