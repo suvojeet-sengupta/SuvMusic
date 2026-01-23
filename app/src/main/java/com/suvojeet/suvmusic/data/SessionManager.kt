@@ -13,6 +13,8 @@ import androidx.security.crypto.MasterKeys
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
+import com.suvojeet.suvmusic.data.model.HapticsIntensity
+import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.model.ThemeMode
@@ -124,6 +126,11 @@ class SessionManager @Inject constructor(
 
         // Player Cache
         private val PLAYER_CACHE_LIMIT_KEY = androidx.datastore.preferences.core.longPreferencesKey("player_cache_limit")
+        
+        // Music Haptics
+        private val MUSIC_HAPTICS_ENABLED_KEY = booleanPreferencesKey("music_haptics_enabled")
+        private val HAPTICS_MODE_KEY = stringPreferencesKey("haptics_mode")
+        private val HAPTICS_INTENSITY_KEY = stringPreferencesKey("haptics_intensity")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -387,6 +394,70 @@ class SessionManager @Inject constructor(
     suspend fun setPlayerCacheLimit(limitBytes: Long) {
         context.dataStore.edit { preferences ->
             preferences[PLAYER_CACHE_LIMIT_KEY] = limitBytes
+        }
+    }
+    
+    // --- Music Haptics ---
+    
+    /**
+     * Check if Music Haptics is enabled.
+     * Provides synchronized vibrations with music playback.
+     */
+    fun isMusicHapticsEnabled(): Boolean = runBlocking {
+        context.dataStore.data.first()[MUSIC_HAPTICS_ENABLED_KEY] ?: false
+    }
+    
+    val musicHapticsEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[MUSIC_HAPTICS_ENABLED_KEY] ?: false
+    }
+    
+    suspend fun setMusicHapticsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[MUSIC_HAPTICS_ENABLED_KEY] = enabled
+        }
+    }
+    
+    /**
+     * Get the current haptics mode.
+     */
+    fun getHapticsMode(): HapticsMode = runBlocking {
+        val modeName = context.dataStore.data.first()[HAPTICS_MODE_KEY]
+        modeName?.let {
+            try { HapticsMode.valueOf(it) } catch (e: Exception) { HapticsMode.BASIC }
+        } ?: HapticsMode.BASIC
+    }
+    
+    val hapticsModeFlow: Flow<HapticsMode> = context.dataStore.data.map { preferences ->
+        preferences[HAPTICS_MODE_KEY]?.let {
+            try { HapticsMode.valueOf(it) } catch (e: Exception) { HapticsMode.BASIC }
+        } ?: HapticsMode.BASIC
+    }
+    
+    suspend fun setHapticsMode(mode: HapticsMode) {
+        context.dataStore.edit { preferences ->
+            preferences[HAPTICS_MODE_KEY] = mode.name
+        }
+    }
+    
+    /**
+     * Get the haptics intensity level.
+     */
+    fun getHapticsIntensity(): HapticsIntensity = runBlocking {
+        val intensityName = context.dataStore.data.first()[HAPTICS_INTENSITY_KEY]
+        intensityName?.let {
+            try { HapticsIntensity.valueOf(it) } catch (e: Exception) { HapticsIntensity.MEDIUM }
+        } ?: HapticsIntensity.MEDIUM
+    }
+    
+    val hapticsIntensityFlow: Flow<HapticsIntensity> = context.dataStore.data.map { preferences ->
+        preferences[HAPTICS_INTENSITY_KEY]?.let {
+            try { HapticsIntensity.valueOf(it) } catch (e: Exception) { HapticsIntensity.MEDIUM }
+        } ?: HapticsIntensity.MEDIUM
+    }
+    
+    suspend fun setHapticsIntensity(intensity: HapticsIntensity) {
+        context.dataStore.edit { preferences ->
+            preferences[HAPTICS_INTENSITY_KEY] = intensity.name
         }
     }
     
