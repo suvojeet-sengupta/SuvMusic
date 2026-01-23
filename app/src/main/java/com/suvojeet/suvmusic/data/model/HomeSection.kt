@@ -5,7 +5,9 @@ enum class HomeSectionType {
     HorizontalCarousel,
     Grid,
     LargeCardWithList,
-    VerticalList
+    VerticalList,
+    CommunityCarousel,
+    ExploreGrid
 }
 
 data class HomeSection(
@@ -16,7 +18,8 @@ data class HomeSection(
 
 sealed class HomeItem {
     data class SongItem(val song: Song) : HomeItem()
-    data class PlaylistItem(val playlist: PlaylistDisplayItem) : HomeItem()
+    data class PlaylistItem(val playlist: PlaylistDisplayItem, val previewSongs: List<Song> = emptyList()) : HomeItem()
     data class AlbumItem(val album: Album) : HomeItem()
     data class ArtistItem(val artist: Artist) : HomeItem()
+    data class ExploreItem(val title: String, val iconRes: Int) : HomeItem()
 }
