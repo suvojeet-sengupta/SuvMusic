@@ -59,7 +59,7 @@ fun HomeScreen(
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (com.suvojeet.suvmusic.data.model.Album) -> Unit,
     onRecentsClick: () -> Unit = {},
-    onExploreClick: (String) -> Unit = {},
+    onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {

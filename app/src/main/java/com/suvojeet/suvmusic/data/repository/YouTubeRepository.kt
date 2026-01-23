@@ -353,6 +353,16 @@ class YouTubeRepository @Inject constructor(
         return sections
     }
 
+    suspend fun getBrowseSections(browseId: String): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+        try {
+            val jsonResponse = fetchInternalApi(browseId)
+            parseHomeSectionsFromInternalJson(jsonResponse)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
     suspend fun getUserPlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<PlaylistDisplayItem>()
 
@@ -1742,10 +1752,10 @@ class YouTubeRepository @Inject constructor(
 
     private fun getExploreSection(): com.suvojeet.suvmusic.data.model.HomeSection {
         val exploreItems = listOf(
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("New releases", com.suvojeet.suvmusic.R.drawable.ic_music_note), // Placeholder ID
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Charts", com.suvojeet.suvmusic.R.drawable.ic_waveform), // Placeholder ID
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Moods and genres", com.suvojeet.suvmusic.R.drawable.ic_play), // Placeholder ID
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Podcasts", com.suvojeet.suvmusic.R.drawable.ic_launcher_monochrome) // Placeholder ID
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("New releases", com.suvojeet.suvmusic.R.drawable.ic_music_note, "FEmusic_new_releases"),
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Charts", com.suvojeet.suvmusic.R.drawable.ic_waveform, "FEmusic_charts"),
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Moods and genres", com.suvojeet.suvmusic.R.drawable.ic_play, "FEmusic_moods_and_genres"),
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Podcasts", com.suvojeet.suvmusic.R.drawable.ic_launcher_monochrome, "FEmusic_podcasts")
         )
         return com.suvojeet.suvmusic.data.model.HomeSection("Explore", exploreItems, com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid)
     }
