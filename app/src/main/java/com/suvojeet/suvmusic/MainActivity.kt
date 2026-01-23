@@ -263,6 +263,7 @@ fun SuvMusicApp(
     
     val lyrics by playerViewModel.lyricsState.collectAsState()
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
+    val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsState()
     
     val comments by playerViewModel.commentsState.collectAsState()
     val isFetchingComments by playerViewModel.isFetchingComments.collectAsState()
@@ -527,6 +528,8 @@ fun SuvMusicApp(
                     onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
                     volumeKeyEvents = volumeKeyEvents,
                     downloadRepository = downloadRepository,
+                    selectedLyricsProvider = selectedLyricsProvider,
+                    onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                     startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
                 )
 
