@@ -20,7 +20,7 @@ class YouTubeStreamingService @Inject constructor(
     // Cache for stream URLs to avoid re-fetching (max 50 entries, 30 min expiry)
     private data class CachedStream(val url: String, val timestamp: Long)
     private val streamCache = LruCache<String, CachedStream>(50)
-    private val CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
+    private val CACHE_EXPIRY_MS = 3 * 60 * 60 * 1000L // 3 hours
 
     /**
      * Get audio stream URL for playback.
@@ -119,7 +119,21 @@ class YouTubeStreamingService @Inject constructor(
     /**
      * Get stream URL for downloading with the user's download quality preference.
      */
+    /**
+     * Get stream URL for downloading with the user's download quality preference.
+     * Prioritizes cached playback URL if available (to ensure download success if song is playing).
+     */
     suspend fun getStreamUrlForDownload(videoId: String): String? = withContext(Dispatchers.IO) {
+        // 1. Check cache first (audio_ cache from playback)
+        // If the user is listening to it, we know this URL works.
+        val cacheKey = "audio_$videoId"
+        streamCache.get(cacheKey)?.let { cached ->
+            if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
+                android.util.Log.d("YouTubeStreaming", "Download using cached playback URL: $videoId")
+                return@withContext cached.url
+            }
+        }
+        
         try {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
@@ -135,6 +149,11 @@ class YouTubeStreamingService @Inject constructor(
                 .filter { it.averageBitrate <= targetBitrate || targetBitrate == Int.MAX_VALUE }
                 .maxByOrNull { it.averageBitrate }
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
+            
+            // Cache this result too, so subsequent playback uses it
+            bestAudioStream?.content?.also { url ->
+                streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
+            }
             
             bestAudioStream?.content
         } catch (e: Exception) {
