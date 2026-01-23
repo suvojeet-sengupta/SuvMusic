@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,8 @@ data class PlaylistUiState(
     val isCreating: Boolean = false,
     val isDeleting: Boolean = false,
     val deleteSuccess: Boolean = false,
-    val isLoggedIn: Boolean = false
+    val isLoggedIn: Boolean = false,
+    val isSaved: Boolean = false
 ) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
@@ -38,6 +40,7 @@ class PlaylistViewModel @Inject constructor(
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
+    private val libraryRepository: LibraryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -74,6 +77,26 @@ class PlaylistViewModel @Inject constructor(
             }
         }
         loadPlaylist()
+        checkLibraryStatus()
+    }
+
+    private fun checkLibraryStatus() {
+        viewModelScope.launch {
+            libraryRepository.isPlaylistSaved(playlistId).collect { isSaved ->
+                _uiState.update { it.copy(isSaved = isSaved) }
+            }
+        }
+    }
+
+    fun toggleSaveToLibrary() {
+        viewModelScope.launch {
+            val playlist = _uiState.value.playlist ?: return@launch
+            if (_uiState.value.isSaved) {
+                libraryRepository.removePlaylist(playlist.id)
+            } else {
+                libraryRepository.savePlaylist(playlist)
+            }
+        }
     }
 
     private fun loadPlaylist() {
