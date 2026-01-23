@@ -116,6 +116,11 @@ class SessionManager @Inject constructor(
         
         // Double Tap Seek
         private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
+        
+        // Lyrics Providers
+        private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
+        private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
+        private val PREFERRED_LYRICS_PROVIDER_KEY = stringPreferencesKey("preferred_lyrics_provider")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -312,6 +317,52 @@ class SessionManager @Inject constructor(
     suspend fun setDoubleTapSeekSeconds(seconds: Int) {
         context.dataStore.edit { preferences ->
             preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] = seconds
+        }
+    }
+    
+    // --- Lyrics Providers ---
+    
+    val enableBetterLyrics: Boolean
+        get() = runBlocking {
+            context.dataStore.data.first()[ENABLE_BETTER_LYRICS_KEY] ?: true
+        }
+    
+    val enableBetterLyricsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ENABLE_BETTER_LYRICS_KEY] ?: true
+    }
+    
+    suspend fun setEnableBetterLyrics(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ENABLE_BETTER_LYRICS_KEY] = enabled
+        }
+    }
+    
+    val enableSimpMusic: Boolean
+        get() = runBlocking {
+            context.dataStore.data.first()[ENABLE_SIMPMUSIC_KEY] ?: true
+        }
+    
+    val enableSimpMusicFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ENABLE_SIMPMUSIC_KEY] ?: true
+    }
+    
+    suspend fun setEnableSimpMusic(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ENABLE_SIMPMUSIC_KEY] = enabled
+        }
+    }
+    
+    fun getPreferredLyricsProvider(): String = runBlocking {
+        context.dataStore.data.first()[PREFERRED_LYRICS_PROVIDER_KEY] ?: "BetterLyrics"
+    }
+    
+    val preferredLyricsProviderFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[PREFERRED_LYRICS_PROVIDER_KEY] ?: "BetterLyrics"
+    }
+    
+    suspend fun setPreferredLyricsProvider(provider: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PREFERRED_LYRICS_PROVIDER_KEY] = provider
         }
     }
     
