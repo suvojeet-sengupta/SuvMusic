@@ -214,7 +214,19 @@ fun NavGraph(
             downloadRepository?.let { repo ->
                 StorageScreen(
                     downloadRepository = repo,
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onPlayerCacheClick = { navController.navigate(Destination.PlayerCache.route) }
+                )
+            }
+        }
+
+        composable(Destination.PlayerCache.route) {
+            downloadRepository?.let { repo ->
+                val settingsViewModel = androidx.hilt.navigation.compose.hiltViewModel<com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel>()
+                com.suvojeet.suvmusic.ui.screens.PlayerCacheScreen(
+                    onBackClick = { navController.popBackStack() },
+                    settingsViewModel = settingsViewModel,
+                    downloadRepository = repo
                 )
             }
         }

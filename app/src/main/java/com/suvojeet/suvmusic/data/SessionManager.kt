@@ -121,6 +121,9 @@ class SessionManager @Inject constructor(
         private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
         private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
         private val PREFERRED_LYRICS_PROVIDER_KEY = stringPreferencesKey("preferred_lyrics_provider")
+
+        // Player Cache
+        private val PLAYER_CACHE_LIMIT_KEY = androidx.datastore.preferences.core.longPreferencesKey("player_cache_limit")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -363,6 +366,27 @@ class SessionManager @Inject constructor(
     suspend fun setPreferredLyricsProvider(provider: String) {
         context.dataStore.edit { preferences ->
             preferences[PREFERRED_LYRICS_PROVIDER_KEY] = provider
+    }
+    }
+
+    // --- Player Cache Limit ---
+
+    /**
+     * Get player cache limit in bytes.
+     * Returns -1L for Unlimited.
+     * Default is 500 MB (500 * 1024 * 1024).
+     */
+    fun getPlayerCacheLimit(): Long = runBlocking {
+        context.dataStore.data.first()[PLAYER_CACHE_LIMIT_KEY] ?: (500L * 1024 * 1024)
+    }
+
+    val playerCacheLimitFlow: Flow<Long> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_CACHE_LIMIT_KEY] ?: (500L * 1024 * 1024)
+    }
+
+    suspend fun setPlayerCacheLimit(limitBytes: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYER_CACHE_LIMIT_KEY] = limitBytes
         }
     }
     
