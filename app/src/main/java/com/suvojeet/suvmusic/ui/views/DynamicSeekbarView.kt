@@ -58,6 +58,7 @@ class DynamicSeekbarView @JvmOverloads constructor(
             SeekbarStyle.CLASSIC -> drawClassic(canvas)
             SeekbarStyle.DOTS -> drawDots(canvas)
             SeekbarStyle.GRADIENT_BAR -> drawGradient(canvas)
+            SeekbarStyle.MATERIAL -> drawClassic(canvas) // Reuse classic style for now
         }
     }
 

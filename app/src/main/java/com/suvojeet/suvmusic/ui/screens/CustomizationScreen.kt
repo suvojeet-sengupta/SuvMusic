@@ -1,5 +1,7 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.material3.Divider
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -77,6 +79,12 @@ import kotlinx.coroutines.launch
 import kotlin.math.sin
 import kotlin.random.Random
 
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.graphics.luminance
+import com.suvojeet.suvmusic.ui.components.rememberDominantColors
+import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
+
 /**
  * Customization settings screen for player appearance
  */
@@ -84,6 +92,7 @@ import kotlin.random.Random
 @Composable
 fun CustomizationScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = hiltViewModel(), // Injected for dynamic colors
     onBack: () -> Unit,
     onSeekbarStyleClick: () -> Unit = {},
     onArtworkShapeClick: () -> Unit = {},
@@ -91,6 +100,17 @@ fun CustomizationScreen(
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
+    
+    // Player State for Dynamic Colors
+    val playerState by playerViewModel.playerState.collectAsState()
+    val currentSong = playerState.currentSong
+    val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    
+    // Dynamic Colors
+    val dominantColors = rememberDominantColors(
+        imageUrl = currentSong?.thumbnailUrl,
+        isDarkTheme = isAppInDarkTheme
+    )
     
     val seekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
     val artworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
@@ -120,19 +140,28 @@ fun CustomizationScreen(
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
+    // Use dominant colors if available, otherwise fallback to theme
+    val primaryColor = if (currentSong != null) dominantColors.accent else MaterialTheme.colorScheme.primary
+    val surfaceColor = if (currentSong != null) dominantColors.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant
+    val backgroundColor = if (currentSong != null) dominantColors.primary else MaterialTheme.colorScheme.background
+    val onBackgroundColor = if (currentSong != null) dominantColors.onBackground else MaterialTheme.colorScheme.onBackground
     
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = backgroundColor,
         topBar = {
             LargeTopAppBar(
-                title = { Text("Customization") },
+                title = { Text("Customization", color = onBackgroundColor) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = onBackgroundColor)
                     }
                 },
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = backgroundColor.copy(alpha = 0.9f),
+                    titleContentColor = onBackgroundColor
+                ),
                 scrollBehavior = scrollBehavior
             )
         }
@@ -145,65 +174,102 @@ fun CustomizationScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Seekbar Style - Navigate to separate screen
-            SeekbarStyleNavigationItem(
-                currentStyle = currentSeekbarStyle,
-                primaryColor = primaryColor,
-                onClick = onSeekbarStyleClick
-            )
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Artwork Shape - Navigate to separate screen
-            ArtworkShapeNavigationItem(
-                currentShape = currentArtworkShape,
-                primaryColor = primaryColor,
-                onClick = onArtworkShapeClick
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Artwork Size - Navigate to separate screen
+            // Section: Player Appearance
+            CustomizationSection(title = "Player Appearance", color = primaryColor) {
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = surfaceColor.copy(alpha = 0.5f),
+                        contentColor = onBackgroundColor
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        SeekbarStyleNavigationItem(
+                            currentStyle = currentSeekbarStyle,
+                            primaryColor = primaryColor,
+                            contentColor = onBackgroundColor,
+                            onClick = onSeekbarStyleClick
+                        )
+                        
+                        Divider(color = onBackgroundColor.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                        
+                        ArtworkShapeNavigationItem(
+                            currentShape = currentArtworkShape,
+                            primaryColor = primaryColor,
+                            contentColor = onBackgroundColor,
+                            onClick = onArtworkShapeClick
+                        )
+                        
+                        Divider(color = onBackgroundColor.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 16.dp))
 
-            ArtworkSizeNavigationItem(
-                currentSize = currentArtworkSize,
-                primaryColor = primaryColor,
-                onClick = onArtworkSizeClick
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Mini Player Transparency
-            MiniPlayerTransparencyItem(
-                alpha = miniPlayerAlpha,
-                primaryColor = primaryColor,
-                onAlphaChange = { newAlpha ->
-                    scope.launch {
-                        sessionManager.setMiniPlayerAlpha(newAlpha)
+                        ArtworkSizeNavigationItem(
+                            currentSize = currentArtworkSize,
+                            primaryColor = primaryColor,
+                            contentColor = onBackgroundColor,
+                            onClick = onArtworkSizeClick
+                        )
                     }
                 }
-            )
+            }
+            
+            // Section: UI Customization
+            CustomizationSection(title = "Interface", color = primaryColor) {
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = surfaceColor.copy(alpha = 0.5f),
+                        contentColor = onBackgroundColor
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Mini Player Transparency
+                        TransparencySliderItem(
+                            title = "Mini Player Transparency",
+                            icon = Icons.Default.MusicNote,
+                            alpha = miniPlayerAlpha,
+                            primaryColor = primaryColor,
+                            contentColor = onBackgroundColor,
+                            onAlphaChange = { newAlpha ->
+                                scope.launch {
+                                    sessionManager.setMiniPlayerAlpha(newAlpha)
+                                }
+                            }
+                        )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                        Divider(color = onBackgroundColor.copy(alpha = 0.1f))
 
-            // Navigation Bar Transparency
-            NavBarTransparencyItem(
-                alpha = navBarAlpha,
-                primaryColor = primaryColor,
-                onAlphaChange = { newAlpha ->
-                    scope.launch {
-                        sessionManager.setNavBarAlpha(newAlpha)
+                        // Navigation Bar Transparency
+                        TransparencySliderItem(
+                            title = "Navigation Bar Transparency",
+                            icon = Icons.Default.Square,
+                            alpha = navBarAlpha,
+                            primaryColor = primaryColor,
+                            contentColor = onBackgroundColor,
+                            onAlphaChange = { newAlpha ->
+                                scope.launch {
+                                    sessionManager.setNavBarAlpha(newAlpha)
+                                }
+                            }
+                        )
                     }
                 }
-            )
+            }
             
             Spacer(modifier = Modifier.height(24.dp))
             
             // Info text
             Text(
-                text = "You can also change these from the player by long-pressing on the seekbar or artwork.",
+                text = "Pro Tip: You can also change these settings directly from the player by long-pressing on the seekbar or artwork.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = onBackgroundColor.copy(alpha = 0.6f),
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
         }
@@ -213,16 +279,17 @@ fun CustomizationScreen(
 @Composable
 private fun CustomizationSection(
     title: String,
+    color: Color,
     content: @Composable () -> Unit
 ) {
     Column {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold
             ),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 12.dp)
+            color = color,
+            modifier = Modifier.padding(start = 8.dp, bottom = 12.dp)
         )
         content()
     }
@@ -232,6 +299,7 @@ private fun CustomizationSection(
 private fun SeekbarStyleNavigationItem(
     currentStyle: SeekbarStyle,
     primaryColor: Color,
+    contentColor: Color,
     onClick: () -> Unit
 ) {
     val styleName = when (currentStyle) {
@@ -240,53 +308,45 @@ private fun SeekbarStyleNavigationItem(
         SeekbarStyle.CLASSIC -> "Classic"
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
+        SeekbarStyle.MATERIAL -> "Material 3"
     }
     
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.GraphicEq,
-                contentDescription = null,
-                tint = primaryColor,
-                modifier = Modifier.size(28.dp)
+        Icon(
+            imageVector = Icons.Default.GraphicEq,
+            contentDescription = null,
+            tint = primaryColor,
+            modifier = Modifier.size(24.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Seekbar Style",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium
+                ),
+                color = contentColor
             )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Seekbar Style",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Currently: $styleName",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = styleName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor.copy(alpha = 0.7f)
             )
         }
+        
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Open",
+            tint = contentColor.copy(alpha = 0.5f)
+        )
     }
 }
 
@@ -294,6 +354,7 @@ private fun SeekbarStyleNavigationItem(
 private fun ArtworkShapeNavigationItem(
     currentShape: ArtworkShape,
     primaryColor: Color,
+    contentColor: Color,
     onClick: () -> Unit
 ) {
     val shapeName = when (currentShape) {
@@ -310,51 +371,42 @@ private fun ArtworkShapeNavigationItem(
         ArtworkShape.SQUARE -> Icons.Default.Square
     }
     
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = primaryColor,
-                modifier = Modifier.size(28.dp)
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = primaryColor,
+            modifier = Modifier.size(24.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Artwork Shape",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium
+                ),
+                color = contentColor
             )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Artwork Shape",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Currently: $shapeName",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = shapeName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor.copy(alpha = 0.7f)
             )
         }
+        
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Open",
+            tint = contentColor.copy(alpha = 0.5f)
+        )
     }
 }
 
@@ -362,197 +414,117 @@ private fun ArtworkShapeNavigationItem(
 private fun ArtworkSizeNavigationItem(
     currentSize: ArtworkSize,
     primaryColor: Color,
+    contentColor: Color,
     onClick: () -> Unit
 ) {
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // Simple size indicator boxes
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Simple size indicator boxes
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val boxCount = when (currentSize) {
-                    ArtworkSize.SMALL -> 1
-                    ArtworkSize.MEDIUM -> 2
-                    ArtworkSize.LARGE -> 3
-                }
-                repeat(3) { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(if (index < boxCount) 8.dp else 6.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(
-                                if (index < boxCount) primaryColor 
-                                else MaterialTheme.colorScheme.outlineVariant
-                            )
-                    )
-                }
+            val boxCount = when (currentSize) {
+                ArtworkSize.SMALL -> 1
+                ArtworkSize.MEDIUM -> 2
+                ArtworkSize.LARGE -> 3
             }
+            repeat(3) { index ->
+                Box(
+                    modifier = Modifier
+                        .size(if (index < boxCount) 10.dp else 8.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            if (index < boxCount) primaryColor 
+                            else contentColor.copy(alpha = 0.2f)
+                        )
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(18.dp)) // Aligned with other icons which are 24dp (boxes are approx 24dp wide total)
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Artwork Size",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium
+                ),
+                color = contentColor
+            )
+            Text(
+                text = currentSize.label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor.copy(alpha = 0.7f)
+            )
+        }
+        
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Open",
+            tint = contentColor.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+private fun TransparencySliderItem(
+    title: String,
+    icon: ImageVector,
+    alpha: Float,
+    primaryColor: Color,
+    contentColor: Color,
+    onAlphaChange: (Float) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = primaryColor,
+                modifier = Modifier.size(24.dp)
+            )
             
             Spacer(modifier = Modifier.width(16.dp))
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Artwork Size",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Medium
                     ),
-                    color = MaterialTheme.colorScheme.primary
+                    color = contentColor
                 )
                 Text(
-                    text = "Currently: ${currentSize.label}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Opacity: ${(alpha * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor.copy(alpha = 0.7f)
                 )
             }
-            
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
-    }
-}
-
-@Composable
-private fun MiniPlayerTransparencyItem(
-    alpha: Float,
-    primaryColor: Color,
-    onAlphaChange: (Float) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = null,
-                    tint = primaryColor,
-                    modifier = Modifier.size(28.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Mini Player Transparency",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Opacity: ${(alpha * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            androidx.compose.material3.Slider(
-                value = alpha,
-                onValueChange = onAlphaChange,
-                valueRange = 0.2f..1f, // Minimum 20% opacity so it's not invisible
-                steps = 15,
-                colors = androidx.compose.material3.SliderDefaults.colors(
-                    thumbColor = primaryColor,
-                    activeTrackColor = primaryColor,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
-                )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        androidx.compose.material3.Slider(
+            value = alpha,
+            onValueChange = onAlphaChange,
+            valueRange = 0f..1f,
+            steps = 20,
+            colors = androidx.compose.material3.SliderDefaults.colors(
+                thumbColor = primaryColor,
+                activeTrackColor = primaryColor,
+                inactiveTrackColor = contentColor.copy(alpha = 0.2f)
             )
-        }
-    }
-}
-
-@Composable
-private fun NavBarTransparencyItem(
-    alpha: Float,
-    primaryColor: Color,
-    onAlphaChange: (Float) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Square,
-                    contentDescription = null,
-                    tint = primaryColor,
-                    modifier = Modifier.size(28.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Navigation Bar Transparency",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Opacity: ${(alpha * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            androidx.compose.material3.Slider(
-                value = alpha,
-                onValueChange = onAlphaChange,
-                valueRange = 0f..1f, // Full range allowed
-                steps = 20,
-                colors = androidx.compose.material3.SliderDefaults.colors(
-                    thumbColor = primaryColor,
-                    activeTrackColor = primaryColor,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
-                )
-            )
-        }
+        )
     }
 }
 
@@ -582,6 +554,7 @@ private fun SeekbarStylePreviewCard(
         SeekbarStyle.CLASSIC -> "Classic"
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
+        SeekbarStyle.MATERIAL -> "Material 3"
     }
     
     val previewAmplitudes = remember { List(25) { Random.nextFloat() * 0.6f + 0.4f } }
@@ -613,6 +586,7 @@ private fun SeekbarStylePreviewCard(
                     SeekbarStyle.CLASSIC -> drawClassicPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.DOTS -> drawDotsPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.GRADIENT_BAR -> drawGradientPreview(progress, primaryColor, surfaceColor)
+                    SeekbarStyle.MATERIAL -> drawClassicPreview(progress, primaryColor, surfaceColor) // Reuse classic preview for Material since it's similar (bar + thumb)
                 }
             }
             
