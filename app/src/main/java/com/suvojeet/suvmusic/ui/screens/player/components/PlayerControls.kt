@@ -132,8 +132,14 @@ fun PlaybackControls(
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
-                tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.size(24.dp)
+                tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(
+                        if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
+                        CircleShape
+                    )
+                    .padding(2.dp)
             )
         }
 
@@ -175,7 +181,7 @@ fun PlaybackControls(
             Icon(
                 imageVector = SkipNext,
                 contentDescription = "Next",
-                tint = dominantColors.onBackground.copy(alpha = 0.6f),
+                tint = dominantColors.onBackground,
                 modifier = Modifier.size(40.dp)
             )
         }
@@ -191,8 +197,14 @@ fun PlaybackControls(
                     else -> Icons.Default.Repeat
                 },
                 contentDescription = "Repeat",
-                tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.size(24.dp)
+                tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(
+                        if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
+                        CircleShape
+                    )
+                    .padding(2.dp)
             )
         }
     }
