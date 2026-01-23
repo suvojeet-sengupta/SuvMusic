@@ -57,7 +57,6 @@ class DownloadRepository @Inject constructor(
     private val _downloadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val downloadProgress: StateFlow<Map<String, Float>> = _downloadProgress.asStateFlow()
     
-    // Dedicated HTTP client for downloads with longer timeouts
     private val downloadClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(5, TimeUnit.MINUTES)
@@ -66,6 +65,16 @@ class DownloadRepository @Inject constructor(
         .followSslRedirects(true)
         .retryOnConnectionFailure(true)
         .build()
+        
+    // Batch Download Queue
+    private val downloadQueue = java.util.ArrayDeque<Song>()
+    private val _queueState = MutableStateFlow<List<Song>>(emptyList())
+    val queueState: StateFlow<List<Song>> = _queueState.asStateFlow()
+    
+    // Track batch progress
+    private var totalBatchSize = 0
+    private var completedBatchCount = 0
+    private var isBatchDownloadActive = false
 
     init {
         loadDownloads()
@@ -1152,6 +1161,62 @@ class DownloadRepository @Inject constructor(
         }
         
         Log.d(TAG, "Cache cleared")
+    }
+
+    suspend fun deleteDownloads(songIds: List<String>) {
+        withContext(Dispatchers.IO) {
+            songIds.forEach { id ->
+                deleteDownload(id)
+            }
+        }
+    }
+
+    /**
+     * Queue a list of songs for sequential download.
+     * Starts processing if not already active.
+     */
+    suspend fun downloadSongs(songs: List<Song>) {
+        withContext(Dispatchers.IO) {
+            // Filter out already downloaded songs and songs already in queue/downloading
+            val newSongs = songs.filter { song -> 
+                _downloadedSongs.value.none { it.id == song.id } && 
+                downloadQueue.none { it.id == song.id } &&
+                !_downloadingIds.value.contains(song.id)
+            }
+            
+            if (newSongs.isEmpty()) return@withContext
+            
+            downloadQueue.addAll(newSongs)
+            _queueState.value = downloadQueue.toList()
+            
+            if (!isBatchDownloadActive) {
+                isBatchDownloadActive = true
+                totalBatchSize = newSongs.size
+                completedBatchCount = 0
+                processDownloadQueue()
+            } else {
+                // Add to existing batch
+                totalBatchSize += newSongs.size
+            }
+        }
+    }
+
+    private suspend fun processDownloadQueue() {
+        while (downloadQueue.isNotEmpty()) {
+            val song = downloadQueue.poll() ?: break
+            _queueState.value = downloadQueue.toList()
+            
+            try {
+                // Determine batch progress string
+                completedBatchCount++
+                downloadSong(song)
+            } catch (e: Exception) {
+                Log.e(TAG, "Queue error for ${song.title}", e)
+            }
+        }
+        isBatchDownloadActive = false
+        totalBatchSize = 0
+        completedBatchCount = 0
     }
     
     /**
