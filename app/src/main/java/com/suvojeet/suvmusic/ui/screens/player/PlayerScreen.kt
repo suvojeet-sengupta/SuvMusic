@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -159,6 +160,7 @@ fun PlayerScreen(
     onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
     ringtoneViewModel: RingtoneViewModel = hiltViewModel(),
+    playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
     volumeKeyEvents: SharedFlow<Unit>? = null
 ) {
 
@@ -232,6 +234,17 @@ fun PlayerScreen(
             // If app is dark, we want light icons (false)
             // If app is light, we want dark icons (true)
             insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme
+        }
+    }
+    
+    // Sync dominant color to PlayerViewModel for Widget
+    // Sync dominant color to PlayerViewModel for Widget
+    LaunchedEffect(dominantColors) {
+        // Use primary or secondary color, ensure it's suitable for background
+        val colorArgb = dominantColors.primary.toArgb()
+        // Only update if it's a valid color (not transparent)
+        if (colorArgb != 0) {
+            playerViewModel.updateDominantColor(colorArgb)
         }
     }
 
