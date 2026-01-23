@@ -148,8 +148,6 @@ fun PlayerScreen(
     isPostingComment: Boolean = false,
     onPostComment: (String) -> Unit = {},
     isLoadingMoreComments: Boolean = false,
-    onPostComment: (String) -> Unit = {},
-    isLoadingMoreComments: Boolean = false,
     onLoadMoreComments: () -> Unit = {},
     // Lyrics Provider
     selectedLyricsProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,

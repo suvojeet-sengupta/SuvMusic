@@ -272,7 +272,6 @@ fun LyricsScreen(
                     textAlign = TextAlign.Center
                 )
             } else {
-            } else {
                 Spacer(modifier = Modifier.height(16.dp))
             }
             

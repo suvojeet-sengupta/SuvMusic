@@ -353,8 +353,6 @@ fun NavGraph(
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 onSetSleepTimer = onSetSleepTimer,
                 volumeKeyEvents = volumeKeyEvents,
-                onSetSleepTimer = onSetSleepTimer,
-                volumeKeyEvents = volumeKeyEvents,
                 onSetPlaybackParameters = onSetPlaybackParameters,
                 selectedLyricsProvider = selectedLyricsProvider,
                 onLyricsProviderChange = onLyricsProviderChange
