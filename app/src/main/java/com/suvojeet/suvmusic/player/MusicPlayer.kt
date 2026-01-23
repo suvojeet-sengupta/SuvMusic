@@ -1037,6 +1037,33 @@ class MusicPlayer @Inject constructor(
             }
         }
     }
+
+    /**
+     * Add songs to be played next (immediately after current song).
+     */
+    fun playNext(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        
+        scope.launch {
+            val currentIndex = _playerState.value.currentIndex
+            // If nothing playing, just add to end (which is beginning)
+            val targetIndex = if (currentIndex < 0) 0 else currentIndex + 1
+            
+            val currentQueue = _playerState.value.queue.toMutableList()
+            // Safety check for index
+            val safeIndex = targetIndex.coerceAtMost(currentQueue.size)
+            
+            currentQueue.addAll(safeIndex, songs)
+            
+            _playerState.update { it.copy(queue = currentQueue) }
+            
+            // Add media items to player
+            songs.forEachIndexed { i, song ->
+                val mediaItem = createMediaItem(song, resolveStream = false)
+                mediaController?.addMediaItem(safeIndex + i, mediaItem)
+            }
+        }
+    }
     
     /**
      * Toggle video mode for YouTube songs.
