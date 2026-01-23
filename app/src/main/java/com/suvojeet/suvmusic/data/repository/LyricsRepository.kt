@@ -276,41 +276,77 @@ class LyricsRepository @Inject constructor(
 
     private fun parseLrcLyrics(lrcContent: String): List<LyricsLine> {
         val lines = mutableListOf<LyricsLine>()
-        val lrcPattern = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")  // [mm:ss.xx]text
-        
-        lrcContent.split("\n").forEach { line ->
-            val match = lrcPattern.find(line)
-            if (match != null) {
-                val minutes = match.groupValues[1].toLongOrNull() ?: 0L
-                val seconds = match.groupValues[2].toLongOrNull() ?: 0L
-                val millisPart = match.groupValues[3]
+        val lrcPattern = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")
+        val wordTimingPattern = Regex("<(.*)>")
+
+        val rawLines = lrcContent.split("\n")
+        var i = 0
+        while (i < rawLines.size) {
+            val line = rawLines[i]
+            val lrcMatch = lrcPattern.find(line)
+            
+            if (lrcMatch != null) {
+                // Parse Standard Line
+                val minutes = lrcMatch.groupValues[1].toLongOrNull() ?: 0L
+                val seconds = lrcMatch.groupValues[2].toLongOrNull() ?: 0L
+                val millisPart = lrcMatch.groupValues[3]
                 val millis = if (millisPart.length == 2) {
                     (millisPart.toLongOrNull() ?: 0L) * 10
                 } else {
                     millisPart.toLongOrNull() ?: 0L
                 }
-                val text = match.groupValues[4].trim()
+                val text = lrcMatch.groupValues[4].trim()
                 
                 val startTimeMs = (minutes * 60 * 1000) + (seconds * 1000) + millis
                 
+                // Check if NEXT line is word timing metadata
+                var words: List<com.suvojeet.suvmusic.data.model.LyricsWord>? = null
+                if (i + 1 < rawLines.size) {
+                    val nextLine = rawLines[i + 1].trim()
+                    val wordMatch = wordTimingPattern.find(nextLine)
+                    if (wordMatch != null) {
+                        try {
+                            val content = wordMatch.groupValues[1]
+                            val wordParts = content.split("|")
+                            words = wordParts.mapNotNull { part ->
+                                val p = part.split(":")
+                                if (p.size >= 3) {
+                                    val wText = p[0]
+                                    val wStart = (p[1].toDoubleOrNull() ?: 0.0) * 1000
+                                    val wEnd = (p[2].toDoubleOrNull() ?: 0.0) * 1000
+                                    com.suvojeet.suvmusic.data.model.LyricsWord(
+                                        text = wText,
+                                        startTimeMs = wStart.toLong(),
+                                        endTimeMs = wEnd.toLong()
+                                    )
+                                } else null
+                            }
+                            i++ // Skip the timing line since we consumed it
+                        } catch (e: Exception) {
+                            // Ignore parsing errors for words
+                        }
+                    }
+                }
+
                 if (text.isNotBlank()) {
                     lines.add(
                         LyricsLine(
                             text = text,
-                            startTimeMs = startTimeMs
+                            startTimeMs = startTimeMs,
+                            words = words
                         )
                     )
                 }
             }
+            i++
         }
         
         // Calculate end times based on next line's start time
-        for (i in lines.indices) {
-            if (i < lines.lastIndex) {
-                lines[i] = lines[i].copy(endTimeMs = lines[i + 1].startTimeMs)
+        for (j in lines.indices) {
+            if (j < lines.lastIndex) {
+                lines[j] = lines[j].copy(endTimeMs = lines[j + 1].startTimeMs)
             } else {
-                // Last line - add 5 seconds as default duration
-                lines[i] = lines[i].copy(endTimeMs = lines[i].startTimeMs + 5000)
+                lines[j] = lines[j].copy(endTimeMs = lines[j].startTimeMs + 5000)
             }
         }
         

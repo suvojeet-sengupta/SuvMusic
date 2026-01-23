@@ -301,64 +301,134 @@ fun LyricsList(
                     label = "scale"
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(
-                            onClick = {
-                                if (isSelectionMode) {
-                                    // Toggle selection
-                                    val newSelection = selectedIndices.toMutableSet()
-                                    if (isSelected) {
-                                        newSelection.remove(index)
-                                        if (newSelection.isEmpty()) {
-                                            isSelectionMode = false // Exit if empty
-                                        }
-                                    } else {
-                                        if (newSelection.size < 5) {
-                                            newSelection.add(index)
-                                        } else {
-                                            // Max 5 lines reached feedback?
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        }
-                                    }
-                                    selectedIndices = newSelection
-                                } else if (lyrics.isSynced && line.startTimeMs > 0) {
-                                    onSeekTo(line.startTimeMs)
+                if (isSelectionMode) {
+                    val isSelected = selectedIndices.contains(index)
+                    val alpha by animateFloatAsState(
+                        targetValue = if (isSelected) 1f else 0.3f, 
+                        label = "alpha"
+                    )
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val newSelection = selectedIndices.toMutableSet()
+                                if (isSelected) {
+                                    newSelection.remove(index)
+                                    if (newSelection.isEmpty()) isSelectionMode = false 
+                                } else {
+                                    if (newSelection.size < 5) newSelection.add(index)
                                 }
-                            },
-                            onLongClick = {
-                                if (!isSelectionMode) {
-                                    isSelectionMode = true
-                                    selectedIndices = setOf(index)
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
+                                selectedIndices = newSelection
                             }
-                        )
-                        .padding(horizontal = 32.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Selection Checkbox (Visible only in selection mode)
-                    if (isSelectionMode) {
-                        Icon(
-                            imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
-                            contentDescription = if (isSelected) "Selected" else "Unselected",
-                            tint = if (isSelected) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.3f),
-                            modifier = Modifier.size(24.dp).padding(end = 16.dp)
+                            .padding(horizontal = 32.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isSelectionMode) {
+                            Icon(
+                                imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
+                                contentDescription = if (isSelected) "Selected" else "Unselected",
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.3f),
+                                modifier = Modifier.size(24.dp).padding(end = 16.dp)
+                            )
+                        }
+                        
+                        Text(
+                            text = line.text,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 36.sp
+                            ),
+                            color = textColor.copy(alpha = alpha),
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.weight(1f)
                         )
                     }
-
-                    Text(
-                        text = line.text,
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 36.sp
-                        ),
-                        color = textColor.copy(alpha = alpha),
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.weight(1f)
+                } else {
+                    // Synced Lyrics View
+                    val isActive = lyrics.isSynced && index == activeLineIndex
+                    
+                    val scale by animateFloatAsState(
+                        targetValue = if (isActive) 1.05f else 1f, // Reduced scale for smoother feel
+                        animationSpec = tween(durationMillis = 300),
+                        label = "scale"
                     )
+
+                    // Word-by-word or standard line
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (lyrics.isSynced && line.startTimeMs > 0) {
+                                    onSeekTo(line.startTimeMs)
+                                }
+                            }
+                            .padding(horizontal = 32.dp, vertical = 8.dp) // Reduced vertical padding
+                    ) {
+                        if (line.words != null && line.words.isNotEmpty() && lyrics.isSynced) {
+                            // Word-by-word rendering
+                            OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                line.words.forEach { word ->
+                                    // Word is active if currentTime is within [startTime, endTime]
+                                    // OR if it's in the past of the current line but we're still processing this line
+                                    val isWordActive = isActive && currentTime >= word.startTimeMs
+                                    
+                                    val wordAlpha by animateFloatAsState(
+                                        targetValue = if (isActive) {
+                                            if (currentTime >= word.startTimeMs) 1f else 0.4f
+                                        } else 0.3f, // Inactive lines are dimmed
+                                        animationSpec = tween(300),
+                                        label = "wordAlpha"
+                                    )
+                                    
+                                    val wordColor = if (isActive && currentTime >= word.startTimeMs) {
+                                        textColor // Highlighted
+                                    } else {
+                                        textColor // Alpha handles the dimming
+                                    }
+
+                                    // Add glow effect for currently sung word?
+                                    // For now, simple opacity transition is cleaner
+                                    
+                                    Text(
+                                        text = word.text,
+                                        style = MaterialTheme.typography.headlineMedium.copy(
+                                            fontSize = 26.sp, // Slightly larger
+                                            fontWeight = FontWeight.Bold,
+                                            lineHeight = 40.sp
+                                        ),
+                                        color = wordColor.copy(alpha = wordAlpha),
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            // Standard line rendering
+                            val lineAlpha by animateFloatAsState(
+                                targetValue = if (isActive || !lyrics.isSynced) 1f else 0.3f, // Dim inactive lines more
+                                animationSpec = tween(300),
+                                label = "lineAlpha"
+                            )
+                            
+                            Text(
+                                text = line.text,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 36.sp
+                                ),
+                                color = textColor.copy(alpha = lineAlpha),
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.fillMaxWidth() // Ensuring full width for text
+                            )
+                        }
+                    }
                 }
             }
         }
