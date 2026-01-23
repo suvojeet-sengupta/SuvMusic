@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens
 
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -42,7 +43,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -80,6 +88,9 @@ fun DownloadsScreen(
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
     val downloadedSongs by viewModel.downloadedSongs.collectAsState()
+    val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val selectedSongIds by viewModel.selectedSongIds.collectAsState()
+    var showMenu by remember { mutableStateOf(false) }
 
     // Theme detection - match PlayerScreen approach
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -148,23 +159,85 @@ fun DownloadsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = dominantColors.onBackground
+                        if (isSelectionMode) {
+                            IconButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = dominantColors.onBackground
+                                )
+                            }
+                            
+                            Text(
+                                text = "${selectedSongIds.size} Selected",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = dominantColors.onBackground,
+                                fontWeight = FontWeight.SemiBold
                             )
+                            
+                            Row {
+                                IconButton(onClick = { viewModel.selectAll() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Select All",
+                                        tint = dominantColors.onBackground
+                                    )
+                                }
+                                IconButton(onClick = { viewModel.deleteSelected() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete Selected",
+                                        tint = dominantColors.onBackground
+                                    )
+                                }
+                            }
+                        } else {
+                            IconButton(onClick = onBackClick) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = dominantColors.onBackground
+                                )
+                            }
+                            
+                            Text(
+                                text = "DOWNLOADS",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = dominantColors.onBackground.copy(alpha = 0.7f),
+                                letterSpacing = 2.sp
+                            )
+                            
+                            Box {
+                                IconButton(onClick = { showMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "Menu",
+                                        tint = dominantColors.onBackground
+                                    )
+                                }
+                                
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Delete All", color = MaterialTheme.colorScheme.onSurface) },
+                                        onClick = { 
+                                            showMenu = false
+                                            viewModel.deleteAll() 
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    )
+                                }
+                            }
                         }
-                        
-                        Text(
-                            text = "DOWNLOADS",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = dominantColors.onBackground.copy(alpha = 0.7f),
-                            letterSpacing = 2.sp
-                        )
-                        
-                        // Spacer for symmetry
-                        Spacer(modifier = Modifier.size(48.dp))
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -319,11 +392,23 @@ fun DownloadsScreen(
                 DownloadedSongCard(
                     song = song,
                     index = index + 1,
-                    onClick = { onSongClick(downloadedSongs, index) },
+                    onClick = { 
+                        if (isSelectionMode) {
+                            viewModel.toggleSelection(song.id)
+                        } else {
+                            onSongClick(downloadedSongs, index) 
+                        }
+                    },
+                    onLongClick = {
+                        viewModel.toggleSelection(song.id)
+                    },
                     onDeleteClick = {
                         pendingDeleteSong = song
                         showDeleteDialog = true
                     },
+                    isSelectionMode = isSelectionMode,
+                    isSelected = selectedSongIds.contains(song.id),
+                    onSelectionChange = { viewModel.toggleSelection(song.id) },
                     dominantColors = dominantColors,
                     isDarkTheme = isDarkTheme
                 )
@@ -582,14 +667,19 @@ private fun DownloadedSongCard(
     song: Song,
     index: Int,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onDeleteClick: () -> Unit,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {},
     dominantColors: DominantColors,
     isDarkTheme: Boolean
 ) {
-    val cardBackground = if (isDarkTheme)
-        Color.White.copy(alpha = 0.08f)
-    else
-        Color.Black.copy(alpha = 0.04f)
+    val cardBackground = when {
+        isSelected -> dominantColors.primary.copy(alpha = 0.2f)
+        isDarkTheme -> Color.White.copy(alpha = 0.08f)
+        else -> Color.Black.copy(alpha = 0.04f)
+    }
 
     Row(
         modifier = Modifier
@@ -597,27 +687,41 @@ private fun DownloadedSongCard(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(cardBackground)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Index number with accent styling
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(dominantColors.accent.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = index.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = dominantColors.accent,
-                fontWeight = FontWeight.SemiBold
+        if (isSelectionMode) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = onSelectionChange,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = dominantColors.accent,
+                    uncheckedColor = dominantColors.onBackground.copy(alpha = 0.6f)
+                )
             )
+            Spacer(modifier = Modifier.width(8.dp))
+        } else {
+            // Index number with accent styling
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(dominantColors.accent.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = index.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = dominantColors.accent,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
         }
-
-        Spacer(modifier = Modifier.width(12.dp))
 
         // Thumbnail with shadow
         Box(
@@ -691,17 +795,19 @@ private fun DownloadedSongCard(
             }
         }
 
-        // Delete button
-        IconButton(
-            onClick = onDeleteClick,
-            modifier = Modifier.alpha(0.7f)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete",
-                tint = dominantColors.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
-            )
+        // Delete button (only show when not in selection mode to avoid clutter)
+        if (!isSelectionMode) {
+            IconButton(
+                onClick = onDeleteClick,
+                modifier = Modifier.alpha(0.7f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = dominantColors.onBackground.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
