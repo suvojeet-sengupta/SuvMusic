@@ -39,6 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -60,7 +63,8 @@ enum class SeekbarStyle {
     WAVE_LINE,     // Sine wave line
     CLASSIC,       // Simple progress bar
     DOTS,          // Animated dots
-    GRADIENT_BAR   // Gradient progress bar with glow
+    GRADIENT_BAR,  // Gradient progress bar with glow
+    MATERIAL       // Standard Material 3 Slider
 }
 
 /**
@@ -237,7 +241,29 @@ fun WaveformSeeker(
                             isDragging = isDragging
                         )
                     }
+                    SeekbarStyle.MATERIAL -> {
+                        // Handled outside canvas via Slider
+                    }
                 }
+            }
+            
+            // Material Slider Overlay
+            if (currentStyle == SeekbarStyle.MATERIAL) {
+                androidx.compose.material3.Slider(
+                    value = currentProgress,
+                    onValueChange = { 
+                        currentProgress = it
+                        // Live seeking or wait for drag end depending on preference
+                        // Typically Slider updates live
+                        onSeek(it)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.SliderDefaults.colors(
+                        thumbColor = activeColor,
+                        activeTrackColor = activeColor,
+                        inactiveTrackColor = inactiveColor.copy(alpha = 0.5f)
+                    )
+                )
             }
         }
         
@@ -340,6 +366,7 @@ private fun StylePreviewItem(
         SeekbarStyle.CLASSIC -> "Classic"
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
+        SeekbarStyle.MATERIAL -> "Material 3"
     }
     
     // Preview amplitudes
@@ -379,6 +406,30 @@ private fun StylePreviewItem(
                 }
                 SeekbarStyle.GRADIENT_BAR -> with(GradientBarStyle) {
                     drawPreview(previewProgress, activeColor, inactiveColor)
+                }
+                SeekbarStyle.MATERIAL -> {
+                    val centerY = size.height / 2
+                    val trackHeight = 4.dp.toPx()
+                    // Track
+                    drawRoundRect(
+                        color = inactiveColor.copy(alpha = 0.5f),
+                        topLeft = Offset(0f, centerY - trackHeight / 2),
+                        size = Size(size.width, trackHeight),
+                        cornerRadius = CornerRadius(trackHeight / 2)
+                    )
+                    // Active Track
+                    drawRoundRect(
+                        color = activeColor,
+                        topLeft = Offset(0f, centerY - trackHeight / 2),
+                        size = Size(previewProgress * size.width, trackHeight),
+                        cornerRadius = CornerRadius(trackHeight / 2)
+                    )
+                    // Thumb
+                    drawCircle(
+                        color = activeColor,
+                        radius = 8.dp.toPx(),
+                        center = Offset(previewProgress * size.width, centerY)
+                    )
                 }
             }
         }
