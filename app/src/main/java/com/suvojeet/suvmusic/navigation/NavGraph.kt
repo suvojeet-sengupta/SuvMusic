@@ -141,7 +141,41 @@ fun NavGraph(
                 onRecentsClick = {
                     navController.navigate(Destination.Recents.route)
                 },
+                onExploreClick = { browseId, title ->
+                    navController.navigate(Destination.Explore.buildRoute(browseId, title))
+                },
                 onStartRadio = onStartRadio
+            )
+        }
+        
+        composable(
+            route = Destination.Explore.ROUTE,
+            arguments = listOf(
+                navArgument(Destination.Explore.ARG_BROWSE_ID) { type = NavType.StringType },
+                navArgument(Destination.Explore.ARG_TITLE) { type = NavType.StringType }
+            )
+        ) {
+            com.suvojeet.suvmusic.ui.screens.ExploreScreen(
+                onBackClick = { navController.popBackStack() },
+                onSongClick = { songs, index -> onPlaySong(songs, index) },
+                onPlaylistClick = { playlist ->
+                    navController.navigate(
+                        Destination.Playlist(
+                            playlistId = playlist.id,
+                            name = playlist.name,
+                            thumbnailUrl = playlist.thumbnailUrl
+                        ).route
+                    )
+                },
+                onAlbumClick = { album ->
+                    navController.navigate(
+                        Destination.Album(
+                            albumId = album.id,
+                            name = album.title,
+                            thumbnailUrl = album.thumbnailUrl
+                        ).route
+                    )
+                }
             )
         }
         

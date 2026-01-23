@@ -545,7 +545,7 @@ fun CommunityPlaylistCard(
 @Composable
 fun ExploreGridSection(
     section: HomeSection,
-    onExploreItemClick: (String) -> Unit // New callback
+    onExploreItemClick: (String, String) -> Unit // browseId, title
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HomeSectionHeader(title = section.title)
@@ -566,7 +566,7 @@ fun ExploreGridSection(
                          ExploreItemCard(
                              item = item,
                              modifier = Modifier.weight(1f),
-                             onClick = { onExploreItemClick(item.title) }
+                             onClick = { onExploreItemClick(item.browseId, item.title) }
                          )
                      }
                      if (rowItems.size == 1) {
