@@ -931,6 +931,10 @@ class MusicPlayer @Inject constructor(
         _playerState.update { it.copy(downloadState = state) }
     }
     
+    fun updateDominantColor(color: Int) {
+        _playerState.update { it.copy(dominantColor = color) }
+    }
+    
     fun getPlayer(): Player? = mediaController
     
     fun toggleAutoplay() {
