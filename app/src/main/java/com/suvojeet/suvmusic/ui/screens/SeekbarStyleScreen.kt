@@ -164,6 +164,7 @@ private fun SeekbarStylePreviewCard(
         SeekbarStyle.CLASSIC -> "Classic"
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
+        SeekbarStyle.MATERIAL -> "Material 3"
     }
     
     val previewAmplitudes = remember { List(25) { Random.nextFloat() * 0.6f + 0.4f } }
@@ -195,6 +196,7 @@ private fun SeekbarStylePreviewCard(
                     SeekbarStyle.CLASSIC -> drawClassicPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.DOTS -> drawDotsPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.GRADIENT_BAR -> drawGradientPreview(progress, primaryColor, surfaceColor)
+                    SeekbarStyle.MATERIAL -> drawClassicPreview(progress, primaryColor, surfaceColor)
                 }
             }
             
