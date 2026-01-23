@@ -114,10 +114,20 @@ object AppModule {
     @Provides
     @Singleton
     fun provideLyricsRepository(
+        @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,
         youTubeRepository: YouTubeRepository,
-        jioSaavnRepository: JioSaavnRepository
+        jioSaavnRepository: JioSaavnRepository,
+        betterLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.BetterLyricsProvider,
+        simpMusicLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.SimpMusicLyricsProvider
     ): com.suvojeet.suvmusic.data.repository.LyricsRepository {
-        return com.suvojeet.suvmusic.data.repository.LyricsRepository(okHttpClient, youTubeRepository, jioSaavnRepository)
+        return com.suvojeet.suvmusic.data.repository.LyricsRepository(
+            context,
+            okHttpClient,
+            youTubeRepository,
+            jioSaavnRepository,
+            betterLyricsProvider,
+            simpMusicLyricsProvider
+        )
     }
 }
