@@ -148,7 +148,12 @@ fun PlayerScreen(
     isPostingComment: Boolean = false,
     onPostComment: (String) -> Unit = {},
     isLoadingMoreComments: Boolean = false,
+    onPostComment: (String) -> Unit = {},
+    isLoadingMoreComments: Boolean = false,
     onLoadMoreComments: () -> Unit = {},
+    // Lyrics Provider
+    selectedLyricsProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
+    onLyricsProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
     // Sleep timer
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -793,7 +798,10 @@ fun PlayerScreen(
                     isDarkTheme = isAppInDarkTheme,
                     onSeekTo = onSeekTo,
                     songTitle = song?.title ?: "",
-                    artistName = song?.artist ?: ""
+                    artistName = song?.artist ?: "",
+                    duration = playerState.duration,
+                    selectedProvider = selectedLyricsProvider,
+                    onProviderChange = onLyricsProviderChange
                 )
             }
 

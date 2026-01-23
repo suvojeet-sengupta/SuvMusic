@@ -74,6 +74,9 @@ fun NavGraph(
     onPostComment: (String) -> Unit = {},
     isLoadingMoreComments: Boolean = false,
     onLoadMoreComments: () -> Unit = {},
+    // Lyrics Provider
+    selectedLyricsProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
+    onLyricsProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
     // Sleep timer
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -350,7 +353,11 @@ fun NavGraph(
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 onSetSleepTimer = onSetSleepTimer,
                 volumeKeyEvents = volumeKeyEvents,
-                onSetPlaybackParameters = onSetPlaybackParameters
+                onSetSleepTimer = onSetSleepTimer,
+                volumeKeyEvents = volumeKeyEvents,
+                onSetPlaybackParameters = onSetPlaybackParameters,
+                selectedLyricsProvider = selectedLyricsProvider,
+                onLyricsProviderChange = onLyricsProviderChange
             )
         }
         
