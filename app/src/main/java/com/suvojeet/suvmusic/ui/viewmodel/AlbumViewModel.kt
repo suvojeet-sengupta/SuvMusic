@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.Album
+import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +24,8 @@ data class AlbumUiState(
 @HiltViewModel
 class AlbumViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
+    private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -86,6 +89,24 @@ class AlbumViewModel @Inject constructor(
                         error = e.message,
                         isLoading = false
                     )
+                }
+        }
+    }
+    }
+
+    fun playNext(songs: List<Song>) {
+        musicPlayer.playNext(songs)
+    }
+
+    fun addToQueue(songs: List<Song>) {
+        musicPlayer.addToQueue(songs)
+    }
+
+    fun downloadAlbum(songs: List<Song>) {
+        viewModelScope.launch {
+            songs.forEach { song ->
+                launch {
+                    downloadRepository.downloadSong(song)
                 }
             }
         }
