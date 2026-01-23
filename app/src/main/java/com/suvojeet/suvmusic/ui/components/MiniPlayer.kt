@@ -69,7 +69,9 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     onCloseClick: (() -> Unit)? = null,
     progressProvider: () -> Float = { playerState.progress },
-    alpha: Float = 1f
+    alpha: Float = 1f,
+    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
+    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
 ) {
     val song = playerState.currentSong
 
@@ -89,174 +91,196 @@ fun MiniPlayer(
         label = "MiniPlayerBackground"
     )
 
-    AnimatedVisibility(
-        visible = song != null,
-        enter = slideInVertically { it },
-        exit = slideOutVertically { it },
-        modifier = modifier
-    ) {
-        song?.let {
-            // Swipe Logic
-            var offsetX by remember { mutableFloatStateOf(0f) }
-            var offsetY by remember { mutableFloatStateOf(0f) }
-            val swipeThreshold = 100f
+    // IMPORTANT: Shared Transition Logic
+    // We apply sharedElement to the Surface (container) and the Artwork
+    
+    song?.let {
+        // Swipe Logic
+        var offsetX by remember { mutableFloatStateOf(0f) }
+        var offsetY by remember { mutableFloatStateOf(0f) }
+        val swipeThreshold = 100f
 
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                    .shadow(
-                        elevation = 16.dp,
-                        shape = playerShape,
-                        spotColor = dominantColors.primary.copy(alpha = 0.5f)
-                    )
-                    .clip(playerShape)
-                    .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragEnd = {
-                                // Vertical swipe (Up) - Open Player
-                                if (offsetY < -swipeThreshold) {
-                                    onPlayerClick()
-                                }
-                                // Horizontal swipe - Previous/Next
-                                else if (offsetX > swipeThreshold) {
-                                    onPreviousClick()
-                                } else if (offsetX < -swipeThreshold) {
-                                    onNextClick()
-                                }
-                                offsetX = 0f
-                                offsetY = 0f
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                offsetX += dragAmount.x
-                                offsetY += dragAmount.y
-                            }
-                        )
-                    }
-                    .clickable(onClick = onPlayerClick),
-                color = backgroundColor,
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Album Art
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (song.thumbnailUrl != null) {
-                                AsyncImage(
-                                    model = song.thumbnailUrl,
-                                    contentDescription = song.title,
-                                    modifier = Modifier.size(42.dp),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.width(10.dp))
-                        
-                        // Song Info
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = song.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = dominantColors.onBackground,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = song.artist,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = dominantColors.onBackground.copy(alpha = 0.7f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        // Play/Pause Button - Apple Music style
-                        IconButton(
-                            onClick = onPlayPauseClick,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (playerState.isPlaying) 
-                                    Icons.Default.Pause 
-                                else 
-                                    Icons.Default.PlayArrow,
-                                contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                                tint = dominantColors.onBackground,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(4.dp))
-                        
-                        // Next Button
-                        IconButton(
-                            onClick = onNextClick,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SkipNext,
-                                contentDescription = "Next",
-                                tint = dominantColors.onBackground,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+        val sharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+            with(sharedTransitionScope) {
+                 Modifier.sharedBounds(
+                    rememberSharedContentState(key = "player_bound"),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.ScaleToBounds(ContentScale.FillWidth),
+                    placeHolderSize = androidx.compose.animation.SharedTransitionScope.PlaceHolderSize.animatedSize
+                )
+            }
+        } else Modifier
 
-                        // Close Button (Optional, for floating)
-                        if (onCloseClick != null) {
-                            IconButton(
-                                onClick = onCloseClick,
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Close",
-                                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(18.dp)
-                                )
+        Surface(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .shadow(
+                    elevation = 16.dp,
+                    shape = playerShape,
+                    spotColor = dominantColors.primary.copy(alpha = 0.5f)
+                )
+                .clip(playerShape)
+                .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragEnd = {
+                            // Vertical swipe (Up) - Open Player
+                            if (offsetY < -swipeThreshold) {
+                                onPlayerClick()
                             }
+                            // Horizontal swipe - Previous/Next
+                            else if (offsetX > swipeThreshold) {
+                                onPreviousClick()
+                            } else if (offsetX < -swipeThreshold) {
+                                onNextClick()
+                            }
+                            offsetX = 0f
+                            offsetY = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetX += dragAmount.x
+                            offsetY += dragAmount.y
                         }
-                    }
-                    // Progress bar
-                    val animatedProgress by animateFloatAsState(
-                        targetValue = progressProvider(),
-                        animationSpec = spring(stiffness = Spring.StiffnessLow),
-                        label = "progress"
-                    )
-                    LinearProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp),
-                        trackColor = dominantColors.onBackground.copy(alpha = 0.2f),
-                        color = dominantColors.accent,
-                        strokeCap = StrokeCap.Round
                     )
                 }
+                .clickable(onClick = onPlayerClick)
+                .then(sharedModifier),
+            color = backgroundColor,
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Album Art
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val artworkModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                            with(sharedTransitionScope) {
+                                Modifier.sharedElement(
+                                    rememberSharedContentState(key = "album_art"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            }
+                        } else Modifier
+
+                        if (song.thumbnailUrl != null) {
+                            AsyncImage(
+                                model = song.thumbnailUrl,
+                                contentDescription = song.title,
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .then(artworkModifier),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .then(artworkModifier),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.width(10.dp))
+                    
+                    // Song Info
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        // We can optionally animate text too, but keep it simple for now
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = dominantColors.onBackground,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = song.artist,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    // Play/Pause Button - Apple Music style
+                    IconButton(
+                        onClick = onPlayPauseClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (playerState.isPlaying) 
+                                Icons.Default.Pause 
+                            else 
+                                Icons.Default.PlayArrow,
+                            contentDescription = if (playerState.isPlaying) "Pause" else "Play",
+                            tint = dominantColors.onBackground,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    // Next Button
+                    IconButton(
+                        onClick = onNextClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "Next",
+                            tint = dominantColors.onBackground,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    // Close Button (Optional, for floating)
+                    if (onCloseClick != null) {
+                        IconButton(
+                            onClick = onCloseClick,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+                // Progress bar
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progressProvider(),
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "progress"
+                )
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp),
+                    trackColor = dominantColors.onBackground.copy(alpha = 0.2f),
+                    color = dominantColors.accent,
+                    strokeCap = StrokeCap.Round
+                )
             }
         }
     }

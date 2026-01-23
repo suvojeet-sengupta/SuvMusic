@@ -444,115 +444,133 @@ fun SuvMusicApp(
         onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
     )
     
+    // Default colors for non-player screens
+    val defaultDominantColors = DominantColors(
+        primary = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+        secondary = androidx.compose.material3.MaterialTheme.colorScheme.secondary,
+        accent = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
+        onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+    )
+    
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            snackbarHost = {
-                SnackbarHost(hostState = snackbarHostState) { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
-            },
-            bottomBar = {
-                if (showBottomNav) {
-                    Column {
-
-                        
-                        // Bottom navigation
-                        val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
-                        
-                        ExpressiveBottomNav(
-                            currentDestination = currentDestination,
-                            onDestinationChange = { destination ->
-                                navController.navigate(destination.route) {
-                                    popUpTo(Destination.Home.route) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            alpha = navBarAlpha
+        @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+        androidx.compose.animation.SharedTransitionLayout {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                snackbarHost = {
+                    SnackbarHost(hostState = snackbarHostState) { data ->
+                        Snackbar(
+                            snackbarData = data,
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
+                            contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
+                },
+                bottomBar = {
+                    if (showBottomNav) {
+                        Column {
+
+                            
+                            // Bottom navigation
+                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
+                            
+                            ExpressiveBottomNav(
+                                currentDestination = currentDestination,
+                                onDestinationChange = { destination ->
+                                    navController.navigate(destination.route) {
+                                        popUpTo(Destination.Home.route) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                alpha = navBarAlpha
+                            )
+                        }
+                    }
                 }
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        bottom = if (showBottomNav) innerPadding.calculateBottomPadding() else innerPadding.calculateBottomPadding()
-                    )
-            ) {
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            bottom = if (showBottomNav) innerPadding.calculateBottomPadding() else innerPadding.calculateBottomPadding()
+                        )
+                ) {
 
-                NavGraph(
-                    navController = navController,
-                    playbackInfo = playbackInfo,
-                    playerState = playerState,
-                    sessionManager = sessionManager,
-                    onPlaySong = { songs, index ->
-                        if (songs.isNotEmpty() && index in songs.indices) {
-                            playerViewModel.playSong(songs[index], songs, index)
-                        }
-                    },
-                    onPlayPause = { playerViewModel.togglePlayPause() },
-                    onSeekTo = { playerViewModel.seekTo(it) },
-                    onNext = { playerViewModel.seekToNext() },
-                    onPrevious = { playerViewModel.seekToPrevious() },
-                    onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
-                    onLikeCurrentSong = { playerViewModel.likeCurrentSong() },
-                    onShuffleToggle = { playerViewModel.toggleShuffle() },
-                    onRepeatToggle = { playerViewModel.toggleRepeat() },
-                    onToggleAutoplay = { playerViewModel.toggleAutoplay() },
-                    onToggleVideoMode = { playerViewModel.toggleVideoMode() },
-                    onStartRadio = { 
-                        playbackInfo.currentSong?.let { song ->
-                            playerViewModel.startRadio(song)
-                        }
-                    },
-                    onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
-                    isRadioMode = isRadioMode,
-                    isLoadingMoreSongs = isLoadingMoreSongs,
-                    onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
-                    onRefreshDevices = { playerViewModel.refreshDevices() },
-                    player = playerViewModel.getPlayer(),
-                    lyrics = lyrics,
-                    isFetchingLyrics = isFetchingLyrics,
-                    comments = comments,
-                    isFetchingComments = isFetchingComments,
-                    isLoggedIn = playerViewModel.isLoggedIn(),
-                    isPostingComment = isPostingComment,
-                    onPostComment = { commentText -> playerViewModel.postComment(commentText) },
-                    isLoadingMoreComments = isLoadingMoreComments,
-                    onLoadMoreComments = { playerViewModel.loadMoreComments() },
-                    sleepTimerOption = sleepTimerOption,
-                    sleepTimerRemainingMs = sleepTimerRemainingMs,
-                    onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
-                    onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
-                    volumeKeyEvents = volumeKeyEvents,
-                    downloadRepository = downloadRepository,
-                    selectedLyricsProvider = selectedLyricsProvider,
-                    enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsState().value,
-                    onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
-                    startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
-                )
-
-                // MiniPlayer floating content overlay
-                if (showMiniPlayer) {
-                    MiniPlayer(
+                    NavGraph(
+                        navController = navController,
+                        playbackInfo = playbackInfo,
                         playerState = playerState,
-                        onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                        onNextClick = { playerViewModel.seekToNext() },
-                        onPreviousClick = { playerViewModel.seekToPrevious() },
-                        onPlayerClick = { navController.navigate(Destination.Player.route) },
-
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                        alpha = miniPlayerAlpha
+                        sessionManager = sessionManager,
+                        onPlaySong = { songs, index ->
+                            if (songs.isNotEmpty() && index in songs.indices) {
+                                playerViewModel.playSong(songs[index], songs, index)
+                            }
+                        },
+                        onPlayPause = { playerViewModel.togglePlayPause() },
+                        onSeekTo = { playerViewModel.seekTo(it) },
+                        onNext = { playerViewModel.seekToNext() },
+                        onPrevious = { playerViewModel.seekToPrevious() },
+                        onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
+                        onLikeCurrentSong = { playerViewModel.likeCurrentSong() },
+                        onShuffleToggle = { playerViewModel.toggleShuffle() },
+                        onRepeatToggle = { playerViewModel.toggleRepeat() },
+                        onToggleAutoplay = { playerViewModel.toggleAutoplay() },
+                        onToggleVideoMode = { playerViewModel.toggleVideoMode() },
+                        onStartRadio = { 
+                            playbackInfo.currentSong?.let { song ->
+                                playerViewModel.startRadio(song)
+                            }
+                        },
+                        onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
+                        isRadioMode = isRadioMode,
+                        isLoadingMoreSongs = isLoadingMoreSongs,
+                        onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
+                        onRefreshDevices = { playerViewModel.refreshDevices() },
+                        player = playerViewModel.getPlayer(),
+                        lyrics = lyrics,
+                        isFetchingLyrics = isFetchingLyrics,
+                        comments = comments,
+                        isFetchingComments = isFetchingComments,
+                        isLoggedIn = playerViewModel.isLoggedIn(),
+                        isPostingComment = isPostingComment,
+                        onPostComment = { commentText -> playerViewModel.postComment(commentText) },
+                        isLoadingMoreComments = isLoadingMoreComments,
+                        onLoadMoreComments = { playerViewModel.loadMoreComments() },
+                        sleepTimerOption = sleepTimerOption,
+                        sleepTimerRemainingMs = sleepTimerRemainingMs,
+                        onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
+                        onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
+                        volumeKeyEvents = volumeKeyEvents,
+                        downloadRepository = downloadRepository,
+                        selectedLyricsProvider = selectedLyricsProvider,
+                        enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsState().value,
+                        onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
+                        startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route,
+                        sharedTransitionScope = this@SharedTransitionLayout
                     )
+
+                    // MiniPlayer floating content overlay
+                    AnimatedVisibility(
+                        visible = showMiniPlayer,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    ) {
+                        MiniPlayer(
+                            playerState = playerState,
+                            onPlayPauseClick = { playerViewModel.togglePlayPause() },
+                            onNextClick = { playerViewModel.seekToNext() },
+                            onPreviousClick = { playerViewModel.seekToPrevious() },
+                            onPlayerClick = { navController.navigate(Destination.Player.route) },
+                            modifier = Modifier,
+                            alpha = miniPlayerAlpha,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this
+                        )
+                    }
                 }
             }
         }
