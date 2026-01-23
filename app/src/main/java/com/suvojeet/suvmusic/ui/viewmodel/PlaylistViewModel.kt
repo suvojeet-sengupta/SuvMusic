@@ -209,11 +209,7 @@ class PlaylistViewModel @Inject constructor(
 
     fun downloadPlaylist(songs: List<Song>) {
         viewModelScope.launch {
-            songs.forEach { song ->
-                launch {
-                    downloadRepository.downloadSong(song)
-                }
-            }
+            downloadRepository.downloadSongs(songs)
         }
     }
 }
