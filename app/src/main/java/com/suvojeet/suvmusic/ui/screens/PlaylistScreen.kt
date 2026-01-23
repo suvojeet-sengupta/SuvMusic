@@ -504,7 +504,7 @@ private fun PlaylistHeader(
         
         // Updated info (if you have it, otherwise show song count)
         Text(
-            text = "${playlist.songs.size} songs",
+            text = com.suvojeet.suvmusic.util.TimeUtil.formatSongCountAndDuration(playlist.songs),
             style = MaterialTheme.typography.bodySmall,
             color = secondaryContentColor.copy(alpha = 0.5f),
             textAlign = TextAlign.Center,
