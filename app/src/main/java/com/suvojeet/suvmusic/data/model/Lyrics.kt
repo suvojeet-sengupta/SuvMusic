@@ -10,5 +10,12 @@ data class LyricsLine(
     val text: String,
     val startTimeMs: Long = 0L,
     val endTimeMs: Long = 0L,
-    val isHeader: Boolean = false // e.g. "Verse 1", "Chorus" if available
+    val isHeader: Boolean = false,
+    val words: List<LyricsWord>? = null
+)
+
+data class LyricsWord(
+    val text: String,
+    val startTimeMs: Long,
+    val endTimeMs: Long
 )
