@@ -42,7 +42,9 @@ data class SettingsUiState(
     val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = "",
     val doubleTapSeekSeconds: Int = 10,
-    val volumeNormalizationEnabled: Boolean = false
+    val volumeNormalizationEnabled: Boolean = false,
+    val betterLyricsEnabled: Boolean = true,
+    val simpMusicEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -106,6 +108,18 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(doubleTapSeekSeconds = seconds) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.enableBetterLyricsFlow.collect { enabled ->
+                _uiState.update { it.copy(betterLyricsEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.enableSimpMusicFlow.collect { enabled ->
+                _uiState.update { it.copy(simpMusicEnabled = enabled) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -132,7 +146,9 @@ class SettingsViewModel @Inject constructor(
                 musicSource = sessionManager.getMusicSource(),
                 currentVersion = updateRepo.getCurrentVersionName(),
                 doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds(),
-                volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled()
+                volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled(),
+                betterLyricsEnabled = sessionManager.enableBetterLyrics,
+                simpMusicEnabled = sessionManager.enableSimpMusic
             )
         }
     }
@@ -380,6 +396,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setVolumeNormalizationEnabled(enabled)
             _uiState.update { it.copy(volumeNormalizationEnabled = enabled) }
+        }
+    }
+
+    fun setBetterLyricsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setEnableBetterLyrics(enabled)
+            _uiState.update { it.copy(betterLyricsEnabled = enabled) }
+        }
+    }
+
+    fun setSimpMusicEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setEnableSimpMusic(enabled)
+            _uiState.update { it.copy(simpMusicEnabled = enabled) }
         }
     }
 }
