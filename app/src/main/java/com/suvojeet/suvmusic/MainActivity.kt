@@ -50,6 +50,11 @@ import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
 import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.MainViewModel
+import com.suvojeet.suvmusic.data.model.UpdateState
+import com.suvojeet.suvmusic.ui.components.UpdateAvailableDialog
+import com.suvojeet.suvmusic.ui.components.DownloadProgressDialog
+import com.suvojeet.suvmusic.ui.components.UpdateErrorDialog
 import com.suvojeet.suvmusic.utils.NetworkMonitor
 import com.suvojeet.suvmusic.service.DynamicIslandService
 import dagger.hilt.android.AndroidEntryPoint
@@ -256,6 +261,8 @@ fun SuvMusicApp(
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
+    val mainViewModel: MainViewModel = hiltViewModel()
+    val mainUiState by mainViewModel.uiState.collectAsState()
     
     // Optimized states to reduce recompositions
     val playbackInfo by playerViewModel.playbackInfo.collectAsState(initial = com.suvojeet.suvmusic.data.model.PlayerState())
@@ -570,6 +577,32 @@ fun SuvMusicApp(
                     .align(Alignment.CenterEnd)
                     .padding(end = 16.dp)
             )
+        }
+
+        // Global Update Dialogs
+        when (val updateState = mainUiState.updateState) {
+            is UpdateState.UpdateAvailable -> {
+                UpdateAvailableDialog(
+                    update = updateState.update,
+                    currentVersion = mainUiState.currentVersion,
+                    onDownload = { mainViewModel.downloadUpdate(updateState.update.downloadUrl, updateState.update.versionName) },
+                    onDismiss = { mainViewModel.dismissUpdateDialog() }
+                )
+            }
+            is UpdateState.Downloading -> {
+                DownloadProgressDialog(
+                    progress = updateState.progress,
+                    onCancel = { mainViewModel.cancelDownload() }
+                )
+            }
+            is UpdateState.Error -> {
+                UpdateErrorDialog(
+                    errorMessage = updateState.message,
+                    onRetry = { mainViewModel.dismissUpdateDialog() }, // Just dismiss for now on auto-check error
+                    onDismiss = { mainViewModel.dismissUpdateDialog() }
+                )
+            }
+            else -> {}
         }
     }
 }
