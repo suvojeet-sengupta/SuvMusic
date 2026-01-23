@@ -39,6 +39,9 @@ class AlbumViewModel @Inject constructor(
     
     private val _uiState = MutableStateFlow(AlbumUiState())
     val uiState: StateFlow<AlbumUiState> = _uiState.asStateFlow()
+    
+    val batchProgress = downloadRepository.batchProgress
+    val queueState = downloadRepository.queueState
 
     init {
         // Initial state from navigation args
