@@ -529,6 +529,7 @@ fun SuvMusicApp(
                     volumeKeyEvents = volumeKeyEvents,
                     downloadRepository = downloadRepository,
                     selectedLyricsProvider = selectedLyricsProvider,
+                    enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsState().value,
                     onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                     startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route
                 )

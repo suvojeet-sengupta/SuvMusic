@@ -58,6 +58,19 @@ class PlayerViewModel @Inject constructor(
     private val _selectedLyricsProvider = kotlinx.coroutines.flow.MutableStateFlow(LyricsProviderType.AUTO)
     val selectedLyricsProvider: StateFlow<LyricsProviderType> = _selectedLyricsProvider.asStateFlow()
 
+    // Dynamic Lyrics Providers State
+    private val _enabledLyricsProviders = kotlinx.coroutines.flow.MutableStateFlow<Map<LyricsProviderType, Boolean>>(
+        mapOf(
+            LyricsProviderType.AUTO to true,
+            LyricsProviderType.BETTER_LYRICS to true,
+            LyricsProviderType.SIMP_MUSIC to true,
+            LyricsProviderType.LRCLIB to true,
+            LyricsProviderType.JIOSAAVN to true,
+            LyricsProviderType.YOUTUBE to true
+        )
+    )
+    val enabledLyricsProviders: StateFlow<Map<LyricsProviderType, Boolean>> = _enabledLyricsProviders.asStateFlow()
+
     private val _commentsState = kotlinx.coroutines.flow.MutableStateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?>(null)
     val commentsState: StateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?> = _commentsState.asStateFlow()
 
@@ -96,6 +109,36 @@ class PlayerViewModel @Inject constructor(
         observeCurrentSong()
         observeDownloads()
         observeQueuePositionForAutoplay()
+        observeLyricsProviderSettings()
+    }
+    
+    private fun observeLyricsProviderSettings() {
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                sessionManager.enableBetterLyricsFlow,
+                sessionManager.enableSimpMusicFlow,
+                sessionManager.developerModeFlow
+            ) { betterLyricsEnabled, simpMusicEnabled, devMode ->
+                mapOf(
+                    LyricsProviderType.AUTO to true, // Always enabled
+                    LyricsProviderType.BETTER_LYRICS to betterLyricsEnabled,
+                    LyricsProviderType.SIMP_MUSIC to simpMusicEnabled,
+                    LyricsProviderType.LRCLIB to true,
+                    LyricsProviderType.JIOSAAVN to devMode,
+                    LyricsProviderType.YOUTUBE to true
+                )
+            }.collectLatest { newMap ->
+                val previousMap = _enabledLyricsProviders.value
+                _enabledLyricsProviders.value = newMap
+                
+                // If currently selected provider was disabled, switch to AUTO
+                val currentSelection = _selectedLyricsProvider.value
+                if (currentSelection != LyricsProviderType.AUTO && newMap[currentSelection] == false) {
+                    android.util.Log.d("PlayerViewModel", "Current provider $currentSelection disabled, switching to AUTO")
+                    switchLyricsProvider(LyricsProviderType.AUTO)
+                }
+            }
+        }
     }
     
     private fun observeCurrentSong() {

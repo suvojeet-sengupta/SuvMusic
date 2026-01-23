@@ -151,6 +151,7 @@ fun PlayerScreen(
     onLoadMoreComments: () -> Unit = {},
     // Lyrics Provider
     selectedLyricsProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
+    enabledLyricsProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
     onLyricsProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
     // Sleep timer
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
@@ -799,6 +800,7 @@ fun PlayerScreen(
                     artistName = song?.artist ?: "",
                     duration = playerState.duration,
                     selectedProvider = selectedLyricsProvider,
+                    enabledProviders = enabledLyricsProviders,
                     onProviderChange = onLyricsProviderChange
                 )
             }
