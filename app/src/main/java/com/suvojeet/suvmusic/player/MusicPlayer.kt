@@ -40,6 +40,7 @@ import androidx.mediarouter.media.MediaRouter
 import androidx.mediarouter.media.MediaRouteSelector
 import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
+import com.suvojeet.suvmusic.util.MusicHapticsManager
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -57,7 +58,8 @@ class MusicPlayer @Inject constructor(
     private val sleepTimerManager: SleepTimerManager,
     private val listeningHistoryRepository: ListeningHistoryRepository,
     private val cache: androidx.media3.datasource.cache.Cache,
-    @com.suvojeet.suvmusic.di.PlayerDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
+    @com.suvojeet.suvmusic.di.PlayerDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
+    private val musicHapticsManager: MusicHapticsManager
 ) {
     
     // ... (existing properties)
@@ -272,6 +274,16 @@ class MusicPlayer @Inject constructor(
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playerState.update { it.copy(isPlaying = isPlaying) }
+            
+            // Music Haptics integration
+            if (isPlaying) {
+                scope.launch {
+                    musicHapticsManager.refreshSettings()
+                    musicHapticsManager.start()
+                }
+            } else {
+                musicHapticsManager.stop()
+            }
         }
         
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -550,8 +562,16 @@ class MusicPlayer @Inject constructor(
                     if (sessionManager.isGaplessPlaybackEnabled()) {
                         checkPreloadNextSong(currentPos, duration)
                     }
+                    
+                    // Music Haptics - simulate amplitude based on progress
+                    // In a real implementation, this would use actual audio analysis
+                    if (_playerState.value.isPlaying) {
+                        val normalizedPosition = (currentPos % 500) / 500f // Creates a beat-like pattern
+                        val simulatedAmplitude = (kotlin.math.sin(normalizedPosition * kotlin.math.PI * 2).toFloat() + 1f) / 2f
+                        musicHapticsManager.processAmplitude(simulatedAmplitude)
+                    }
                 }
-                delay(500)
+                delay(50) // Faster update for haptics
             }
         }
     }

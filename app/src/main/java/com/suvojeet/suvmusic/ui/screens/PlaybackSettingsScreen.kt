@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -52,8 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
+import com.suvojeet.suvmusic.data.model.HapticsIntensity
+import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.data.MusicSource
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import com.suvojeet.suvmusic.util.MusicHapticsManager
 import kotlinx.coroutines.launch
 
 /**
@@ -74,6 +78,10 @@ fun PlaybackSettingsScreen(
     val downloadSheetState = rememberModalBottomSheetState()
     val musicSourceSheetState = rememberModalBottomSheetState()
     val doubleTapSeekSheetState = rememberModalBottomSheetState()
+    var showHapticsModeSheet by remember { mutableStateOf(false) }
+    var showHapticsIntensitySheet by remember { mutableStateOf(false) }
+    val hapticsModeSheetState = rememberModalBottomSheetState()
+    val hapticsIntensitySheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -262,6 +270,57 @@ fun PlaybackSettingsScreen(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
+            // Music Haptics Section
+            SectionTitle("Music Haptics")
+            
+            ListItem(
+                headlineContent = { Text("Music Haptics") },
+                supportingContent = { 
+                    Text("Feel the music with taps & vibrations synced to the beat") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Vibration,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.musicHapticsEnabled,
+                        onCheckedChange = { viewModel.setMusicHapticsEnabled(it) }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            // Show mode and intensity options only when haptics is enabled
+            if (uiState.musicHapticsEnabled) {
+                ListItem(
+                    headlineContent = { Text("Haptics Mode") },
+                    supportingContent = { 
+                        Text(
+                            when (uiState.hapticsMode) {
+                                HapticsMode.OFF -> "Disabled"
+                                HapticsMode.BASIC -> "Basic (Strong beats only)"
+                                HapticsMode.ADVANCED -> "Advanced (Full analysis)"
+                                HapticsMode.CUSTOM -> "Custom"
+                            }
+                        )
+                    },
+                    modifier = Modifier.clickable { showHapticsModeSheet = true },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+                
+                ListItem(
+                    headlineContent = { Text("Vibration Intensity") },
+                    supportingContent = { 
+                        Text(uiState.hapticsIntensity.displayName)
+                    },
+                    modifier = Modifier.clickable { showHapticsIntensitySheet = true },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+            }
+            
             Spacer(modifier = Modifier.height(100.dp))
         }
     }
@@ -449,6 +508,122 @@ fun PlaybackSettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(text = "$seconds seconds")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    // Haptics Mode Bottom Sheet
+    if (showHapticsModeSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showHapticsModeSheet = false },
+            sheetState = hapticsModeSheetState
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Haptics Mode",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Text(
+                    text = "Choose how sensitive the haptic feedback should be",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                val modeOptions = listOf(
+                    HapticsMode.BASIC to "Basic" to "Responds to strong beats only",
+                    HapticsMode.ADVANCED to "Advanced" to "Full audio spectrum analysis",
+                    HapticsMode.CUSTOM to "Custom" to "Fine-tuned for your preference"
+                )
+                
+                HapticsMode.entries.filter { it != HapticsMode.OFF }.forEach { mode ->
+                    val (label, description) = when (mode) {
+                        HapticsMode.BASIC -> "Basic" to "Responds to strong beats only"
+                        HapticsMode.ADVANCED -> "Advanced" to "Full audio spectrum analysis"
+                        HapticsMode.CUSTOM -> "Custom" to "Fine-tuned for your preference"
+                        else -> "" to ""
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setHapticsMode(mode)
+                                scope.launch {
+                                    hapticsModeSheetState.hide()
+                                    showHapticsModeSheet = false
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.hapticsMode == mode,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(text = label)
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    // Haptics Intensity Bottom Sheet
+    if (showHapticsIntensitySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showHapticsIntensitySheet = false },
+            sheetState = hapticsIntensitySheetState
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Vibration Intensity",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Text(
+                    text = "Adjust how strong the vibrations feel",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                HapticsIntensity.entries.forEach { intensity ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setHapticsIntensity(intensity)
+                                scope.launch {
+                                    hapticsIntensitySheetState.hide()
+                                    showHapticsIntensitySheet = false
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.hapticsIntensity == intensity,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(text = intensity.displayName)
                     }
                 }
                 

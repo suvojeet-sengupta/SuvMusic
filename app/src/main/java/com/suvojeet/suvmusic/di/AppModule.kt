@@ -101,6 +101,15 @@ object AppModule {
     
     @Provides
     @Singleton
+    fun provideMusicHapticsManager(
+        @ApplicationContext context: Context,
+        sessionManager: SessionManager
+    ): com.suvojeet.suvmusic.util.MusicHapticsManager {
+        return com.suvojeet.suvmusic.util.MusicHapticsManager(context, sessionManager)
+    }
+    
+    @Provides
+    @Singleton
     fun provideMusicPlayer(
         @ApplicationContext context: Context,
         youTubeRepository: YouTubeRepository,
@@ -109,9 +118,10 @@ object AppModule {
         sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager,
         listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository,
         cache: androidx.media3.datasource.cache.Cache,
-        @PlayerDataSource dataSourceFactory: androidx.media3.datasource.DataSource.Factory
+        @PlayerDataSource dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
+        musicHapticsManager: com.suvojeet.suvmusic.util.MusicHapticsManager
     ): MusicPlayer {
-        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory)
+        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory, musicHapticsManager)
     }
     @Provides
     @Singleton
