@@ -52,6 +52,10 @@ fun LyricsScreen(
     onSeekTo: (Long) -> Unit = {},
     songTitle: String = "",
     artistName: String = "",
+    // New parameters
+    duration: Long = 0L,
+    selectedProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
+    onProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Theme-aware colors
@@ -60,6 +64,15 @@ fun LyricsScreen(
     val overlayColor = if (isDarkTheme) Color.Black else Color.White
     
     val context = LocalContext.current
+    var showProviderDialog by remember { mutableStateOf(false) }
+    
+    // Formatting helper for seek bar
+    fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
+    }
     
     Box(
         modifier = modifier
@@ -94,6 +107,45 @@ fun LyricsScreen(
                 )
         )
 
+        if (showProviderDialog) {
+            AlertDialog(
+                onDismissRequest = { showProviderDialog = false },
+                title = { Text("Lyrics Source") },
+                text = {
+                    Column {
+                        com.suvojeet.suvmusic.data.model.LyricsProviderType.entries.forEach { provider ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onProviderChange(provider)
+                                        showProviderDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = provider == selectedProvider,
+                                    onClick = null // Handled by Row click
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = provider.displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface 
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showProviderDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -107,7 +159,22 @@ fun LyricsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Share Button (Top Left)
+                // Provider Switch Button (Top Left)
+                IconButton(
+                    onClick = { showProviderDialog = true },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(textColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle, // Use a more appropriate icon like 'Tune' or 'Settings' if available, but CheckCircle works for now
+                        contentDescription = "Switch Provider",
+                        tint = textColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Share Button (Middle Left)
                 IconButton(
                     onClick = {
                         val shareText = buildString {
@@ -204,6 +271,54 @@ fun LyricsScreen(
                         .align(Alignment.CenterHorizontally),
                     textAlign = TextAlign.Center
                 )
+            } else {
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            // Bottom Seek Bar
+            if (duration > 0) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                     var sliderPosition by remember { mutableStateOf<Float?>(null) }
+                     val progress = sliderPosition ?: (currentTimeProvider().toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                     
+                     Slider(
+                         value = progress,
+                         onValueChange = { sliderPosition = it },
+                         onValueChangeFinished = {
+                             sliderPosition?.let {
+                                 onSeekTo((it * duration).toLong())
+                                 sliderPosition = null
+                             }
+                         },
+                         modifier = Modifier.fillMaxWidth().height(20.dp),
+                         colors = SliderDefaults.colors(
+                             thumbColor = textColor,
+                             activeTrackColor = textColor.copy(alpha = 0.8f),
+                             inactiveTrackColor = textColor.copy(alpha = 0.2f)
+                         )
+                     )
+                     
+                     Row(
+                         modifier = Modifier.fillMaxWidth(),
+                         horizontalArrangement = Arrangement.SpaceBetween
+                     ) {
+                         Text(
+                             text = formatTime(if (sliderPosition != null) (sliderPosition!! * duration).toLong() else currentTimeProvider()),
+                             style = MaterialTheme.typography.labelSmall,
+                             color = textColor.copy(alpha = 0.6f)
+                         )
+                         Text(
+                             text = formatTime(duration),
+                             style = MaterialTheme.typography.labelSmall,
+                             color = textColor.copy(alpha = 0.6f)
+                         )
+                     }
+                }
             } else {
                 Spacer(modifier = Modifier.height(32.dp))
             }

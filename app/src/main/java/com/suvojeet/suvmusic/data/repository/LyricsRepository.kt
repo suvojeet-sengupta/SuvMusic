@@ -10,6 +10,7 @@ import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.repository.lyrics.BetterLyricsProvider
 import com.suvojeet.suvmusic.data.repository.lyrics.LyricsProvider
 import com.suvojeet.suvmusic.data.repository.lyrics.SimpMusicLyricsProvider
+import com.suvojeet.suvmusic.data.model.LyricsProviderType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -50,12 +51,19 @@ class LyricsRepository @Inject constructor(
         }
     }
 
-    suspend fun getLyrics(song: Song): Lyrics? = withContext(Dispatchers.IO) {
-        // Check cache first
+    suspend fun getLyrics(song: Song, providerType: LyricsProviderType = LyricsProviderType.AUTO): Lyrics? = withContext(Dispatchers.IO) {
+        // If specific provider requested, bypass cache for that provider
+        if (providerType != LyricsProviderType.AUTO) {
+            return@withContext fetchFromProvider(song, providerType)
+        }
+        
+        // Check cache first for AUTO mode
         val cached = cache.get(song.id)
         if (cached != null) {
             return@withContext cached
         }
+        
+        // AUTO Mode: Priority Order
         
         // 1. Try external providers (BetterLyrics, SimpMusic)
         for (provider in getLyricsProviders()) {
@@ -69,18 +77,19 @@ class LyricsRepository @Inject constructor(
                 ).onSuccess { lrcText ->
                     val parsed = parseLrcLyrics(lrcText)
                     if (parsed.isNotEmpty()) {
+                        val providerEnum = if (provider == betterLyricsProvider) LyricsProviderType.BETTER_LYRICS else LyricsProviderType.SIMP_MUSIC
                         val lyrics = Lyrics(
                             lines = parsed,
                             sourceCredit = "Lyrics from ${provider.name}",
-                            isSynced = true
+                            isSynced = true,
+                            provider = providerEnum
                         )
                         cache.put(song.id, lyrics)
                         return@withContext lyrics
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.d("LyricsRepo", "${provider.name} failed: ${e.message}")
-                // Continue to next provider
+                // Continue
             }
         }
         
@@ -91,23 +100,8 @@ class LyricsRepository @Inject constructor(
             return@withContext lrcLibLyrics
         }
         
-        // 3. Fallback: Get lyrics from the original source
-        val sourceLyrics = when (song.source) {
-            SongSource.JIOSAAVN -> {
-                jioSaavnRepository.getLyricsFromJioSaavn(song.id)?.let { text ->
-                    val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
-                    Lyrics(lines = lines, sourceCredit = "Lyrics from JioSaavn", isSynced = false)
-                }
-            }
-            SongSource.YOUTUBE, SongSource.DOWNLOADED, SongSource.LOCAL -> {
-                try {
-                     youTubeRepository.getLyrics(song.id)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-            else -> null
-        }
+        // 3. Fallback: Get lyrics from the original source (JioSaavn/YouTube)
+        val sourceLyrics = fetchFromSource(song)
         
         if (sourceLyrics != null) {
             cache.put(song.id, sourceLyrics)
@@ -121,6 +115,91 @@ class LyricsRepository @Inject constructor(
         }
         
         null
+    }
+    
+    // Fetch from a specific provider
+    private suspend fun fetchFromProvider(song: Song, providerType: LyricsProviderType): Lyrics? {
+        return when (providerType) {
+            LyricsProviderType.BETTER_LYRICS -> {
+                if (betterLyricsProvider.isEnabled(context)) {
+                    fetchExternalLyrics(betterLyricsProvider, song, LyricsProviderType.BETTER_LYRICS)
+                } else null
+            }
+            LyricsProviderType.SIMP_MUSIC -> {
+                if (simpMusicLyricsProvider.isEnabled(context)) {
+                    fetchExternalLyrics(simpMusicLyricsProvider, song, LyricsProviderType.SIMP_MUSIC)
+                } else null
+            }
+            LyricsProviderType.LRCLIB -> {
+                getSyncedLyricsFromLrcLib(song.title, song.artist, song.duration)
+            }
+            LyricsProviderType.JIOSAAVN -> {
+                jioSaavnRepository.getLyricsFromJioSaavn(song.id)?.let { text ->
+                    val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
+                    Lyrics(lines = lines, sourceCredit = "Lyrics from JioSaavn", isSynced = false, provider = LyricsProviderType.JIOSAAVN)
+                }
+            }
+            LyricsProviderType.YOUTUBE -> {
+                try {
+                     // Force YouTube fetch even if source is different (search by ID might fail if ID is not YT, handle carefully)
+                     // If song source is NOT YT, we might not have a valid YT ID. 
+                     // But typically this is called with a YT ID for YT/YTMusic songs.
+                     if (song.source == SongSource.YOUTUBE || song.source == SongSource.DOWNLOADED) {
+                        youTubeRepository.getLyrics(song.id)?.copy(provider = LyricsProviderType.YOUTUBE)
+                     } else null
+                } catch (e: Exception) { null }
+            }
+            LyricsProviderType.AUTO -> getLyrics(song, LyricsProviderType.AUTO)
+        }
+    }
+
+    private suspend fun fetchExternalLyrics(
+        provider: LyricsProvider, 
+        song: Song, 
+        type: LyricsProviderType
+    ): Lyrics? {
+        return try {
+            var result: Lyrics? = null
+            provider.getLyrics(
+                id = song.id,
+                title = song.title,
+                artist = song.artist,
+                duration = (song.duration / 1000).toInt(),
+                album = song.album
+            ).onSuccess { lrcText ->
+                val parsed = parseLrcLyrics(lrcText)
+                if (parsed.isNotEmpty()) {
+                    result = Lyrics(
+                        lines = parsed,
+                        sourceCredit = "Lyrics from ${provider.name}",
+                        isSynced = true,
+                        provider = type
+                    )
+                }
+            }
+            result
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun fetchFromSource(song: Song): Lyrics? {
+        return when (song.source) {
+            SongSource.JIOSAAVN -> {
+                jioSaavnRepository.getLyricsFromJioSaavn(song.id)?.let { text ->
+                    val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
+                    Lyrics(lines = lines, sourceCredit = "Lyrics from JioSaavn", isSynced = false, provider = LyricsProviderType.JIOSAAVN)
+                }
+            }
+            SongSource.YOUTUBE, SongSource.DOWNLOADED, SongSource.LOCAL -> {
+                try {
+                     youTubeRepository.getLyrics(song.id)?.copy(provider = LyricsProviderType.YOUTUBE)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            else -> null
+        }
     }
 
     private suspend fun getSyncedLyricsFromLrcLib(title: String, artist: String, duration: Long): Lyrics? {
@@ -162,7 +241,8 @@ class LyricsRepository @Inject constructor(
                             return Lyrics(
                                 lines = lines,
                                 sourceCredit = "Lyrics from LRCLIB",
-                                isSynced = true
+                                isSynced = true,
+                                provider = LyricsProviderType.LRCLIB
                             )
                         }
                     }
@@ -176,7 +256,8 @@ class LyricsRepository @Inject constructor(
                         return Lyrics(
                             lines = lines,
                             sourceCredit = "Lyrics from LRCLIB",
-                            isSynced = false
+                            isSynced = false,
+                            provider = LyricsProviderType.LRCLIB
                         )
                     }
                 }
@@ -246,7 +327,8 @@ class LyricsRepository @Inject constructor(
                                 return Lyrics(
                                     lines = lines,
                                     sourceCredit = "Lyrics from LRCLIB (Best Match)",
-                                    isSynced = true
+                                    isSynced = true,
+                                    provider = LyricsProviderType.LRCLIB
                                 )
                             }
                         }
@@ -259,7 +341,8 @@ class LyricsRepository @Inject constructor(
                             return Lyrics(
                                 lines = lines,
                                 sourceCredit = "Lyrics from LRCLIB (Best Match)",
-                                isSynced = false
+                                isSynced = false,
+                                provider = LyricsProviderType.LRCLIB
                             )
                         }
                     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.model.LyricsProviderType
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -52,6 +53,10 @@ class PlayerViewModel @Inject constructor(
     
     private val _isFetchingLyrics = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isFetchingLyrics: StateFlow<Boolean> = _isFetchingLyrics.asStateFlow()
+    
+    // Lyrics Provider Selection
+    private val _selectedLyricsProvider = kotlinx.coroutines.flow.MutableStateFlow(LyricsProviderType.AUTO)
+    val selectedLyricsProvider: StateFlow<LyricsProviderType> = _selectedLyricsProvider.asStateFlow()
 
     private val _commentsState = kotlinx.coroutines.flow.MutableStateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?>(null)
     val commentsState: StateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?> = _commentsState.asStateFlow()
@@ -101,6 +106,9 @@ class PlayerViewModel @Inject constructor(
                     if (song != null) {
                         checkLikeStatus(song)
                         checkDownloadStatus(song)
+                        // Reset provider to AUTO on song change unless user specifically locked a provider?
+                        // For now, let's keep it persistent or reset. Resetting is safer for "Best Match".
+                        _selectedLyricsProvider.value = LyricsProviderType.AUTO
                         fetchLyrics(song.id)
                         fetchComments(song.id)
                     } else {
@@ -537,7 +545,7 @@ class PlayerViewModel @Inject constructor(
     }    
 
     
-    private fun fetchLyrics(videoId: String) {
+    private fun fetchLyrics(videoId: String, provider: LyricsProviderType = LyricsProviderType.AUTO) {
         viewModelScope.launch {
             _isFetchingLyrics.value = true
             _lyricsState.value = null
@@ -545,7 +553,7 @@ class PlayerViewModel @Inject constructor(
             val currentSong = playerState.value.currentSong
             if (currentSong != null) {
                 try {
-                    val lyrics = lyricsRepository.getLyrics(currentSong)
+                    val lyrics = lyricsRepository.getLyrics(currentSong, provider)
                     _lyricsState.value = lyrics
                 } catch (e: Exception) {
                     android.util.Log.e("PlayerViewModel", "Error fetching lyrics", e)
@@ -554,6 +562,12 @@ class PlayerViewModel @Inject constructor(
             
             _isFetchingLyrics.value = false
         }
+    }
+    
+    fun switchLyricsProvider(provider: LyricsProviderType) {
+        _selectedLyricsProvider.value = provider
+        val currentSong = playerState.value.currentSong ?: return
+        fetchLyrics(currentSong.id, provider)
     }
     
     private fun fetchComments(videoId: String) {
