@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    kotlin("plugin.serialization") version "1.9.22"
 }
 
 android {
@@ -139,6 +140,15 @@ dependencies {
 
     // Jsoup (HTML Parser)
     implementation(libs.jsoup)
+    
+    // Ktor (HTTP Client for lyrics providers)
+    implementation("io.ktor:ktor-client-core:2.3.7")
+    implementation("io.ktor:ktor-client-cio:2.3.7")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+    
+    // Kotlinx Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
     
     // Testing
     testImplementation(libs.junit)
