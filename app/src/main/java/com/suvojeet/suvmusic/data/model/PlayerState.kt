@@ -25,7 +25,8 @@ data class PlayerState(
     val playbackSpeed: Float = 1.0f,
     val pitch: Float = 1.0f,
     val audioCodec: String? = null, // e.g., "opus", "aac", "mp3"
-    val audioBitrate: Int? = null // in kbps, e.g., 256
+    val audioBitrate: Int? = null, // in kbps, e.g., 256
+    val dominantColor: Int = -16777216 // Black/Dark default
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f

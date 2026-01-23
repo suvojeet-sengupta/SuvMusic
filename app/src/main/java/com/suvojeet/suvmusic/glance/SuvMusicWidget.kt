@@ -1,15 +1,11 @@
 package com.suvojeet.suvmusic.glance
 
 import android.content.Context
-import android.graphics.BitmapFactory
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.Button
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -27,8 +23,10 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -40,22 +38,16 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.suvojeet.suvmusic.R
-import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.player.MusicPlayer
-import com.suvojeet.suvmusic.ui.components.DominantColors
-import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 
 class SuvMusicWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         
-        // Hilt Entry Point to get Singleton Dependencies
         val appContext = context.applicationContext
         val entryPoint = EntryPointAccessors.fromApplication(
             appContext,
@@ -68,117 +60,153 @@ class SuvMusicWidget : GlanceAppWidget() {
                 val playerState by musicPlayer.playerState.collectAsState()
                 val currentSong = playerState.currentSong
                 
-                // Use default colors or fallback
-                val backgroundColor = Color(0xFF1C1B1F) 
-                val contentColor = Color(0xFFE6E1E5)
-                val secondaryColor = Color(0xFFCAC4D0)
+                // Dynamic background color from PlayerState (default to dark sleek color)
+                // Use a fallback if dominantColor is invalid/default (-16777216 is Black)
+                val domColor = playerState.dominantColor
+                val backgroundColor = if (domColor != -16777216 && domColor != 0) {
+                     Color(domColor).copy(alpha = 0.95f) // Slightly transparent/glassy
+                } else {
+                     Color(0xFF252836).copy(alpha = 0.95f) // Sleek dark blue-grey fallback
+                }
+                
+                val contentColor = Color.White
+                val secondaryColor = Color.White.copy(alpha = 0.7f)
 
                 // Main Container
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
                         .background(ColorProvider(backgroundColor))
-                        .cornerRadius(16.dp)
-                        .clickable(actionRunCallback<OpenAppAction>()) // Click background to open app
+                        .cornerRadius(24.dp) // Large rounded corners as per image
+                        .clickable(actionRunCallback<OpenAppAction>())
                 ) {
                     Row(
                         modifier = GlanceModifier
                             .fillMaxSize()
-                            .padding(12.dp),
+                            .padding(16.dp), // Consistent padding
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Album Art
-                        if (currentSong?.thumbnailUrl != null) {
-                             // Note: Loading actual bitmap in widget is tricky without Coil-Glance interop or manual loader.
-                             // For a robust implementation we might need a worker or UpdateService.
-                             // For now, let's use a placeholder icon if image loading logic isn't strictly synchronous ready.
-                             // Ideally, we'd use a custom ImageProvider(bitmap).
-                             
-                             // Placeholder for "Beautiful" requirement: Use Icon for now, 
-                             // but we can try to implement bitmap loading if user asks, or use resource ID if local.
+                        // Album Art (Left Side)
+                        // Using a placeholder/fallback mechanism as loading Bitmaps in Glance is complex without WorkManager
+                        // Ideally, we'd pass the bitmap URI to a custom ImageProvider, but standard resource for now.
+                        // If currentSong has thumbnail, we rely on the system or app to have cached it, 
+                        // but Glance ImageProvider(url) isn't standard.
+                        // For EXACT look, we use the app icon or a generic music placeholder if art isn't available via resource.
+                        // (To do this 'properly' in Glance requires a worker to fetch bitmap -> update widget state)
+                        // For now sticking to resource/drawable logic for stability.
+                        
+                        Box(
+                            modifier = GlanceModifier
+                                .size(80.dp) // Large square
+                                .cornerRadius(12.dp)
+                                .background(ColorProvider(Color.DarkGray))
+                        ) {
                              Image(
-                                provider = ImageProvider(R.drawable.ic_launcher_foreground), // Fallback/Placeholder
-                                contentDescription = "Artwork",
-                                modifier = GlanceModifier
-                                    .size(64.dp)
-                                    .cornerRadius(12.dp)
-                                    .background(ColorProvider(Color.DarkGray))
-                            )
-                        } else {
-                            Image(
                                 provider = ImageProvider(R.drawable.ic_launcher_foreground),
                                 contentDescription = "Artwork",
-                                modifier = GlanceModifier
-                                    .size(64.dp)
-                                    .cornerRadius(12.dp)
-                                    .background(ColorProvider(Color.DarkGray))
+                                contentScale = ContentScale.Fit,
+                                modifier = GlanceModifier.fillMaxSize()
                             )
                         }
 
-                        Spacer(modifier = GlanceModifier.width(12.dp))
+                        Spacer(modifier = GlanceModifier.width(16.dp))
 
-                        // Text Info
+                        // Right Side: Info + Controls
                         Column(
-                            modifier = GlanceModifier.defaultWeight()
-                        ) {
-                            Text(
-                                text = currentSong?.title ?: "Not Playing",
-                                style = TextStyle(
-                                    color = ColorProvider(contentColor),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                maxLines = 1
-                            )
-                            Spacer(modifier = GlanceModifier.height(4.dp))
-                            Text(
-                                text = currentSong?.artist ?: "SuvMusic",
-                                style = TextStyle(
-                                    color = ColorProvider(secondaryColor),
-                                    fontSize = 14.sp
-                                ),
-                                maxLines = 1
-                            )
-                        }
-
-                        // Controls
-                        Row(
+                            modifier = GlanceModifier
+                                .defaultWeight()
+                                .fillMaxHeight(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Previous
-                            Image(
-                                provider = ImageProvider(R.drawable.ic_skip_previous), // Ensure drawable exists
-                                contentDescription = "Previous",
-                                colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
-                                modifier = GlanceModifier
-                                    .size(32.dp)
-                                    .padding(4.dp)
-                                    .clickable(actionRunCallback<PreviousAction>())
-                            )
+                            // Top Row: Title + App Icon
+                            Row(
+                                modifier = GlanceModifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = GlanceModifier.defaultWeight()
+                                ) {
+                                    Text(
+                                        text = currentSong?.title ?: "Select a song",
+                                        style = TextStyle(
+                                            color = ColorProvider(contentColor),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        maxLines = 1
+                                    )
+                                    Spacer(modifier = GlanceModifier.height(4.dp))
+                                    Text(
+                                        text = currentSong?.artist ?: "SuvMusic",
+                                        style = TextStyle(
+                                            color = ColorProvider(secondaryColor),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Normal
+                                        ),
+                                        maxLines = 1
+                                    )
+                                }
+                                
+                                // Music Note Icon (Top Right)
+                                Image(
+                                    provider = ImageProvider(R.drawable.ic_music_note), // Ensure this exists
+                                    contentDescription = "App Icon",
+                                    colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
+                                    modifier = GlanceModifier.size(16.dp).padding(start = 8.dp)
+                                )
+                            }
                             
-                            // Play/Pause
-                            Image(
-                                provider = ImageProvider(
-                                    if (playerState.isPlaying) R.drawable.ic_pause else R.drawable.ic_play
-                                ),
-                                contentDescription = "Play/Pause",
-                                colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
-                                modifier = GlanceModifier
-                                    .size(40.dp)
-                                    .padding(4.dp)
-                                    .clickable(actionRunCallback<PlayPauseAction>())
-                            )
+                            Spacer(modifier = GlanceModifier.defaultWeight())
                             
-                            // Next
-                            Image(
-                                provider = ImageProvider(R.drawable.ic_skip_next), // Ensure drawable exists
-                                contentDescription = "Next",
-                                colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
-                                modifier = GlanceModifier
-                                    .size(32.dp)
-                                    .padding(4.dp)
-                                    .clickable(actionRunCallback<NextAction>())
-                            )
+                            // Bottom Row: Controls (Right Aligned in the column, or spread)
+                            // Image shows spacing.
+                            Row(
+                                modifier = GlanceModifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.End, // Align to right like screenshot? 
+                                // Actually screenshot shows them spaced out but arguably centered/right-ish.
+                                // Let's use SpaceEvenly or SpaceBetween for the control row itself?
+                                // Screenshot: Prev - Play - Next are clustered somewhat.
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Spacer to push controls to right if desired, OR just center them in the available width
+                                // Let's spread them out slightly.
+                                
+                                // Previous
+                                Image(
+                                    provider = ImageProvider(R.drawable.ic_skip_previous),
+                                    contentDescription = "Previous",
+                                    colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
+                                    modifier = GlanceModifier
+                                        .size(32.dp)
+                                        .clickable(actionRunCallback<PreviousAction>())
+                                )
+                                
+                                Spacer(modifier = GlanceModifier.width(24.dp))
+                                
+                                // Play/Pause (Larger)
+                                Image(
+                                    provider = ImageProvider(
+                                        if (playerState.isPlaying) R.drawable.ic_pause else R.drawable.ic_play
+                                    ),
+                                    contentDescription = "Play/Pause",
+                                    colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
+                                    modifier = GlanceModifier
+                                        .size(40.dp)
+                                        .clickable(actionRunCallback<PlayPauseAction>())
+                                )
+                                
+                                Spacer(modifier = GlanceModifier.width(24.dp))
+                                
+                                // Next
+                                Image(
+                                    provider = ImageProvider(R.drawable.ic_skip_next),
+                                    contentDescription = "Next",
+                                    colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
+                                    modifier = GlanceModifier
+                                        .size(32.dp)
+                                        .clickable(actionRunCallback<NextAction>())
+                                )
+                            }
                         }
                     }
                 }

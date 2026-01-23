@@ -750,6 +750,10 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    fun updateDominantColor(color: Int) {
+        musicPlayer.updateDominantColor(color)
+    }
+
     override fun onCleared() {
         super.onCleared()
         // Don't release player here - it's shared
