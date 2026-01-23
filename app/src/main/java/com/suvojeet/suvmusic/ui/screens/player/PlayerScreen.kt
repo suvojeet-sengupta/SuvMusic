@@ -161,7 +161,9 @@ fun PlayerScreen(
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
     ringtoneViewModel: RingtoneViewModel = hiltViewModel(),
     playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
-    volumeKeyEvents: SharedFlow<Unit>? = null
+    volumeKeyEvents: SharedFlow<Unit>? = null,
+    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
+    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
 ) {
 
     val song = playbackInfo.currentSong
@@ -346,6 +348,17 @@ fun PlayerScreen(
         }
     }
 
+    val sharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+             Modifier.sharedBounds(
+                rememberSharedContentState(key = "player_bound"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.ScaleToBounds(androidx.compose.ui.layout.ContentScale.FillWidth),
+                placeHolderSize = androidx.compose.animation.SharedTransitionScope.PlaceHolderSize.animatedSize
+            )
+        }
+    } else Modifier
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -388,6 +401,7 @@ fun PlayerScreen(
                     }
                 )
             }
+            .then(sharedModifier)
     ) {
         // Background Layer with Fade Out effect
         Box(
@@ -484,6 +498,15 @@ fun PlayerScreen(
                                     .padding(end = 16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
+                                val artworkModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                                    with(sharedTransitionScope) {
+                                        Modifier.sharedElement(
+                                            rememberSharedContentState(key = "album_art"),
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        )
+                                    }
+                                } else Modifier
+
                                 AlbumArtwork(
                                     imageUrl = song?.thumbnailUrl,
                                     title = song?.title,
@@ -503,7 +526,8 @@ fun PlayerScreen(
                                     },
                                     onDoubleTapRight = {
                                         handleDoubleTapSeek(true)
-                                    }
+                                    },
+                                    modifier = artworkModifier
                                 )
                             }
 
@@ -668,6 +692,15 @@ fun PlayerScreen(
                                 }
                             } else {
                                 // Album artwork
+                                val artworkModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                                    with(sharedTransitionScope) {
+                                        Modifier.sharedElement(
+                                            rememberSharedContentState(key = "album_art"),
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        )
+                                    }
+                                } else Modifier
+
                                 AlbumArtwork(
                                     imageUrl = song?.thumbnailUrl,
                                     title = song?.title,
@@ -687,7 +720,8 @@ fun PlayerScreen(
                                     },
                                     onDoubleTapRight = {
                                         handleDoubleTapSeek(true)
-                                    }
+                                    },
+                                    modifier = artworkModifier
                                 )
                             }
 
