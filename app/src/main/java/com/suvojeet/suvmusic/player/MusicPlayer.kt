@@ -394,11 +394,25 @@ class MusicPlayer @Inject constructor(
                  return
             }
             
-            // Resolve stream URL for the song based on source
-            val streamUrl = when (song.source) {
-                SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
-                SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id) ?: return
-                else -> youTubeRepository.getStreamUrl(song.id) ?: return
+            // Resolve stream URL for the song based on source with timeout protection
+            val streamUrl = kotlinx.coroutines.withTimeoutOrNull(15_000L) {
+                when (song.source) {
+                    SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
+                    SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id)
+                    else -> youTubeRepository.getStreamUrl(song.id)
+                }
+            }
+            
+            // Handle null stream URL - show error and clear loading state
+            if (streamUrl == null) {
+                android.util.Log.e("MusicPlayer", "Failed to resolve stream URL for: ${song.id}")
+                _playerState.update { 
+                    it.copy(
+                        error = "Could not load song. Please try again.",
+                        isLoading = false
+                    )
+                }
+                return
             }
             
             val newMediaItem = MediaItem.Builder()
@@ -431,10 +445,16 @@ class MusicPlayer @Inject constructor(
                         if (shouldPlay) {
                              controller.play()
                         }
+                        
+                        // Clear loading state after successful resolution
+                        _playerState.update { it.copy(isLoading = false, error = null) }
                     } else {
                         // Queue changed, discard this update
                         _playerState.update { it.copy(isLoading = false) }
                     }
+                } else {
+                    // Index out of bounds - clear loading state
+                    _playerState.update { it.copy(isLoading = false) }
                 }
             }
         } catch (e: Exception) {
@@ -653,14 +673,26 @@ class MusicPlayer @Inject constructor(
             SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
             SongSource.JIOSAAVN -> {
                 if (resolveStream) {
-                    jioSaavnRepository.getStreamUrl(song.id) ?: ""
+                    // Retry once if first attempt fails
+                    jioSaavnRepository.getStreamUrl(song.id)
+                        ?: run {
+                            kotlinx.coroutines.delay(500)
+                            jioSaavnRepository.getStreamUrl(song.id)
+                        }
+                        ?: ""
                 } else {
                     song.streamUrl ?: ""
                 }
             }
             else -> {
                 if (resolveStream) {
-                    youTubeRepository.getStreamUrl(song.id) ?: "https://youtube.com/watch?v=${song.id}"
+                    // Retry once if first attempt fails
+                    youTubeRepository.getStreamUrl(song.id)
+                        ?: run {
+                            kotlinx.coroutines.delay(500)
+                            youTubeRepository.getStreamUrl(song.id)
+                        }
+                        ?: "https://youtube.com/watch?v=${song.id}"
                 } else {
                     "https://youtube.com/watch?v=${song.id}"
                 }
