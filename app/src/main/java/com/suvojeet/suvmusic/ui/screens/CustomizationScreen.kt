@@ -101,17 +101,6 @@ fun CustomizationScreen(
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     
-    // Player State for Dynamic Colors
-    val playerState by playerViewModel.playerState.collectAsState()
-    val currentSong = playerState.currentSong
-    val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    
-    // Dynamic Colors
-    val dominantColors = rememberDominantColors(
-        imageUrl = currentSong?.thumbnailUrl,
-        isDarkTheme = isAppInDarkTheme
-    )
-    
     val seekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
     val artworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
     
@@ -140,11 +129,11 @@ fun CustomizationScreen(
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    // Use dominant colors if available, otherwise fallback to theme
-    val primaryColor = if (currentSong != null) dominantColors.accent else MaterialTheme.colorScheme.primary
-    val surfaceColor = if (currentSong != null) dominantColors.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant
-    val backgroundColor = if (currentSong != null) dominantColors.primary else MaterialTheme.colorScheme.background
-    val onBackgroundColor = if (currentSong != null) dominantColors.onBackground else MaterialTheme.colorScheme.onBackground
+    // Enforce App Theme colors as requested
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
     
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
