@@ -285,6 +285,9 @@ class YouTubeRepository @Inject constructor(
                 attempts++
             }
             
+            // Append Explore Section at the end
+            sections.add(getExploreSection())
+
             return@withContext sections.distinctBy { it.title }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -1673,7 +1676,7 @@ class YouTubeRepository @Inject constructor(
                             val type = when {
                                 title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
                                 title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
+                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel
                                 else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
                             }
                             sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
@@ -1698,7 +1701,7 @@ class YouTubeRepository @Inject constructor(
                             val type = when {
                                 title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
                                 title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
+                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel
                                 else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
                             }
                             sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
@@ -1735,6 +1738,16 @@ class YouTubeRepository @Inject constructor(
             e.printStackTrace()
         }
         return sections
+    }
+
+    private fun getExploreSection(): com.suvojeet.suvmusic.data.model.HomeSection {
+        val exploreItems = listOf(
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("New releases", com.suvojeet.suvmusic.R.drawable.ic_music_note), // Placeholder ID
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Charts", com.suvojeet.suvmusic.R.drawable.ic_waveform), // Placeholder ID
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Moods and genres", com.suvojeet.suvmusic.R.drawable.ic_play), // Placeholder ID
+            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Podcasts", com.suvojeet.suvmusic.R.drawable.ic_launcher_monochrome) // Placeholder ID
+        )
+        return com.suvojeet.suvmusic.data.model.HomeSection("Explore", exploreItems, com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid)
     }
 
     private fun parseHomeItem(itemObj: JSONObject?): com.suvojeet.suvmusic.data.model.HomeItem? {

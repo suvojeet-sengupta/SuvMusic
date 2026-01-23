@@ -12,7 +12,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.Modifier 
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -27,6 +28,18 @@ import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.data.model.HomeSection
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.outlined.Radio
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.clickable
 
 @Composable
 fun HorizontalCarouselSection(
@@ -325,6 +338,258 @@ fun HomeItemCardLarge(
                      overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun CommunityCarouselSection(
+    section: HomeSection,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (Album) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeSectionHeader(title = section.title)
+        
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(section.items.filterIsInstance<HomeItem.PlaylistItem>()) { item ->
+                CommunityPlaylistCard(
+                    item = item,
+                    onPlaylistClick = onPlaylistClick,
+                    onSongClick = onSongClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CommunityPlaylistCard(
+    item: HomeItem.PlaylistItem,
+    onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onSongClick: (List<Song>, Int) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(320.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF2A2020)) // Dark reddish brown placeholder
+            .clickable { onPlaylistClick(item.playlist) }
+            .padding(16.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Header
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Cover Art
+                AsyncImage(
+                    model = item.playlist.thumbnailUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                
+                // Info
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = item.playlist.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = item.playlist.uploaderName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                     Text(
+                        text = "${item.playlist.songCount} songs",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
+            // Songs Preview
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item.previewSongs.take(3).forEach { song ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AsyncImage(
+                            model = song.thumbnailUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = song.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = song.artist, // + " • 14 crore plays" if we had plays
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = "More",
+                            tint = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+            
+            // Actions
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Play Button
+                FilledIconButton(
+                    onClick = { 
+                         // Play playlist logic - typically handled by caller, but here we trigger playlist click or specific play action
+                         onPlaylistClick(item.playlist)
+                    },
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = "Play",
+                        tint = Color.Black
+                    )
+                }
+                
+                // Radio Button
+                IconButton(
+                    onClick = { /* TODO: Start Radio */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50)),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
+                ) {
+                    Icon(
+                         // Using Radio icon if available, or similar
+                        imageVector = Icons.Outlined.Radio, // Requires dependency or workaround
+                         // Fallback if Outlined.Radio not found:
+                         // imageVector = Icons.Rounded.Radio (if available) or Icons.Rounded.Sensors
+                         contentDescription = "Radio"
+                    )
+                }
+                
+                // Save Button
+                IconButton(
+                    onClick = { /* TODO: Save to Library */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50)),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.BookmarkBorder,
+                        contentDescription = "Save"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExploreGridSection(
+    section: HomeSection,
+    onExploreItemClick: (String) -> Unit // New callback
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeSectionHeader(title = section.title)
+        
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+             val items = section.items.filterIsInstance<HomeItem.ExploreItem>()
+             val rows = items.chunked(2)
+             
+             rows.forEach { rowItems ->
+                 Row(
+                     modifier = Modifier.fillMaxWidth(),
+                     horizontalArrangement = Arrangement.spacedBy(16.dp)
+                 ) {
+                     rowItems.forEach { item ->
+                         ExploreItemCard(
+                             item = item,
+                             modifier = Modifier.weight(1f),
+                             onClick = { onExploreItemClick(item.title) }
+                         )
+                     }
+                     if (rowItems.size == 1) {
+                         Spacer(modifier = Modifier.weight(1f))
+                     }
+                 }
+             }
+        }
+    }
+}
+
+@Composable
+fun ExploreItemCard(
+    item: HomeItem.ExploreItem,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(80.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF1E1E1E)) // Dark grey
+            .clickable(onClick = onClick)
+            .padding(16.dp)
+    ) {
+        // Layout: Icon Top Left, Text Bottom Left? Screenshot shows Icon Top Left, Text Bottom Left.
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start
+        ) {
+             Icon(
+                 painter = painterResource(id = item.iconRes),
+                 contentDescription = null,
+                 tint = Color.White,
+                 modifier = Modifier.size(24.dp)
+             )
+             
+             Text(
+                 text = item.title,
+                 style = MaterialTheme.typography.titleSmall,
+                 fontWeight = FontWeight.Bold,
+                 color = Color.White
+             )
         }
     }
 }
