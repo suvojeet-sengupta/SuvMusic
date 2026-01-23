@@ -3,8 +3,18 @@ package com.suvojeet.suvmusic.data.model
 data class Lyrics(
     val lines: List<LyricsLine>,
     val sourceCredit: String?,
-    val isSynced: Boolean = false
+    val isSynced: Boolean = false,
+    val provider: LyricsProviderType = LyricsProviderType.AUTO
 )
+
+enum class LyricsProviderType(val displayName: String) {
+    AUTO("Auto (Best Match)"),
+    LRCLIB("LRCLIB (Synced)"),
+    JIOSAAVN("JioSaavn"),
+    YOUTUBE("YouTube (Captions)"),
+    BETTER_LYRICS("Better Lyrics (Apple Music)"),
+    SIMP_MUSIC("SimpMusic")
+}
 
 data class LyricsLine(
     val text: String,
