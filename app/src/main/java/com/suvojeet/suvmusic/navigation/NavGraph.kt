@@ -85,7 +85,8 @@ fun NavGraph(
     modifier: Modifier = Modifier,
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
-    startDestination: String = Destination.Home.route
+    startDestination: String = Destination.Home.route,
+    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -369,7 +370,9 @@ fun NavGraph(
                 onSetPlaybackParameters = onSetPlaybackParameters,
                 selectedLyricsProvider = selectedLyricsProvider,
                 enabledLyricsProviders = enabledLyricsProviders,
-                onLyricsProviderChange = onLyricsProviderChange
+                onLyricsProviderChange = onLyricsProviderChange,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this
             )
         }
         

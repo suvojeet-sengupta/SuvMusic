@@ -100,7 +100,8 @@ fun AlbumArtwork(
     artworkSize: ArtworkSize = ArtworkSize.LARGE,
     onShapeChange: ((ArtworkShape) -> Unit)? = null,
     onDoubleTapLeft: () -> Unit = {},
-    onDoubleTapRight: () -> Unit = {}
+    onDoubleTapRight: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
 
@@ -162,7 +163,7 @@ fun AlbumArtwork(
         val isWideLayout = maxWidth > 500.dp
 
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .then(
                     if (isWideLayout) {
                         Modifier.fillMaxHeight(artworkSize.fraction).aspectRatio(1f)
