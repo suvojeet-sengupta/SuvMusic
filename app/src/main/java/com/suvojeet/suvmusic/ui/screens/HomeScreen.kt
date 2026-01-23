@@ -59,6 +59,7 @@ fun HomeScreen(
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (com.suvojeet.suvmusic.data.model.Album) -> Unit,
     onRecentsClick: () -> Unit = {},
+    onExploreClick: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -154,6 +155,20 @@ fun HomeScreen(
                                     onAlbumClick = onAlbumClick
                                 )
                             }
+                            com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel -> {
+                                com.suvojeet.suvmusic.ui.components.CommunityCarouselSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick
+                                )
+                            }
+                            com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid -> {
+                                com.suvojeet.suvmusic.ui.components.ExploreGridSection(
+                                    section = section,
+                                    onExploreItemClick = onExploreClick
+                                )
+                            }
                         }
                     }
 
@@ -215,6 +230,9 @@ private fun HomeItemCard(
         }
         is HomeItem.ArtistItem -> {
             // Placeholder for Artist
+        }
+        is HomeItem.ExploreItem -> {
+            // Handle ExploreItem
         }
     }
 }

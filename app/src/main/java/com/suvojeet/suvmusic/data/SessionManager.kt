@@ -1181,6 +1181,12 @@ class SessionManager @Inject constructor(
                 )
                 com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(artist)
             }
+            "explore" -> {
+                com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem(
+                    title = data.optString("title"),
+                    iconRes = data.optInt("iconRes")
+                )
+            }
             else -> null
         }
     }
@@ -1224,6 +1230,14 @@ class SessionManager @Inject constructor(
                     put("thumbnailUrl", item.artist.thumbnailUrl ?: "")
                     put("description", item.artist.description ?: "")
                     put("subscribers", item.artist.subscribers ?: "")
+                }
+                obj.put("data", data)
+            }
+            is com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem -> {
+                obj.put("type", "explore")
+                val data = JSONObject().apply {
+                    put("title", item.title)
+                    put("iconRes", item.iconRes)
                 }
                 obj.put("data", data)
             }

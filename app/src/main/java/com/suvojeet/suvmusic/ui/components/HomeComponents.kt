@@ -71,6 +71,9 @@ fun HomeItemCard(
         is HomeItem.ArtistItem -> {
             // Placeholder for Artist
         }
+        is HomeItem.ExploreItem -> {
+            // Explore items are handled by ExploreGridSection specifically
+        }
     }
 }
 
