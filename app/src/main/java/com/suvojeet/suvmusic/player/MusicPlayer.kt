@@ -692,7 +692,7 @@ class MusicPlayer @Inject constructor(
                             kotlinx.coroutines.delay(500)
                             youTubeRepository.getStreamUrl(song.id)
                         }
-                        ?: "https://youtube.com/watch?v=${song.id}"
+                        ?: ""
                 } else {
                     "https://youtube.com/watch?v=${song.id}"
                 }
