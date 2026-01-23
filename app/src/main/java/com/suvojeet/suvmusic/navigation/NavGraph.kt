@@ -76,6 +76,7 @@ fun NavGraph(
     onLoadMoreComments: () -> Unit = {},
     // Lyrics Provider
     selectedLyricsProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
+    enabledLyricsProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
     onLyricsProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
     // Sleep timer
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
@@ -355,6 +356,7 @@ fun NavGraph(
                 volumeKeyEvents = volumeKeyEvents,
                 onSetPlaybackParameters = onSetPlaybackParameters,
                 selectedLyricsProvider = selectedLyricsProvider,
+                enabledLyricsProviders = enabledLyricsProviders,
                 onLyricsProviderChange = onLyricsProviderChange
             )
         }
