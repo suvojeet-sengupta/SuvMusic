@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -152,6 +153,11 @@ fun AlbumArtwork(
     val scale = 1f - (kotlin.math.abs(animatedOffsetX) / 1500f).coerceIn(0f, 0.1f)
     val rotation = animatedOffsetX / 30f
 
+    val currentOnDoubleTapLeft by rememberUpdatedState(onDoubleTapLeft)
+    val currentOnDoubleTapRight by rememberUpdatedState(onDoubleTapRight)
+    val currentOnSwipeLeft by rememberUpdatedState(onSwipeLeft)
+    val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
+
     BoxWithConstraints {
         val isWideLayout = maxWidth > 500.dp
 
@@ -174,9 +180,9 @@ fun AlbumArtwork(
                     detectTapGestures(
                         onDoubleTap = { offset ->
                             if (offset.x < size.width / 2) {
-                                onDoubleTapLeft()
+                                currentOnDoubleTapLeft()
                             } else {
-                                onDoubleTapRight()
+                                currentOnDoubleTapRight()
                             }
                         },
                         onLongPress = {
@@ -188,8 +194,8 @@ fun AlbumArtwork(
                     detectHorizontalDragGestures(
                         onDragEnd = {
                             when {
-                                offsetX < -swipeThreshold -> onSwipeLeft()
-                                offsetX > swipeThreshold -> onSwipeRight()
+                                offsetX < -swipeThreshold -> currentOnSwipeLeft()
+                                offsetX > swipeThreshold -> currentOnSwipeRight()
                             }
                             offsetX = 0f
                         },
