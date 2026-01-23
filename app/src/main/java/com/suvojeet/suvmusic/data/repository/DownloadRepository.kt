@@ -12,6 +12,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.service.DownloadService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,10 +72,8 @@ class DownloadRepository @Inject constructor(
     private val _queueState = MutableStateFlow<List<Song>>(emptyList())
     val queueState: StateFlow<List<Song>> = _queueState.asStateFlow()
     
-    // Track batch progress
-    private var totalBatchSize = 0
-    private var completedBatchCount = 0
-    private var isBatchDownloadActive = false
+    private val _batchProgress = MutableStateFlow<Pair<Int, Int>>(0 to 0) // current, total
+    val batchProgress: StateFlow<Pair<Int, Int>> = _batchProgress.asStateFlow()
 
     init {
         loadDownloads()
@@ -1163,60 +1162,68 @@ class DownloadRepository @Inject constructor(
         Log.d(TAG, "Cache cleared")
     }
 
+    // Batch Download Queue functions
+    // We expect the Service to process this queue.
+    
+    fun getNextFromQueue(): Song? {
+        val song = downloadQueue.peek()
+        return song
+    }
+    
+    fun popFromQueue(): Song? {
+        val song = downloadQueue.poll()
+        _queueState.value = downloadQueue.toList()
+        return song
+    }
+    
+    fun updateBatchProgress(current: Int, total: Int) {
+        _batchProgress.value = current to total
+    }
+
+    /**
+     * Add songs to queue and start service.
+     */
+    fun downloadSongs(songs: List<Song>) {
+        // Filter duplicates
+        val newSongs = songs.filter { song -> 
+            _downloadedSongs.value.none { it.id == song.id } && 
+            downloadQueue.none { it.id == song.id } &&
+            !_downloadingIds.value.contains(song.id)
+        }
+        
+        if (newSongs.isEmpty()) return
+        
+        val wasEmpty = downloadQueue.isEmpty()
+        downloadQueue.addAll(newSongs)
+        _queueState.value = downloadQueue.toList()
+        
+        // Update batch total if starting new or adding
+        // If we were 0/0, now we are 0/newSize
+        // If we were 3/10, and added 5, we are 3/15
+        val currentTotal = _batchProgress.value.second
+        val currentDone = _batchProgress.value.first
+        
+        if (currentTotal == 0) {
+            _batchProgress.value = 0 to newSongs.size
+        } else {
+            _batchProgress.value = currentDone to (currentTotal + newSongs.size)
+        }
+        
+        // Start Service to process
+        DownloadService.startBatchDownload(context)
+    }
+    
+    // Alias for single song
+    fun downloadSongToQueue(song: Song) {
+        downloadSongs(listOf(song))
+    }
+    
     suspend fun deleteDownloads(songIds: List<String>) {
         withContext(Dispatchers.IO) {
             songIds.forEach { id ->
                 deleteDownload(id)
             }
         }
-    }
-
-    /**
-     * Queue a list of songs for sequential download.
-     * Starts processing if not already active.
-     */
-    suspend fun downloadSongs(songs: List<Song>) {
-        withContext(Dispatchers.IO) {
-            // Filter out already downloaded songs and songs already in queue/downloading
-            val newSongs = songs.filter { song -> 
-                _downloadedSongs.value.none { it.id == song.id } && 
-                downloadQueue.none { it.id == song.id } &&
-                !_downloadingIds.value.contains(song.id)
-            }
-            
-            if (newSongs.isEmpty()) return@withContext
-            
-            downloadQueue.addAll(newSongs)
-            _queueState.value = downloadQueue.toList()
-            
-            if (!isBatchDownloadActive) {
-                isBatchDownloadActive = true
-                totalBatchSize = newSongs.size
-                completedBatchCount = 0
-                processDownloadQueue()
-            } else {
-                // Add to existing batch
-                totalBatchSize += newSongs.size
-            }
-        }
-    }
-
-    private suspend fun processDownloadQueue() {
-        while (downloadQueue.isNotEmpty()) {
-            val song = downloadQueue.poll() ?: break
-            _queueState.value = downloadQueue.toList()
-            
-            try {
-                // Determine batch progress string
-                completedBatchCount++
-                downloadSong(song)
-            } catch (e: Exception) {
-                Log.e(TAG, "Queue error for ${song.title}", e)
-            }
-        }
-        isBatchDownloadActive = false
-        totalBatchSize = 0
-        completedBatchCount = 0
     }
     
     /**
@@ -1233,16 +1240,18 @@ class DownloadRepository @Inject constructor(
             }
         }
         
-        // Also clean up the public folders in case there are orphan files
-        listOf(getPublicMusicFolder(), getLegacyDownloadsFolder()).forEach { publicFolder ->
-            if (publicFolder.exists()) {
-                publicFolder.listFiles()?.forEach { file ->
-                    if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac")) {
-                        file.delete()
+        // Clean up legacy/orphan files
+        try {
+            listOf(getPublicMusicFolder(), getLegacyDownloadsFolder()).forEach { publicFolder ->
+                if (publicFolder.exists()) {
+                    publicFolder.listFiles()?.forEach { file ->
+                        if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac")) {
+                            file.delete()
+                        }
                     }
                 }
             }
-        }
+        } catch (e: Exception) {}
         
         _downloadedSongs.value = emptyList()
         saveDownloads()
