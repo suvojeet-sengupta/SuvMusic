@@ -21,5 +21,5 @@ sealed class HomeItem {
     data class PlaylistItem(val playlist: PlaylistDisplayItem, val previewSongs: List<Song> = emptyList()) : HomeItem()
     data class AlbumItem(val album: Album) : HomeItem()
     data class ArtistItem(val artist: Artist) : HomeItem()
-    data class ExploreItem(val title: String, val iconRes: Int) : HomeItem()
+    data class ExploreItem(val title: String, val iconRes: Int, val browseId: String) : HomeItem()
 }
