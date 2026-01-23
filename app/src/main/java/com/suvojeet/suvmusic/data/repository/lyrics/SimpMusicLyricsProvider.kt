@@ -1,7 +1,7 @@
 package com.suvojeet.suvmusic.data.repository.lyrics
 
 import android.content.Context
-import com.suvojeet.suvmusic.data.local.SessionManager
+import com.suvojeet.suvmusic.data.SessionManager
 import javax.inject.Inject
 
 /**
