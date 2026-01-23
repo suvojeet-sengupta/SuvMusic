@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +19,8 @@ import javax.inject.Inject
 data class AlbumUiState(
     val album: Album? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isSaved: Boolean = false
 )
 
 @HiltViewModel
@@ -26,6 +28,7 @@ class AlbumViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
+    private val libraryRepository: LibraryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -59,6 +62,26 @@ class AlbumViewModel @Inject constructor(
             }
         }
         loadAlbum()
+        checkLibraryStatus()
+    }
+
+    private fun checkLibraryStatus() {
+        viewModelScope.launch {
+            libraryRepository.isAlbumSaved(albumId).collect { isSaved ->
+                _uiState.update { it.copy(isSaved = isSaved) }
+            }
+        }
+    }
+
+    fun toggleSaveToLibrary() {
+        viewModelScope.launch {
+            val album = _uiState.value.album ?: return@launch
+            if (_uiState.value.isSaved) {
+                libraryRepository.removeAlbum(album.id)
+            } else {
+                libraryRepository.saveAlbum(album)
+            }
+        }
     }
 
     private fun loadAlbum() {
