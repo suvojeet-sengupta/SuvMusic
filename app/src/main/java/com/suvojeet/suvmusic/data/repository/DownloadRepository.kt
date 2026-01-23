@@ -623,6 +623,12 @@ class DownloadRepository @Inject constructor(
             return@withContext true
         }
         
+        // Prevent concurrent downloads of the same song
+        if (_downloadingIds.value.contains(song.id)) {
+            Log.d(TAG, "Song ${song.id} is already downloading")
+            return@withContext true
+        }
+        
         // Mark as downloading
         _downloadingIds.value = _downloadingIds.value + song.id
         Log.d(TAG, "Starting download for: ${song.title} (${song.id})")

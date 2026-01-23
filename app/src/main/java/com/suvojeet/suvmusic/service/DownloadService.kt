@@ -80,8 +80,14 @@ class DownloadService : Service() {
     
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var progressJob: Job? = null
-    private var downloadJob: Job? = null
-    private var currentDownloadingSong: Song? = null
+    
+    // Track active downloads: ID -> Title
+    private val activeDownloads = java.util.concurrent.ConcurrentHashMap<String, String>()
+    // Track jobs for cancellation: ID -> Job
+    private val downloadJobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
+    
+    // The song currently being displayed in the notification
+    private var primaryNotificationSongId: String? = null
     
     private val notificationManager by lazy {
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -105,7 +111,7 @@ class DownloadService : Service() {
             ACTION_CANCEL_DOWNLOAD -> {
                 val songId = intent.getStringExtra("song_id")
                 if (songId != null) {
-                    cancelCurrentDownload(songId)
+                    cancelDownload(songId)
                 }
             }
         }
@@ -131,12 +137,14 @@ class DownloadService : Service() {
     }
     
     private fun startDownloadWithNotification(song: Song) {
-        currentDownloadingSong = song
+        // Add to active list
+        activeDownloads[song.id] = song.title
+        primaryNotificationSongId = song.id
         
         // Start foreground with initial notification
-        startForeground(NOTIFICATION_ID, createProgressNotification(song.title, 0))
+        updateForegroundNotification()
         
-        downloadJob = serviceScope.launch {
+        val job = serviceScope.launch {
             try {
                 Log.d(TAG, "Starting download for: ${song.title}")
                 val success = downloadRepository.downloadSong(song)
@@ -150,31 +158,46 @@ class DownloadService : Service() {
                 Log.e(TAG, "Download error", e)
                 showCompleteNotification(song.title, false)
             } finally {
-                currentDownloadingSong = null
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                // Cleanup
+                activeDownloads.remove(song.id)
+                downloadJobs.remove(song.id)
+                
+                // If this was the primary song, pick another one or clear
+                if (primaryNotificationSongId == song.id) {
+                    primaryNotificationSongId = activeDownloads.keys.firstOrNull()
+                }
+                
+                // Check if service should stop
+                if (activeDownloads.isEmpty()) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                } else {
+                    updateForegroundNotification()
+                }
             }
         }
+        
+        downloadJobs[song.id] = job
     }
     
     private fun observeDownloadProgress() {
         progressJob = serviceScope.launch {
             downloadRepository.downloadProgress.collectLatest { progressMap ->
-                val song = currentDownloadingSong ?: return@collectLatest
-                val progress = progressMap[song.id] ?: return@collectLatest
+                val primaryId = primaryNotificationSongId ?: return@collectLatest
+                val title = activeDownloads[primaryId] ?: return@collectLatest
+                val progress = progressMap[primaryId] ?: 0f
                 
                 val progressPercent = (progress * 100).toInt()
-                updateProgressNotification(song.title, progressPercent)
+                updateProgressNotification(title, progressPercent)
             }
         }
     }
     
-    private fun cancelCurrentDownload(songId: String) {
-        if (currentDownloadingSong?.id == songId) {
-            downloadJob?.cancel()
-            currentDownloadingSong = null
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+    private fun cancelDownload(songId: String) {
+        val job = downloadJobs[songId]
+        if (job != null) {
+            job.cancel()
+            // Cleanup will happen in finally block of the job
         }
     }
     
@@ -188,7 +211,8 @@ class DownloadService : Service() {
         
         val cancelIntent = Intent(this, DownloadService::class.java).apply {
             action = ACTION_CANCEL_DOWNLOAD
-            putExtra("song_id", currentDownloadingSong?.id)
+            // If multiple, canceling notification action could cancel the primary one
+            putExtra("song_id", primaryNotificationSongId)
         }
         val cancelPendingIntent = PendingIntent.getService(
             this,
@@ -197,9 +221,16 @@ class DownloadService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
+        val extraCount = activeDownloads.size - 1
+        val contentText = if (extraCount > 0) {
+            "$songTitle (+ $extraCount others)"
+        } else {
+            songTitle
+        }
+        
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Downloading")
-            .setContentText(songTitle)
+            .setContentText(contentText)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setProgress(100, progress, progress == 0)
             .setOngoing(true)
@@ -213,6 +244,20 @@ class DownloadService : Service() {
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+    }
+    
+    private fun updateForegroundNotification() {
+        val primaryId = primaryNotificationSongId
+        if (primaryId != null) {
+            val title = activeDownloads[primaryId] ?: "Unknown"
+            // We might not have progress immediately, allow observeDownloadProgress to catch up
+            // But we must startForeground immediately
+            try {
+                startForeground(NOTIFICATION_ID, createProgressNotification(title, 0))
+            } catch (e: Exception) {
+                // If service is not foreground-allowed etc.
+            }
+        }
     }
     
     private fun updateProgressNotification(songTitle: String, progress: Int) {
@@ -246,7 +291,7 @@ class DownloadService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         progressJob?.cancel()
-        downloadJob?.cancel()
+        downloadJobs.values.forEach { it.cancel() }
         serviceScope.cancel()
     }
 }
