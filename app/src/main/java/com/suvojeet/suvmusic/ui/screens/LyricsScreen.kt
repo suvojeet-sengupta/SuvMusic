@@ -473,11 +473,20 @@ fun LyricsList(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                if (lyrics.isSynced && line.startTimeMs > 0) {
-                                    onSeekTo(line.startTimeMs)
+                            .combinedClickable(
+                                onClick = {
+                                    if (lyrics.isSynced && line.startTimeMs > 0) {
+                                        onSeekTo(line.startTimeMs)
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!isSelectionMode) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        isSelectionMode = true
+                                        selectedIndices = setOf(index)
+                                    }
                                 }
-                            }
+                            )
                             .padding(horizontal = 32.dp, vertical = 8.dp) // Reduced vertical padding
                     ) {
                         if (line.words != null && line.words.isNotEmpty() && lyrics.isSynced) {
