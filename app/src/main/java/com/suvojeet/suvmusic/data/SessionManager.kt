@@ -1184,7 +1184,8 @@ class SessionManager @Inject constructor(
             "explore" -> {
                 com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem(
                     title = data.optString("title"),
-                    iconRes = data.optInt("iconRes")
+                    iconRes = data.optInt("iconRes"),
+                    browseId = data.optString("browseId", "")
                 )
             }
             else -> null
@@ -1238,6 +1239,7 @@ class SessionManager @Inject constructor(
                 val data = JSONObject().apply {
                     put("title", item.title)
                     put("iconRes", item.iconRes)
+                    put("browseId", item.browseId)
                 }
                 obj.put("data", data)
             }

@@ -83,4 +83,17 @@ sealed class Destination(val route: String) {
             }
         }
     }
+
+    data class Explore(val browseId: String, val title: String) : Destination(buildRoute(browseId, title)) {
+        companion object {
+            const val ROUTE = "explore/{browseId}?title={title}"
+            const val ARG_BROWSE_ID = "browseId"
+            const val ARG_TITLE = "title"
+
+            fun buildRoute(browseId: String, title: String): String {
+                val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                return "explore/$browseId?title=$encodedTitle"
+            }
+        }
+    }
 }
