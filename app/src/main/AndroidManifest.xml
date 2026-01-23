@@ -29,6 +29,9 @@
     
     <!-- Permission to install APK updates -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    
+    <!-- Vibration permission for Music Haptics -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Package visibility for Android 11+ -->
     <queries>

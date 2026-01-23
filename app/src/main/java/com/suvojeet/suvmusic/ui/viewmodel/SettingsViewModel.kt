@@ -11,6 +11,8 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
+import com.suvojeet.suvmusic.data.model.HapticsIntensity
+import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.UpdateState
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
@@ -45,7 +47,11 @@ data class SettingsUiState(
     val volumeNormalizationEnabled: Boolean = false,
     val betterLyricsEnabled: Boolean = true,
     val simpMusicEnabled: Boolean = true,
-    val playerCacheLimit: Long = 500L * 1024 * 1024 // Default 500MB
+    val playerCacheLimit: Long = 500L * 1024 * 1024, // Default 500MB
+    // Music Haptics
+    val musicHapticsEnabled: Boolean = false,
+    val hapticsMode: HapticsMode = HapticsMode.BASIC,
+    val hapticsIntensity: HapticsIntensity = HapticsIntensity.MEDIUM
 )
 
 @HiltViewModel
@@ -127,6 +133,24 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(playerCacheLimit = limit) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.musicHapticsEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(musicHapticsEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.hapticsModeFlow.collect { mode ->
+                _uiState.update { it.copy(hapticsMode = mode) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.hapticsIntensityFlow.collect { intensity ->
+                _uiState.update { it.copy(hapticsIntensity = intensity) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -156,7 +180,11 @@ class SettingsViewModel @Inject constructor(
                 volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled(),
                 betterLyricsEnabled = sessionManager.enableBetterLyrics,
                 simpMusicEnabled = sessionManager.enableSimpMusic,
-                playerCacheLimit = sessionManager.getPlayerCacheLimit()
+                playerCacheLimit = sessionManager.getPlayerCacheLimit(),
+                // Music Haptics
+                musicHapticsEnabled = sessionManager.isMusicHapticsEnabled(),
+                hapticsMode = sessionManager.getHapticsMode(),
+                hapticsIntensity = sessionManager.getHapticsIntensity()
             )
         }
     }
@@ -426,6 +454,29 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPlayerCacheLimit(limit)
             _uiState.update { it.copy(playerCacheLimit = limit) }
+        }
+    }
+
+    // --- Music Haptics ---
+
+    fun setMusicHapticsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setMusicHapticsEnabled(enabled)
+            _uiState.update { it.copy(musicHapticsEnabled = enabled) }
+        }
+    }
+
+    fun setHapticsMode(mode: HapticsMode) {
+        viewModelScope.launch {
+            sessionManager.setHapticsMode(mode)
+            _uiState.update { it.copy(hapticsMode = mode) }
+        }
+    }
+
+    fun setHapticsIntensity(intensity: HapticsIntensity) {
+        viewModelScope.launch {
+            sessionManager.setHapticsIntensity(intensity)
+            _uiState.update { it.copy(hapticsIntensity = intensity) }
         }
     }
 }
