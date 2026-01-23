@@ -249,21 +249,33 @@ fun WaveformSeeker(
             
             // Material Slider Overlay
             if (currentStyle == SeekbarStyle.MATERIAL) {
-                androidx.compose.material3.Slider(
-                    value = currentProgress,
-                    onValueChange = { 
-                        currentProgress = it
-                        // Live seeking or wait for drag end depending on preference
-                        // Typically Slider updates live
-                        onSeek(it)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.SliderDefaults.colors(
-                        thumbColor = activeColor,
-                        activeTrackColor = activeColor,
-                        inactiveTrackColor = inactiveColor.copy(alpha = 0.5f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    showStyleMenu = true
+                                }
+                            )
+                        }
+                ) {
+                    androidx.compose.material3.Slider(
+                        value = currentProgress,
+                        onValueChange = { 
+                            currentProgress = it
+                            // Live seeking or wait for drag end depending on preference
+                            // Typically Slider updates live
+                            onSeek(it)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = activeColor,
+                            activeTrackColor = activeColor,
+                            inactiveTrackColor = inactiveColor.copy(alpha = 0.5f)
+                        )
                     )
-                )
+                }
             }
         }
         
