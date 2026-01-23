@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PersonAdd
@@ -184,8 +185,10 @@ fun PlaylistScreen(
                     PlaylistHeader(
                         playlist = playlist,
                         batchProgress = batchProgress,
+                        isSaved = uiState.isSaved,
                         onPlayAll = { onPlayAll(playlist.songs) },
                         onShufflePlay = { onShufflePlay(playlist.songs) },
+                        onToggleSave = { viewModel.toggleSaveToLibrary() },
                         onMoreClick = { showMediaMenu = true },
                         contentColor = contentColor,
                         secondaryContentColor = secondaryContentColor,
@@ -396,8 +399,10 @@ private fun TopBar(
 private fun PlaylistHeader(
     playlist: Playlist,
     batchProgress: Pair<Int, Int>,
+    isSaved: Boolean,
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
+    onToggleSave: () -> Unit,
     onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color,
@@ -498,9 +503,9 @@ private fun PlaylistHeader(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Favorite Button (Placeholder)
+            // Favorite Button
             IconButton(
-                onClick = { /* TODO: Follow/Favorite Playlist */ },
+                onClick = onToggleSave,
                 modifier = Modifier
                     .size(48.dp)
                     .background(
@@ -509,9 +514,9 @@ private fun PlaylistHeader(
                     )
             ) {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.FavoriteBorder, 
-                    contentDescription = "Favorite",
-                    tint = contentColor
+                    imageVector = if (isSaved) androidx.compose.material.icons.Icons.Default.Favorite else androidx.compose.material.icons.Icons.Default.FavoriteBorder, 
+                    contentDescription = if (isSaved) "Remove from Library" else "Add to Library",
+                    tint = if (isSaved) Color(0xFFFF4081) else contentColor
                 )
             }
             

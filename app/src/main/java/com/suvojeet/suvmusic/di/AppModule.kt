@@ -98,6 +98,14 @@ object AppModule {
     ): com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao {
         return database.listeningHistoryDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideLibraryDao(
+        database: com.suvojeet.suvmusic.data.local.AppDatabase
+    ): com.suvojeet.suvmusic.data.local.dao.LibraryDao {
+        return database.libraryDao()
+    }
     
     @Provides
     @Singleton
