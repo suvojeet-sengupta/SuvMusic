@@ -685,7 +685,10 @@ class DownloadRepository @Inject constructor(
     private fun downloadUsingSharedCache(song: Song, streamUrl: String): Boolean {
         return try {
             val uri = android.net.Uri.parse(streamUrl)
-            val dataSpec = androidx.media3.datasource.DataSpec(uri)
+            val dataSpec = androidx.media3.datasource.DataSpec.Builder()
+                .setUri(uri)
+                .setKey(song.id) // CRITICAL: Match MusicPlayer's cache key
+                .build()
             val dataSource = dataSourceFactory.createDataSource()
             
             // Open the source (this reads from cache if available, or network if not)

@@ -107,9 +107,11 @@ object AppModule {
         jioSaavnRepository: JioSaavnRepository,
         sessionManager: SessionManager,
         sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager,
-        listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
+        listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository,
+        cache: androidx.media3.datasource.cache.Cache,
+        @PlayerDataSource dataSourceFactory: androidx.media3.datasource.DataSource.Factory
     ): MusicPlayer {
-        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository)
+        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory)
     }
     @Provides
     @Singleton
