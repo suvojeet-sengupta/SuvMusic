@@ -1,8 +1,17 @@
 package com.suvojeet.suvmusic.data.model
 
+
+enum class HomeSectionType {
+    HorizontalCarousel,
+    Grid,
+    LargeCardWithList,
+    VerticalList
+}
+
 data class HomeSection(
     val title: String,
-    val items: List<HomeItem>
+    val items: List<HomeItem>,
+    val type: HomeSectionType = HomeSectionType.HorizontalCarousel
 )
 
 sealed class HomeItem {

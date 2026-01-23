@@ -3,7 +3,7 @@ package com.suvojeet.suvmusic.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.rememberSharedContentState
+
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -37,7 +37,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -104,16 +104,7 @@ fun MiniPlayer(
         var offsetY by remember { mutableFloatStateOf(0f) }
         val swipeThreshold = 100f
 
-        val sharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-            with(sharedTransitionScope) {
-                 Modifier.sharedBounds(
-                    rememberSharedContentState(key = "player_bound"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.ScaleToBounds(ContentScale.FillWidth),
-                    placeHolderSize = androidx.compose.animation.SharedTransitionScope.PlaceHolderSize.animatedSize
-                )
-            }
-        } else Modifier
+        val sharedModifier = Modifier
 
         Surface(
             modifier = modifier
@@ -168,14 +159,7 @@ fun MiniPlayer(
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
-                        val artworkModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                Modifier.sharedElement(
-                                    rememberSharedContentState(key = "album_art"),
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                )
-                            }
-                        } else Modifier
+                        val artworkModifier = Modifier
 
                         if (song.thumbnailUrl != null) {
                             AsyncImage(

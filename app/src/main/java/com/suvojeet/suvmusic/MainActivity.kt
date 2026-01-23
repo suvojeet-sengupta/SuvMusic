@@ -14,6 +14,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -444,13 +447,7 @@ fun SuvMusicApp(
         onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
     )
     
-    // Default colors for non-player screens
-    val defaultDominantColors = DominantColors(
-        primary = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-        secondary = androidx.compose.material3.MaterialTheme.colorScheme.secondary,
-        accent = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
-        onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-    )
+
     
     Box(modifier = Modifier.fillMaxSize()) {
         @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)

@@ -1101,13 +1101,21 @@ class SessionManager @Inject constructor(
             (0 until array.length()).mapNotNull { i ->
                 val obj = array.optJSONObject(i) ?: return@mapNotNull null
                 val title = obj.optString("title")
+                val typeStr = obj.optString("type")
+                val type = try {
+                    if (typeStr.isNotEmpty()) com.suvojeet.suvmusic.data.model.HomeSectionType.valueOf(typeStr)
+                    else com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                } catch (e: Exception) {
+                    com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                }
+                
                 val itemsArray = obj.optJSONArray("items") ?: JSONArray()
                 
                 val items = (0 until itemsArray.length()).mapNotNull { j ->
                     parseHomeItem(itemsArray.optJSONObject(j))
                 }
                 
-                com.suvojeet.suvmusic.data.model.HomeSection(title, items)
+                com.suvojeet.suvmusic.data.model.HomeSection(title, items, type)
             }
         } catch (e: Exception) {
             emptyList()
@@ -1119,6 +1127,7 @@ class SessionManager @Inject constructor(
         sections.forEach { section ->
             val obj = JSONObject().apply {
                 put("title", section.title)
+                put("type", section.type.name)
                 val itemsArray = JSONArray()
                 section.items.forEach { item ->
                     itemsArray.put(serializeHomeItem(item))
