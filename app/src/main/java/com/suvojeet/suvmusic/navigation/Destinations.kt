@@ -21,6 +21,7 @@ sealed class Destination(val route: String) {
     data object Downloads : Destination("downloads")
     data object Storage : Destination("storage")
     data object ListeningStats : Destination("listening_stats")
+    data object PlayerCache : Destination("player_cache")
     data object Welcome : Destination("welcome")
     data object HowItWorks : Destination("how_it_works")
     data object Support : Destination("support")
