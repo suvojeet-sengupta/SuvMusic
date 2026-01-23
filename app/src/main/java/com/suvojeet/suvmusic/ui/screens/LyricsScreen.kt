@@ -55,6 +55,7 @@ fun LyricsScreen(
     // New parameters
     duration: Long = 0L,
     selectedProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
+    enabledProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
     onProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -114,26 +115,38 @@ fun LyricsScreen(
                 text = {
                     Column {
                         com.suvojeet.suvmusic.data.model.LyricsProviderType.entries.forEach { provider ->
+                            val isEnabled = enabledProviders[provider] ?: true
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
+                                    .clickable(enabled = isEnabled) {
                                         onProviderChange(provider)
                                         showProviderDialog = false
                                     }
-                                    .padding(vertical = 12.dp),
+                                    .padding(vertical = 12.dp)
+                                    .alpha(if (isEnabled) 1f else 0.5f),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RadioButton(
                                     selected = provider == selectedProvider,
-                                    onClick = null // Handled by Row click
+                                    onClick = null, // Handled by Row click
+                                    enabled = isEnabled
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = provider.displayName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface 
-                                )
+                                Column {
+                                    Text(
+                                        text = provider.displayName,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface 
+                                    )
+                                    if (!isEnabled) {
+                                        Text(
+                                            text = "Disabled in settings",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.error 
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
