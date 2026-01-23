@@ -97,20 +97,38 @@ class DownloadRepository @Inject constructor(
             var hasNewSongs = false
             
             for (file in audioFiles) {
-                // Check if already tracked by URI
+                // Check if already tracked by URI or Filename
                 val fileUri = file.toUri()
+                
+                // Parse filename: "Title - Artist.m4a" format
+                val nameWithoutExt = file.nameWithoutExtension
+                val parts = nameWithoutExt.split(" - ", limit = 2)
+                val title = parts.getOrElse(0) { nameWithoutExt }.trim()
+                val artist = parts.getOrElse(1) { "Unknown Artist" }.trim()
+                
                 val isTracked = currentSongs.any { song ->
-                    song.localUri?.path == file.absolutePath || 
-                    song.localUri == fileUri
+                    // 1. Check direct URI match
+                    if (song.localUri?.path == file.absolutePath || song.localUri == fileUri) {
+                        return@any true
+                    }
+                    
+                    // 2. Check filename match (most reliable for our naming convention)
+                    // The file on disk is "SanitizedTitle - SanitizedArtist.ext"
+                    val expectedFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}"
+                    if (nameWithoutExt == expectedFileName) {
+                        return@any true
+                    }
+                    
+                    // 3. Fallback: Check Title and Artist match
+                    // Useful if sanitization logic changed slightly or for very similar files
+                    if (song.title == title && song.artist == artist) {
+                        return@any true
+                    }
+                    
+                    false
                 }
                 
                 if (!isTracked) {
-                    // Parse filename: "Title - Artist.m4a" format
-                    val nameWithoutExt = file.nameWithoutExtension
-                    val parts = nameWithoutExt.split(" - ", limit = 2)
-                    val title = parts.getOrElse(0) { nameWithoutExt }.trim()
-                    val artist = parts.getOrElse(1) { "Unknown Artist" }.trim()
-                    
                     val song = Song(
                         id = "local_${file.name.hashCode()}",
                         title = title,
@@ -563,10 +581,25 @@ class DownloadRepository @Inject constructor(
                 null
             }
             
-            _downloadedSongs.value = validSongs
+            // Deduplicate songs (fix for duplicate entries issue)
+            // Group by Title + Artist and keep the best version (prefer with thumbnail, prefer original ID)
+            val distinctSongs = validSongs
+                .groupBy { "${it.title.trim().lowercase()}-${it.artist.trim().lowercase()}" }
+                .map { (_, duplicates) ->
+                    if (duplicates.size > 1) {
+                        duplicates.sortedWith(
+                            compareByDescending<Song> { !it.thumbnailUrl.isNullOrEmpty() }
+                                .thenByDescending { !it.id.startsWith("local_") }
+                        ).first()
+                    } else {
+                        duplicates.first()
+                    }
+                }
             
-            // If some songs were removed, save the updated list
-            if (validSongs.size != songs.size) {
+            _downloadedSongs.value = distinctSongs
+            
+            // If some songs were removed (invalid or duplicates), save the updated list
+            if (distinctSongs.size != songs.size) {
                 saveDownloads()
             }
         } catch (e: Exception) {
