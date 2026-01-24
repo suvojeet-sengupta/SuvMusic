@@ -10,6 +10,7 @@ import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.repository.lyrics.BetterLyricsProvider
 import com.suvojeet.suvmusic.data.repository.lyrics.LyricsProvider
 import com.suvojeet.suvmusic.data.repository.lyrics.SimpMusicLyricsProvider
+import com.suvojeet.suvmusic.data.repository.lyrics.KuGouLyricsProvider
 import com.suvojeet.suvmusic.data.model.LyricsProviderType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,7 +31,8 @@ class LyricsRepository @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val betterLyricsProvider: BetterLyricsProvider,
-    private val simpMusicLyricsProvider: SimpMusicLyricsProvider
+    private val simpMusicLyricsProvider: SimpMusicLyricsProvider,
+    private val kuGouLyricsProvider: KuGouLyricsProvider
 ) {
     private val cache = LruCache<String, Lyrics>(MAX_CACHE_SIZE)
 
@@ -47,6 +49,11 @@ class LyricsRepository @Inject constructor(
             // SimpMusic
             if (simpMusicLyricsProvider.isEnabled(context)) {
                 add(simpMusicLyricsProvider)
+            }
+
+            // KuGou
+            if (kuGouLyricsProvider.isEnabled(context)) {
+                add(kuGouLyricsProvider)
             }
         }
     }
@@ -77,7 +84,12 @@ class LyricsRepository @Inject constructor(
                 ).onSuccess { lrcText ->
                     val parsed = parseLrcLyrics(lrcText)
                     if (parsed.isNotEmpty()) {
-                        val providerEnum = if (provider == betterLyricsProvider) LyricsProviderType.BETTER_LYRICS else LyricsProviderType.SIMP_MUSIC
+                        val providerEnum = when (provider) {
+                            betterLyricsProvider -> LyricsProviderType.BETTER_LYRICS
+                            kuGouLyricsProvider -> LyricsProviderType.KUGOU
+                            simpMusicLyricsProvider -> LyricsProviderType.SIMP_MUSIC
+                            else -> LyricsProviderType.AUTO
+                        }
                         val lyrics = Lyrics(
                             lines = parsed,
                             sourceCredit = "Lyrics from ${provider.name}",
@@ -128,6 +140,11 @@ class LyricsRepository @Inject constructor(
             LyricsProviderType.SIMP_MUSIC -> {
                 if (simpMusicLyricsProvider.isEnabled(context)) {
                     fetchExternalLyrics(simpMusicLyricsProvider, song, LyricsProviderType.SIMP_MUSIC)
+                } else null
+            }
+            LyricsProviderType.KUGOU -> {
+                if (kuGouLyricsProvider.isEnabled(context)) {
+                    fetchExternalLyrics(kuGouLyricsProvider, song, LyricsProviderType.KUGOU)
                 } else null
             }
             LyricsProviderType.LRCLIB -> {

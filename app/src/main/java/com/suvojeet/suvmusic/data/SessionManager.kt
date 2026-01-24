@@ -123,6 +123,7 @@ class SessionManager @Inject constructor(
         // Lyrics Providers
         private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
         private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
+        private val ENABLE_KUGOU_KEY = booleanPreferencesKey("enable_kugou")
         private val PREFERRED_LYRICS_PROVIDER_KEY = stringPreferencesKey("preferred_lyrics_provider")
 
         // Player Cache
@@ -347,6 +348,19 @@ class SessionManager @Inject constructor(
     suspend fun setEnableSimpMusic(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ENABLE_SIMPMUSIC_KEY] = enabled
+        }
+    }
+    
+    suspend fun doesEnableKuGou(): Boolean = 
+            context.dataStore.data.first()[ENABLE_KUGOU_KEY] ?: true
+    
+    val enableKuGouFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ENABLE_KUGOU_KEY] ?: true
+    }
+    
+    suspend fun setEnableKuGou(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ENABLE_KUGOU_KEY] = enabled
         }
     }
     
