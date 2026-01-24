@@ -142,7 +142,11 @@ fun NavGraph(
                     navController.navigate(Destination.Recents.route)
                 },
                 onExploreClick = { browseId, title ->
-                    navController.navigate(Destination.Explore.buildRoute(browseId, title))
+                    if (browseId == "FEmusic_moods_and_genres") {
+                        navController.navigate(Destination.MoodAndGenres.route)
+                    } else {
+                        navController.navigate(Destination.Explore.buildRoute(browseId, title))
+                    }
                 },
                 onStartRadio = onStartRadio
             )
@@ -176,6 +180,42 @@ fun NavGraph(
                         ).route
                     )
                 }
+            )
+                }
+
+
+        composable(Destination.MoodAndGenres.route) {
+            com.suvojeet.suvmusic.ui.screens.MoodAndGenresScreen(
+                onCategoryClick = { browseId, params, title ->
+                    navController.navigate(
+                        Destination.MoodAndGenresDetail.buildRoute(browseId, params, title)
+                    )
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Destination.MoodAndGenresDetail.ROUTE,
+            arguments = listOf(
+                navArgument(Destination.MoodAndGenresDetail.ARG_BROWSE_ID) { type = NavType.StringType },
+                navArgument(Destination.MoodAndGenresDetail.ARG_PARAMS) { 
+                    type = NavType.StringType 
+                    nullable = true
+                },
+                navArgument(Destination.MoodAndGenresDetail.ARG_TITLE) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val browseId = backStackEntry.arguments?.getString(Destination.MoodAndGenresDetail.ARG_BROWSE_ID) ?: ""
+            val params = backStackEntry.arguments?.getString(Destination.MoodAndGenresDetail.ARG_PARAMS)
+            val title = backStackEntry.arguments?.getString(Destination.MoodAndGenresDetail.ARG_TITLE) ?: ""
+
+            com.suvojeet.suvmusic.ui.screens.MoodAndGenresDetailScreen(
+                browseId = browseId,
+                params = params,
+                title = title,
+                onBackClick = { navController.popBackStack() },
+                onSongClick = { songs, index -> onPlaySong(songs, index) }
             )
         }
         

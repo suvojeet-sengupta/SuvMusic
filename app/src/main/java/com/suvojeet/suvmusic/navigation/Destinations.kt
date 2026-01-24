@@ -96,4 +96,25 @@ sealed class Destination(val route: String) {
             }
         }
     }
+
+    data object MoodAndGenres : Destination("mood_and_genres")
+
+    data class MoodAndGenresDetail(
+        val browseId: String,
+        val params: String? = null,
+        val title: String
+    ) : Destination(buildRoute(browseId, params, title)) {
+        companion object {
+            const val ROUTE = "mood_and_genres_detail/{browseId}?params={params}&title={title}"
+            const val ARG_BROWSE_ID = "browseId"
+            const val ARG_PARAMS = "params"
+            const val ARG_TITLE = "title"
+
+            fun buildRoute(browseId: String, params: String?, title: String): String {
+                val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                val encodedParams = if (params != null) java.net.URLEncoder.encode(params, "UTF-8") else ""
+                return "mood_and_genres_detail/$browseId?params=$encodedParams&title=$encodedTitle"
+            }
+        }
+    }
 }
