@@ -12,6 +12,8 @@ import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.MusicSource
+import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -77,7 +79,9 @@ class SearchViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val localAudioRepository: LocalAudioRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val musicPlayer: MusicPlayer,
+    private val downloadRepository: DownloadRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -411,6 +415,25 @@ class SearchViewModel @Inject constructor(
             )
         }
         search()
+        search()
+    }
+
+    fun playNext(song: Song) {
+        musicPlayer.playNext(listOf(song))
+    }
+
+    fun addToQueue(song: Song) {
+        musicPlayer.addToQueue(listOf(song))
+    }
+
+    fun downloadSong(song: Song) {
+        viewModelScope.launch {
+            downloadRepository.downloadSong(song)
+        }
+    }
+    
+    fun addToPlaylist(song: Song) {
+        // TODO: Implement add to playlist sheet for Search
     }
 }
 
