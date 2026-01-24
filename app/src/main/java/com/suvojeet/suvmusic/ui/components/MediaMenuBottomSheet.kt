@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,13 +55,16 @@ fun MediaMenuBottomSheet(
     title: String,
     subtitle: String, // e.g. "48 songs"
     thumbnailUrl: String?,
+    isUserPlaylist: Boolean = false,
     onShuffle: () -> Unit,
     onStartRadio: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onDownload: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onRename: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -178,6 +183,22 @@ fun MediaMenuBottomSheet(
                     subtitle = "Make available for offline playback",
                     onClick = { onDownload(); onDismiss() }
                 )
+                
+                if (isUserPlaylist) {
+                    MenuActionItem(
+                        icon = Icons.Default.Edit,
+                        title = "Edit playlist",
+                        subtitle = "Rename playlist",
+                        onClick = { onRename(); onDismiss() }
+                    )
+                    
+                    MenuActionItem(
+                        icon = Icons.Default.Delete,
+                        title = "Delete playlist",
+                        subtitle = "Permanently remove this playlist",
+                        onClick = { onDelete(); onDismiss() }
+                    )
+                }
 
                 MenuActionItem(
                     icon = Icons.Default.Share,
