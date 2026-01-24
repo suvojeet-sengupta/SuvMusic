@@ -2,8 +2,6 @@ package com.suvojeet.suvmusic.player
 
 import android.content.ComponentName
 import android.content.Context
-import android.animation.ValueAnimator
-import android.view.animation.LinearInterpolator
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -93,6 +91,8 @@ class MusicPlayer @Inject constructor(
     private var currentSongStartTime: Long = 0L
     private var currentSongStartPosition: Long = 0L
     
+    private var deviceReceiver: android.content.BroadcastReceiver? = null
+    
     init {
         connectToService()
         
@@ -116,7 +116,7 @@ class MusicPlayer @Inject constructor(
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
         }
         
-        val receiver = object : android.content.BroadcastReceiver() {
+        deviceReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
                 // Small delay to allow system to update device list
                 scope.launch {
@@ -127,7 +127,7 @@ class MusicPlayer @Inject constructor(
         }
         
         try {
-            context.registerReceiver(receiver, filter)
+            deviceReceiver?.let { context.registerReceiver(it, filter) }
         } catch (e: Exception) {
             // Log error
         }
@@ -1144,6 +1144,16 @@ class MusicPlayer @Inject constructor(
         positionUpdateJob?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         mediaController = null
+        
+        // Unregister device receiver
+        deviceReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+            } catch (e: Exception) {
+                // Ignore if already unregistered
+            }
+            deviceReceiver = null
+        }
     }
     
     /**
