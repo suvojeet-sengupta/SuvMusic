@@ -10,6 +10,7 @@ import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -60,7 +61,10 @@ class YouTubeRepository @Inject constructor(
     private var currentVideoIdForComments: String? = null
 
     init {
-        initializeNewPipe()
+        // Fix: Potential Main Thread Network Blocking -> Move init to background
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            initializeNewPipe()
+        }
     }
 
     private fun initializeNewPipe() {

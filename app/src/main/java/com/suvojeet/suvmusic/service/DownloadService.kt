@@ -116,6 +116,10 @@ class DownloadService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Fix for Android 12+ ForegroundServiceDidNotStartInTimeException
+        // We must call startForeground immediately
+        startForeground(NOTIFICATION_ID, createProgressNotification("Starting service...", 0, 0, 0))
+
         when (intent?.action) {
             ACTION_START_DOWNLOAD -> {
                 val songJson = intent.getStringExtra(EXTRA_SONG_JSON)
@@ -225,13 +229,8 @@ class DownloadService : Service() {
     }
     
     private fun cancelDownload(songId: String) {
-        // If it's the current one, the repo's downloadSong will check cancellation status 
-        // if we support cancellation flag logic, but downloadSong is atomic mostly.
-        // However, we can just let it finish or fail.
-        // Real cancellation requires Job cancellation.
-        // Since we are running sequentially in `batchJob`, simple cancellation is tricky for just one song.
-        // For now, we assume cancel stops the whole queue or just that song if we had map.
-        // Let's implement full cancel support later, user asked for batch progress mainly.
+        // Fix: Broken Download Cancellation -> Delegate to Repository
+        downloadRepository.cancelDownload(songId)
     }
     
     private fun createProgressNotification(songTitle: String, progress: Int, current: Int, total: Int): Notification {
