@@ -69,6 +69,7 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
+import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 
 @Composable
@@ -105,6 +106,10 @@ fun PlaylistScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showMediaMenu by remember { mutableStateOf(false) }
+    
+    // Song Menu State
+    var showSongMenu by remember { mutableStateOf(false) }
+    var selectedSong: Song? by remember { mutableStateOf(null) }
 
     // Handle delete success
     androidx.compose.runtime.LaunchedEffect(uiState.deleteSuccess) {
@@ -272,6 +277,10 @@ fun PlaylistScreen(
                             index = index,
                             totalSongs = playlist.songs.size,
                             onClick = { onSongClick(playlist.songs, index) },
+                            onMoreClick = { 
+                                selectedSong = song
+                                showSongMenu = true 
+                            },
                             titleColor = contentColor,
                             subtitleColor = secondaryContentColor
                         )
@@ -329,6 +338,21 @@ fun PlaylistScreen(
                     onDelete = { showDeleteDialog = true }
                 )
             }
+        }
+
+        // Song Menu
+        if (showSongMenu && selectedSong != null) {
+            val song = selectedSong!!
+            SongMenuBottomSheet(
+                isVisible = showSongMenu,
+                onDismiss = { showSongMenu = false },
+                song = song,
+                onPlayNext = { viewModel.playNext(song) },
+                onAddToQueue = { viewModel.addToQueue(song) },
+                onAddToPlaylist = { viewModel.addToPlaylist(song) }, // Ensure ViewModel has this
+                onDownload = { viewModel.downloadSong(song) }, // Ensure ViewModel has this
+                onShare = { /* TODO share song */ }
+            )
         }
 
         // Dialogs
@@ -596,6 +620,7 @@ private fun SongListItem(
     index: Int = 0,
     totalSongs: Int = 0,
     onClick: () -> Unit,
+    onMoreClick: () -> Unit = {},
     titleColor: Color,
     subtitleColor: Color
 ) {
@@ -685,7 +710,7 @@ private fun SongListItem(
                 }
             }
         } else {
-             IconButton(onClick = { }) {
+             IconButton(onClick = onMoreClick) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More options",

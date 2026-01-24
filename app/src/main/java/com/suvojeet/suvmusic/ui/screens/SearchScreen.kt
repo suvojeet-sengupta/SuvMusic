@@ -72,6 +72,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ResultFilter
+import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
 import coil.request.ImageRequest
@@ -91,6 +92,10 @@ fun SearchScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     var isSearchFocused by remember { mutableStateOf(false) }
+
+    // Song Menu State
+    var showSongMenu by remember { mutableStateOf(false) }
+    var selectedSong: Song? by remember { mutableStateOf(null) }
     
     // Accent color for the app (works in both light/dark)
     val accentColor = MaterialTheme.colorScheme.primary
@@ -383,6 +388,10 @@ fun SearchScreen(
                             },
                             onArtistClick = { artistId ->
                                 onArtistClick(artistId)
+                            },
+                            onMoreClick = {
+                                selectedSong = song
+                                showSongMenu = true
                             }
                         )
                     }
@@ -436,6 +445,10 @@ fun SearchScreen(
                             },
                             onArtistClick = { artistId ->
                                 onArtistClick(artistId)
+                            },
+                            onMoreClick = {
+                                selectedSong = song
+                                showSongMenu = true
                             }
                         )
                     }
@@ -522,7 +535,8 @@ private fun SuggestionItem(
 private fun SearchResultItem(
     song: Song,
     onClick: () -> Unit,
-    onArtistClick: (String) -> Unit = {}
+    onArtistClick: (String) -> Unit = {},
+    onMoreClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -583,7 +597,7 @@ private fun SearchResultItem(
         }
         
         // Menu button
-        IconButton(onClick = { /* TODO: Show menu */ }) {
+        IconButton(onClick = onMoreClick) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",

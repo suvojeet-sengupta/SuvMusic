@@ -58,6 +58,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.ImportSpotifyDialog
 import com.suvojeet.suvmusic.ui.components.MusicCard
+import com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
 
 /**
@@ -81,6 +82,10 @@ fun LibraryScreen(
     
     // Import Spotify dialog state
     var showImportSpotifyDialog by remember { mutableStateOf(false) }
+
+    // Playlist Menu State
+    var showPlaylistMenu by remember { mutableStateOf(false) }
+    var selectedPlaylist: PlaylistDisplayItem? by remember { mutableStateOf(null) }
 
     // Player-inspired Background Colors
     val deepPurple = Color(0xFF1E1033) // Deep background
@@ -167,6 +172,10 @@ fun LibraryScreen(
                         0 -> PlaylistsTab(
                             playlists = uiState.playlists,
                             onPlaylistClick = onPlaylistClick,
+                            onMoreClick = { playlist ->
+                                selectedPlaylist = playlist
+                                showPlaylistMenu = true
+                            },
                             onCreatePlaylistClick = { showCreatePlaylistDialog = true },
                             onImportSpotifyClick = { showImportSpotifyDialog = true }
                         )
@@ -221,6 +230,7 @@ fun LibraryScreen(
 private fun PlaylistsTab(
     playlists: List<PlaylistDisplayItem>,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onMoreClick: (PlaylistDisplayItem) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onImportSpotifyClick: () -> Unit
 ) {
@@ -264,7 +274,8 @@ private fun PlaylistsTab(
         items(playlists) { playlist ->
             PlaylistListItem(
                 playlist = playlist,
-                onClick = { onPlaylistClick(playlist) }
+                onClick = { onPlaylistClick(playlist) },
+                onMoreClick = { onMoreClick(playlist) }
             )
         }
         
@@ -387,7 +398,8 @@ private fun ImportSpotifyCard(
 @Composable
 private fun PlaylistListItem(
     playlist: PlaylistDisplayItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onMoreClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -437,7 +449,7 @@ private fun PlaylistListItem(
             )
         }
         
-        IconButton(onClick = { /* TODO: Show menu */ }) {
+        IconButton(onClick = onMoreClick) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",
