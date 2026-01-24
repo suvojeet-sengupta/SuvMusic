@@ -90,16 +90,8 @@ class MusicPlayerService : MediaSessionService() {
         // Observe Volume Normalization setting
         serviceScope.launch {
             sessionManager.volumeNormalizationEnabledFlow.collect { enabled ->
-                if (enabled) {
-                    // Apply effect if player is ready
-                    val sessionId = (mediaSession?.player as? ExoPlayer)?.audioSessionId
-                    if (sessionId != null && sessionId != C.AUDIO_SESSION_ID_UNSET) {
-                        setupAudioNormalization(sessionId)
-                    }
-                } else {
-                    // Release effects
-                    releaseAudioEffects()
-                }
+                // Apply smooth transition when setting changes
+                 updateNormalizationEffect(enabled, animate = true)
             }
         }
         
@@ -189,61 +181,129 @@ class MusicPlayerService : MediaSessionService() {
         }
     }
     
+    private  var volumeNormalizationJob: kotlinx.coroutines.Job? = null
+
     private fun setupAudioNormalization(sessionId: Int) {
         serviceScope.launch {
-            if (!sessionManager.isVolumeNormalizationEnabled()) return@launch
-            
-            releaseAudioEffects()
+            if (sessionManager.isVolumeNormalizationEnabled()) {
+                // Determine if we need to create/reset effects for the new session
+                // For new session, we apply instantly (no fade) to avoid dips at track start
+                updateNormalizationEffect(enabled = true, animate = false, forcedSessionId = sessionId)
+            }
+        }
+    }
 
+    private fun updateNormalizationEffect(enabled: Boolean, animate: Boolean, forcedSessionId: Int? = null) {
+        volumeNormalizationJob?.cancel()
+        volumeNormalizationJob = serviceScope.launch {
             try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                    // API 28+: Use DynamicsProcessing for real-time normalization (Limiter)
-                    // We create a Limiter configuration: Boost input -> Hard Limit -> Consistent Output
-                    
-                    val config = android.media.audiofx.DynamicsProcessing.Config.Builder(
-                        android.media.audiofx.DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
-                        2, // Assume stereo
-                        false, 0, // preEq
-                        false, 0, // mbc
-                        false, 0, // postEq
-                        true      // limiter
-                    )
-                    .setPreferredFrameDuration(10.0f)
-                    .build()
+                val player = mediaSession?.player as? ExoPlayer
+                val sessionId = forcedSessionId ?: player?.audioSessionId ?: C.AUDIO_SESSION_ID_UNSET
+                
+                if (sessionId == C.AUDIO_SESSION_ID_UNSET) return@launch
 
-                    dynamicsProcessing = android.media.audiofx.DynamicsProcessing(0, sessionId, config)
-                    
-                    dynamicsProcessing?.apply {
-                        // 1. Boost Input Gain (Pre-Gain)
-                        // Moderate boost (+5.5dB) to bring quiet songs up without destroying dynamics
-                        setInputGainAllChannelsTo(5.5f)
+                if (enabled) {
+                    // Create effects if they don't exist
+                    if (loudnessEnhancer == null && dynamicsProcessing == null) {
+                        createAudioEffects(sessionId)
+                        // If animating, start from 0 gain
+                        if (animate) setEffectGain(0f)
+                    }
 
-                        // 2. Set Limiter (Ceiling)
-                        // Gentler limiting to prevent "pumping" or stuttering artifacts
-                        val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
-                            true,   // inUse
-                            true,   // enabled
-                            0,      // linkGroup
-                            10.0f,  // attackTimeMs (slower attack to let transients punch through)
-                            200.0f, // releaseTimeMs (smoother recovery to avoid pumping)
-                            4.0f,   // ratio (gentler compression, 4:1)
-                            -3.0f,  // thresholdDb (slightly lower ceiling)
-                            0.0f    // postGainDb
-                        )
-                        setLimiterAllChannelsTo(limiterConfig)
-                        
-                        enabled = true
+                    if (animate) {
+                        // Smooth Ramp Up: 0f -> 1f over 500ms
+                        val steps = 20
+                        for (i in 0..steps) {
+                            val progress = i / steps.toFloat()
+                            setEffectGain(progress)
+                            kotlinx.coroutines.delay(25) // Total ~500ms
+                        }
+                    } else {
+                        setEffectGain(1f) // Instant
                     }
                 } else {
-                    // Fallback for older devices (API < 28)
-                    // Just use LoudnessEnhancer with a static gain
-                    loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
-                    loudnessEnhancer?.setTargetGain(800) // 800mB gain
-                    loudnessEnhancer?.enabled = true
+                    // Disable: Smooth Ramp Down -> Release
+                    if (loudnessEnhancer != null || dynamicsProcessing != null) {
+                        if (animate) {
+                            // Smooth Ramp Down: 1f -> 0f
+                            val steps = 20
+                            for (i in steps downTo 0) {
+                                val progress = i / steps.toFloat()
+                                setEffectGain(progress)
+                                kotlinx.coroutines.delay(25)
+                            }
+                        }
+                        releaseAudioEffects()
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun createAudioEffects(sessionId: Int) {
+        releaseAudioEffects() // Ensure clean state
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                // API 28+: DynamicsProcessing (Limiter + Pre-Gain)
+                val config = android.media.audiofx.DynamicsProcessing.Config.Builder(
+                    android.media.audiofx.DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+                    2, // Assume stereo
+                    false, 0, // preEq
+                    false, 0, // mbc
+                    false, 0, // postEq
+                    true      // limiter
+                )
+                .setPreferredFrameDuration(10.0f)
+                .build()
+
+                dynamicsProcessing = android.media.audiofx.DynamicsProcessing(0, sessionId, config)
+                
+                dynamicsProcessing?.apply {
+                    // Set Limiter Config (Fixed)
+                    val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
+                        true,   // inUse
+                        true,   // enabled
+                        0,      // linkGroup
+                        10.0f,  // attackTimeMs
+                        200.0f, // releaseTimeMs
+                        4.0f,   // ratio
+                        -3.0f,  // thresholdDb
+                        0.0f    // postGainDb
+                    )
+                    setLimiterAllChannelsTo(limiterConfig)
+                    enabled = true
+                }
+            } else {
+                // API < 28: LoudnessEnhancer
+                loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
+                loudnessEnhancer?.enabled = true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun setEffectGain(progress: Float) {
+        try {
+            // Apply gain based on progress (0.0 -> 1.0)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                dynamicsProcessing?.apply {
+                    // Target: 5.5dB
+                    // We interpolate linearly in dB domain for perceived smoothness
+                    val targetDb = 5.5f * progress
+                    setInputGainAllChannelsTo(targetDb)
+                }
+            } else {
+                loudnessEnhancer?.apply {
+                    // Target: 800mB
+                    val targetmB = (800 * progress).toInt()
+                    setTargetGain(targetmB)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
