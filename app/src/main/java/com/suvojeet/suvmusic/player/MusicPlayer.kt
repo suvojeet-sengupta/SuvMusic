@@ -87,6 +87,9 @@ class MusicPlayer @Inject constructor(
     // Track manually selected device ID to persist selection across refreshes
     private var manualSelectedDeviceId: String? = null
     
+    // Cache for resolved video IDs for non-YouTube songs (SongId -> VideoId)
+    private val resolvedVideoIds = mutableMapOf<String, String>()
+    
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
     private var currentSongStartPosition: Long = 0L
@@ -1070,17 +1073,13 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
-     * Toggle video mode for YouTube songs.
+     * Toggle video mode for any song.
+     * Searches YouTube for video if the song is not from YouTube.
      * Switches between audio-only and video playback while preserving position.
      */
     fun toggleVideoMode() {
         val state = _playerState.value
         val song = state.currentSong ?: return
-        
-        // Only works for YouTube songs
-        if (song.source != SongSource.YOUTUBE) {
-            return
-        }
         
         val currentPosition = mediaController?.currentPosition ?: 0L
         val wasPlaying = mediaController?.isPlaying == true
@@ -1092,10 +1091,36 @@ class MusicPlayer @Inject constructor(
             try {
                 val streamUrl = if (newVideoMode) {
                     // Switch to video stream
-                    youTubeRepository.getVideoStreamUrl(song.id)
+                    // 1. Determine Video ID
+                    val videoId = if (song.source == SongSource.YOUTUBE) {
+                        song.id
+                    } else {
+                        // Check cache or search
+                        resolvedVideoIds[song.id] ?: run {
+                            // Search for video
+                            val query = "${song.title} ${song.artist} official video"
+                            try {
+                                val results = youTubeRepository.search(query)
+                                val bestMatch = results.firstOrNull()
+                                bestMatch?.id?.also { resolvedVideoIds[song.id] = it }
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+                    }
+                    
+                    if (videoId != null) {
+                        youTubeRepository.getVideoStreamUrl(videoId)
+                    } else {
+                        null
+                    }
                 } else {
-                    // Switch back to audio stream
-                    youTubeRepository.getStreamUrl(song.id)
+                    // Switch back to audio stream - use original source logic
+                    when (song.source) {
+                        SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
+                        SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id)
+                        else -> youTubeRepository.getStreamUrl(song.id)
+                    }
                 }
                 
                 if (streamUrl == null) {
