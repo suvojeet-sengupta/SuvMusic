@@ -47,6 +47,7 @@ data class SettingsUiState(
     val volumeNormalizationEnabled: Boolean = false,
     val betterLyricsEnabled: Boolean = true,
     val simpMusicEnabled: Boolean = true,
+    val kuGouEnabled: Boolean = true,
     val playerCacheLimit: Long = -1L, // Default Unlimited
     val playerCacheAutoClearInterval: Int = 5, // Default 5 days
     // Music Haptics
@@ -130,6 +131,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.enableKuGouFlow.collect { enabled ->
+                _uiState.update { it.copy(kuGouEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.playerCacheLimitFlow.collect { limit ->
                 _uiState.update { it.copy(playerCacheLimit = limit) }
             }
@@ -185,6 +192,7 @@ class SettingsViewModel @Inject constructor(
             val volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled()
             val betterLyricsEnabled = sessionManager.doesEnableBetterLyrics()
             val simpMusicEnabled = sessionManager.doesEnableSimpMusic()
+            val kuGouEnabled = sessionManager.doesEnableKuGou()
             val playerCacheLimit = sessionManager.getPlayerCacheLimit()
             val playerCacheAutoClearInterval = sessionManager.getPlayerCacheAutoClearInterval()
             val musicHapticsEnabled = sessionManager.isMusicHapticsEnabled()
@@ -210,6 +218,7 @@ class SettingsViewModel @Inject constructor(
                     volumeNormalizationEnabled = volumeNormalizationEnabled,
                     betterLyricsEnabled = betterLyricsEnabled,
                     simpMusicEnabled = simpMusicEnabled,
+                    kuGouEnabled = kuGouEnabled,
                     playerCacheLimit = playerCacheLimit,
                     playerCacheAutoClearInterval = playerCacheAutoClearInterval,
                     // Music Haptics
@@ -478,6 +487,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setEnableSimpMusic(enabled)
             _uiState.update { it.copy(simpMusicEnabled = enabled) }
+        }
+    }
+
+    fun setKuGouEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setEnableKuGou(enabled)
+            _uiState.update { it.copy(kuGouEnabled = enabled) }
         }
     }
 
