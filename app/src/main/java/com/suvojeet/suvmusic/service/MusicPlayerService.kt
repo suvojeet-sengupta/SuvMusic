@@ -2,13 +2,22 @@ package com.suvojeet.suvmusic.service
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService.LibraryParams
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import com.google.common.collect.ImmutableList
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
+import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.MainActivity
 import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -21,7 +30,7 @@ import javax.inject.Inject
  * Supports gapless playback and automix based on user settings.
  */
 @AndroidEntryPoint
-class MusicPlayerService : MediaSessionService() {
+class MusicPlayerService : MediaLibraryService() {
     
     @Inject
     lateinit var sessionManager: SessionManager
@@ -30,7 +39,18 @@ class MusicPlayerService : MediaSessionService() {
     @com.suvojeet.suvmusic.di.PlayerDataSource
     lateinit var dataSourceFactory: androidx.media3.datasource.DataSource.Factory
     
-    private var mediaSession: MediaSession? = null
+    @Inject
+    lateinit var downloadRepository: DownloadRepository
+    
+    @Inject
+    lateinit var localAudioRepository: LocalAudioRepository
+    
+    private var mediaLibrarySession: MediaLibrarySession? = null
+    
+    // Constants for Android Auto browsing
+    private val ROOT_ID = "root"
+    private val DOWNLOADS_ID = "downloads"
+    private val LOCAL_ID = "local"
     
     private val serviceScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
     private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
@@ -102,57 +122,134 @@ class MusicPlayerService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         
-        mediaSession = MediaSession.Builder(this, player)
-            .setSessionActivity(sessionActivityPendingIntent)
-            .setBitmapLoader(CoilBitmapLoader(this))
-            .setCallback(object : MediaSession.Callback {
-                override fun onConnect(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo
-                ): MediaSession.ConnectionResult {
-                    val connectionResult = super.onConnect(session, controller)
-                    val sessionCommands = connectionResult.availableSessionCommands
-                        .buildUpon()
-                        .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
-                        .build()
-                    return MediaSession.ConnectionResult.accept(
-                        sessionCommands,
-                        connectionResult.availablePlayerCommands
+        mediaLibrarySession = MediaLibrarySession.Builder(this, player, object : MediaLibrarySession.Callback {
+            override fun onConnect(
+                session: MediaSession,
+                controller: MediaSession.ControllerInfo
+            ): MediaSession.ConnectionResult {
+                val connectionResult = super.onConnect(session, controller)
+                val sessionCommands = connectionResult.availableSessionCommands
+                    .buildUpon()
+                    .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
+                    .build()
+                return MediaSession.ConnectionResult.accept(
+                    sessionCommands,
+                    connectionResult.availablePlayerCommands
+                )
+            }
+
+            override fun onCustomCommand(
+                session: MediaSession,
+                controller: MediaSession.ControllerInfo,
+                customCommand: androidx.media3.session.SessionCommand,
+                args: android.os.Bundle
+            ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+                if (customCommand.customAction == "SET_OUTPUT_DEVICE") {
+                    val deviceId = args.getString("DEVICE_ID")
+                    if (deviceId != null) {
+                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                        val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+                        
+                        val targetDevice = if (deviceId == "phone_speaker") {
+                            devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                        } else {
+                            devices.find { it.id.toString() == deviceId }
+                        }
+                        
+                        val player = session.player
+                        if (player is ExoPlayer) {
+                            // If targetDevice is null, it clears the preference (default routing)
+                            player.setPreferredAudioDevice(targetDevice)
+                        }
+                    }
+                    return com.google.common.util.concurrent.Futures.immediateFuture(
+                        androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
                     )
                 }
+                return super.onCustomCommand(session, controller, customCommand, args)
+            }
+            
+            override fun onGetLibraryRoot(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                params: LibraryParams?
+            ): com.google.common.util.concurrent.ListenableFuture<LibraryResult<MediaItem>> {
+                // The root item of the browser tree
+                val rootItem = MediaItem.Builder()
+                    .setMediaId(ROOT_ID)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setIsBrowsable(true)
+                            .setIsPlayable(false)
+                            .setTitle("Root")
+                            .build()
+                    )
+                    .build()
+                return com.google.common.util.concurrent.Futures.immediateFuture(LibraryResult.ofItem(rootItem, params))
+            }
 
-                override fun onCustomCommand(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo,
-                    customCommand: androidx.media3.session.SessionCommand,
-                    args: android.os.Bundle
-                ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
-                    if (customCommand.customAction == "SET_OUTPUT_DEVICE") {
-                        val deviceId = args.getString("DEVICE_ID")
-                        if (deviceId != null) {
-                            val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
-                            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-                            
-                            val targetDevice = if (deviceId == "phone_speaker") {
-                                devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                            } else {
-                                devices.find { it.id.toString() == deviceId }
+            override fun onGetChildren(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                parentId: String,
+                page: Int,
+                pageSize: Int,
+                params: LibraryParams?
+            ): com.google.common.util.concurrent.ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+                val future = com.google.common.util.concurrent.SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
+                
+                serviceScope.launch {
+                    try {
+                        val children = when (parentId) {
+                            ROOT_ID -> {
+                                ImmutableList.of(
+                                    createBrowsableMediaItem(DOWNLOADS_ID, "Downloads"),
+                                    createBrowsableMediaItem(LOCAL_ID, "Local Music")
+                                )
                             }
-                            
-                            val player = session.player
-                            if (player is ExoPlayer) {
-                                // If targetDevice is null, it clears the preference (default routing)
-                                player.setPreferredAudioDevice(targetDevice)
+                            DOWNLOADS_ID -> {
+                                 // Fetch downloaded songs
+                                 val songs = downloadRepository.downloadedSongs.value
+                                 songs.map { song -> createPlayableMediaItem(song) }.toImmutableList()
                             }
+                            LOCAL_ID -> {
+                                // Fetch local songs (Async)
+                                val songs = localAudioRepository.getAllLocalSongs()
+                                songs.map { song -> createPlayableMediaItem(song) }.toImmutableList()
+                            }
+                            else -> ImmutableList.of()
                         }
-                        return com.google.common.util.concurrent.Futures.immediateFuture(
-                            androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
-                        )
+                        future.set(LibraryResult.ofItemList(children, params))
+                    } catch (e: Exception) {
+                        future.setException(e)
                     }
-                    return super.onCustomCommand(session, controller, customCommand, args)
                 }
-            })
-            .build()
+                return future
+            }
+            
+            override fun onAddMediaItems(
+                mediaSession: MediaSession,
+                controller: MediaSession.ControllerInfo,
+                mediaItems: MutableList<MediaItem>
+            ): com.google.common.util.concurrent.ListenableFuture<MutableList<MediaItem>> {
+                 val updatedMediaItems = mediaItems.map { item ->
+                    // If the item has a valid URI, keep it, otherwise try to resolve it
+                     if (item.localConfiguration?.uri != null) {
+                        item
+                    } else {
+                        // Logic to resolve MediaItem if needed, but we provide URIs in createPlayableMediaItem
+                        // so this should be fine to just return as is or reload from repo if needed.
+                        // For now return as is.
+                        item
+                    }
+                }.toMutableList()
+                
+                return com.google.common.util.concurrent.Futures.immediateFuture(updatedMediaItems)
+            }
+        })
+        .setSessionActivity(sessionActivityPendingIntent)
+        .setBitmapLoader(CoilBitmapLoader(this))
+        .build()
             
         // Customize the notification provider to ensure seekbar and controls work perfectly
         val notificationProvider = object : androidx.media3.session.DefaultMediaNotificationProvider(this) {
@@ -169,12 +266,12 @@ class MusicPlayerService : MediaSessionService() {
         setMediaNotificationProvider(notificationProvider)
     }
     
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
+        return mediaLibrarySession
     }
     
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaSession?.player
+        val player = mediaLibrarySession?.player
         // Fix: Background Playback Termination -> Only stop if NOT playing
         if (player?.playWhenReady == false && player.mediaItemCount == 0) {
             stopSelf()
@@ -197,7 +294,7 @@ class MusicPlayerService : MediaSessionService() {
         volumeNormalizationJob?.cancel()
         volumeNormalizationJob = serviceScope.launch {
             try {
-                val player = mediaSession?.player as? ExoPlayer
+                val player = mediaLibrarySession?.player as? ExoPlayer
                 val sessionId = forcedSessionId ?: player?.audioSessionId ?: C.AUDIO_SESSION_ID_UNSET
                 
                 if (sessionId == C.AUDIO_SESSION_ID_UNSET) return@launch
@@ -329,12 +426,53 @@ class MusicPlayerService : MediaSessionService() {
         serviceScope.cancel() // Cancel scope
         releaseAudioEffects()
 
-        mediaSession?.run {
+        mediaLibrarySession?.run {
             player.release()
             release()
-            mediaSession = null
+            mediaLibrarySession = null
         }
         super.onDestroy()
+    }
+    private fun createBrowsableMediaItem(mediaId: String, title: String): MediaItem {
+        return MediaItem.Builder()
+            .setMediaId(mediaId)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setIsBrowsable(true)
+                    .setIsPlayable(false)
+                    .setTitle(title)
+                    .build()
+            )
+            .build()
+    }
+
+    private fun createPlayableMediaItem(song: com.suvojeet.suvmusic.data.model.Song): MediaItem {
+        // Use correct properties based on Song model
+        val artworkUri = if (!song.thumbnailUrl.isNullOrEmpty()) {
+            Uri.parse(song.thumbnailUrl)
+        } else {
+            null
+        }
+        
+        val contentUri = song.localUri ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else Uri.EMPTY
+
+        val metadata = MediaMetadata.Builder()
+            .setTitle(song.title)
+            .setArtist(song.artist)
+            .setArtworkUri(artworkUri)
+            .setIsBrowsable(false)
+            .setIsPlayable(true)
+            .build()
+            
+        return MediaItem.Builder()
+            .setMediaId(song.id)
+            .setUri(contentUri)
+            .setMediaMetadata(metadata)
+            .build()
+    }
+    
+    private fun <T> List<T>.toImmutableList(): ImmutableList<T> {
+        return ImmutableList.copyOf(this)
     }
 }
 
