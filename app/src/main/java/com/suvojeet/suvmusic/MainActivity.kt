@@ -66,6 +66,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import androidx.media3.datasource.cache.Cache
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -79,6 +83,9 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
+
+    @Inject
+    lateinit var playerCache: Cache
     
     private lateinit var audioManager: AudioManager
     
@@ -105,6 +112,26 @@ class MainActivity : ComponentActivity() {
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
         requestPermissions()
+
+        // Check for player cache auto-clear
+        lifecycleScope.launch(Dispatchers.IO) {
+            val intervalDays = sessionManager.getPlayerCacheAutoClearInterval()
+            if (intervalDays > 0) {
+                val lastCleared = sessionManager.getLastCacheClearedTimestamp()
+                val intervalMillis = intervalDays * 24 * 60 * 60 * 1000L
+                if (System.currentTimeMillis() - lastCleared > intervalMillis) {
+                    try {
+                        // Clear all cached resources
+                        playerCache.keys.forEach { key ->
+                            playerCache.removeResource(key)
+                        }
+                        sessionManager.updateLastCacheClearedTimestamp()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
         
         // Handle deep link from intent
         val deepLinkUrl = intent?.data?.toString()
