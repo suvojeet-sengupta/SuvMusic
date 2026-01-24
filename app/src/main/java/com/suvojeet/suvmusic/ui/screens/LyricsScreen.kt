@@ -259,7 +259,40 @@ fun LyricsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (isFetching) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    val loadingMessages = remember {
+                        listOf(
+                            "Polishing the lyrics...",
+                            "Preparing your concert experience...",
+                            "Tuning the vocal cords...",
+                            "Finding the rhythm...",
+                            "Did you hear about the musician who locked their keys in the car? They had to break the window to let the bassist out.",
+                            "Why did the singer go to the doctor? Because they had too many 'bars'!",
+                            "Teaching the app how to sing...",
+                            "Gathering the words...",
+                            "Fetching the soul of the song...",
+                            "Wait a second, the lyrics are taking a scenic route..."
+                        )
+                    }
+                    val currentMessage = remember { loadingMessages.random() }
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            color = textColor.copy(alpha = 0.5f),
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = currentMessage,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = textColor.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 24.sp
+                        )
+                    }
                 } else if (lyrics == null || lyrics.lines.isEmpty()) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
@@ -335,6 +368,7 @@ fun LyricsScreen(
                          modifier = Modifier.fillMaxWidth(),
                          horizontalArrangement = Arrangement.SpaceBetween
                      ) {
+                        Text(
                             text = formatTime(if (sliderPosition != null) (sliderPosition!! * duration).toLong() else currentTimeProvider()),
                             style = MaterialTheme.typography.labelSmall,
                             color = textColor.copy(alpha = 0.6f)
