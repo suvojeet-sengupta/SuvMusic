@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -144,6 +145,21 @@ fun SearchScreen(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
+                    // Voice Search Launcher
+                    val voiceSearchLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+                    ) { result ->
+                        if (result.resultCode == android.app.Activity.RESULT_OK) {
+                            val data = result.data
+                            val results = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                            val spokenText = results?.get(0)
+                            if (!spokenText.isNullOrBlank()) {
+                                viewModel.onQueryChange(spokenText)
+                                viewModel.search()
+                            }
+                        }
+                    }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
@@ -183,7 +199,9 @@ fun SearchScreen(
                                         Text(
                                             text = "Artists, Songs, Lyrics and more",
                                             style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                     innerTextField()
@@ -191,7 +209,7 @@ fun SearchScreen(
                             }
                         )
                         
-                        // Clear button
+                        // Clear button (Visible when query is not empty)
                         AnimatedVisibility(visible = uiState.query.isNotEmpty()) {
                             IconButton(
                                 onClick = { viewModel.onQueryChange("") },
@@ -200,6 +218,32 @@ fun SearchScreen(
                                 Icon(
                                     imageVector = Icons.Default.Clear,
                                     contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Voice Search Button (Visible when query is empty)
+                        val context = LocalContext.current
+                        AnimatedVisibility(visible = uiState.query.isEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+                                    }
+                                    try {
+                                        voiceSearchLauncher.launch(intent)
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "Voice search not supported", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Mic,
+                                    contentDescription = "Voice Search",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
