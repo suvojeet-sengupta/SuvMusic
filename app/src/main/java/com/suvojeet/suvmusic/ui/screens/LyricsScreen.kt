@@ -279,12 +279,6 @@ fun LyricsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(32.dp)
                     ) {
-                        CircularProgressIndicator(
-                            color = textColor.copy(alpha = 0.5f),
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
                         Text(
                             text = currentMessage,
                             style = MaterialTheme.typography.bodyLarge,
