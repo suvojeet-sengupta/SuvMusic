@@ -828,7 +828,11 @@ fun PlayerScreen(
                     duration = playerState.duration,
                     selectedProvider = selectedLyricsProvider,
                     enabledProviders = enabledLyricsProviders,
-                    onProviderChange = onLyricsProviderChange
+                    onProviderChange = onLyricsProviderChange,
+                    isPlaying = playerState.isPlaying,
+                    onPlayPause = onPlayPause,
+                    onNext = onNext,
+                    onPrevious = onPrevious
                 )
             }
 
