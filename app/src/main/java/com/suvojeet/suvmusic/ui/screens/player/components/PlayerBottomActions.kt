@@ -37,15 +37,13 @@ fun BottomActions(
             )
         }
 
-        // Video mode toggle - only for YouTube songs
-        if (isYouTubeSong) {
-            IconButton(onClick = onVideoToggle) {
-                Icon(
-                    imageVector = if (isVideoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                    contentDescription = if (isVideoMode) "Switch to Audio" else "Switch to Video",
-                    tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
-                )
-            }
+        // Video mode toggle - for all songs (searches YouTube if not native)
+        IconButton(onClick = onVideoToggle) {
+            Icon(
+                imageVector = if (isVideoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                contentDescription = if (isVideoMode) "Switch to Audio" else "Switch to Video",
+                tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
+            )
         }
 
         IconButton(onClick = onCastClick) {
