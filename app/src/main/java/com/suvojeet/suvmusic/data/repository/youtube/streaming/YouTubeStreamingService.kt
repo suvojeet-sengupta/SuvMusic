@@ -49,11 +49,10 @@ class YouTubeStreamingService @Inject constructor(
                 com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 64
                 com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 128
                 com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 256
-                com.suvojeet.suvmusic.data.model.AudioQuality.BEST -> Int.MAX_VALUE
             }
             
             val bestAudioStream = audioStreams
-                .filter { it.averageBitrate <= targetBitrate || targetBitrate == Int.MAX_VALUE }
+                .filter { it.averageBitrate <= targetBitrate }
                 .maxByOrNull { it.averageBitrate }
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
             
@@ -146,7 +145,7 @@ class YouTubeStreamingService @Inject constructor(
             val targetBitrate = sessionManager.getDownloadQuality().maxBitrate
             
             val bestAudioStream = audioStreams
-                .filter { it.averageBitrate <= targetBitrate || targetBitrate == Int.MAX_VALUE }
+                .filter { it.averageBitrate <= targetBitrate }
                 .maxByOrNull { it.averageBitrate }
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
             

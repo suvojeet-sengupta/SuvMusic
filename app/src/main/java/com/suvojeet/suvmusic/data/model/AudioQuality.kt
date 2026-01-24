@@ -6,8 +6,7 @@ package com.suvojeet.suvmusic.data.model
 enum class AudioQuality(val label: String, val bitrateRange: IntRange) {
     LOW("Low (64 kbps)", 0..64),
     MEDIUM("Medium (128 kbps)", 65..128),
-    HIGH("High (256 kbps)", 129..256),
-    BEST("Best (320+ kbps)", 257..Int.MAX_VALUE);
+    HIGH("High (256 kbps)", 129..256);
     
     companion object {
         fun fromBitrate(bitrate: Int): AudioQuality {
