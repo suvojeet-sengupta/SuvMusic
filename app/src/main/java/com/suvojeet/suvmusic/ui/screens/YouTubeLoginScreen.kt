@@ -174,8 +174,12 @@ fun YouTubeLoginScreen(
                                                 // Try to extract avatar URL
                                                 view?.evaluateJavascript(
                                                     "(function() { " +
-                                                    "var img = document.querySelector('img.yt-spec-avatar-shape__avatar'); " +
-                                                    "return img ? img.src : ''; " +
+                                                    "var selectors = ['img.yt-spec-avatar-shape__avatar', 'button#avatar-btn img', 'img[src*=\"googleusercontent.com\"]'];" +
+                                                    "for (var i = 0; i < selectors.length; i++) {" +
+                                                    "  var img = document.querySelector(selectors[i]);" +
+                                                    "  if (img && img.src && img.src.indexOf('http') === 0) return img.src;" +
+                                                    "}" +
+                                                    "return '';" +
                                                     "})()"
                                                 ) { result ->
                                                     val avatarUrl = result.trim('"')
