@@ -12,11 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Support Screen with help options, bug reporting, and contact info.
+ * Support Screen with donation options, help, and contact info.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +119,7 @@ fun SupportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Support", fontWeight = FontWeight.Bold) },
+                title = { Text("Support & Feedback", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -159,7 +160,7 @@ fun SupportScreen(
                     )
             ) {
                 Text(
-                    text = "🎧",
+                    text = "💖",
                     fontSize = 48.sp
                 )
             }
@@ -167,26 +168,78 @@ fun SupportScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "How can we help?",
+                text = "Support Development",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = onSurfaceColor
             )
             
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
+            // Professional English Text
             Text(
-                text = "We're here to make your music experience better",
+                text = "SuvMusic is a free and open-source project developed with passion. Maintaining and adding new features requires significant time and effort.\n\nIf you enjoy using this app and want to support its continued development, please consider contributing.\n\nWhether it's buying a coffee or starring the repository on GitHub, every bit of support is deeply appreciated! ❤️",
                 style = MaterialTheme.typography.bodyMedium,
                 color = onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // === DONATION / SUPPORT SECTION ===
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column {
+                    SupportItem(
+                        icon = Icons.Default.Coffee, // Or similar
+                        title = "Buy Me a Coffee",
+                        subtitle = "Support the developer directly",
+                        accentColor = Color(0xFFFFDD00), // Yellowish for coffee/gold
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/suvojeet_sengupta"))
+                            context.startActivity(intent)
+                        }
+                    )
+                    SupportItem(
+                        icon = Icons.Default.Star,
+                        title = "Star on GitHub",
+                        subtitle = "Show love on our repo",
+                        accentColor = Color(0xFF4CAF50), // GitHub Green-ish
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta/SuvMusic"))
+                            context.startActivity(intent)
+                        }
+                    )
+                    SupportItem(
+                        icon = Icons.Default.Share,
+                        title = "Share SuvMusic",
+                        subtitle = "Spread the word with friends",
+                        accentColor = Color(0xFF2196F3),
+                        onClick = {
+                            val sendIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, "Check out SuvMusic - The best open source music player! \n\nDownload: https://github.com/suvojeet-sengupta/SuvMusic/releases")
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, null)
+                            context.startActivity(shareIntent)
+                        },
+                        showDivider = false
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.height(28.dp))
             
-            // === HELP SECTION ===
-            SupportSectionTitle("Get Help", primaryColor)
+            // === HELP & FEEDBACK SECTION ===
+            SupportSectionTitle("Help & Feedback", primaryColor)
             
             Card(
                 modifier = Modifier
@@ -196,16 +249,6 @@ fun SupportScreen(
                 colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
             ) {
                 Column {
-                    SupportItem(
-                        icon = Icons.AutoMirrored.Filled.HelpOutline,
-                        title = "FAQ",
-                        subtitle = "Frequently asked questions",
-                        accentColor = primaryColor,
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta/SuvMusic/wiki/FAQ"))
-                            context.startActivity(intent)
-                        }
-                    )
                     SupportItem(
                         icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram,
                         title = "Join Telegram",
@@ -213,25 +256,8 @@ fun SupportScreen(
                         accentColor = Color(0xFF0088CC),
                         onClick = {
                             showTelegramOptions = true
-                        },
-                        showDivider = false
+                        }
                     )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // === FEEDBACK SECTION ===
-            SupportSectionTitle("Feedback", primaryColor)
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                Column {
                     SupportItem(
                         icon = Icons.Default.BugReport,
                         title = "Report a Bug",
@@ -250,17 +276,6 @@ fun SupportScreen(
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta/SuvMusic/issues/new?template=feature_request.md"))
                             context.startActivity(intent)
-                        }
-                    )
-                    SupportItem(
-                        icon = Icons.Default.Star,
-                        title = "Rate the App",
-                        subtitle = "Show your support with 5 stars",
-                        accentColor = Color(0xFF4CAF50),
-                        onClick = {
-                            // Open GitHub repo for now (can be changed to Play Store later)
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta/SuvMusic"))
-                            context.startActivity(intent)
                         },
                         showDivider = false
                     )
@@ -270,7 +285,7 @@ fun SupportScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             // === CONTACT SECTION ===
-            SupportSectionTitle("Contact Developer", primaryColor)
+            SupportSectionTitle("Contact", primaryColor)
             
             Card(
                 modifier = Modifier
@@ -294,21 +309,8 @@ fun SupportScreen(
                         }
                     )
                     SupportItem(
-                        icon = Icons.Default.Email,
-                        title = "Email (Alt)",
-                        subtitle = "suvojeetsengupta@zohomail.in",
-                        accentColor = primaryColor,
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:suvojeetsengupta@zohomail.in")
-                                putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Support")
-                            }
-                            context.startActivity(intent)
-                        }
-                    )
-                    SupportItem(
                         icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram,
-                        title = "Telegram",
+                        title = "Telegram DM",
                         subtitle = "@suvojeet_sengupta",
                         accentColor = Color(0xFF0088CC),
                         onClick = {
@@ -339,7 +341,7 @@ fun SupportScreen(
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
-                    text = " for music lovers",
+                    text = " in India",
                     style = MaterialTheme.typography.bodySmall,
                     color = onSurfaceVariant.copy(alpha = 0.6f)
                 )
