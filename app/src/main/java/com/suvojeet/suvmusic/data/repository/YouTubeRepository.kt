@@ -36,7 +36,8 @@ class YouTubeRepository @Inject constructor(
     private val jsonParser: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser,
     private val apiClient: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient,
     private val streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService,
-    private val searchService: com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService
+    private val searchService: com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService,
+    private val networkMonitor: com.suvojeet.suvmusic.utils.NetworkMonitor
 ) {
     companion object {
         private var isInitialized = false
@@ -82,6 +83,7 @@ class YouTubeRepository @Inject constructor(
      * Fetch user account info (Name, Email, Avatar) from account menu.
      */
     suspend fun fetchAccountInfo(): com.suvojeet.suvmusic.data.SessionManager.StoredAccount? = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) return@withContext null
         try {
             if (!sessionManager.isLoggedIn()) return@withContext null
             val cookies = sessionManager.getCookies() ?: return@withContext null
@@ -148,19 +150,30 @@ class YouTubeRepository @Inject constructor(
     // Search & Stream (NewPipe)
     // ============================================================================================
 
-    suspend fun search(query: String, filter: String = FILTER_SONGS): List<Song> = 
-        searchService.search(query, filter)
+    suspend fun search(query: String, filter: String = FILTER_SONGS): List<Song> {
+        if (!networkMonitor.isCurrentlyConnected()) return emptyList()
+        return searchService.search(query, filter)
+    }
 
-    suspend fun searchArtists(query: String): List<Artist> = 
-        searchService.searchArtists(query)
+    suspend fun searchArtists(query: String): List<Artist> {
+        if (!networkMonitor.isCurrentlyConnected()) return emptyList()
+        return searchService.searchArtists(query)
+    }
 
-    suspend fun searchPlaylists(query: String): List<Playlist> = 
-        searchService.searchPlaylists(query)
+    suspend fun searchPlaylists(query: String): List<Playlist> {
+        if (!networkMonitor.isCurrentlyConnected()) return emptyList()
+        return searchService.searchPlaylists(query)
+    }
 
-    suspend fun getSearchSuggestions(query: String): List<String> = 
-        searchService.getSearchSuggestions(query)
+    suspend fun getSearchSuggestions(query: String): List<String> {
+        if (!networkMonitor.isCurrentlyConnected()) return emptyList()
+        return searchService.getSearchSuggestions(query)
+    }
 
-    suspend fun getStreamUrl(videoId: String): String? = streamingService.getStreamUrl(videoId)
+    suspend fun getStreamUrl(videoId: String): String? {
+        if (!networkMonitor.isCurrentlyConnected()) return null
+        return streamingService.getStreamUrl(videoId)
+    }
 
     suspend fun getVideoStreamUrl(videoId: String): String? = streamingService.getVideoStreamUrl(videoId)
 
@@ -176,6 +189,7 @@ class YouTubeRepository @Inject constructor(
     // ============================================================================================
 
     suspend fun getRecommendations(): List<Song> = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
         if (!sessionManager.isLoggedIn()) {
             return@withContext search("trending music 2024", FILTER_SONGS)
         }
@@ -190,6 +204,7 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
         if (!sessionManager.isLoggedIn()) {
             // Try to fetch public YouTube Music content without auth
             val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
