@@ -69,7 +69,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Simple conditional rendering - no animations to prevent blank flashes
         when {
