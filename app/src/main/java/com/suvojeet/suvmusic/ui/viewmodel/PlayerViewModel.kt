@@ -108,8 +108,23 @@ class PlayerViewModel @Inject constructor(
     init {
         observeCurrentSong()
         observeDownloads()
+        observeDownloadStateConsistency()
         observeQueuePositionForAutoplay()
         observeLyricsProviderSettings()
+    }
+    
+    private fun observeDownloadStateConsistency() {
+        viewModelScope.launch {
+            // Monitor for when download state is reset to NOT_DOWNLOADED (e.g. by player transition)
+            // but the song is actually downloaded.
+            playerState.map { it.currentSong to it.downloadState }
+                .distinctUntilChanged()
+                .collect { (song, downloadState) ->
+                    if (song != null && downloadState == DownloadState.NOT_DOWNLOADED) {
+                        checkDownloadStatus(song)
+                    }
+                }
+        }
     }
     
     private fun observeLyricsProviderSettings() {
