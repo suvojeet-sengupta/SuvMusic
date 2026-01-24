@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.screens
 
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -30,8 +31,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
@@ -51,6 +54,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -77,7 +81,9 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
+import com.suvojeet.suvmusic.ui.viewmodel.DownloadItem
 import com.suvojeet.suvmusic.ui.viewmodel.DownloadsViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.SongStatus
 
 @Composable
 fun DownloadsScreen(
@@ -88,9 +94,17 @@ fun DownloadsScreen(
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
     val downloadedSongs by viewModel.downloadedSongs.collectAsState()
+    val downloadItems by viewModel.downloadItems.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedSongIds by viewModel.selectedSongIds.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
+
+    // Navigation state for collections
+    var openedCollection by remember { mutableStateOf<DownloadItem.CollectionItem?>(null) }
+    
+    BackHandler(enabled = openedCollection != null) {
+        openedCollection = null
+    }
 
     // Theme detection - match PlayerScreen approach
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -103,7 +117,38 @@ fun DownloadsScreen(
         isDarkTheme = isDarkTheme
     )
 
-    // Track scroll position for collapsing header
+    // Delete confirmation dialog state
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var pendingDeleteSong by remember { mutableStateOf<Song?>(null) }
+    
+    // Logic to handle deleting from main list
+    fun deleteSong(song: Song) {
+         pendingDeleteSong = song
+         showDeleteDialog = true
+    }
+
+    // If a collection is opened, show detail view
+    if (openedCollection != null) {
+        // Find the most recent version of this collection from the flow to show live progress
+        val currentCollection = downloadItems.filterIsInstance<DownloadItem.CollectionItem>()
+            .find { it.id == openedCollection!!.id } ?: openedCollection!!
+
+        DownloadedCollectionDetail(
+            collection = currentCollection,
+            onBackClick = { openedCollection = null },
+            onSongClick = onSongClick,
+            onPlayAll = onPlayAll,
+            onShufflePlay = onShufflePlay,
+            onDeleteSong = { song -> 
+                 viewModel.deleteDownload(song.id)
+            },
+            dominantColors = dominantColors,
+            isDarkTheme = isDarkTheme
+        )
+        return
+    }
+
+    // Main Screen Content
     val listState = rememberLazyListState()
     val isScrolled by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100 }
@@ -112,10 +157,6 @@ fun DownloadsScreen(
     // Calculate total duration
     val totalDuration = downloadedSongs.sumOf { it.duration }
     val durationText = formatDuration(totalDuration)
-
-    // Delete confirmation dialog state
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var pendingDeleteSong by remember { mutableStateOf<Song?>(null) }
 
     Box(
         modifier = Modifier
@@ -144,7 +185,7 @@ fun DownloadsScreen(
             contentPadding = PaddingValues(bottom = 140.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header section with collage artwork
+            // Header section (Same as before)
             item {
                 Column(
                     modifier = Modifier
@@ -291,7 +332,7 @@ fun DownloadsScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Play and Shuffle buttons - glassmorphism style
+                    // Play and Shuffle buttons
                     if (downloadedSongs.isNotEmpty()) {
                         Row(
                             modifier = Modifier
@@ -299,7 +340,6 @@ fun DownloadsScreen(
                                 .padding(horizontal = 24.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Play Button - glassmorphism
                             Button(
                                 onClick = { onPlayAll(downloadedSongs) },
                                 modifier = Modifier
@@ -322,24 +362,16 @@ fun DownloadsScreen(
                                     modifier = Modifier.size(22.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Play",
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 15.sp
-                                )
+                                Text("Play", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                             }
 
-                            // Shuffle Button - glassmorphism
                             Button(
                                 onClick = { onShufflePlay(downloadedSongs) },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isDarkTheme) 
-                                        Color.White.copy(alpha = 0.15f)
-                                    else 
-                                        Color.Black.copy(alpha = 0.08f),
+                                    containerColor = if (isDarkTheme) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.08f),
                                     contentColor = dominantColors.onBackground
                                 ),
                                 shape = RoundedCornerShape(26.dp)
@@ -350,11 +382,7 @@ fun DownloadsScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Shuffle",
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 15.sp
-                                )
+                                Text("Shuffle", fontWeight = FontWeight.Medium, fontSize = 15.sp)
                             }
                         }
                     }
@@ -363,9 +391,48 @@ fun DownloadsScreen(
                 }
             }
 
-            // Empty state
-            if (downloadedSongs.isEmpty()) {
-                item {
+            // List of Download Items (Collections + Singles)
+            itemsIndexed(downloadItems) { index, item ->
+                when (item) {
+                    is DownloadItem.CollectionItem -> {
+                        DownloadedCollectionCard(
+                            collection = item,
+                            onClick = { openedCollection = item },
+                            dominantColors = dominantColors,
+                            isDarkTheme = isDarkTheme
+                        )
+                    }
+                    is DownloadItem.SongItem -> {
+                        DownloadedSongCard(
+                            song = item.song,
+                            index = index + 1,
+                            isDownloading = item.isDownloading,
+                            progress = item.progress,
+                            onClick = { 
+                                if (isSelectionMode) {
+                                    viewModel.toggleSelection(item.song.id)
+                                } else {
+                                    val realIndex = downloadedSongs.indexOfFirst { it.id == item.song.id }
+                                    if (realIndex != -1) {
+                                        onSongClick(downloadedSongs, realIndex)
+                                    }
+                                }
+                            },
+                            onLongClick = { viewModel.toggleSelection(item.song.id) },
+                            onDeleteClick = { deleteSong(item.song) },
+                            isSelectionMode = isSelectionMode,
+                            isSelected = selectedSongIds.contains(item.song.id),
+                            onSelectionChange = { viewModel.toggleSelection(item.song.id) },
+                            dominantColors = dominantColors,
+                            isDarkTheme = isDarkTheme
+                        )
+                    }
+                }
+            }
+            
+            // Empty state handling
+            if (downloadItems.isEmpty()) {
+                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -377,45 +444,12 @@ fun DownloadsScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = dominantColors.onBackground.copy(alpha = 0.7f)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Download songs to listen offline",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = dominantColors.onBackground.copy(alpha = 0.5f)
-                        )
                     }
                 }
             }
-
-            // Song list with glassmorphism cards
-            itemsIndexed(downloadedSongs) { index, song ->
-                DownloadedSongCard(
-                    song = song,
-                    index = index + 1,
-                    onClick = { 
-                        if (isSelectionMode) {
-                            viewModel.toggleSelection(song.id)
-                        } else {
-                            onSongClick(downloadedSongs, index) 
-                        }
-                    },
-                    onLongClick = {
-                        viewModel.toggleSelection(song.id)
-                    },
-                    onDeleteClick = {
-                        pendingDeleteSong = song
-                        showDeleteDialog = true
-                    },
-                    isSelectionMode = isSelectionMode,
-                    isSelected = selectedSongIds.contains(song.id),
-                    onSelectionChange = { viewModel.toggleSelection(song.id) },
-                    dominantColors = dominantColors,
-                    isDarkTheme = isDarkTheme
-                )
-            }
         }
 
-        // Collapsing header bar (Sticky Top Bar)
+        // Collapsing header bar
         AnimatedVisibility(
             visible = isScrolled,
             enter = fadeIn() + slideInVertically { -it },
@@ -449,9 +483,7 @@ fun DownloadsScreen(
 
                     Text(
                         text = "Downloaded",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = dominantColors.onBackground,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -469,15 +501,8 @@ fun DownloadsScreen(
                 showDeleteDialog = false
                 pendingDeleteSong = null
             },
-            title = {
-                Text(
-                    text = "Delete Download?",
-                    fontWeight = FontWeight.SemiBold
-                )
-            },
-            text = {
-                Text("\"${pendingDeleteSong?.title}\" will be removed from your device.")
-            },
+            title = { Text("Delete Download?", fontWeight = FontWeight.SemiBold) },
+            text = { Text("\"${pendingDeleteSong?.title}\" will be removed from your device.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -485,9 +510,7 @@ fun DownloadsScreen(
                         showDeleteDialog = false
                         pendingDeleteSong = null
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Delete")
                 }
@@ -666,6 +689,8 @@ private fun EmptyArtworkPlaceholder(dominantColors: DominantColors) {
 private fun DownloadedSongCard(
     song: Song,
     index: Int,
+    isDownloading: Boolean = false,
+    progress: Float = 1.0f,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onDeleteClick: () -> Unit,
@@ -681,7 +706,7 @@ private fun DownloadedSongCard(
         else -> Color.Black.copy(alpha = 0.04f)
     }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -691,39 +716,179 @@ private fun DownloadedSongCard(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectionChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = dominantColors.accent,
+                        uncheckedColor = dominantColors.onBackground.copy(alpha = 0.6f)
+                    )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            } else {
+                // Index number with accent styling
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(dominantColors.accent.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = index.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = dominantColors.accent,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
+            // Thumbnail with shadow
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(8.dp),
+                        spotColor = dominantColors.primary.copy(alpha = 0.3f)
+                    )
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                if (song.thumbnailUrl != null) {
+                    val imageModel = if (song.thumbnailUrl.startsWith("file://")) {
+                        android.net.Uri.parse(song.thumbnailUrl)
+                    } else if (song.thumbnailUrl.startsWith("/")) {
+                        java.io.File(song.thumbnailUrl)
+                    } else {
+                        song.thumbnailUrl
+                    }
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                if (isDownloading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Song info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = dominantColors.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isDownloading) {
+                        Text(
+                            text = "Downloading... ${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = dominantColors.accent,
+                            maxLines = 1
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = dominantColors.accent,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = song.artist,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            // Delete button
+            if (!isSelectionMode && !isDownloading) {
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = dominantColors.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+            } else if (isDownloading) {
+                 IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cancel",
+                        tint = dominantColors.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadedCollectionCard(
+    collection: DownloadItem.CollectionItem,
+    onClick: () -> Unit,
+    dominantColors: DominantColors,
+    isDarkTheme: Boolean
+) {
+    val cardBackground = if (isDarkTheme) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(cardBackground)
+            .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (isSelectionMode) {
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = onSelectionChange,
-                colors = CheckboxDefaults.colors(
-                    checkedColor = dominantColors.accent,
-                    uncheckedColor = dominantColors.onBackground.copy(alpha = 0.6f)
-                )
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        } else {
-            // Index number with accent styling
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(dominantColors.accent.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = index.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = dominantColors.accent,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-        }
-
-        // Thumbnail with shadow
+        // Folder Icon / Thumbnail
         Box(
             modifier = Modifier
                 .size(52.dp)
@@ -736,23 +901,16 @@ private fun DownloadedSongCard(
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            if (song.thumbnailUrl != null) {
-                val imageModel = if (song.thumbnailUrl.startsWith("file://")) {
-                    android.net.Uri.parse(song.thumbnailUrl)
-                } else if (song.thumbnailUrl.startsWith("/")) {
-                    java.io.File(song.thumbnailUrl)
-                } else {
-                    song.thumbnailUrl
-                }
+            if (collection.thumbnailUrl != null) {
                 AsyncImage(
-                    model = imageModel,
+                    model = collection.thumbnailUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
+                 Icon(
+                    imageVector = Icons.Default.Folder,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -762,50 +920,190 @@ private fun DownloadedSongCard(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Song info
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = song.title,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.Medium
-                ),
+                text = collection.title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = dominantColors.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = dominantColors.accent,
-                    modifier = Modifier.size(12.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = dominantColors.onBackground.copy(alpha = 0.6f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            
+            val isDownloading = collection.songs.any { it.isDownloading }
+            val downloadedCount = collection.songs.count { !it.isDownloading && it.progress >= 1.0f }
+            val totalCount = collection.songs.size
+            
+            Text(
+                text = if (isDownloading) "Downloading $downloadedCount / $totalCount" else "$totalCount songs",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isDownloading) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            tint = dominantColors.onBackground.copy(alpha = 0.4f),
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
+@Composable
+private fun DownloadedCollectionDetail(
+    collection: DownloadItem.CollectionItem,
+    onBackClick: () -> Unit,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onPlayAll: (List<Song>) -> Unit,
+    onShufflePlay: (List<Song>) -> Unit,
+    onDeleteSong: (Song) -> Unit,
+    dominantColors: DominantColors,
+    isDarkTheme: Boolean
+) {
+    val listState = rememberLazyListState()
+    val isScrolled by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100 }
+    }
+    
+    // Calculate duration
+    val totalDuration = collection.songs.sumOf { it.song.duration }
+    val durationText = formatDuration(totalDuration)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(top = 80.dp, bottom = 120.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Header
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(180.dp)
+                            .shadow(16.dp, RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                         if (collection.thumbnailUrl != null) {
+                            AsyncImage(
+                                model = collection.thumbnailUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().padding(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Text(
+                        text = collection.title,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = dominantColors.onBackground,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Text(
+                        text = "${collection.songs.size} songs • $durationText",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = dominantColors.onBackground.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                     Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { onPlayAll(collection.songs.map { it.song }) },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = dominantColors.accent),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Play")
+                        }
+                        
+                         Button(
+                            onClick = { onShufflePlay(collection.songs.map { it.song }) },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.1f),
+                                contentColor = dominantColors.onBackground
+                            ),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            Icon(Icons.Default.Shuffle, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Shuffle")
+                        }
+                    }
+                }
+            }
+            
+            itemsIndexed(collection.songs) { index, songStatus ->
+                DownloadedSongCard(
+                    song = songStatus.song,
+                    index = index + 1,
+                    isDownloading = songStatus.isDownloading,
+                    progress = songStatus.progress,
+                    onClick = { onSongClick(collection.songs.map { it.song }, index) },
+                    onDeleteClick = { onDeleteSong(songStatus.song) },
+                    isSelectionMode = false,
+                    dominantColors = dominantColors,
+                    isDarkTheme = isDarkTheme
                 )
             }
         }
-
-        // Delete button (only show when not in selection mode to avoid clutter)
-        if (!isSelectionMode) {
-            IconButton(
-                onClick = onDeleteClick,
-                modifier = Modifier.alpha(0.7f)
-            ) {
+        
+        // Sticky Top Bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(64.dp)
+                .background(
+                    if (isScrolled) dominantColors.primary.copy(alpha = 0.95f) else Color.Transparent
+                )
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            IconButton(onClick = onBackClick) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = dominantColors.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.size(20.dp)
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = dominantColors.onBackground
+                )
+            }
+            
+            AnimatedVisibility(
+                visible = isScrolled,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.padding(start = 56.dp)
+            ) {
+                 Text(
+                    text = collection.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = dominantColors.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
