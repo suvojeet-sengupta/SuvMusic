@@ -16,9 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -31,9 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -45,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -57,12 +56,10 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.ImportSpotifyDialog
 import com.suvojeet.suvmusic.ui.components.MusicCard
-import com.suvojeet.suvmusic.ui.components.PlaylistCard
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
 
 /**
- * Library screen with playlists, offline music, and liked songs.
- * Apple Music inspired design.
+ * Library screen with Material 3 design and player-inspired aesthetics.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,82 +79,109 @@ fun LibraryScreen(
     
     // Import Spotify dialog state
     var showImportSpotifyDialog by remember { mutableStateOf(false) }
+
+    // Player-inspired Background Colors
+    val deepPurple = Color(0xFF1E1033) // Deep background
+    val vibrantPurple = Color(0xFF6200EA) // Primary Accent
+    val secondaryAccent = Color(0xFF3700B3) // Secondary Accent
     
-    PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
-        onRefresh = { viewModel.refresh() },
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(
+        // Ambient Background Glow (Player Style)
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
+                .align(Alignment.TopStart)
+                .size(300.dp)
+                .offset(x = (-50).dp, y = (-50).dp)
+                .blur(80.dp)
+                .background(vibrantPurple.copy(alpha = 0.15f), CircleShape)
+        )
+
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Title
-            Text(
-                text = "Library",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 34.sp
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Tabs (Apple Music style - Pill chips)
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxSize()
+                    .statusBarsPadding()
             ) {
-                tabs.forEachIndexed { index, title ->
-                    val isSelected = selectedTab == index
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.clickable { selectedTab = index }
-                    ) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            ),
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Title
+                Text(
+                    text = "Library",
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Material 3 Style Tabs
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        val isSelected = selectedTab == index
+                        val containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+                        val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        
+                        Surface(
+                            shape = RoundedCornerShape(16.dp), // More rounded
+                            color = containerColor,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clickable { selectedTab = index }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    color = contentColor
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Content based on selected tab
+                Box(modifier = Modifier.weight(1f)) {
+                    when (selectedTab) {
+                        0 -> PlaylistsTab(
+                            playlists = uiState.playlists,
+                            onPlaylistClick = onPlaylistClick,
+                            onCreatePlaylistClick = { showCreatePlaylistDialog = true },
+                            onImportSpotifyClick = { showImportSpotifyDialog = true }
+                        )
+                        1 -> OfflineTab(
+                            localSongs = uiState.localSongs,
+                            downloadedSongs = uiState.downloadedSongs,
+                            onSongClick = onSongClick,
+                            onDownloadsClick = onDownloadsClick
+                        )
+                        2 -> LikedTab(
+                            songs = uiState.likedSongs,
+                            isSyncing = uiState.isSyncingLikedSongs,
+                            onSongClick = onSongClick,
+                            onSync = { viewModel.syncLikedSongs() }
                         )
                     }
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            // Content based on selected tab
-            when (selectedTab) {
-                0 -> PlaylistsTab(
-                    playlists = uiState.playlists,
-                    onPlaylistClick = onPlaylistClick,
-                    onCreatePlaylistClick = { showCreatePlaylistDialog = true },
-                    onImportSpotifyClick = { showImportSpotifyDialog = true }
-                )
-                1 -> OfflineTab(
-                    localSongs = uiState.localSongs,
-                    downloadedSongs = uiState.downloadedSongs,
-                    onSongClick = onSongClick,
-                    onDownloadsClick = onDownloadsClick
-                )
-                2 -> LikedTab(
-                    songs = uiState.likedSongs,
-                    isSyncing = uiState.isSyncingLikedSongs,
-                    onSongClick = onSongClick,
-                    onSync = { viewModel.syncLikedSongs() }
-                )
             }
         }
         
@@ -207,7 +231,7 @@ private fun PlaylistsTab(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 CreatePlaylistCard(
@@ -225,16 +249,16 @@ private fun PlaylistsTab(
         if (playlists.isNotEmpty()) {
             item {
                 Text(
-                    text = "YOUR PLAYLISTS",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    text = "Your Playlists",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp)
                 )
             }
         }
         
-        // Playlists as List Items (Apple Music style)
+        // Playlists as List Items
         items(playlists) { playlist ->
             PlaylistListItem(
                 playlist = playlist,
@@ -244,31 +268,11 @@ private fun PlaylistsTab(
         
         if (playlists.isEmpty()) {
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 40.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No playlists yet",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
-                    Text(
-                        text = "Create one to get started!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-                    )
-                }
+                EmptyState(
+                    icon = Icons.Default.MusicNote,
+                    title = "No playlists yet",
+                    message = "Create one to get started!"
+                )
             }
         }
     }
@@ -280,11 +284,11 @@ private fun CreatePlaylistCard(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(24.dp), // Material 3 rounding
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
-            .height(110.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(120.dp)
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
@@ -292,37 +296,36 @@ private fun CreatePlaylistCard(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
-            // Plus icon in gradient box
+            // Icon Container
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFFFA2D48),
-                                Color(0xFFFF6B6B)
-                            )
-                        )
-                    ),
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
                 )
             }
             
-            Text(
-                text = "New Playlist",
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
+            Column {
+                Text(
+                    text = "New Playlist",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Create custom mix",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -333,11 +336,11 @@ private fun ImportSpotifyCard(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
-            .height(110.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(120.dp)
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
@@ -345,37 +348,36 @@ private fun ImportSpotifyCard(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
-            // Spotify icon in green gradient box
+            // Icon Container (Spotify Greenish tint)
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF1DB954),
-                                Color(0xFF191414)
-                            )
-                        )
-                    ),
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.MusicNote,
+                    imageVector = Icons.Default.MusicNote, // Generic music icon
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    tint = Color(0xFF1DB954),
+                    modifier = Modifier.size(24.dp)
                 )
             }
             
-            Text(
-                text = "Import Spotify",
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
+            Column {
+                Text(
+                    text = "Import Spotify",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Sync your library",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -389,15 +391,14 @@ private fun PlaylistListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Thumbnail
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            modifier = Modifier.size(56.dp)
         ) {
             if (playlist.thumbnailUrl != null) {
                 coil.compose.AsyncImage(
@@ -407,14 +408,14 @@ private fun PlaylistListItem(
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
             } else {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(24.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
         
@@ -423,15 +424,14 @@ private fun PlaylistListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = playlist.name,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "${playlist.songCount} songs",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         
@@ -439,7 +439,7 @@ private fun PlaylistListItem(
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -454,41 +454,41 @@ private fun OfflineTab(
 ) {
     LazyColumn(
         contentPadding = PaddingValues(
-            start = 20.dp,
-            end = 20.dp,
+            start = 24.dp,
+            end = 24.dp,
             bottom = 140.dp
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (localSongs.isEmpty() && downloadedSongs.isEmpty()) {
             item {
-                Text(
-                    text = "No offline songs yet.\nDownload songs or add music to Downloads/SuvMusic folder.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(vertical = 32.dp)
+                EmptyState(
+                    icon = Icons.Default.CloudDownload,
+                    title = "No offline music",
+                    message = "Download songs or add local files"
                 )
             }
         }
         
         // Downloaded Songs Section Card
-            if (downloadedSongs.isNotEmpty()) {
+        if (downloadedSongs.isNotEmpty()) {
             item {
                 DownloadedSongsCard(
                     songCount = downloadedSongs.size,
                     totalDuration = downloadedSongs.sumOf { it.duration },
                     onClick = onDownloadsClick
                 )
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
         
         if (localSongs.isNotEmpty()) {
             item {
-                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "DEVICE FILES",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    text = "Device Files",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
             }
@@ -516,15 +516,15 @@ private fun DownloadedSongsCard(
             val remainingMinutes = minutes % 60
             "$hours hr $remainingMinutes min"
         } else {
-            "$minutes min $seconds sec"
+            "$minutes min"
         }
     } else {
         ""
     }
     
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -532,78 +532,45 @@ private fun DownloadedSongsCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Checkmark icon in gradient box
+            // Icon
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF7B68EE),
-                                Color(0xFF9370DB)
-                            )
-                        )
-                    ),
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(24.dp)
                 )
             }
             
             Spacer(modifier = Modifier.width(16.dp))
             
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Downloaded songs",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "Downloaded Songs",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = buildString {
-                            append("Auto playlist")
-                            append(" • ")
-                            append("$songCount song${if (songCount != 1) "s" else ""}")
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                }
-                if (durationText.isNotEmpty()) {
-                    Text(
-                        text = durationText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                }
+                Text(
+                    text = "$songCount songs • $durationText",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                )
             }
             
-            IconButton(onClick = { }) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
         }
     }
 }
@@ -617,8 +584,8 @@ private fun LikedTab(
 ) {
     LazyColumn(
         contentPadding = PaddingValues(
-            start = 20.dp,
-            end = 20.dp,
+            start = 24.dp,
+            end = 24.dp,
             bottom = 140.dp
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -632,16 +599,16 @@ private fun LikedTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "LIKED SONGS",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    text = "Liked Songs",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 IconButton(onClick = onSync, enabled = !isSyncing) {
                     if (isSyncing) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -655,13 +622,13 @@ private fun LikedTab(
                 }
             }
         }
+        
         if (songs.isEmpty()) {
             item {
-                Text(
-                    text = "No liked songs yet.\nLog in to YouTube Music to see your likes.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(vertical = 32.dp)
+                EmptyState(
+                    icon = Icons.Default.MusicNote,
+                    title = "No liked songs",
+                    message = "Songs you like on YouTube Music will appear here"
                 )
             }
         }
@@ -672,5 +639,39 @@ private fun LikedTab(
                 onClick = { onSongClick(songs, index) }
             )
         }
+    }
+}
+
+@Composable
+private fun EmptyState(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    message: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 64.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+            modifier = Modifier.size(80.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+            modifier = Modifier.padding(top = 4.dp)
+        )
     }
 }
