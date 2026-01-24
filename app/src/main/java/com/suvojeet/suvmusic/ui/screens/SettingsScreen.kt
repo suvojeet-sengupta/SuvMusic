@@ -387,20 +387,9 @@ fun SettingsScreen(
                             icon = Icons.Default.Favorite,
                             title = "Support Project",
                             subtitle = "Your support keeps SuvMusic alive! 💖",
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/suvojeet_sengupta"))
-                                context.startActivity(intent)
-                            }
-                        )
-                        
-                        HorizontalDivider()
-                        
-                        SettingsNavigationItem(
-                            icon = Icons.Default.HeadsetMic,
-                            title = "Help & Support",
-                            subtitle = "FAQ, contact us",
                             onClick = onSupportClick
                         )
+                        
                         
                         HorizontalDivider()
                         
