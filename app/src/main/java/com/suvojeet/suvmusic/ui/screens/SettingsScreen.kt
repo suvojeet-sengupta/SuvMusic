@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HeadsetMic
 import androidx.compose.material.icons.filled.Info
@@ -373,6 +374,18 @@ fun SettingsScreen(
                 item {
                     SettingsSectionTitle("About & Support")
                     GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        SettingsNavigationItem(
+                            icon = Icons.Default.Favorite,
+                            title = "Support Project",
+                            subtitle = "Your support keeps SuvMusic alive! 💖",
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/suvojeet_sengupta"))
+                                context.startActivity(intent)
+                            }
+                        )
+                        
+                        HorizontalDivider()
+                        
                         SettingsNavigationItem(
                             icon = Icons.Default.HeadsetMic,
                             title = "Help & Support",
