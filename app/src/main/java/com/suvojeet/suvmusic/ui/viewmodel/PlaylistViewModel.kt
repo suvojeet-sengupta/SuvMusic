@@ -236,10 +236,28 @@ class PlaylistViewModel @Inject constructor(
         musicPlayer.addToQueue(songs)
     }
 
+    fun playNext(song: Song) {
+        musicPlayer.playNext(listOf(song))
+    }
+
+    fun addToQueue(song: Song) {
+        musicPlayer.addToQueue(listOf(song))
+    }
+
     fun downloadPlaylist(songs: List<Song>) {
         viewModelScope.launch {
             downloadRepository.downloadSongs(songs)
         }
+    }
+
+    fun downloadSong(song: Song) {
+        viewModelScope.launch {
+            downloadRepository.downloadSong(song)
+        }
+    }
+    
+    fun addToPlaylist(song: Song) {
+        showAddToPlaylistSheet(song)
     }
 
     // Add to Playlist management
