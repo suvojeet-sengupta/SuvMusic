@@ -42,6 +42,12 @@ class MusicPlayerService : MediaLibraryService() {
     @Inject
     lateinit var youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository
 
+    @Inject
+    lateinit var downloadRepository: DownloadRepository
+
+    @Inject
+    lateinit var localAudioRepository: LocalAudioRepository
+
     private var mediaLibrarySession: MediaLibrarySession? = null
     
     // Constants for Android Auto browsing
@@ -177,7 +183,7 @@ class MusicPlayerService : MediaLibraryService() {
                             PLAYLISTS_ID -> {
                                 val playlists = youTubeRepository.getUserPlaylists()
                                 children.addAll(playlists.map { playlist ->
-                                    createBrowsableMediaItem("playlist_${playlist.id}", playlist.title)
+                                    createBrowsableMediaItem("playlist_${playlist.id}", playlist.name)
                                 })
                             }
                             else -> {
@@ -191,9 +197,9 @@ class MusicPlayerService : MediaLibraryService() {
                                              if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.SongItem) {
                                                  children.add(createPlayableMediaItem(homeItem.song))
                                              } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem) {
-                                                 children.add(createBrowsableMediaItem("playlist_${homeItem.playlist.id}", homeItem.playlist.title))
+                                                 children.add(createBrowsableMediaItem("playlist_${homeItem.playlist.id}", homeItem.playlist.name))
                                              } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem) {
-                                                 children.add(createBrowsableMediaItem("album_${homeItem.album.browseId}", homeItem.album.title))
+                                                 children.add(createBrowsableMediaItem("album_${homeItem.album.id}", homeItem.album.title))
                                              } else {
                                                  // Skip Artists/Explore for now to keep simple, or map them similarly
                                              }
