@@ -650,7 +650,6 @@ private fun getAudioQualityLabel(quality: AudioQuality, source: MusicSource): St
             AudioQuality.LOW -> "Low (96 kbps)"
             AudioQuality.MEDIUM -> "Standard (160 kbps)"
             AudioQuality.HIGH -> "High (320 kbps)"
-            AudioQuality.BEST -> "Best Available (320 kbps)"
         }
     } else {
         // YouTube Defaults
@@ -658,7 +657,6 @@ private fun getAudioQualityLabel(quality: AudioQuality, source: MusicSource): St
             AudioQuality.LOW -> "Low (48 kbps)"
             AudioQuality.MEDIUM -> "Normal (128 kbps)"
             AudioQuality.HIGH -> "High (256 kbps)"
-            AudioQuality.BEST -> "Always High"
         }
     }
 }
@@ -669,7 +667,6 @@ private fun getDownloadQualityLabel(quality: DownloadQuality, source: MusicSourc
             DownloadQuality.LOW -> "Low (96 kbps) • Saves data"
             DownloadQuality.MEDIUM -> "Standard (160 kbps)"
             DownloadQuality.HIGH -> "High (320 kbps)"
-            DownloadQuality.BEST -> "Best Available (320 kbps)"
         }
     } else {
         // YouTube Defaults
@@ -677,7 +674,6 @@ private fun getDownloadQualityLabel(quality: DownloadQuality, source: MusicSourc
             DownloadQuality.LOW -> "Low (48 kbps) • Saves data"
             DownloadQuality.MEDIUM -> "Medium (128 kbps)"
             DownloadQuality.HIGH -> "High (256 kbps)"
-            DownloadQuality.BEST -> "Best available"
         }
     }
 }
