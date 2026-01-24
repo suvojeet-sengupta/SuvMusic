@@ -34,6 +34,7 @@ class MusicPlayerService : MediaSessionService() {
     
     private val serviceScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
     private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
+    private var dynamicsProcessing: android.media.audiofx.DynamicsProcessing? = null
     
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -81,11 +82,11 @@ class MusicPlayerService : MediaSessionService() {
                     pauseAtEndOfMediaItems = false
                 }
                 
-                // Add listener to attach LoudnessEnhancer when audio session changes
+                // Add listener to attach Audio Normalization when audio session changes
                 addListener(object : androidx.media3.common.Player.Listener {
                     override fun onAudioSessionIdChanged(audioSessionId: Int) {
                         if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
-                            setupLoudnessEnhancer(audioSessionId)
+                            setupAudioNormalization(audioSessionId)
                         }
                     }
                 })
@@ -98,17 +99,11 @@ class MusicPlayerService : MediaSessionService() {
                     // Apply effect if player is ready
                     val sessionId = (mediaSession?.player as? ExoPlayer)?.audioSessionId
                     if (sessionId != null && sessionId != C.AUDIO_SESSION_ID_UNSET) {
-                        setupLoudnessEnhancer(sessionId)
+                        setupAudioNormalization(sessionId)
                     }
                 } else {
-                    // Release enhancer
-                     try {
-                        loudnessEnhancer?.enabled = false
-                        loudnessEnhancer?.release()
-                        loudnessEnhancer = null
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    // Release effects
+                    releaseAudioEffects()
                 }
             }
         }
@@ -198,15 +193,71 @@ class MusicPlayerService : MediaSessionService() {
         }
     }
     
-    private fun setupLoudnessEnhancer(sessionId: Int) {
+    private fun setupAudioNormalization(sessionId: Int) {
         if (!sessionManager.isVolumeNormalizationEnabled()) return
         
+        releaseAudioEffects()
+
         try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                // API 28+: Use DynamicsProcessing for real-time normalization (Limiter)
+                // We create a Limiter configuration: Boost input -> Hard Limit -> Consistent Output
+                
+                val config = android.media.audiofx.DynamicsProcessing.Config.Builder(
+                    android.media.audiofx.DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+                    2, // Assume stereo
+                    false, 0, // preEq
+                    false, 0, // mbc
+                    false, 0, // postEq
+                    true      // limiter
+                )
+                .setPreferredFrameDuration(10.0f)
+                .build()
+
+                dynamicsProcessing = android.media.audiofx.DynamicsProcessing(0, sessionId, config)
+                
+                dynamicsProcessing?.apply {
+                    // 1. Boost Input Gain (Pre-Gain)
+                    // Push everything up by +15dB so quiet songs hit the limiter
+                    setInputGainAllChannelsTo(15.0f)
+
+                    // 2. Set Limiter (Ceiling)
+                    // Clamp output at -2dB to prevent clipping/distortion
+                    val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
+                        true,   // inUse
+                        true,   // enabled
+                        0,      // linkGroup
+                        -1.0f,  // attackTimeMs (default/auto)
+                        60.0f,  // releaseTimeMs (fast recovery)
+                        10.0f,  // ratio (hard compression)
+                        -2.0f,  // thresholdDb
+                        0.0f    // postGainDb
+                    )
+                    setLimiterAllChannelsTo(limiterConfig)
+                    
+                    enabled = true
+                }
+            } else {
+                // Fallback for older devices (API < 28)
+                // Just use LoudnessEnhancer with a static gain
+                loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
+                loudnessEnhancer?.setTargetGain(800) // 800mB gain
+                loudnessEnhancer?.enabled = true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun releaseAudioEffects() {
+        try {
+            loudnessEnhancer?.enabled = false
             loudnessEnhancer?.release()
-            loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
-            // Target gain in millibels. 500mB to 800mB is a reasonable boost for normalization without distortion
-            loudnessEnhancer?.setTargetGain(800) 
-            loudnessEnhancer?.enabled = true
+            loudnessEnhancer = null
+            
+            dynamicsProcessing?.enabled = false
+            dynamicsProcessing?.release()
+            dynamicsProcessing = null
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -214,14 +265,7 @@ class MusicPlayerService : MediaSessionService() {
 
     override fun onDestroy() {
         serviceScope.cancel() // Cancel scope
-        
-        try {
-            loudnessEnhancer?.enabled = false
-            loudnessEnhancer?.release()
-            loudnessEnhancer = null
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        releaseAudioEffects()
 
         mediaSession?.run {
             player.release()
