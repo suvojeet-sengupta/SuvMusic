@@ -64,8 +64,8 @@ fun PlayerCacheScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Player Cache", fontWeight = FontWeight.Bold) },
+            LargeTopAppBar(
+                title = { Text("Player Cache") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -73,10 +73,7 @@ fun PlayerCacheScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -94,7 +91,7 @@ fun PlayerCacheScreen(
                     .padding(vertical = 16.dp),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             ) {
                 Column(
@@ -105,7 +102,7 @@ fun PlayerCacheScreen(
                         imageVector = Icons.Default.Cached,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -150,7 +147,7 @@ fun PlayerCacheScreen(
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(16.dp),
@@ -159,13 +156,13 @@ fun PlayerCacheScreen(
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Player cache stores songs you stream so they don't need to be re-downloaded. This allows for instant playback and offline access to recently played songs.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
             
@@ -173,9 +170,9 @@ fun PlayerCacheScreen(
             
             Text(
                 text = "SETTINGS",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp)
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -204,7 +201,7 @@ fun PlayerCacheScreen(
                     Text(
                         text = "Allow cache to grow without limit",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(
@@ -232,13 +229,14 @@ fun PlayerCacheScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
                     text = "Maximum Cache Size",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 8.dp)
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -265,7 +263,7 @@ fun PlayerCacheScreen(
                 
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f) 
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.padding(top = 8.dp)
@@ -273,7 +271,7 @@ fun PlayerCacheScreen(
                    Text(
                        text = "Note: Changes to cache limit may require an app restart to take full effect.",
                        style = MaterialTheme.typography.bodySmall,
-                       color = MaterialTheme.colorScheme.onTertiaryContainer,
+                       color = MaterialTheme.colorScheme.onSurfaceVariant,
                        modifier = Modifier.padding(12.dp)
                    ) 
                 }
@@ -289,7 +287,7 @@ fun PlayerCacheScreen(
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error)
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
