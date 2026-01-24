@@ -296,13 +296,16 @@ fun PlaylistScreen(
                     title = playlist.title,
                     subtitle = "${playlist.songs.size} songs",
                     thumbnailUrl = playlist.thumbnailUrl,
+                    isUserPlaylist = uiState.isEditable,
                     onShuffle = { onShufflePlay(playlist.songs) },
                     onStartRadio = { onShufflePlay(playlist.songs) },
                     onPlayNext = { viewModel.playNext(playlist.songs) },
                     onAddToQueue = { viewModel.addToQueue(playlist.songs) },
                     onAddToPlaylist = { /* TODO: Show add to playlist dialog */ },
                     onDownload = { viewModel.downloadPlaylist(playlist.songs) },
-                    onShare = { sharePlaylist(playlist) }
+                    onShare = { sharePlaylist(playlist) },
+                    onRename = { showRenameDialog = true },
+                    onDelete = { showDeleteDialog = true }
                 )
             }
         }
