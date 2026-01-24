@@ -38,8 +38,16 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import android.content.Intent
 import com.suvojeet.suvmusic.ui.utils.LyricsImageGenerator
 import coil.compose.AsyncImage
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import com.suvojeet.suvmusic.data.model.Lyrics
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 
 @Composable
 fun LyricsScreen(
@@ -54,6 +62,10 @@ fun LyricsScreen(
     artistName: String = "",
     // New parameters
     duration: Long = 0L,
+    isPlaying: Boolean = false,
+    onPlayPause: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onPrevious: () -> Unit = {},
     selectedProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
     enabledProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
     onProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
@@ -79,6 +91,10 @@ fun LyricsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(backgroundColor)
+            // Block volume gesture from parent by consuming vertical drags
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { _, _ -> }
+            }
     ) {
         // Blurred Background
         if (artworkUrl != null) {
@@ -319,17 +335,61 @@ fun LyricsScreen(
                          modifier = Modifier.fillMaxWidth(),
                          horizontalArrangement = Arrangement.SpaceBetween
                      ) {
-                         Text(
-                             text = formatTime(if (sliderPosition != null) (sliderPosition!! * duration).toLong() else currentTimeProvider()),
-                             style = MaterialTheme.typography.labelSmall,
-                             color = textColor.copy(alpha = 0.6f)
-                         )
-                         Text(
-                             text = formatTime(duration),
-                             style = MaterialTheme.typography.labelSmall,
-                             color = textColor.copy(alpha = 0.6f)
-                         )
-                     }
+                            text = formatTime(if (sliderPosition != null) (sliderPosition!! * duration).toLong() else currentTimeProvider()),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = 0.6f)
+                        )
+
+                        // Playback Controls
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            IconButton(
+                                onClick = onPrevious,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipPrevious,
+                                    contentDescription = "Previous",
+                                    tint = textColor,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            
+                            IconButton(
+                                onClick = onPlayPause,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(textColor, androidx.compose.foundation.shape.CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    tint = backgroundColor,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                            
+                            IconButton(
+                                onClick = onNext,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "Next",
+                                    tint = textColor,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = formatTime(duration),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             } else {
                 Spacer(modifier = Modifier.height(32.dp))
@@ -372,23 +432,40 @@ fun LyricsList(
         selectedIndices = emptySet()
     }
     
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+    var lastUserInteractionTime by remember { mutableLongStateOf(0L) }
+    var isAutoScrolling by remember { mutableStateOf(false) }
+
+    // Track user interaction
+    LaunchedEffect(isDragged, listState.isScrollInProgress) {
+        if (isDragged || (listState.isScrollInProgress && !isAutoScrolling)) {
+            lastUserInteractionTime = System.currentTimeMillis()
+        }
+    }
+
     LaunchedEffect(currentTime, lyrics) {
-        if (lyrics.isSynced && !isSelectionMode) { // Pause scrolling during selection
-            // Find the current line
-            // A line is active if currentTime >= startTime && currentTime < endTime (or next line start)
-            val index = lyrics.lines.indexOfLast { it.startTimeMs <= currentTime }
-            if (index != activeLineIndex && index >= 0) {
-                activeLineIndex = index
-                // Scroll to center
-                // We want the active line to be roughly in the middle
-                // Calculating offset is tricky without item heights, but generic scroll might work
-                try {
-                     listState.animateScrollToItem(
-                        index = index,
-                        scrollOffset = -400 // Approximate offset to center, value depends on screen height/item height
-                    )
-                } catch (e: Exception) {
-                    // Ignore scroll errors
+        if (lyrics.isSynced && !isSelectionMode) {
+            // Check if we should auto-scroll
+            val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
+            val shouldAutoScroll = timeSinceInteraction > 5000 // 5 seconds delay
+            
+            if (shouldAutoScroll) {
+                // Find the current line
+                // A line is active if currentTime >= startTime && currentTime < endTime (or next line start)
+                val index = lyrics.lines.indexOfLast { it.startTimeMs <= currentTime }
+                if (index != activeLineIndex && index >= 0) {
+                    activeLineIndex = index
+                    // Scroll to center
+                    try {
+                         isAutoScrolling = true
+                         listState.animateScrollToItem(
+                            index = index,
+                            scrollOffset = -400 // Approximate offset to center
+                        )
+                        isAutoScrolling = false
+                    } catch (e: Exception) {
+                        isAutoScrolling = false
+                    }
                 }
             }
         }
