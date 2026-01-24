@@ -541,6 +541,17 @@ class PlayerViewModel @Inject constructor(
         // Start foreground service for background download with notification
         com.suvojeet.suvmusic.service.DownloadService.startDownload(context, song)
     }
+
+    fun deleteDownload(songId: String) {
+        viewModelScope.launch {
+            downloadRepository.deleteDownload(songId)
+            // Update state immediately if it's current song
+            val currentSong = playerState.value.currentSong
+            if (currentSong != null && currentSong.id == songId) {
+                musicPlayer.updateDownloadState(DownloadState.NOT_DOWNLOADED)
+            }
+        }
+    }
     
     /**
      * Download current song with progressive playback.
