@@ -237,6 +237,7 @@ class MusicPlayerService : MediaSessionService() {
                     }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("MusicPlayerService", "Error updating audio normalization effect", e)
                 e.printStackTrace()
             }
         }
@@ -281,6 +282,7 @@ class MusicPlayerService : MediaSessionService() {
                 loudnessEnhancer?.enabled = true
             }
         } catch (e: Exception) {
+            android.util.Log.e("MusicPlayerService", "Error creating audio effects", e)
             e.printStackTrace()
         }
     }
@@ -303,6 +305,7 @@ class MusicPlayerService : MediaSessionService() {
                 }
             }
         } catch (e: Exception) {
+            android.util.Log.e("MusicPlayerService", "Error setting effect gain", e)
             e.printStackTrace()
         }
     }
@@ -317,6 +320,7 @@ class MusicPlayerService : MediaSessionService() {
             dynamicsProcessing?.release()
             dynamicsProcessing = null
         } catch (e: Exception) {
+            android.util.Log.e("MusicPlayerService", "Error releasing audio effects", e)
             e.printStackTrace()
         }
     }
