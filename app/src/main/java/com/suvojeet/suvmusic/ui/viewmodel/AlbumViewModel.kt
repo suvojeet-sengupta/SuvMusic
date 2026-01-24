@@ -128,9 +128,9 @@ class AlbumViewModel @Inject constructor(
         musicPlayer.addToQueue(songs)
     }
 
-    fun downloadAlbum(songs: List<Song>) {
+    fun downloadAlbum(album: Album) {
         viewModelScope.launch {
-            downloadRepository.downloadSongs(songs)
+            downloadRepository.downloadAlbum(album)
         }
     }
 }

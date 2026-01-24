@@ -332,7 +332,7 @@ fun PlaylistScreen(
                         // Re-reading: "add to playlist from playerscreen".
                         // I will simply implement the sheet in PlaylistScreen layout to support adding songs *from the list*.
                     },
-                    onDownload = { viewModel.downloadPlaylist(playlist.songs) },
+                    onDownload = { viewModel.downloadPlaylist(playlist) },
                     onShare = { sharePlaylist(playlist) },
                     onRename = { showRenameDialog = true },
                     onDelete = { showDeleteDialog = true }
