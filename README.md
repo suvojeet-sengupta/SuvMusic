@@ -3,7 +3,7 @@
 <div align="center">
 
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=flat-square)](https://github.com/suvojeet-sengupta/SuvMusic/graphs/commit-activity)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Platform](https://img.shields.io/badge/Platform-Android-3DDC84.svg?style=flat-square&logo=android&logoColor=white)](https://developer.android.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Made in India](https://img.shields.io/badge/Made%20in%20India-FF9933?style=flat-square&logo=india&logoColor=white)](https://github.com/suvojeet-sengupta)
@@ -46,46 +46,48 @@ graph TD
 
 ## 🚀 Core Features & capabilities
 
-### 1. Hybrid Audio Engine
+### 1. Hybrid Audio Engine & DSP
 Unlike standard wrappers, SuvMusic implements a custom audio resolution strategy:
 *   **Dual-Source Resolution**: Dynamically resolves audio streams from multiple providers (`YouTube`, `JioSaavn`) to guarantee the highest bitrate (320kbps AAC/OPUS) availability.
-*   **Smart Buffering**: Implements custom `LoadControl` in `ExoPlayer` to optimize buffer sizes based on network type, minimizing latency while ensuring gapless playback.
-*   **Loudness Normalization**: (In Development) volume normalization DSP to ensure consistent listening levels across different tracks.
+*   **Music Haptics**: A specialized synchronization engine that translates audio frequencies into tactile feedback, allowing you to "feel" the beat.
+*   **Pitch & Speed Control**: Real-time DSP allows for granular control over playback speed (up to 5x) and pitch shifting without affecting audio quality.
+*   **Loudness Normalization**: Advanced volume normalization to ensure consistent listening levels across different tracks and sources.
 
 ### 2. Advanced Lyric Synchronization System
 A sophisticated lyrics aggregation pipeline designed for precision:
+*   **Word-by-Word Sync**: Supports high-precision, time-synced lyrics with active word highlighting for an immersive karaoke-style experience.
 *   **Priority Queue Parsing**:
     1.  **LRCLIB API**: Fetches community-verified time-synced LRC data.
-    2.  **Embedded Lyrics**: Extracts ID3v2 SYLT frames from local media.
-    3.  **Fallback Scrapers**: Parses static lyrics from provider metadata if synchronization fails.
-*   **Real-time Interpolation**: The UI uses a linear interpolation algorithm to render smooth lyric scrolling synchronized to the millisecond with the active media player position.
+    2.  **Provider Switcher**: Hot-swap between different lyric sources (LRCLIB, Genius, etc.) directly from the player.
+*   **Real-time Interpolation**: Uses linear interpolation algorithms to render smooth lyric scrolling synchronized to the millisecond.
 
-### 3. "Dynamic Island" Overlay Service
-A technical demonstration of Android's `SYSTEM_ALERT_WINDOW` capabilities:
-*   **Foreground Service**, decoupling the overlay UI from the main application lifecycle.
-*   **Gesture Dispatching**: Custom touch event handling to allow the overlay to expand/collapse without interfering with underlying applications.
-*   **State Synchronization**: Binds directly to the central `MediaSessionService` to reflect real-time playback updates with zero polling.
+### 3. Intelligent Download & Cache System
+*   **Instant Downloads**: Leveraging a shared cache architecture, songs are saved instantly to local storage if they have already been buffered during playback.
+*   **Batch Processing**: Support for queuing entire albums and playlists for background download with persistent notification progress.
+*   **Player Cache Management**: Automated cleanup logic with user-defined limits to optimize device storage.
 
-### 4. Custom Video/Audio Search Algorithm
-Enhances discovery by merging distinct data pipelines:
-*   **Parallel execution** of `Structured Search` (Official Tracks) and `Unstructured Search` (Community Uploads/Videos) using `async/await` patterns.
-*   **Deduplication Logic**: Custom comparison algorithms filter out identical tracks across different sources to present a unified result list.
+### 4. YouTube Music Integration
+*   **Community & Explore**: Direct integration of YouTube Music's Explore and Community sections, bringing personalized discovery to a native interface.
+*   **Search Algorithm**: Parallel execution of structured and unstructured search with custom deduplication logic.
+
+### 5. "Floating Player" & Modern UI
+*   **Floating Player**: A draggable, system-wide overlay that decoupling playback controls from the main application lifecycle.
+*   **Shared Element Transitions**: Cinematic animations using Jetpack Compose's latest shared element APIs for seamless navigation.
+*   **Glance Widgets**: Modern homescreen widgets built with Jetpack Glance for real-time control.
 
 ---
 
 ## 🛠 Technology Stack
 
 ### Language & Runtime
-*   **Kotlin 2.0+**: Leveraging K2 compiler improvements with strict null safety
-*   **Coroutines**: For managing background threads and strict structured concurrency
-*   **Kotlin Flow**: Reactive streams for asynchronous data handling
+*   **Kotlin 2.3+**: Utilizing the latest K2 compiler features and performance improvements.
+*   **Coroutines & Flow**: For structured concurrency and reactive data streams.
 
 ### User Interface
-*   **Jetpack Compose**: 100% declarative UI with Material 3
-*   **Material 3**: Latest Material Design guidelines implementation
-*   **Coil 3.x**: Memory-efficient image loading with hardware-backed bitmap pooling
-*   **Compose Navigation**: Type-safe navigation between screens
-*   **Compose Animation**: Smooth transitions and animations
+*   **Jetpack Compose**: 100% declarative UI with Material 3.
+*   **Material 3**: Full implementation of the latest Material Design guidelines with "Pure Black" OLED support.
+*   **Shared Element Transitions**: High-performance UI animations.
+*   **Coil 3.x**: Hardware-backed image loading and pooling.
 
 ### Architecture & Dependency Injection
 *   **Hilt**: Compile-time dependency injection built on Dagger
@@ -154,39 +156,39 @@ Enhances discovery by merging distinct data pipelines:
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| `androidx.media3:media3-exoplayer` | 1.5+ | Media playback engine |
-| `androidx.media3:media3-session` | 1.5+ | Background playback support |
-| `androidx.media3:media3-ui` | 1.5+ | Player UI components |
-| `androidx.media3:media3-common` | 1.5+ | Common media utilities |
-| `androidx.mediarouter:mediarouter` | Latest | Casting support |
+| `androidx.media3:media3-exoplayer` | 1.9.0 | Media playback engine |
+| `androidx.media3:media3-session` | 1.9.0 | Background playback support |
+| `androidx.media3:media3-ui` | 1.9.0 | Player UI components |
+| `androidx.media3:media3-common` | 1.9.0 | Common media utilities |
+| `androidx.mediarouter:mediarouter` | 1.8.1 | Casting support |
 
 ### Networking Dependencies
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| `com.squareup.okhttp3:okhttp` | 4.x | HTTP client |
-| `com.squareup.okhttp3:logging-interceptor` | 4.x | Network logging |
-| `com.github.TeamNewPipe:NewPipeExtractor` | Latest | YouTube API extraction |
-| `org.jsoup:jsoup` | Latest | HTML parsing |
-| `com.google.code.gson:gson` | Latest | JSON processing |
+| `com.squareup.okhttp3:okhttp` | 4.12.0 | HTTP client |
+| `com.squareup.okhttp3:logging-interceptor` | 4.12.0 | Network logging |
+| `com.github.TeamNewPipe:NewPipeExtractor` | v0.24.8 | YouTube API extraction |
+| `org.jsoup:jsoup` | 1.22.1 | HTML parsing |
+| `com.google.code.gson:gson` | 2.11.0 | JSON processing |
 
 ### Dependency Injection
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| `com.google.dagger:hilt-android` | Latest | DI framework |
-| `com.google.dagger:hilt-compiler` | Latest | Hilt annotation processor |
-| `androidx.hilt:hilt-navigation-compose` | Latest | Hilt + Compose Navigation |
+| `com.google.dagger:hilt-android` | 2.58 | DI framework |
+| `com.google.dagger:hilt-compiler` | 2.58 | Hilt annotation processor |
+| `androidx.hilt:hilt-navigation-compose` | 1.2.0 | Hilt + Compose Navigation |
 
 ### Data Storage
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| `androidx.room:room-runtime` | 2.6+ | Database runtime |
-| `androidx.room:room-ktx` | 2.6+ | Kotlin extensions for Room |
-| `androidx.room:room-compiler` | 2.6+ | Room annotation processor |
-| `androidx.datastore:datastore-preferences` | Latest | Key-value storage |
-| `androidx.security:security-crypto` | Latest | Encrypted storage |
+| `androidx.room:room-runtime` | 2.8.4 | Database runtime |
+| `androidx.room:room-ktx` | 2.8.4 | Kotlin extensions for Room |
+| `androidx.room:room-compiler` | 2.8.4 | Room annotation processor |
+| `androidx.datastore:datastore-preferences` | 1.1.1 | Key-value storage |
+| `androidx.security:security-crypto` | 1.1.0 | Encrypted storage |
 
 ### Build & Tooling
 
@@ -291,6 +293,17 @@ data/repository/
 *   **Baseline Profiles**: Included to improve application startup time and reduce frame jank by pre-compiling critical code paths.
 *   **R8 Full Mode**: Aggressive shrinking and obfuscation to minimize APK size (~50MB) and optimize bytecode.
 *   **Memory Leak Detection**: Developed with strict adherence to lifecycle observation to prevent context leaks, verified via LeakCanary during debug builds.
+
+---
+
+## 💖 Support the Project
+
+SuvMusic is a free and open-source project developed with passion. If you enjoy using the app and want to support its continued development, there are several ways you can contribute:
+
+*   **☕ [Buy Me a Coffee](https://buymeacoffee.com/suvojeet_sengupta):** Support the developer directly.
+*   **⭐️ Star the Repository:** Show your love by starring this project on GitHub.
+*   **📢 Join the Community:** Stay updated via our [Telegram Channel](https://t.me/TechToli) or get help in the [Support Group](https://t.me/Tech_Toli).
+*   **🤝 Contribute:** Found a bug? Have a feature idea? Open an issue or submit a pull request!
 
 ---
 
