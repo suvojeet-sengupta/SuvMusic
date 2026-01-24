@@ -218,19 +218,19 @@ class MusicPlayerService : MediaSessionService() {
                 
                 dynamicsProcessing?.apply {
                     // 1. Boost Input Gain (Pre-Gain)
-                    // Push everything up by +15dB so quiet songs hit the limiter
-                    setInputGainAllChannelsTo(15.0f)
+                    // Moderate boost (+5.5dB) to bring quiet songs up without destroying dynamics
+                    setInputGainAllChannelsTo(5.5f)
 
                     // 2. Set Limiter (Ceiling)
-                    // Clamp output at -2dB to prevent clipping/distortion
+                    // Gentler limiting to prevent "pumping" or stuttering artifacts
                     val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
                         true,   // inUse
                         true,   // enabled
                         0,      // linkGroup
-                        -1.0f,  // attackTimeMs (default/auto)
-                        60.0f,  // releaseTimeMs (fast recovery)
-                        10.0f,  // ratio (hard compression)
-                        -2.0f,  // thresholdDb
+                        10.0f,  // attackTimeMs (slower attack to let transients punch through)
+                        200.0f, // releaseTimeMs (smoother recovery to avoid pumping)
+                        4.0f,   // ratio (gentler compression, 4:1)
+                        -3.0f,  // thresholdDb (slightly lower ceiling)
                         0.0f    // postGainDb
                     )
                     setLimiterAllChannelsTo(limiterConfig)
