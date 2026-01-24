@@ -65,8 +65,8 @@ fun StorageScreen(
     
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Storage Manager", fontWeight = FontWeight.Bold) },
+            LargeTopAppBar(
+                title = { Text("Storage Manager") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -74,10 +74,7 @@ fun StorageScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -97,7 +94,7 @@ fun StorageScreen(
                 }
             } else {
                 storageInfo?.let { info ->
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     
                     // Overview Card
                     Card(
@@ -121,7 +118,7 @@ fun StorageScreen(
                             Text(
                                 text = "Total Used Space",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -138,9 +135,9 @@ fun StorageScreen(
                     // Storage Breakdown Section
                     Text(
                         text = "DETAILS",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                     
                     Spacer(modifier = Modifier.height(12.dp))
@@ -185,9 +182,9 @@ fun StorageScreen(
                     // Actions Section
                     Text(
                         text = "ACTIONS",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                     
                     Spacer(modifier = Modifier.height(12.dp))
@@ -267,7 +264,7 @@ private fun StorageItem(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer // More opaque container
         )
     ) {
         Row(
@@ -301,7 +298,7 @@ private fun StorageItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -319,7 +316,7 @@ private fun StorageItem(
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
