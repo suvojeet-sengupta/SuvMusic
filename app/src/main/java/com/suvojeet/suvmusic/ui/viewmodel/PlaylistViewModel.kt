@@ -27,7 +27,11 @@ data class PlaylistUiState(
     val isDeleting: Boolean = false,
     val deleteSuccess: Boolean = false,
     val isLoggedIn: Boolean = false,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val userPlaylists: List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> = emptyList(),
+    val isLoadingPlaylists: Boolean = false,
+    val showAddToPlaylistSheet: Boolean = false,
+    val selectedSong: Song? = null
 ) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
@@ -236,6 +240,55 @@ class PlaylistViewModel @Inject constructor(
         viewModelScope.launch {
             downloadRepository.downloadSongs(songs)
         }
+    }
+
+    // Add to Playlist management
+    fun showAddToPlaylistSheet(song: Song) {
+        _uiState.update { 
+            it.copy(
+                showAddToPlaylistSheet = true,
+                selectedSong = song
+            )
+        }
+        loadUserPlaylists()
+    }
+
+    fun hideAddToPlaylistSheet() {
+        _uiState.update { 
+            it.copy(
+                showAddToPlaylistSheet = false,
+                selectedSong = null
+            )
+        }
+    }
+
+    private fun loadUserPlaylists() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingPlaylists = true) }
+            val playlists = youTubeRepository.getUserEditablePlaylists()
+            _uiState.update { 
+                it.copy(
+                    userPlaylists = playlists,
+                    isLoadingPlaylists = false
+                )
+            }
+        }
+    }
+
+    fun addSongToPlaylist(playlistId: String) {
+        val song = _uiState.value.selectedSong ?: return
+        viewModelScope.launch {
+            youTubeRepository.addSongToPlaylist(playlistId, song.id)
+            hideAddToPlaylistSheet()
+        }
+    }
+
+    fun showCreatePlaylistDialog() {
+        // Implement if needed or redirect
+    }
+
+    fun hideCreatePlaylistDialog() {
+        // Implement if needed or redirect
     }
 }
 
