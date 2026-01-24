@@ -368,10 +368,19 @@ fun IntroPage() {
         lineHeight = 52.sp
     )
 
+    Spacer(modifier = Modifier.height(8.dp))
+    
+    Text(
+        text = "Proudly Made in India 🇮🇳",
+        style = MaterialTheme.typography.labelLarge,
+        color = Color(0xFFB388FF),
+        fontWeight = FontWeight.Bold
+    )
+
     Spacer(modifier = Modifier.height(16.dp))
 
     Text(
-        text = "Your ultimate music companion. Stream, download, and enjoy high-quality audio with a premium material design.",
+        text = "Premium Open Source music player. Stream, download, and enjoy high-quality audio with a stunning material design.",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         color = Color.White.copy(alpha = 0.7f),
