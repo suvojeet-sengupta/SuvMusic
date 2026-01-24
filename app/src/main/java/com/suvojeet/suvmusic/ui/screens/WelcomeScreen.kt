@@ -383,7 +383,7 @@ fun IntroPage() {
 fun FeaturesPageOne() {
     FeatureHeader(
         icon = Icons.Default.LibraryMusic,
-        title = "Dual Sources"
+        title = "Music Source"
     )
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -399,7 +399,7 @@ fun FeaturesPageOne() {
         FeatureCard(
             icon = Icons.Default.GraphicEq,
             title = "High Quality Audio",
-            desc = "Crystal clear playback with support for 320kbps MP3 and AAC formats."
+            desc = "Crystal clear playback with support for up to 256kbps."
         )
     }
 }

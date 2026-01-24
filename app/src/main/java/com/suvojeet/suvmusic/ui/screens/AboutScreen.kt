@@ -228,7 +228,7 @@ fun AboutScreen(
                     FeatureRow(
                         icon = Icons.Default.HighQuality,
                         title = "High Quality",
-                        subtitle = "Up to 320 kbps audio",
+                        subtitle = "Up to 256 kbps audio",
                         accentColor = primaryColor
                     )
                     FeatureRow(
