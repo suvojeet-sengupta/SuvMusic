@@ -63,7 +63,23 @@ class NewPipeDownloaderImpl(
                 throw ReCaptchaException("Rate limited", url)
             }
 
-            val responseBodyString = response.body?.string() ?: ""
+            // Prevent OOM by limiting response size (e.g., 10MB limit for metadata)
+            val responseBodyString = response.body?.let { body ->
+                 val limit = 10 * 1024 * 1024L // 10MB
+                 val contentLength = body.contentLength()
+                 if (contentLength > limit) {
+                     "" // Return empty for too large files (likely streams not metadata)
+                 } else {
+                     try {
+                         // Peek or read conservatively
+                         val source = body.source()
+                         source.request(limit) // Request up to limit
+                         if (source.buffer.size > limit) "" else body.string()
+                     } catch (e: Exception) {
+                         ""
+                     }
+                 }
+            } ?: ""
             
             val responseHeaders = mutableMapOf<String, MutableList<String>>()
             response.headers.forEach { (name, value) ->

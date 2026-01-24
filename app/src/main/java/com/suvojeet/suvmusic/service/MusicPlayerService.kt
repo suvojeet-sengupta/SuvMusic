@@ -40,8 +40,8 @@ class MusicPlayerService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         
-        val isGaplessEnabled = sessionManager.isGaplessPlaybackEnabled()
-        val isAutomixEnabled = sessionManager.isAutomixEnabled()
+        // Initialize with defaults to avoid blocking main thread
+        // Logic for gapless/automix is handled by player configuration and queue management
         
         // Ultra-fast buffer for instant playback
         // Minimum buffering = faster start (may rebuffer on slow networks)
@@ -73,14 +73,9 @@ class MusicPlayerService : MediaSessionService() {
                 // Configure for gapless playback
                 // When gapless is enabled, ExoPlayer will seamlessly transition between tracks
                 // When disabled, there may be small gaps between tracks
-                if (isGaplessEnabled || isAutomixEnabled) {
-                    // ExoPlayer handles gapless automatically when media items are queued
-                    // Enabling pause at end is DISABLED for gapless playback
-                    pauseAtEndOfMediaItems = false
-                } else {
-                    // Add small pause between tracks when gapless is disabled
-                    pauseAtEndOfMediaItems = false
-                }
+                // ExoPlayer handles gapless automatically when media items are queued
+                // Enabling pause at end is DISABLED for gapless playback
+                pauseAtEndOfMediaItems = false
                 
                 // Add listener to attach Audio Normalization when audio session changes
                 addListener(object : androidx.media3.common.Player.Listener {
@@ -195,58 +190,60 @@ class MusicPlayerService : MediaSessionService() {
     }
     
     private fun setupAudioNormalization(sessionId: Int) {
-        if (!sessionManager.isVolumeNormalizationEnabled()) return
-        
-        releaseAudioEffects()
+        serviceScope.launch {
+            if (!sessionManager.isVolumeNormalizationEnabled()) return@launch
+            
+            releaseAudioEffects()
 
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                // API 28+: Use DynamicsProcessing for real-time normalization (Limiter)
-                // We create a Limiter configuration: Boost input -> Hard Limit -> Consistent Output
-                
-                val config = android.media.audiofx.DynamicsProcessing.Config.Builder(
-                    android.media.audiofx.DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
-                    2, // Assume stereo
-                    false, 0, // preEq
-                    false, 0, // mbc
-                    false, 0, // postEq
-                    true      // limiter
-                )
-                .setPreferredFrameDuration(10.0f)
-                .build()
-
-                dynamicsProcessing = android.media.audiofx.DynamicsProcessing(0, sessionId, config)
-                
-                dynamicsProcessing?.apply {
-                    // 1. Boost Input Gain (Pre-Gain)
-                    // Moderate boost (+5.5dB) to bring quiet songs up without destroying dynamics
-                    setInputGainAllChannelsTo(5.5f)
-
-                    // 2. Set Limiter (Ceiling)
-                    // Gentler limiting to prevent "pumping" or stuttering artifacts
-                    val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
-                        true,   // inUse
-                        true,   // enabled
-                        0,      // linkGroup
-                        10.0f,  // attackTimeMs (slower attack to let transients punch through)
-                        200.0f, // releaseTimeMs (smoother recovery to avoid pumping)
-                        4.0f,   // ratio (gentler compression, 4:1)
-                        -3.0f,  // thresholdDb (slightly lower ceiling)
-                        0.0f    // postGainDb
-                    )
-                    setLimiterAllChannelsTo(limiterConfig)
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    // API 28+: Use DynamicsProcessing for real-time normalization (Limiter)
+                    // We create a Limiter configuration: Boost input -> Hard Limit -> Consistent Output
                     
-                    enabled = true
+                    val config = android.media.audiofx.DynamicsProcessing.Config.Builder(
+                        android.media.audiofx.DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+                        2, // Assume stereo
+                        false, 0, // preEq
+                        false, 0, // mbc
+                        false, 0, // postEq
+                        true      // limiter
+                    )
+                    .setPreferredFrameDuration(10.0f)
+                    .build()
+
+                    dynamicsProcessing = android.media.audiofx.DynamicsProcessing(0, sessionId, config)
+                    
+                    dynamicsProcessing?.apply {
+                        // 1. Boost Input Gain (Pre-Gain)
+                        // Moderate boost (+5.5dB) to bring quiet songs up without destroying dynamics
+                        setInputGainAllChannelsTo(5.5f)
+
+                        // 2. Set Limiter (Ceiling)
+                        // Gentler limiting to prevent "pumping" or stuttering artifacts
+                        val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
+                            true,   // inUse
+                            true,   // enabled
+                            0,      // linkGroup
+                            10.0f,  // attackTimeMs (slower attack to let transients punch through)
+                            200.0f, // releaseTimeMs (smoother recovery to avoid pumping)
+                            4.0f,   // ratio (gentler compression, 4:1)
+                            -3.0f,  // thresholdDb (slightly lower ceiling)
+                            0.0f    // postGainDb
+                        )
+                        setLimiterAllChannelsTo(limiterConfig)
+                        
+                        enabled = true
+                    }
+                } else {
+                    // Fallback for older devices (API < 28)
+                    // Just use LoudnessEnhancer with a static gain
+                    loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
+                    loudnessEnhancer?.setTargetGain(800) // 800mB gain
+                    loudnessEnhancer?.enabled = true
                 }
-            } else {
-                // Fallback for older devices (API < 28)
-                // Just use LoudnessEnhancer with a static gain
-                loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
-                loudnessEnhancer?.setTargetGain(800) // 800mB gain
-                loudnessEnhancer?.enabled = true
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 

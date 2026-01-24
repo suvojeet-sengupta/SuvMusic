@@ -257,9 +257,11 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         // Start Floating Player if enabled and music might be playing
-        if (sessionManager.isDynamicIslandEnabled() && 
-            DynamicIslandService.hasOverlayPermission(this)) {
-            DynamicIslandService.start(this)
+        lifecycleScope.launch {
+            if (sessionManager.isDynamicIslandEnabled() && 
+                DynamicIslandService.hasOverlayPermission(this@MainActivity)) {
+                DynamicIslandService.start(this@MainActivity)
+            }
         }
     }
     
@@ -572,7 +574,7 @@ fun SuvMusicApp(
                         selectedLyricsProvider = selectedLyricsProvider,
                         enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsState().value,
                         onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
-                        startDestination = if (sessionManager.isOnboardingCompleted()) Destination.Home.route else Destination.Welcome.route,
+                        startDestination = if (sessionManager.onboardingCompletedFlow.collectAsState(initial = false).value) Destination.Home.route else Destination.Welcome.route,
                         sharedTransitionScope = this@SharedTransitionLayout
                     )
 
