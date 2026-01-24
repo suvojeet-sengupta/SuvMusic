@@ -65,6 +65,10 @@
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="34">
         
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc"/>
+        
         <receiver
             android:name=".glance.SuvMusicWidgetReceiver"
             android:exported="true">
