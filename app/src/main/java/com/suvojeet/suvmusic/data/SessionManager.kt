@@ -126,6 +126,8 @@ class SessionManager @Inject constructor(
 
         // Player Cache
         private val PLAYER_CACHE_LIMIT_KEY = androidx.datastore.preferences.core.longPreferencesKey("player_cache_limit")
+        private val PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY = intPreferencesKey("player_cache_auto_clear_interval")
+        private val PLAYER_CACHE_LAST_CLEARED_TIMESTAMP_KEY = androidx.datastore.preferences.core.longPreferencesKey("player_cache_last_cleared_timestamp")
         
         // Music Haptics
         private val MUSIC_HAPTICS_ENABLED_KEY = booleanPreferencesKey("music_haptics_enabled")
@@ -380,20 +382,53 @@ class SessionManager @Inject constructor(
 
     /**
      * Get player cache limit in bytes.
-     * Returns -1L for Unlimited.
-     * Default is 500 MB (500 * 1024 * 1024).
+     * Returns -1L for Unlimited (Default).
      */
     fun getPlayerCacheLimit(): Long = runBlocking {
-        context.dataStore.data.first()[PLAYER_CACHE_LIMIT_KEY] ?: (500L * 1024 * 1024)
+        context.dataStore.data.first()[PLAYER_CACHE_LIMIT_KEY] ?: -1L
     }
 
     val playerCacheLimitFlow: Flow<Long> = context.dataStore.data.map { preferences ->
-        preferences[PLAYER_CACHE_LIMIT_KEY] ?: (500L * 1024 * 1024)
+        preferences[PLAYER_CACHE_LIMIT_KEY] ?: -1L
     }
 
     suspend fun setPlayerCacheLimit(limitBytes: Long) {
         context.dataStore.edit { preferences ->
             preferences[PLAYER_CACHE_LIMIT_KEY] = limitBytes
+        }
+    }
+    
+    // --- Player Cache Auto Clear ---
+
+    /**
+     * Get auto clear interval in days.
+     * Default: 5 days.
+     * 0 means disabled.
+     */
+    fun getPlayerCacheAutoClearInterval(): Int = runBlocking {
+        context.dataStore.data.first()[PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY] ?: 5
+    }
+
+    val playerCacheAutoClearIntervalFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY] ?: 5
+    }
+
+    suspend fun setPlayerCacheAutoClearInterval(days: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY] = days
+        }
+    }
+
+    /**
+     * Get the timestamp of the last cache clearing.
+     */
+    fun getLastCacheClearedTimestamp(): Long = runBlocking {
+        context.dataStore.data.first()[PLAYER_CACHE_LAST_CLEARED_TIMESTAMP_KEY] ?: 0L
+    }
+
+    suspend fun updateLastCacheClearedTimestamp() {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYER_CACHE_LAST_CLEARED_TIMESTAMP_KEY] = System.currentTimeMillis()
         }
     }
     

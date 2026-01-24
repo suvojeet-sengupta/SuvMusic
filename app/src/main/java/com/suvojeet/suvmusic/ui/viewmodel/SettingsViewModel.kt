@@ -47,7 +47,8 @@ data class SettingsUiState(
     val volumeNormalizationEnabled: Boolean = false,
     val betterLyricsEnabled: Boolean = true,
     val simpMusicEnabled: Boolean = true,
-    val playerCacheLimit: Long = 500L * 1024 * 1024, // Default 500MB
+    val playerCacheLimit: Long = -1L, // Default Unlimited
+    val playerCacheAutoClearInterval: Int = 5, // Default 5 days
     // Music Haptics
     val musicHapticsEnabled: Boolean = false,
     val hapticsMode: HapticsMode = HapticsMode.BASIC,
@@ -135,6 +136,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.playerCacheAutoClearIntervalFlow.collect { interval ->
+                _uiState.update { it.copy(playerCacheAutoClearInterval = interval) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.musicHapticsEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(musicHapticsEnabled = enabled) }
             }
@@ -181,6 +188,7 @@ class SettingsViewModel @Inject constructor(
                 betterLyricsEnabled = sessionManager.enableBetterLyrics,
                 simpMusicEnabled = sessionManager.enableSimpMusic,
                 playerCacheLimit = sessionManager.getPlayerCacheLimit(),
+                playerCacheAutoClearInterval = sessionManager.getPlayerCacheAutoClearInterval(),
                 // Music Haptics
                 musicHapticsEnabled = sessionManager.isMusicHapticsEnabled(),
                 hapticsMode = sessionManager.getHapticsMode(),
@@ -454,6 +462,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPlayerCacheLimit(limit)
             _uiState.update { it.copy(playerCacheLimit = limit) }
+        }
+    }
+
+    fun setPlayerCacheAutoClearInterval(days: Int) {
+        viewModelScope.launch {
+            sessionManager.setPlayerCacheAutoClearInterval(days)
+            _uiState.update { it.copy(playerCacheAutoClearInterval = days) }
         }
     }
 
