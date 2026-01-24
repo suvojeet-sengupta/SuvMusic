@@ -15,9 +15,13 @@ import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.service.DownloadService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -68,7 +72,10 @@ class DownloadRepository @Inject constructor(
         .build()
         
     // Batch Download Queue
-    private val downloadQueue = java.util.ArrayDeque<Song>()
+    // Fix: Broken Download Cancellation -> Use Synchronized List or ConcurrentLinkedDeque for safety
+    private val downloadQueue = java.util.concurrent.ConcurrentLinkedDeque<Song>()
+    // Track active jobs for cancellation
+    private val activeDownloadJobs = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
     private val _queueState = MutableStateFlow<List<Song>>(emptyList())
     val queueState: StateFlow<List<Song>> = _queueState.asStateFlow()
     
@@ -76,11 +83,14 @@ class DownloadRepository @Inject constructor(
     val batchProgress: StateFlow<Pair<Int, Int>> = _batchProgress.asStateFlow()
 
     init {
-        loadDownloads()
-        // Migrate old downloads from internal storage to public Downloads folder
-        migrateOldDownloads()
-        // Scan Downloads/SuvMusic folder for any manually added files
-        scanDownloadsFolder()
+        // Fix Main Thread I/O: Move heavy initialization to background thread
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            loadDownloads()
+            // Migrate old downloads from internal storage to public Downloads folder
+            migrateOldDownloads()
+            // Scan Downloads/SuvMusic folder for any manually added files
+            scanDownloadsFolder()
+        }
     }
 
     /**
@@ -536,7 +546,15 @@ class DownloadRepository @Inject constructor(
             return
         }
         try {
-            val json = downloadsMetaFile.readText()
+            // Fix: Use AtomicFile for safe reading
+            val atomicFile = androidx.core.util.AtomicFile(downloadsMetaFile)
+            val json = try {
+                atomicFile.readFully().toString(Charsets.UTF_8)
+            } catch (e: Exception) {
+                // Fallback to direct read if AtomicFile fails (e.g. first run/migration issue)
+                downloadsMetaFile.readText()
+            }
+            
             val type = object : TypeToken<List<Song>>() {}.type
             val songs: List<Song> = gson.fromJson(json, type) ?: emptyList()
             
@@ -619,7 +637,18 @@ class DownloadRepository @Inject constructor(
     private fun saveDownloads() {
         try {
             val json = gson.toJson(_downloadedSongs.value)
-            downloadsMetaFile.writeText(json)
+            
+            // Fix: Insecure Data Persistence -> Use AtomicFile
+            val atomicFile = androidx.core.util.AtomicFile(downloadsMetaFile)
+            var fos: java.io.FileOutputStream? = null
+            try {
+                fos = atomicFile.startWrite()
+                fos.write(json.toByteArray(Charsets.UTF_8))
+                atomicFile.finishWrite(fos)
+            } catch (e: Exception) {
+                atomicFile.failWrite(fos)
+                Log.e(TAG, "Atomic write failed", e)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error saving downloads", e)
         }
@@ -637,8 +666,15 @@ class DownloadRepository @Inject constructor(
             return@withContext true
         }
         
-        // Mark as downloading
-        _downloadingIds.value = _downloadingIds.value + song.id
+        // Mark as downloading (Atomic update)
+        _downloadingIds.update { it + song.id }
+        
+        // Track coroutine job for cancellation
+        val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+        if (job != null) {
+            activeDownloadJobs[song.id] = job
+        }
+        
         Log.d(TAG, "Starting download for: ${song.title} (${song.id})")
         
         try {
@@ -649,7 +685,7 @@ class DownloadRepository @Inject constructor(
             }
             if (streamUrl == null) {
                 Log.e(TAG, "Failed to get stream URL for ${song.id}")
-                _downloadingIds.value = _downloadingIds.value - song.id
+                _downloadingIds.update { it - song.id }
                 return@withContext false
             }
             
@@ -683,9 +719,11 @@ class DownloadRepository @Inject constructor(
             true
         } catch (e: Exception) {
             Log.e(TAG, "Download error for ${song.id}", e)
-            _downloadingIds.value = _downloadingIds.value - song.id
-            _downloadProgress.value = _downloadProgress.value - song.id
+            _downloadingIds.update { it - song.id }
+            _downloadProgress.update { it - song.id }
             false
+        } finally {
+            activeDownloadJobs.remove(song.id)
         }
     }
 
@@ -718,8 +756,8 @@ class DownloadRepository @Inject constructor(
             dataSource.close()
             
             if (downloadedUri == null) {
-                _downloadingIds.value = _downloadingIds.value - song.id
-                _downloadProgress.value = _downloadProgress.value - song.id
+                _downloadingIds.update { it - song.id }
+                _downloadProgress.update { it - song.id }
                 return false
             }
             
@@ -932,10 +970,37 @@ class DownloadRepository @Inject constructor(
             true
         } catch (e: Exception) {
             Log.e(TAG, "Progressive download error for ${song.id}", e)
-            _downloadingIds.value = _downloadingIds.value - song.id
-            _downloadProgress.value = _downloadProgress.value - song.id
+            _downloadingIds.update { it - song.id }
+            _downloadProgress.update { it - song.id }
             false
+        } finally {
+             activeDownloadJobs.remove(song.id)
         }
+    }
+
+    /**
+     * Cancel a specific download by ID.
+     * If it's queued, remove it.
+     * If it's running, cancel the job.
+     */
+    fun cancelDownload(songId: String) {
+        // 1. Check active jobs
+        activeDownloadJobs[songId]?.cancel()
+        
+        // 2. Check queue
+        val iterator = downloadQueue.iterator()
+        while (iterator.hasNext()) {
+            if (iterator.next().id == songId) {
+                iterator.remove()
+                break
+            }
+        }
+        
+        // 3. Update state
+        _downloadingIds.update { it - songId }
+        _downloadProgress.update { it - songId }
+        
+        Log.d(TAG, "Cancelled download: $songId")
     }
 
     suspend fun deleteDownload(songId: String) = withContext(Dispatchers.IO) {

@@ -66,8 +66,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val isDarkTheme = isSystemInDarkTheme()
-    val backgroundColor = if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.background
+    val backgroundColor = MaterialTheme.colorScheme.background
     
     Box(
         modifier = Modifier
