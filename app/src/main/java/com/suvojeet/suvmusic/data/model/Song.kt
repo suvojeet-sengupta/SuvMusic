@@ -19,7 +19,10 @@ data class Song(
     val setVideoId: String? = null, // Unique ID for this song instance in a playlist (for reordering)
     val artistId: String? = null, // Artist browse ID for navigation to artist screen
     val originalSource: SongSource? = null, // Original source before download (for credits display)
-    val isVideo: Boolean = false // Whether this item is a video (vs official song)
+    val isVideo: Boolean = false, // Whether this item is a video (vs official song)
+    val customFolderPath: String? = null, // Subfolder path for downloads (e.g. "My Playlist")
+    val collectionId: String? = null, // ID of the collection (album/playlist) this download belongs to
+    val collectionName: String? = null // Name of the collection
 ) {
     companion object {
         /**

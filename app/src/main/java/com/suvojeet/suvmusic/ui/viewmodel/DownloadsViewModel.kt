@@ -18,13 +18,57 @@ class DownloadsViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository
 ) : ViewModel() {
     
+    
     val downloadedSongs: StateFlow<List<Song>> = downloadRepository.downloadedSongs
+    val queueState: StateFlow<List<Song>> = downloadRepository.queueState
+    val downloadingIds: StateFlow<Set<String>> = downloadRepository.downloadingIds
+    val downloadProgress: StateFlow<Map<String, Float>> = downloadRepository.downloadProgress
+    
+    val downloadItems: StateFlow<List<DownloadItem>> = kotlinx.coroutines.flow.combine(
+        downloadedSongs,
+        queueState,
+        downloadingIds,
+        downloadProgress
+    ) { downloaded, queued, downloading, progressMap ->
+        val allSongs = (downloaded + queued).distinctBy { it.id }
+        
+        val collections = allSongs.filter { it.collectionId != null }
+            .groupBy { it.collectionId!! }
+            .map { (id, groupSongs) ->
+                val first = groupSongs.first()
+                DownloadItem.CollectionItem(
+                    id = id,
+                    title = first.collectionName ?: "Unknown Collection",
+                    thumbnailUrl = first.thumbnailUrl,
+                    songs = groupSongs.map { song ->
+                        val isDownloading = downloading.contains(song.id)
+                        val progress = progressMap[song.id] ?: if (downloaded.any { it.id == song.id }) 1.0f else 0.0f
+                        SongStatus(song, isDownloading, progress)
+                    }
+                )
+            }
+        
+        val singles = allSongs.filter { it.collectionId == null }
+            .map { song ->
+                val isDownloading = downloading.contains(song.id)
+                val progress = progressMap[song.id] ?: if (downloaded.any { it.id == song.id }) 1.0f else 0.0f
+                DownloadItem.SongItem(song, isDownloading, progress)
+            }
+            
+        (collections + singles).sortedBy { 
+            when(it) {
+                is DownloadItem.CollectionItem -> it.title
+                is DownloadItem.SongItem -> it.song.title
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     
     private val _selectedSongIds = MutableStateFlow<Set<String>>(emptySet())
     val selectedSongIds: StateFlow<Set<String>> = _selectedSongIds
     
     val isSelectionMode = _selectedSongIds.map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     
     fun deleteDownload(songId: String) {
         viewModelScope.launch {
@@ -70,4 +114,25 @@ class DownloadsViewModel @Inject constructor(
     fun refreshDownloads() {
         downloadRepository.refreshDownloads()
     }
+}
+
+data class SongStatus(
+    val song: Song,
+    val isDownloading: Boolean,
+    val progress: Float
+)
+
+sealed class DownloadItem {
+    data class SongItem(
+        val song: Song,
+        val isDownloading: Boolean = false,
+        val progress: Float = 1.0f
+    ) : DownloadItem()
+    
+    data class CollectionItem(
+        val id: String,
+        val title: String,
+        val thumbnailUrl: String?,
+        val songs: List<SongStatus>
+    ) : DownloadItem()
 }

@@ -242,38 +242,85 @@ class DownloadRepository @Inject constructor(
     /**
      * Helper to delete a song file from a specific folder
      */
+    /**
+     * Helper to delete a song file from a specific folder
+     */
     private fun deleteFromFolder(folder: File, song: Song): Boolean {
         if (!folder.exists()) return false
         
         try {
-            // Try exact filename match first
-            val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
-            val file = File(folder, fileName)
-            if (file.exists()) {
-                val deleted = file.delete()
-                Log.d(TAG, "Deleted file from ${folder.name}: $deleted - ${file.absolutePath}")
-                if (deleted) return true
-            }
+            // Determine search folders: subfolder first, then base folder
+            val searchFolders = mutableListOf<File>()
             
-            // Try alternate extensions
-            listOf("mp3", "aac", "flac", "wav", "ogg").forEach { ext ->
-                val altFile = File(folder, "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.$ext")
-                if (altFile.exists()) {
-                    val deleted = altFile.delete()
-                    if (deleted) {
-                        Log.d(TAG, "Deleted file with ext $ext: ${altFile.name}")
-                        return true
-                    }
+            song.customFolderPath?.let { sub ->
+                val subFolder = File(folder, sanitizeFileName(sub))
+                if (subFolder.exists() && subFolder.isDirectory) {
+                    searchFolders.add(subFolder)
                 }
             }
-            
-            // Fallback: search by partial title match
-            folder.listFiles()?.forEach { f ->
-                if (f.nameWithoutExtension.contains(song.title.take(20), ignoreCase = true)) {
-                    val deleted = f.delete()
-                    if (deleted) {
-                        Log.d(TAG, "Deleted matching file: ${f.name}")
-                        return true
+            searchFolders.add(folder)
+
+            for (targetFolder in searchFolders) {
+                // Try exact filename match first
+                val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
+                val file = File(targetFolder, fileName)
+                if (file.exists()) {
+                    val deleted = file.delete()
+                    Log.d(TAG, "Deleted file from ${targetFolder.name}: $deleted - ${file.absolutePath}")
+                    
+                    // Cleanup empty subfolder if it was the target
+                    if (deleted && targetFolder != folder) {
+                        try {
+                            if (targetFolder.listFiles()?.isEmpty() == true) {
+                                targetFolder.delete()
+                            }
+                        } catch (e: Exception) {}
+                    }
+                    
+                    if (deleted) return true
+                }
+                
+                // Try alternate extensions
+                val extensions = listOf("mp3", "aac", "flac", "wav", "ogg")
+                for (ext in extensions) {
+                    val altFile = File(targetFolder, "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.$ext")
+                    if (altFile.exists()) {
+                        val deleted = altFile.delete()
+                        if (deleted) {
+                            Log.d(TAG, "Deleted file with ext $ext: ${altFile.name}")
+                            
+                            // Cleanup empty subfolder
+                            if (targetFolder != folder) {
+                                try {
+                                    if (targetFolder.listFiles()?.isEmpty() == true) {
+                                        targetFolder.delete()
+                                    }
+                                } catch (e: Exception) {}
+                            }
+                            
+                            return true
+                        }
+                    }
+                }
+                
+                // Fallback: search by partial title match
+                targetFolder.listFiles()?.forEach { f ->
+                    if (f.nameWithoutExtension.contains(song.title.take(20), ignoreCase = true)) {
+                        val deleted = f.delete()
+                        if (deleted) {
+                            Log.d(TAG, "Deleted matching file: ${f.name}")
+                            
+                            // Cleanup empty subfolder
+                            if (targetFolder != folder) {
+                                try {
+                                    if (targetFolder.listFiles()?.isEmpty() == true) {
+                                        targetFolder.delete()
+                                    }
+                                } catch (e: Exception) {}
+                            }
+                            
+                            return true
+                        }
                     }
                 }
             }
@@ -342,27 +389,33 @@ class DownloadRepository @Inject constructor(
     /**
      * Save file to public Downloads/SuvMusic folder using appropriate API
      */
-    private fun saveFileToPublicDownloads(songId: String, artist: String, title: String, inputStream: InputStream): Uri? {
+    private fun saveFileToPublicDownloads(songId: String, artist: String, title: String, inputStream: InputStream, subfolder: String? = null): Uri? {
         val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.m4a"
         
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // Android 10+ use MediaStore
-            saveToMediaStore(songId, fileName, inputStream)
+            saveToMediaStore(songId, fileName, inputStream, subfolder)
         } else {
             // Android 9 and below use direct file access
-            saveToPublicFolder(songId, fileName, inputStream)
+            saveToPublicFolder(songId, fileName, inputStream, subfolder)
         }
     }
 
     /**
      * Save to MediaStore for Android 10+ (Scoped Storage)
      */
-    private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream): Uri? {
+    private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null): Uri? {
         return try {
+            val relativePath = if (subfolder != null) {
+                "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER/${sanitizeFileName(subfolder)}"
+            } else {
+                "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER"
+            }
+
             val contentValues = ContentValues().apply {
                 put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
-                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER")
+                put(MediaStore.Audio.Media.RELATIVE_PATH, relativePath)
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
             }
 
@@ -379,24 +432,30 @@ class DownloadRepository @Inject constructor(
                 contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
                 resolver.update(mediaUri, contentValues, null, null)
                 
-                Log.d(TAG, "Saved to MediaStore: $fileName")
+                Log.d(TAG, "Saved to MediaStore: $fileName in $relativePath")
             }
             
             uri
         } catch (e: Exception) {
             Log.e(TAG, "Error saving to MediaStore", e)
             // Fallback to direct file access
-            saveToPublicFolder(songId, fileName, inputStream)
+            saveToPublicFolder(songId, fileName, inputStream, subfolder)
         }
     }
 
     /**
      * Save to public Music folder directly (Android 9 and below)
      */
-    private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream): Uri? {
+    private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null): Uri? {
         return try {
-            val folder = getPublicMusicFolder()
-            val file = File(folder, fileName)
+            val rootFolder = getPublicMusicFolder()
+            val targetFolder = if (subfolder != null) {
+                File(rootFolder, sanitizeFileName(subfolder)).apply { mkdirs() }
+            } else {
+                rootFolder
+            }
+            
+            val file = File(targetFolder, fileName)
             
             FileOutputStream(file).use { outputStream ->
                 inputStream.copyTo(outputStream)
@@ -420,6 +479,7 @@ class DownloadRepository @Inject constructor(
         title: String,
         inputStream: InputStream,
         contentLength: Long,
+        subfolder: String? = null,
         onProgress: (Float) -> Unit
     ): Uri? {
         val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.m4a"
@@ -427,10 +487,10 @@ class DownloadRepository @Inject constructor(
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // Android 10+ use MediaStore with progress
-                saveToMediaStoreWithProgress(fileName, inputStream, contentLength, onProgress)
+                saveToMediaStoreWithProgress(fileName, inputStream, contentLength, subfolder, onProgress)
             } else {
                 // Android 9 and below use direct file access
-                saveToPublicFolderWithProgress(fileName, inputStream, contentLength, onProgress)
+                saveToPublicFolderWithProgress(fileName, inputStream, contentLength, subfolder, onProgress)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error saving file with progress", e)
@@ -445,13 +505,20 @@ class DownloadRepository @Inject constructor(
         fileName: String,
         inputStream: InputStream,
         contentLength: Long,
+        subfolder: String? = null,
         onProgress: (Float) -> Unit
     ): Uri? {
         return try {
+            val relativePath = if (subfolder != null) {
+                "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER/${sanitizeFileName(subfolder)}"
+            } else {
+                "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER"
+            }
+
             val contentValues = ContentValues().apply {
                 put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
-                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER")
+                put(MediaStore.Audio.Media.RELATIVE_PATH, relativePath)
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
             }
 
@@ -468,7 +535,7 @@ class DownloadRepository @Inject constructor(
                 contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
                 resolver.update(mediaUri, contentValues, null, null)
                 
-                Log.d(TAG, "Saved to MediaStore with progress: $fileName")
+                Log.d(TAG, "Saved to MediaStore with progress: $fileName in $relativePath")
             }
             
             uri
@@ -485,11 +552,18 @@ class DownloadRepository @Inject constructor(
         fileName: String,
         inputStream: InputStream,
         contentLength: Long,
+        subfolder: String? = null,
         onProgress: (Float) -> Unit
     ): Uri? {
         return try {
-            val folder = getPublicMusicFolder()
-            val file = File(folder, fileName)
+            val rootFolder = getPublicMusicFolder()
+            val targetFolder = if (subfolder != null) {
+                File(rootFolder, sanitizeFileName(subfolder)).apply { mkdirs() }
+            } else {
+                rootFolder
+            }
+            
+            val file = File(targetFolder, fileName)
             
             FileOutputStream(file).use { outputStream ->
                 copyWithProgress(inputStream, outputStream, contentLength, onProgress)
@@ -762,7 +836,7 @@ class DownloadRepository @Inject constructor(
             // We can wrap the DataSource in an InputStream to reuse existing save logic
             val inputStream = androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec)
             
-            val downloadedUri = saveFileWithProgress(song.id, song.artist, song.title, inputStream, contentLength) { progress ->
+            val downloadedUri = saveFileWithProgress(song.id, song.artist, song.title, inputStream, contentLength, song.customFolderPath) { progress ->
                  _downloadProgress.value = _downloadProgress.value + (song.id to progress)
             }
             
@@ -931,7 +1005,7 @@ class DownloadRepository @Inject constructor(
             }
             
             // Move temp file to final location
-            val finalUri = saveFileToPublicDownloads(song.id, song.artist, song.title, tempFile.inputStream())
+            val finalUri = saveFileToPublicDownloads(song.id, song.artist, song.title, tempFile.inputStream(), song.customFolderPath)
             tempFile.delete()
             
             if (finalUri == null) {
@@ -1334,5 +1408,31 @@ class DownloadRepository @Inject constructor(
         _downloadedSongs.value = emptyList()
         saveDownloads()
         Log.d(TAG, "All downloads deleted")
+    }
+
+
+    fun downloadAlbum(album: com.suvojeet.suvmusic.data.model.Album) {
+        val songsToDownload = album.songs.map { song ->
+            song.copy(
+                customFolderPath = album.title,
+                collectionId = album.id,
+                collectionName = album.title,
+                thumbnailUrl = song.thumbnailUrl ?: album.thumbnailUrl // Fallback to album art
+            )
+        }
+        downloadSongs(songsToDownload)
+    }
+
+    fun downloadPlaylist(playlist: com.suvojeet.suvmusic.data.model.Playlist) {
+        val songsToDownload = playlist.songs.map { song ->
+            song.copy(
+                customFolderPath = playlist.title,
+                collectionId = playlist.id,
+                collectionName = playlist.title,
+                // Ensure playlist thumbnail isn't applied to every song unless missing
+                thumbnailUrl = song.thumbnailUrl ?: playlist.thumbnailUrl  
+            )
+        }
+        downloadSongs(songsToDownload)
     }
 }
