@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -654,20 +656,27 @@ class DownloadRepository @Inject constructor(
         }
     }
 
+
+
+    private val downloadMutex = kotlinx.coroutines.sync.Mutex()
+
     suspend fun downloadSong(song: Song): Boolean = withContext(Dispatchers.IO) {
-        if (_downloadedSongs.value.any { it.id == song.id }) {
-            Log.d(TAG, "Song ${song.id} already downloaded")
-            return@withContext true
+        // Critical Section: Check atomic state
+        val canDownload = downloadMutex.withLock {
+            if (_downloadedSongs.value.any { it.id == song.id }) {
+                Log.d(TAG, "Song ${song.id} already downloaded")
+                return@withLock false
+            }
+            if (_downloadingIds.value.contains(song.id)) {
+                Log.d(TAG, "Song ${song.id} is already downloading")
+                return@withLock false
+            }
+            // Mark as downloading (Atomic update)
+            _downloadingIds.update { it + song.id }
+            true
         }
-        
-        // Prevent concurrent downloads of the same song
-        if (_downloadingIds.value.contains(song.id)) {
-            Log.d(TAG, "Song ${song.id} is already downloading")
-            return@withContext true
-        }
-        
-        // Mark as downloading (Atomic update)
-        _downloadingIds.update { it + song.id }
+
+        if (!canDownload) return@withContext true
         
         // Track coroutine job for cancellation
         val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
@@ -685,7 +694,9 @@ class DownloadRepository @Inject constructor(
             }
             if (streamUrl == null) {
                 Log.e(TAG, "Failed to get stream URL for ${song.id}")
-                _downloadingIds.update { it - song.id }
+                downloadMutex.withLock {
+                     _downloadingIds.update { it - song.id }
+                }
                 return@withContext false
             }
             
@@ -719,7 +730,9 @@ class DownloadRepository @Inject constructor(
             true
         } catch (e: Exception) {
             Log.e(TAG, "Download error for ${song.id}", e)
-            _downloadingIds.update { it - song.id }
+            downloadMutex.withLock {
+                _downloadingIds.update { it - song.id }
+            }
             _downloadProgress.update { it - song.id }
             false
         } finally {
