@@ -168,32 +168,56 @@ class SettingsViewModel @Inject constructor(
     }
     
     private fun loadSettings() {
-        _uiState.update { 
-            it.copy(
-                isLoggedIn = sessionManager.isLoggedIn(),
-                userAvatarUrl = sessionManager.getUserAvatar(),
-                storedAccounts = sessionManager.getStoredAccounts(),
-                audioQuality = sessionManager.getAudioQuality(),
-                downloadQuality = sessionManager.getDownloadQuality(),
-                themeMode = sessionManager.getThemeMode(),
-                appTheme = sessionManager.getAppTheme(),
-                dynamicColorEnabled = sessionManager.isDynamicColorEnabled(),
-                gaplessPlaybackEnabled = sessionManager.isGaplessPlaybackEnabled(),
-                automixEnabled = sessionManager.isAutomixEnabled(),
-                volumeSliderEnabled = sessionManager.isVolumeSliderEnabled(),
-                musicSource = sessionManager.getMusicSource(),
-                currentVersion = updateRepo.getCurrentVersionName(),
-                doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds(),
-                volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled(),
-                betterLyricsEnabled = sessionManager.enableBetterLyrics,
-                simpMusicEnabled = sessionManager.enableSimpMusic,
-                playerCacheLimit = sessionManager.getPlayerCacheLimit(),
-                playerCacheAutoClearInterval = sessionManager.getPlayerCacheAutoClearInterval(),
-                // Music Haptics
-                musicHapticsEnabled = sessionManager.isMusicHapticsEnabled(),
-                hapticsMode = sessionManager.getHapticsMode(),
-                hapticsIntensity = sessionManager.getHapticsIntensity()
-            )
+        viewModelScope.launch {
+            val isLoggedIn = sessionManager.isLoggedIn()
+            val userAvatar = sessionManager.getUserAvatar()
+            val storedAccounts = sessionManager.getStoredAccounts()
+            val audioQuality = sessionManager.getAudioQuality()
+            val downloadQuality = sessionManager.getDownloadQuality()
+            val themeMode = sessionManager.getThemeMode()
+            val appTheme = sessionManager.getAppTheme()
+            val dynamicColorEnabled = sessionManager.isDynamicColorEnabled()
+            val gaplessPlaybackEnabled = sessionManager.isGaplessPlaybackEnabled()
+            val automixEnabled = sessionManager.isAutomixEnabled()
+            val volumeSliderEnabled = sessionManager.isVolumeSliderEnabled()
+            val musicSource = sessionManager.getMusicSource()
+            val doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds()
+            val volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled()
+            val betterLyricsEnabled = sessionManager.doesEnableBetterLyrics()
+            val simpMusicEnabled = sessionManager.doesEnableSimpMusic()
+            val playerCacheLimit = sessionManager.getPlayerCacheLimit()
+            val playerCacheAutoClearInterval = sessionManager.getPlayerCacheAutoClearInterval()
+            val musicHapticsEnabled = sessionManager.isMusicHapticsEnabled()
+            val hapticsMode = sessionManager.getHapticsMode()
+            val hapticsIntensity = sessionManager.getHapticsIntensity()
+
+            _uiState.update { 
+                it.copy(
+                    isLoggedIn = isLoggedIn,
+                    userAvatarUrl = userAvatar,
+                    storedAccounts = storedAccounts,
+                    audioQuality = audioQuality,
+                    downloadQuality = downloadQuality,
+                    themeMode = themeMode,
+                    appTheme = appTheme,
+                    dynamicColorEnabled = dynamicColorEnabled,
+                    gaplessPlaybackEnabled = gaplessPlaybackEnabled,
+                    automixEnabled = automixEnabled,
+                    volumeSliderEnabled = volumeSliderEnabled,
+                    musicSource = musicSource,
+                    currentVersion = updateRepo.getCurrentVersionName(),
+                    doubleTapSeekSeconds = doubleTapSeekSeconds,
+                    volumeNormalizationEnabled = volumeNormalizationEnabled,
+                    betterLyricsEnabled = betterLyricsEnabled,
+                    simpMusicEnabled = simpMusicEnabled,
+                    playerCacheLimit = playerCacheLimit,
+                    playerCacheAutoClearInterval = playerCacheAutoClearInterval,
+                    // Music Haptics
+                    musicHapticsEnabled = musicHapticsEnabled,
+                    hapticsMode = hapticsMode,
+                    hapticsIntensity = hapticsIntensity
+                )
+            }
         }
     }
     
