@@ -1,6 +1,37 @@
 # Changelog
 
-## New Features
+## [1.0.4] - 2026-01-25
+
+### Added
+- **Music Haptics**: Beat-synchronized vibration engine for an immersive listening experience.
+- **Word-by-Word Lyrics**: Precise, time-synced lyrics with active word highlighting and provider switcher.
+- **Floating Player**: Draggable system-wide overlay (formerly Dynamic Island) for global playback control.
+- **Pitch & Speed Control**: Real-time DSP for playback speed (up to 5x) and pitch adjustment.
+- **Shared Element Transitions**: Cinematic animations when navigating between Mini Player and full Player screen.
+- **Batch Downloads**: Queue multiple albums/playlists for background processing with notification support.
+- **Instant Downloads**: Save buffered tracks instantly to local storage.
+- **YouTube Integration**: Explore and Community sections from YouTube Music directly on the Home screen.
+- **Glance Widgets**: Modern homescreen widgets with real-time state updates.
+- **Support Screen**: Integrated options for "Buy Me a Coffee", GitHub starring, and community links.
+
+### Changed
+- **UI Redesign**: Complete Material 3 overhaul for Library, Settings, and Storage screens.
+- **Pure Black Mode**: True OLED black background for Home screen and Player in dark mode.
+- **Kotlin 2.3**: Upgraded to latest Kotlin compiler and Gradle 8.14.
+- **Hilt 2.58**: Updated DI framework for Kotlin 2.3 compatibility.
+- **Media3 1.9.0**: Upgraded media session and playback engine.
+- **Marquee Text**: Added scrolling effect for long titles in Mini Player and widgets.
+
+### Fixed
+- Resolved session management race conditions and improved async data handling.
+- Fixed memory leaks in MusicPlayer and receiver leaks in services.
+- Corrected download reliability and persistent "Downloaded" indicators.
+- Improved volume normalization parameters to eliminate stuttering.
+- Fixed critical crashes related to image loading and vector drawable rendering.
+
+## [1.0.3] - Previous Release
+
+### New Features
 
 ### Dual Music Source & High-Fidelity Audio
 - **JioSaavn Integration**: Added full support for JioSaavn as a music source, enabling 320kbps MP3 streaming capabilities.
