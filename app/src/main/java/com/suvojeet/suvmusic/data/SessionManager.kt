@@ -519,7 +519,7 @@ class SessionManager @Inject constructor(
         encryptedPrefs.edit().putString(SAVED_ACCOUNTS_KEY, array.toString()).apply()
     }
     
-    fun saveCurrentAccountToHistory(name: String, email: String, avatarUrl: String) {
+    suspend fun saveCurrentAccountToHistory(name: String, email: String, avatarUrl: String) {
         val currentCookies = getCookies() ?: return
         val newAccount = StoredAccount(name, email, avatarUrl, currentCookies)
         
@@ -531,10 +531,10 @@ class SessionManager @Inject constructor(
         saveStoredAccounts(accounts)
         
         // Update current avatar in DataStore just in case
-        runBlocking { saveUserAvatar(avatarUrl) }
+        saveUserAvatar(avatarUrl)
     }
     
-    fun switchAccount(account: StoredAccount) {
+    suspend fun switchAccount(account: StoredAccount) {
         // Save current session if valid before switching? 
         // Ideally the UI should prompt or we save automatically if we have info.
         // For now, we assume the user just wants to switch TO this account.
@@ -543,7 +543,7 @@ class SessionManager @Inject constructor(
         encryptedPrefs.edit().putString("cookies", account.cookies).apply()
         
         // 2. Set Avatar
-        runBlocking { saveUserAvatar(account.avatarUrl) }
+        saveUserAvatar(account.avatarUrl)
         
         // 3. Ensure this account is at the top of the list (recently used)
         saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
