@@ -88,27 +88,8 @@ class YouTubeRepository @Inject constructor(
             
             val root = JSONObject(jsonResponse)
             
-            // Parse response to find account info
-            // Structure: actions -> openPopupAction -> popup -> multiPageMenuRenderer -> header -> activeAccountHeaderRenderer
-            
-            val actions = root.optJSONArray("actions")
-            var accountHeader: JSONObject? = null
-            
-            if (actions != null) {
-                for (i in 0 until actions.length()) {
-                    val action = actions.optJSONObject(i)
-                    val header = action?.optJSONObject("openPopupAction")
-                        ?.optJSONObject("popup")
-                        ?.optJSONObject("multiPageMenuRenderer")
-                        ?.optJSONObject("header")
-                        ?.optJSONObject("activeAccountHeaderRenderer")
-                    
-                    if (header != null) {
-                        accountHeader = header
-                        break
-                    }
-                }
-            }
+            // Recursive search for activeAccountHeaderRenderer as structure can vary
+            val accountHeader = findActiveAccountHeader(root)
             
             if (accountHeader != null) {
                 val name = getRunText(accountHeader.optJSONObject("accountName")) ?: "User"
@@ -133,6 +114,30 @@ class YouTubeRepository @Inject constructor(
             e.printStackTrace()
             null
         }
+    }
+
+    private fun findActiveAccountHeader(node: JSONObject): JSONObject? {
+        val keys = node.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val value = node.opt(key)
+            
+            if (key == "activeAccountHeaderRenderer" && value is JSONObject) {
+                return value
+            }
+            
+            if (value is JSONObject) {
+                val found = findActiveAccountHeader(value)
+                if (found != null) return found
+            } else if (value is JSONArray) {
+                for (i in 0 until value.length()) {
+                    val item = value.optJSONObject(i) ?: continue
+                    val found = findActiveAccountHeader(item)
+                    if (found != null) return found
+                }
+            }
+        }
+        return null
     }
 
     // ============================================================================================
