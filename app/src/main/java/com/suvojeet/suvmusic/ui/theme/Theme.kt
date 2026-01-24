@@ -66,9 +66,9 @@ private val LightColorScheme = lightColorScheme(
     onTertiary = Color.White,
     tertiaryContainer = Magenta90,
     onTertiaryContainer = Magenta10,
-    background = Color.White,
+    background = Neutral99,
     onBackground = Neutral10,
-    surface = Color.White,
+    surface = Neutral99,
     onSurface = Neutral10,
     surfaceVariant = NeutralVar90,
     onSurfaceVariant = NeutralVar30,
@@ -93,7 +93,7 @@ private val OceanLightColorScheme = lightColorScheme(
     primary = Blue40, onPrimary = Color.White, primaryContainer = Blue90, onPrimaryContainer = Blue10,
     secondary = Teal40, onSecondary = Color.White, secondaryContainer = Teal90, onSecondaryContainer = Teal10,
     tertiary = Purple40, onTertiary = Color.White, tertiaryContainer = Purple90, onTertiaryContainer = Purple10,
-    background = Color.White, onBackground = Neutral10, surface = Color.White, onSurface = Neutral10
+    background = Neutral99, onBackground = Neutral10, surface = Neutral99, onSurface = Neutral10
 )
 
 // --- Sunset Orange Schemes ---
@@ -108,7 +108,7 @@ private val SunsetLightColorScheme = lightColorScheme(
     primary = Orange40, onPrimary = Color.White, primaryContainer = Orange90, onPrimaryContainer = Orange10,
     secondary = Gold40, onSecondary = Color.White, secondaryContainer = Gold90, onSecondaryContainer = Gold10,
     tertiary = Pink40, onTertiary = Color.White, tertiaryContainer = Pink90, onTertiaryContainer = Pink10,
-    background = Color.White, onBackground = Neutral10, surface = Color.White, onSurface = Neutral10
+    background = Neutral99, onBackground = Neutral10, surface = Neutral99, onSurface = Neutral10
 )
 
 // --- Nature Green Schemes ---
@@ -123,7 +123,7 @@ private val NatureLightColorScheme = lightColorScheme(
     primary = Green40, onPrimary = Color.White, primaryContainer = Green90, onPrimaryContainer = Green10,
     secondary = Lime40, onSecondary = Color.White, secondaryContainer = Lime90, onSecondaryContainer = Lime10,
     tertiary = Teal40, onTertiary = Color.White, tertiaryContainer = Teal90, onTertiaryContainer = Teal10,
-    background = Color.White, onBackground = Neutral10, surface = Color.White, onSurface = Neutral10
+    background = Neutral99, onBackground = Neutral10, surface = Neutral99, onSurface = Neutral10
 )
 
 // --- Love Pink Schemes ---
@@ -138,7 +138,7 @@ private val LoveLightColorScheme = lightColorScheme(
     primary = Pink40, onPrimary = Color.White, primaryContainer = Pink90, onPrimaryContainer = Pink10,
     secondary = Rose40, onSecondary = Color.White, secondaryContainer = Rose90, onSecondaryContainer = Rose10,
     tertiary = Orange40, onTertiary = Color.White, tertiaryContainer = Orange90, onTertiaryContainer = Orange10,
-    background = Color.White, onBackground = Neutral10, surface = Color.White, onSurface = Neutral10
+    background = Neutral99, onBackground = Neutral10, surface = Neutral99, onSurface = Neutral10
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
