@@ -188,7 +188,8 @@ class MusicPlayerService : MediaSessionService() {
     
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
-        if (player?.playWhenReady == false || player?.mediaItemCount == 0) {
+        // Fix: Background Playback Termination -> Only stop if NOT playing
+        if (player?.playWhenReady == false && player.mediaItemCount == 0) {
             stopSelf()
         }
     }

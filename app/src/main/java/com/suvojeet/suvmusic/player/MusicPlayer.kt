@@ -88,7 +88,8 @@ class MusicPlayer @Inject constructor(
     private var manualSelectedDeviceId: String? = null
     
     // Cache for resolved video IDs for non-YouTube songs (SongId -> VideoId)
-    private val resolvedVideoIds = mutableMapOf<String, String>()
+    // Fix: Unbounded Memory Leak -> Use LruCache with max size 100
+    private val resolvedVideoIds = android.util.LruCache<String, String>(100)
     
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
@@ -1102,7 +1103,7 @@ class MusicPlayer @Inject constructor(
                             try {
                                 val results = youTubeRepository.search(query)
                                 val bestMatch = results.firstOrNull()
-                                bestMatch?.id?.also { resolvedVideoIds[song.id] = it }
+                                bestMatch?.id?.also { resolvedVideoIds.put(song.id, it) }
                             } catch (e: Exception) {
                                 null
                             }
