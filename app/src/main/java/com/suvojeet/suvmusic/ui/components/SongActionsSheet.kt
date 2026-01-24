@@ -54,7 +54,9 @@ fun SongActionsSheet(
     song: Song,
     isVisible: Boolean,
     onDismiss: () -> Unit,
+    isDownloaded: Boolean = false,
     onDownload: () -> Unit = {},
+    onDeleteDownload: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
     onViewCredits: () -> Unit = {},
     onViewComments: () -> Unit = {},
@@ -160,13 +162,19 @@ fun SongActionsSheet(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-
-                ActionItem(
-                    icon = Icons.Default.Download,
-                    title = "Download",
-                    onClick = { onDownload(); onDismiss() }
-                )
-                
+                if (isDownloaded) {
+                    ActionItem(
+                        icon = Icons.Default.Delete,
+                        title = "Delete from downloads",
+                        onClick = { onDeleteDownload(); onDismiss() }
+                    )
+                } else {
+                    ActionItem(
+                        icon = Icons.Default.Download,
+                        title = "Download",
+                        onClick = { onDownload(); onDismiss() }
+                    )
+                }
 
                 ActionItem(
                     icon = Icons.Default.PlaylistAdd,
