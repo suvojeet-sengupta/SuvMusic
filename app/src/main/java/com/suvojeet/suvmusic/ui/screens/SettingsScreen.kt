@@ -343,6 +343,15 @@ fun SettingsScreen(
                             onCheckedChange = { viewModel.setSimpMusicEnabled(it) },
                             modifier = Modifier.padding(start = 16.dp)
                         )
+
+                        SettingsSwitchItem(
+                            icon = null, // Indented
+                            title = "Kugou",
+                            subtitle = "Massive lyrics library",
+                            checked = uiState.kuGouEnabled,
+                            onCheckedChange = { viewModel.setKuGouEnabled(it) },
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
