@@ -875,8 +875,12 @@ fun PlayerScreen(
                 song = song,
                 isVisible = showActionsSheet,
                 onDismiss = { showActionsSheet = false },
+                isDownloaded = playerState.downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED,
                 onToggleFavorite = onToggleLike,
                 onDownload = onDownload,
+                onDeleteDownload = {
+                    playerViewModel.deleteDownload(song.id)
+                },
                 onViewCredits = {
                     showActionsSheet = false
                     showCreditsSheet = true
