@@ -1355,7 +1355,7 @@ class DownloadRepository @Inject constructor(
         val currentTotal = _batchProgress.value.second
         val currentDone = _batchProgress.value.first
         
-        if (currentTotal == 0) {
+        if (currentTotal == 0 || currentDone >= currentTotal) {
             _batchProgress.value = 0 to newSongs.size
         } else {
             _batchProgress.value = currentDone to (currentTotal + newSongs.size)
