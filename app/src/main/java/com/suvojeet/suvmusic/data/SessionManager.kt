@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -141,9 +142,8 @@ class SessionManager @Inject constructor(
      * Check if developer mode is enabled.
      * When enabled, JioSaavn option becomes visible.
      */
-    fun isDeveloperMode(): Boolean = runBlocking {
+    suspend fun isDeveloperMode(): Boolean = 
         context.dataStore.data.first()[DEV_MODE_KEY] == "unlocked"
-    }
     
     val developerModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[DEV_MODE_KEY] == "unlocked"
@@ -169,9 +169,8 @@ class SessionManager @Inject constructor(
     
     // --- Floating Player ---
     
-    fun isDynamicIslandEnabled(): Boolean = runBlocking {
+    suspend fun isDynamicIslandEnabled(): Boolean = 
         context.dataStore.data.first()[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
-    }
     
     val dynamicIslandEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
@@ -188,9 +187,8 @@ class SessionManager @Inject constructor(
     /**
      * Get saved seekbar style (defaults to WAVEFORM)
      */
-    fun getSeekbarStyle(): String = runBlocking {
+    suspend fun getSeekbarStyle(): String = 
         context.dataStore.data.first()[SEEKBAR_STYLE_KEY] ?: "WAVEFORM"
-    }
     
     val seekbarStyleFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[SEEKBAR_STYLE_KEY] ?: "WAVEFORM"
@@ -205,9 +203,8 @@ class SessionManager @Inject constructor(
     /**
      * Get saved artwork shape (defaults to ROUNDED_SQUARE)
      */
-    fun getArtworkShape(): String = runBlocking {
+    suspend fun getArtworkShape(): String = 
         context.dataStore.data.first()[ARTWORK_SHAPE_KEY] ?: "ROUNDED_SQUARE"
-    }
     
     val artworkShapeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[ARTWORK_SHAPE_KEY] ?: "ROUNDED_SQUARE"
@@ -222,9 +219,8 @@ class SessionManager @Inject constructor(
     /**
      * Get saved artwork size (defaults to LARGE)
      */
-    fun getArtworkSize(): String = runBlocking {
+    suspend fun getArtworkSize(): String = 
         context.dataStore.data.first()[ARTWORK_SIZE_KEY] ?: "LARGE"
-    }
     
     val artworkSizeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[ARTWORK_SIZE_KEY] ?: "LARGE"
@@ -238,9 +234,8 @@ class SessionManager @Inject constructor(
     
     // --- Endless Queue / Radio Mode ---
     
-    fun isEndlessQueueEnabled(): Boolean = runBlocking {
+    suspend fun isEndlessQueueEnabled(): Boolean = 
         context.dataStore.data.first()[ENDLESS_QUEUE_ENABLED_KEY] ?: true // Enabled by default
-    }
     
     val endlessQueueFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[ENDLESS_QUEUE_ENABLED_KEY] ?: true
@@ -254,9 +249,8 @@ class SessionManager @Inject constructor(
     
     // --- Offline Mode ---
     
-    fun isOfflineModeEnabled(): Boolean = runBlocking {
+    suspend fun isOfflineModeEnabled(): Boolean = 
         context.dataStore.data.first()[OFFLINE_MODE_ENABLED_KEY] ?: false
-    }
     
     val offlineModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[OFFLINE_MODE_ENABLED_KEY] ?: false
@@ -270,9 +264,8 @@ class SessionManager @Inject constructor(
     
     // --- Volume Slider ---
     
-    fun isVolumeSliderEnabled(): Boolean = runBlocking {
+    suspend fun isVolumeSliderEnabled(): Boolean = 
         context.dataStore.data.first()[VOLUME_SLIDER_ENABLED_KEY] ?: true
-    }
     
     val volumeSliderEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[VOLUME_SLIDER_ENABLED_KEY] ?: true
@@ -286,9 +279,8 @@ class SessionManager @Inject constructor(
 
     // --- Mini Player Transparency ---
 
-    fun getMiniPlayerAlpha(): Float = runBlocking {
+    suspend fun getMiniPlayerAlpha(): Float = 
         context.dataStore.data.first()[MINI_PLAYER_ALPHA_KEY] ?: 1f
-    }
 
     val miniPlayerAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
         preferences[MINI_PLAYER_ALPHA_KEY] ?: 1f
@@ -302,9 +294,8 @@ class SessionManager @Inject constructor(
 
     // --- Navigation Bar Transparency ---
 
-    fun getNavBarAlpha(): Float = runBlocking {
+    suspend fun getNavBarAlpha(): Float = 
         context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 0.9f
-    }
 
     val navBarAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
         preferences[NAV_BAR_ALPHA_KEY] ?: 0.9f
@@ -318,9 +309,8 @@ class SessionManager @Inject constructor(
     
     // --- Double Tap Seek ---
     
-    fun getDoubleTapSeekSeconds(): Int = runBlocking {
+    suspend fun getDoubleTapSeekSeconds(): Int = 
         context.dataStore.data.first()[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
-    }
     
     val doubleTapSeekSecondsFlow: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
@@ -334,10 +324,8 @@ class SessionManager @Inject constructor(
     
     // --- Lyrics Providers ---
     
-    val enableBetterLyrics: Boolean
-        get() = runBlocking {
+    suspend fun doesEnableBetterLyrics(): Boolean = 
             context.dataStore.data.first()[ENABLE_BETTER_LYRICS_KEY] ?: true
-        }
     
     val enableBetterLyricsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[ENABLE_BETTER_LYRICS_KEY] ?: true
@@ -349,10 +337,8 @@ class SessionManager @Inject constructor(
         }
     }
     
-    val enableSimpMusic: Boolean
-        get() = runBlocking {
+    suspend fun doesEnableSimpMusic(): Boolean = 
             context.dataStore.data.first()[ENABLE_SIMPMUSIC_KEY] ?: true
-        }
     
     val enableSimpMusicFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[ENABLE_SIMPMUSIC_KEY] ?: true
@@ -364,9 +350,8 @@ class SessionManager @Inject constructor(
         }
     }
     
-    fun getPreferredLyricsProvider(): String = runBlocking {
+    suspend fun getPreferredLyricsProvider(): String = 
         context.dataStore.data.first()[PREFERRED_LYRICS_PROVIDER_KEY] ?: "BetterLyrics"
-    }
     
     val preferredLyricsProviderFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[PREFERRED_LYRICS_PROVIDER_KEY] ?: "BetterLyrics"
@@ -384,9 +369,8 @@ class SessionManager @Inject constructor(
      * Get player cache limit in bytes.
      * Returns -1L for Unlimited (Default).
      */
-    fun getPlayerCacheLimit(): Long = runBlocking {
+    suspend fun getPlayerCacheLimit(): Long = 
         context.dataStore.data.first()[PLAYER_CACHE_LIMIT_KEY] ?: -1L
-    }
 
     val playerCacheLimitFlow: Flow<Long> = context.dataStore.data.map { preferences ->
         preferences[PLAYER_CACHE_LIMIT_KEY] ?: -1L
@@ -405,9 +389,8 @@ class SessionManager @Inject constructor(
      * Default: 5 days.
      * 0 means disabled.
      */
-    fun getPlayerCacheAutoClearInterval(): Int = runBlocking {
+    suspend fun getPlayerCacheAutoClearInterval(): Int = 
         context.dataStore.data.first()[PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY] ?: 5
-    }
 
     val playerCacheAutoClearIntervalFlow: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY] ?: 5
@@ -422,9 +405,8 @@ class SessionManager @Inject constructor(
     /**
      * Get the timestamp of the last cache clearing.
      */
-    fun getLastCacheClearedTimestamp(): Long = runBlocking {
+    suspend fun getLastCacheClearedTimestamp(): Long = 
         context.dataStore.data.first()[PLAYER_CACHE_LAST_CLEARED_TIMESTAMP_KEY] ?: 0L
-    }
 
     suspend fun updateLastCacheClearedTimestamp() {
         context.dataStore.edit { preferences ->
@@ -438,9 +420,8 @@ class SessionManager @Inject constructor(
      * Check if Music Haptics is enabled.
      * Provides synchronized vibrations with music playback.
      */
-    fun isMusicHapticsEnabled(): Boolean = runBlocking {
+    suspend fun isMusicHapticsEnabled(): Boolean = 
         context.dataStore.data.first()[MUSIC_HAPTICS_ENABLED_KEY] ?: false
-    }
     
     val musicHapticsEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[MUSIC_HAPTICS_ENABLED_KEY] ?: false
@@ -455,9 +436,9 @@ class SessionManager @Inject constructor(
     /**
      * Get the current haptics mode.
      */
-    fun getHapticsMode(): HapticsMode = runBlocking {
+    suspend fun getHapticsMode(): HapticsMode {
         val modeName = context.dataStore.data.first()[HAPTICS_MODE_KEY]
-        modeName?.let {
+        return modeName?.let {
             try { HapticsMode.valueOf(it) } catch (e: Exception) { HapticsMode.BASIC }
         } ?: HapticsMode.BASIC
     }
@@ -477,9 +458,9 @@ class SessionManager @Inject constructor(
     /**
      * Get the haptics intensity level.
      */
-    fun getHapticsIntensity(): HapticsIntensity = runBlocking {
+    suspend fun getHapticsIntensity(): HapticsIntensity {
         val intensityName = context.dataStore.data.first()[HAPTICS_INTENSITY_KEY]
-        intensityName?.let {
+        return intensityName?.let {
             try { HapticsIntensity.valueOf(it) } catch (e: Exception) { HapticsIntensity.MEDIUM }
         } ?: HapticsIntensity.MEDIUM
     }
@@ -576,26 +557,27 @@ class SessionManager @Inject constructor(
     
     // --- Cookies ---
     
-    fun getCookies(): String? {
-        // Try getting from encrypted prefs first
-        val secureCookies = encryptedPrefs.getString("cookies", null)
-        if (secureCookies != null) return secureCookies
-        
-        // Migration: Check if cookies exist in DataStore
-        val oldCookies = runBlocking {
-            context.dataStore.data.first()[COOKIES_KEY]
+    private val coroutineScope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+
+    init {
+        // Migrate cookies asynchronously to avoid blocking main thread
+        coroutineScope.launch {
+            migrateCookies()
         }
-        
+    }
+
+    private suspend fun migrateCookies() {
+        val oldCookies = context.dataStore.data.first()[COOKIES_KEY]
         if (oldCookies != null) {
-            // Save to secure prefs and clear from DataStore
             encryptedPrefs.edit().putString("cookies", oldCookies).apply()
-            runBlocking {
-                context.dataStore.edit { it.remove(COOKIES_KEY) }
-            }
-            return oldCookies
+            context.dataStore.edit { it.remove(COOKIES_KEY) }
         }
-        
-        return null
+    }
+    
+    // --- Cookies ---
+    
+    fun getCookies(): String? {
+        return encryptedPrefs.getString("cookies", null)
     }
     
     suspend fun saveCookies(cookies: String) {
@@ -615,9 +597,8 @@ class SessionManager @Inject constructor(
     
     // --- User Avatar ---
     
-    fun getUserAvatar(): String? = runBlocking {
+    suspend fun getUserAvatar(): String? = 
         context.dataStore.data.first()[USER_AVATAR_KEY]
-    }
     
     suspend fun saveUserAvatar(url: String) {
         context.dataStore.edit { preferences ->
@@ -631,9 +612,9 @@ class SessionManager @Inject constructor(
     
     // --- Audio Quality ---
     
-    fun getAudioQuality(): AudioQuality = runBlocking {
+    suspend fun getAudioQuality(): AudioQuality {
         val qualityName = context.dataStore.data.first()[AUDIO_QUALITY_KEY]
-        qualityName?.let { 
+        return qualityName?.let { 
             try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.HIGH }
         } ?: AudioQuality.HIGH
     }
@@ -652,9 +633,8 @@ class SessionManager @Inject constructor(
     
     // --- Playback Settings ---
     
-    fun isGaplessPlaybackEnabled(): Boolean = runBlocking {
+    suspend fun isGaplessPlaybackEnabled(): Boolean = 
         context.dataStore.data.first()[GAPLESS_PLAYBACK_KEY] ?: true
-    }
     
     suspend fun setGaplessPlayback(enabled: Boolean) {
         context.dataStore.edit { preferences ->
@@ -662,9 +642,8 @@ class SessionManager @Inject constructor(
         }
     }
     
-    fun isAutomixEnabled(): Boolean = runBlocking {
+    suspend fun isAutomixEnabled(): Boolean = 
         context.dataStore.data.first()[AUTOMIX_KEY] ?: true
-    }
     
     suspend fun setAutomix(enabled: Boolean) {
         context.dataStore.edit { preferences ->
@@ -674,9 +653,8 @@ class SessionManager @Inject constructor(
 
     // --- Volume Normalization ---
 
-    fun isVolumeNormalizationEnabled(): Boolean = runBlocking {
+    suspend fun isVolumeNormalizationEnabled(): Boolean = 
         context.dataStore.data.first()[VOLUME_NORMALIZATION_ENABLED_KEY] ?: false
-    }
 
     val volumeNormalizationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[VOLUME_NORMALIZATION_ENABLED_KEY] ?: false
@@ -690,9 +668,9 @@ class SessionManager @Inject constructor(
     
     // --- Download Quality ---
     
-    fun getDownloadQuality(): DownloadQuality = runBlocking {
+    suspend fun getDownloadQuality(): DownloadQuality {
         val qualityName = context.dataStore.data.first()[DOWNLOAD_QUALITY_KEY]
-        qualityName?.let { 
+        return qualityName?.let { 
             try { DownloadQuality.valueOf(it) } catch (e: Exception) { DownloadQuality.HIGH }
         } ?: DownloadQuality.HIGH
     }
@@ -711,8 +689,11 @@ class SessionManager @Inject constructor(
 
     // --- Onboarding ---
 
-    fun isOnboardingCompleted(): Boolean = runBlocking {
+    suspend fun isOnboardingCompleted(): Boolean = 
         context.dataStore.data.first()[ONBOARDING_COMPLETED_KEY] ?: false
+        
+    val onboardingCompletedFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ONBOARDING_COMPLETED_KEY] ?: false
     }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
@@ -723,9 +704,9 @@ class SessionManager @Inject constructor(
     
     // --- Theme Mode ---
     
-    fun getThemeMode(): ThemeMode = runBlocking {
+    suspend fun getThemeMode(): ThemeMode {
         val modeName = context.dataStore.data.first()[THEME_MODE_KEY]
-        modeName?.let { 
+        return modeName?.let { 
             try { ThemeMode.valueOf(it) } catch (e: Exception) { ThemeMode.SYSTEM }
         } ?: ThemeMode.SYSTEM
     }
@@ -744,9 +725,9 @@ class SessionManager @Inject constructor(
 
     // --- App Theme (Static Colors) ---
 
-    fun getAppTheme(): AppTheme = runBlocking {
+    suspend fun getAppTheme(): AppTheme {
         val themeName = context.dataStore.data.first()[APP_THEME_KEY]
-        themeName?.let {
+        return themeName?.let {
             try { AppTheme.valueOf(it) } catch (e: Exception) { AppTheme.DEFAULT }
         } ?: AppTheme.DEFAULT
     }
@@ -765,9 +746,8 @@ class SessionManager @Inject constructor(
     
     // --- Dynamic Color ---
     
-    fun isDynamicColorEnabled(): Boolean = runBlocking {
+    suspend fun isDynamicColorEnabled(): Boolean = 
         context.dataStore.data.first()[DYNAMIC_COLOR_KEY] ?: true
-    }
     
     val dynamicColorFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[DYNAMIC_COLOR_KEY] ?: true
@@ -781,9 +761,9 @@ class SessionManager @Inject constructor(
     
     // --- Music Source ---
     
-    fun getMusicSource(): MusicSource = runBlocking {
+    suspend fun getMusicSource(): MusicSource {
         val sourceName = context.dataStore.data.first()[MUSIC_SOURCE_KEY]
-        sourceName?.let { 
+        return sourceName?.let { 
             try { MusicSource.valueOf(it) } catch (e: Exception) { MusicSource.YOUTUBE }
         } ?: MusicSource.YOUTUBE
     }

@@ -15,7 +15,8 @@ class SimpMusicLyricsProvider @Inject constructor(
     override val name = "SimpMusic"
 
     override fun isEnabled(context: Context): Boolean {
-        return sessionManager.enableSimpMusic
+        // Safe to block here as isEnabled is usually checked on background thread or during init
+        return kotlinx.coroutines.runBlocking { sessionManager.doesEnableSimpMusic() }
     }
 
     override suspend fun getLyrics(

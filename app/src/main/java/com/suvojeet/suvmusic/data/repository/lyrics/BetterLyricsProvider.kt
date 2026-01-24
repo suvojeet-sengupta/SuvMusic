@@ -15,7 +15,8 @@ class BetterLyricsProvider @Inject constructor(
     override val name = "BetterLyrics"
 
     override fun isEnabled(context: Context): Boolean {
-        return sessionManager.enableBetterLyrics
+        // Safe to block here as isEnabled is usually checked on background thread or during init
+        return kotlinx.coroutines.runBlocking { sessionManager.doesEnableBetterLyrics() }
     }
 
     override suspend fun getLyrics(
