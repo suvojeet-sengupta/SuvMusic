@@ -247,6 +247,10 @@ class PlayerViewModel @Inject constructor(
     fun togglePlayPause() {
         musicPlayer.togglePlayPause()
     }
+
+    fun stop() {
+        musicPlayer.stop()
+    }
     
     fun seekTo(position: Long) {
         musicPlayer.seekTo(position)
