@@ -56,7 +56,9 @@ data class SettingsUiState(
     val hapticsIntensity: HapticsIntensity = HapticsIntensity.MEDIUM,
     // Misc
     val stopMusicOnTaskClear: Boolean = false,
-    val pauseMusicOnMediaMuted: Boolean = false
+    val pauseMusicOnMediaMuted: Boolean = false,
+    // Appearance
+    val pureBlackEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -180,6 +182,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(pauseMusicOnMediaMuted = enabled) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.pureBlackEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(pureBlackEnabled = enabled) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -215,6 +223,7 @@ class SettingsViewModel @Inject constructor(
             val hapticsIntensity = sessionManager.getHapticsIntensity()
             val stopMusicOnTaskClear = sessionManager.isStopMusicOnTaskClearEnabled()
             val pauseMusicOnMediaMuted = sessionManager.isPauseMusicOnMediaMutedEnabled()
+            val pureBlackEnabled = sessionManager.isPureBlackEnabled()
 
             _uiState.update { 
                 it.copy(
@@ -243,7 +252,8 @@ class SettingsViewModel @Inject constructor(
                     hapticsMode = hapticsMode,
                     hapticsIntensity = hapticsIntensity,
                     stopMusicOnTaskClear = stopMusicOnTaskClear,
-                    pauseMusicOnMediaMuted = pauseMusicOnMediaMuted
+                    pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
+                    pureBlackEnabled = pureBlackEnabled
                 )
             }
         }
@@ -567,6 +577,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPauseMusicOnMediaMutedEnabled(enabled)
             _uiState.update { it.copy(pauseMusicOnMediaMuted = enabled) }
+        }
+    }
+
+    fun setPureBlackEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setPureBlackEnabled(enabled)
+            _uiState.update { it.copy(pureBlackEnabled = enabled) }
         }
     }
 }

@@ -5,19 +5,31 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Palette
@@ -31,8 +43,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -44,6 +58,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
@@ -72,73 +87,114 @@ fun AppearanceSettingsScreen(
     
     val scope = rememberCoroutineScope()
     
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    
+    // Background Gradient (Consistent with other screens)
+    val backgroundBrush = androidx.compose.ui.graphics.Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surfaceContainer,
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    )
+
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets.statusBars,
         topBar = {
-// ...
+            androidx.compose.material3.TopAppBar(
+                title = { Text("Appearance", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .background(backgroundBrush)
         ) {
-            // Theme Section
-            SectionTitle("Theme")
-            
-            ListItem(
-                headlineContent = { Text("Theme Mode") },
-                supportingContent = { Text(uiState.themeMode.label) },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.DarkMode,
-                        contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable { showThemeModeSheet = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            ListItem(
-                headlineContent = { Text("Dynamic Theme") },
-                supportingContent = { Text("Use system colors (Android 12+)") },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Palette,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
-                        checked = uiState.dynamicColorEnabled,
-                        onCheckedChange = { viewModel.setDynamicColor(it) }
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            AnimatedVisibility(
-                visible = !uiState.dynamicColorEnabled,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp)
             ) {
-                ListItem(
-                    headlineContent = { Text("App Theme") },
-                    supportingContent = { Text(uiState.appTheme.label) },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Default.ColorLens,
-                            contentDescription = null
+                // --- Theme Section ---
+                item {
+                    SettingsSectionTitle("Theme Mode")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        AppearanceNavigationItem(
+                            icon = Icons.Default.DarkMode,
+                            title = "Theme Mode",
+                            subtitle = uiState.themeMode.label,
+                            onClick = { showThemeModeSheet = true }
                         )
-                    },
-                    modifier = Modifier.clickable { showAppThemeSheet = true },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
+
+                        // Pure Black Mode (Only visible in Dark Mode or System if currently dark)
+                        val isDark = when(uiState.themeMode) {
+                            ThemeMode.DARK -> true
+                            ThemeMode.LIGHT -> false
+                            ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+                        }
+
+                        AnimatedVisibility(
+                            visible = isDark,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column {
+                                HorizontalDivider()
+                                AppearanceSwitchItem(
+                                    icon = Icons.Default.ColorLens,
+                                    title = "Pure Black",
+                                    subtitle = "True black background (#000000)",
+                                    checked = uiState.pureBlackEnabled,
+                                    onCheckedChange = { viewModel.setPureBlackEnabled(it) }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                // --- Colors Section ---
+                item {
+                    SettingsSectionTitle("System & Colors")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        AppearanceSwitchItem(
+                            icon = Icons.Default.Palette,
+                            title = "Dynamic Colors",
+                            subtitle = "Use Android 12+ wallpaper colors",
+                            checked = uiState.dynamicColorEnabled,
+                            onCheckedChange = { viewModel.setDynamicColor(it) }
+                        )
+
+                        AnimatedVisibility(
+                            visible = !uiState.dynamicColorEnabled,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column {
+                                HorizontalDivider()
+                                AppearanceNavigationItem(
+                                    icon = Icons.Default.ColorLens,
+                                    title = "App Theme",
+                                    subtitle = uiState.appTheme.label,
+                                    onClick = { showAppThemeSheet = true }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
-            
-            Spacer(modifier = Modifier.height(100.dp))
         }
     }
     
@@ -146,17 +202,26 @@ fun AppearanceSettingsScreen(
     if (showThemeModeSheet) {
         ModalBottomSheet(
             onDismissRequest = { showThemeModeSheet = false },
-            sheetState = themeModeSheetState
+            sheetState = themeModeSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Theme Mode",
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 
                 ThemeMode.entries.forEach { mode ->
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(mode.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.themeMode == mode,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
@@ -165,19 +230,10 @@ fun AppearanceSettingsScreen(
                                     themeModeSheetState.hide()
                                     showThemeModeSheet = false
                                 }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.themeMode == mode,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = mode.label)
-                    }
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -187,17 +243,26 @@ fun AppearanceSettingsScreen(
     if (showAppThemeSheet) {
         ModalBottomSheet(
             onDismissRequest = { showAppThemeSheet = false },
-            sheetState = appThemeSheetState
+            sheetState = appThemeSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "App Theme",
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 
                 AppTheme.entries.forEach { theme ->
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(theme.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.appTheme == theme,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
@@ -206,19 +271,10 @@ fun AppearanceSettingsScreen(
                                     appThemeSheetState.hide()
                                     showAppThemeSheet = false
                                 }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.appTheme == theme,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = theme.label)
-                    }
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -226,12 +282,99 @@ fun AppearanceSettingsScreen(
 }
 
 @Composable
-private fun SectionTitle(title: String) {
+private fun SettingsSectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun GlassmorphicCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+        ),
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun HorizontalDivider() {
+    androidx.compose.material3.HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+    )
+}
+
+@Composable
+private fun AppearanceNavigationItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String? = null,
+    onClick: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
+        leadingContent = {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        },
+        modifier = Modifier.clickable(onClick = onClick),
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@Composable
+private fun AppearanceSwitchItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
+        leadingContent = {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = androidx.compose.material3.SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        },
+        modifier = Modifier.clickable { onCheckedChange(!checked) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }

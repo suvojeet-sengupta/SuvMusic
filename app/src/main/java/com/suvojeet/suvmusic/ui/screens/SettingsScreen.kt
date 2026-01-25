@@ -235,6 +235,20 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
+                // --- Appearance Section ---
+                item {
+                    SettingsSectionTitle("Appearance")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        SettingsNavigationItem(
+                            icon = Icons.Default.DarkMode,
+                            title = "Appearance",
+                            subtitle = "Theme, dark mode, colors",
+                            onClick = onAppearanceClick
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
                 // --- General Section ---
                 item {
                     SettingsSectionTitle("General")
@@ -293,15 +307,6 @@ fun SettingsScreen(
                             title = "Customization",
                             subtitle = "Player UI, artwork style",
                             onClick = onCustomizationClick
-                        )
-                        
-                        HorizontalDivider()
-                        
-                        SettingsNavigationItem(
-                            icon = Icons.Default.DarkMode,
-                            title = "Appearance",
-                            subtitle = "Theme, dynamic colors",
-                            onClick = onAppearanceClick
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
