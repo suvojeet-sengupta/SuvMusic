@@ -132,12 +132,15 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
     private fun getFallbackUri(uri: Uri): Uri? {
         val uriString = uri.toString()
         // Check for Google/YouTube thumbnail pattern
-        if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com")) {
-            // Replace resolution parameters with fallback size (544x544) which is standard backup
-            return if (uriString.contains("=w")) {
-                Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544"))
-            } else {
-                null
+        if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com") || uriString.contains("ytimg.com")) {
+            // Priority 1: If it's a forced maxresdefault (which might fail), fallback to hqdefault
+            if (uriString.contains("maxresdefault")) {
+                return Uri.parse(uriString.replace("maxresdefault", "hqdefault"))
+            }
+            
+            // Priority 2: Resize google hosted images if needed
+            if (uriString.contains("=w")) {
+                return Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544"))
             }
         }
         return null
