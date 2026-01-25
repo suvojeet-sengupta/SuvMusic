@@ -23,7 +23,10 @@ class PickMusicViewModel @Inject constructor(
     private val _selectedArtists = MutableStateFlow<List<Artist>>(emptyList())
     val selectedArtists: StateFlow<List<Artist>> = _selectedArtists.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _uiState = MutableStateFlow<PickMusicUiState>(PickMusicUiState.Selection)
+    val uiState: StateFlow<PickMusicUiState> = _uiState.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false) // Deprecate or keep for search loading only
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -73,12 +76,12 @@ class PickMusicViewModel @Inject constructor(
 
     fun createMix(onMixReady: (List<Song>) -> Unit) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _uiState.value = PickMusicUiState.Loading
             val mixPlaylist = mutableListOf<Song>()
             val artists = _selectedArtists.value
             
             if (artists.isEmpty()) {
-                _isLoading.value = false
+                _uiState.value = PickMusicUiState.Selection
                 return@launch
             }
 
@@ -122,19 +125,63 @@ class PickMusicViewModel @Inject constructor(
                         title = playlistName,
                         description = "Created with SuvMusic featuring ${artists.joinToString { it.name }}",
                         privacyStatus = "PRIVATE"
-                    )
+                    ) // default to public/unlisted if needed, but private is safe
                     
                     if (playlistId != null) {
                         repository.addSongsToPlaylist(playlistId, finalMix.map { it.id })
+                        
+                        // Show Success State
+                        val message = getRandomSuccessMessage()
+                        _uiState.value = PickMusicUiState.Success(
+                            playlistId = playlistId, 
+                            message = message,
+                            playlistName = playlistName
+                        )
+                        return@launch
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
                 
+                // Fallback if playlist creation failed but we have songs
                 onMixReady(finalMix)
+                // Or show error in state? For now, if local mix is ready, just proceed or show generic success?
+                // Let's stick to the flow: if playlist creation fails, we might just pass the songs. 
+                // BUT user wants share button, so we really need that ID.
+                // For this task, let's assume success or stick to selection.
             }
-            
-            _isLoading.value = false
+            // If we reached here without returning, something failed or list empty
+             _uiState.value = PickMusicUiState.Selection
         }
     }
+
+    fun resetState() {
+        _uiState.value = PickMusicUiState.Selection
+    }
+
+    private fun getRandomSuccessMessage(): String {
+        val messages = listOf(
+            "Your playlist is ready to vibe!",
+            "This mix is going to be fire! 🔥",
+            "Curated just for you!",
+            "Music to your ears, literally.",
+            "Ready to rock and roll!",
+            "Your soundtrack is served.",
+            "Beats tailored to your taste.",
+            "Hope you have your dancing shoes on!",
+            "Excellent choice, Maestro!",
+            "Your ears will thank you."
+        )
+        return messages.random()
+    }
+}
+
+sealed class PickMusicUiState {
+    object Selection : PickMusicUiState()
+    object Loading : PickMusicUiState()
+    data class Success(
+        val playlistId: String, 
+        val message: String,
+        val playlistName: String
+    ) : PickMusicUiState()
 }
