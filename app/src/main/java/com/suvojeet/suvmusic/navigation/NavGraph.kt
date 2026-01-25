@@ -538,6 +538,15 @@ fun NavGraph(
                 onLoginClick = {
                     // Navigate to login page
                     navController.navigate(Destination.YouTubeLogin.route)
+                },
+                onSkipLogin = {
+                    scope.launch {
+                        sessionManager.setOnboardingCompleted(true)
+                    }
+                    navController.navigate(Destination.Home.route) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
