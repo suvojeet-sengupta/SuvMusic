@@ -58,7 +58,7 @@ fun FloatingPillMiniPlayer(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 24.dp)
+            .padding(horizontal = 16.dp, vertical = 17.dp)
             .height(72.dp)
             .shadow(
                 elevation = 20.dp,
