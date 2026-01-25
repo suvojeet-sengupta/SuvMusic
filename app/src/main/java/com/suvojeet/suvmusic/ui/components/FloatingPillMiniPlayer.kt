@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -51,7 +51,9 @@ fun FloatingPillMiniPlayer(
     onNextClick: () -> Unit,
     onPreviousClick: () -> Unit,
     onPlayerClick: () -> Unit,
-    progress: Float
+    onCloseClick: (() -> Unit)? = null,
+    progress: Float,
+    alpha: Float = 1f
 ) {
     Surface(
         modifier = modifier
@@ -65,7 +67,7 @@ fun FloatingPillMiniPlayer(
             )
             .clip(RoundedCornerShape(50.dp))
             .clickable(onClick = onPlayerClick),
-        color = dominantColors.primary.copy(alpha = 0.95f), // Slightly transparent for glass effect
+        color = dominantColors.primary.copy(alpha = alpha), // Slightly transparent for glass effect
         contentColor = dominantColors.onBackground
     ) {
         Row(
@@ -156,14 +158,16 @@ fun FloatingPillMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Artist/Person Icon (Place holder action for now, maybe Go To Artist?)
-                IconButton(onClick = {}) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Artist",
-                        tint = dominantColors.onBackground.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
+                // Close Icon
+                if (onCloseClick != null) {
+                    IconButton(onClick = onCloseClick) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = dominantColors.onBackground.copy(alpha = 0.6f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
                 // Heart/Like Icon

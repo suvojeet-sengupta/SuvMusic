@@ -148,7 +148,9 @@ fun MiniPlayer(
                 onNextClick = onNextClick,
                 onPreviousClick = onPreviousClick,
                 onPlayerClick = onPlayerClick,
-                progress = animatedProgress
+                onCloseClick = onCloseClick,
+                progress = animatedProgress,
+                alpha = alpha
             )
         } else {
             StandardMiniPlayer(
