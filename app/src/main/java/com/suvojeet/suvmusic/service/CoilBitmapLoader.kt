@@ -43,12 +43,18 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
             // Fallback logic
             try {
-                val fallbackUri = getFallbackUri(uri)
-                if (fallbackUri != null && fallbackUri != uri) {
-                    val fallbackBitmap = loadBitmapInternal(fallbackUri)
-                    if (fallbackBitmap != null) {
-                        future.set(fallbackBitmap)
-                        return@launch
+                val fallbackUris = getFallbackUris(uri)
+                for (fallbackUri in fallbackUris) {
+                    if (fallbackUri != uri) {
+                        try {
+                            val fallbackBitmap = loadBitmapInternal(fallbackUri)
+                            if (fallbackBitmap != null) {
+                                future.set(fallbackBitmap)
+                                return@launch
+                            }
+                        } catch (e: Exception) {
+                            // Try next fallback
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -129,20 +135,28 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
         }
     }
 
-    private fun getFallbackUri(uri: Uri): Uri? {
+    private fun getFallbackUris(uri: Uri): List<Uri> {
         val uriString = uri.toString()
+        val fallbacks = mutableListOf<Uri>()
+        
         // Check for Google/YouTube thumbnail pattern
         if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com") || uriString.contains("ytimg.com")) {
-            // Priority 1: If it's a forced maxresdefault (which might fail), fallback to hqdefault
+            // If it's maxresdefault, try sddefault then hqdefault
             if (uriString.contains("maxresdefault")) {
-                return Uri.parse(uriString.replace("maxresdefault", "hqdefault"))
+                fallbacks.add(Uri.parse(uriString.replace("maxresdefault", "sddefault")))
+                fallbacks.add(Uri.parse(uriString.replace("maxresdefault", "hqdefault")))
+            } 
+            // If it's sddefault, try hqdefault
+            else if (uriString.contains("sddefault")) {
+                fallbacks.add(Uri.parse(uriString.replace("sddefault", "hqdefault")))
             }
             
-            // Priority 2: Resize google hosted images if needed
+            // Retry with resizing if it's a googleusercontent/ggpht image
             if (uriString.contains("=w")) {
-                return Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544"))
+                // Try a standard size
+                fallbacks.add(Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")))
             }
         }
-        return null
+        return fallbacks
     }
 }
