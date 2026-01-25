@@ -418,6 +418,7 @@ fun SuvMusicApp(
     // Radio Mode
     val isRadioMode by playerViewModel.isRadioMode.collectAsState()
     val isLoadingMoreSongs by playerViewModel.isLoadingMoreSongs.collectAsState()
+    val isMiniPlayerDismissed by playerViewModel.isMiniPlayerDismissed.collectAsState()
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -469,8 +470,8 @@ fun SuvMusicApp(
         Destination.Settings.route
     )
     
-    // Don't show MiniPlayer on Player screen itself
-    val showMiniPlayer = currentRoute != Destination.Player.route
+    // Don't show MiniPlayer on Player screen itself or if explicitly dismissed
+    val showMiniPlayer = currentRoute != Destination.Player.route && !isMiniPlayerDismissed
     
     // Don't show global volume indicator on PlayerScreen (it has its own)
     val showGlobalVolumeIndicator = currentRoute != Destination.Player.route && hasSong
@@ -666,7 +667,7 @@ fun SuvMusicApp(
                             onPlayerClick = { navController.navigate(Destination.Player.route) },
                             modifier = Modifier,
                             onCloseClick = if (currentRoute != Destination.Home.route) {
-                                { playerViewModel.stop() }
+                                { playerViewModel.dismissMiniPlayer() }
                             } else null,
                             alpha = miniPlayerAlpha,
                             sharedTransitionScope = this@SharedTransitionLayout,

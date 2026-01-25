@@ -103,6 +103,10 @@ class PlayerViewModel @Inject constructor(
     private val _isLoadingMoreSongs = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isLoadingMoreSongs: StateFlow<Boolean> = _isLoadingMoreSongs.asStateFlow()
     
+    // MiniPlayer Visibility State
+    private val _isMiniPlayerDismissed = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isMiniPlayerDismissed: StateFlow<Boolean> = _isMiniPlayerDismissed.asStateFlow()
+    
     private var radioBaseSongId: String? = null
     
     init {
@@ -162,6 +166,7 @@ class PlayerViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { song ->
                     if (song != null) {
+                        _isMiniPlayerDismissed.value = false // Show mini player when a new song starts
                         checkLikeStatus(song)
                         checkDownloadStatus(song)
                         // Reset provider to AUTO on song change unless user specifically locked a provider?
@@ -250,6 +255,11 @@ class PlayerViewModel @Inject constructor(
 
     fun stop() {
         musicPlayer.stop()
+        _isMiniPlayerDismissed.value = false // Reset for next time
+    }
+
+    fun dismissMiniPlayer() {
+        _isMiniPlayerDismissed.value = true
     }
     
     fun seekTo(position: Long) {
