@@ -12,6 +12,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -37,7 +38,8 @@ class YouTubeRepository @Inject constructor(
     private val apiClient: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient,
     private val streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService,
     private val searchService: com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService,
-    private val networkMonitor: com.suvojeet.suvmusic.utils.NetworkMonitor
+    private val networkMonitor: com.suvojeet.suvmusic.utils.NetworkMonitor,
+    private val libraryRepository: LibraryRepository
 ) {
     companion object {
         private var isInitialized = false
@@ -404,6 +406,10 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun getLikedMusic(fetchAll: Boolean = false): List<Song> = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) {
+            return@withContext libraryRepository.getCachedPlaylistSongs("LM")
+        }
+
         if (sessionManager.isLoggedIn()) {
             try {
                 val songs = mutableListOf<Song>()
@@ -437,15 +443,40 @@ class YouTubeRepository @Inject constructor(
                     }
                 }
                 
-                if (songs.isNotEmpty()) return@withContext songs.distinctBy { it.id }
+                if (songs.isNotEmpty()) {
+                    val distinctSongs = songs.distinctBy { it.id }
+                    // Cache the liked songs
+                    libraryRepository.savePlaylistSongs("LM", distinctSongs)
+                    return@withContext distinctSongs
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
-        getPlaylist("LM").songs 
+        
+        val fallback = getPlaylist("LM").songs
+        if (fallback.isNotEmpty()) {
+            libraryRepository.savePlaylistSongs("LM", fallback)
+        }
+        fallback
     }
     
     suspend fun getPlaylist(playlistId: String): Playlist = withContext(Dispatchers.IO) {
+        // Fallback to cache if offline
+        if (!networkMonitor.isCurrentlyConnected()) {
+            val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+            if (cachedSongs.isNotEmpty()) {
+                val cachedPlaylist = libraryRepository.getSavedPlaylists().first().find { it.id == playlistId }
+                return@withContext Playlist(
+                    id = playlistId,
+                    title = cachedPlaylist?.title ?: "Offline Playlist",
+                    author = cachedPlaylist?.subtitle ?: "",
+                    thumbnailUrl = cachedPlaylist?.thumbnailUrl,
+                    songs = cachedSongs
+                )
+            }
+        }
+
         // Handle special playlists that require authentication
         if (playlistId == "LM" || playlistId == "VLLM") {
             // Use internal API for Liked Music if logged in
@@ -454,13 +485,15 @@ class YouTubeRepository @Inject constructor(
                     val json = fetchInternalApi("FEmusic_liked_videos")
                     val songs = parseSongsFromInternalJson(json)
                     if (songs.isNotEmpty()) {
-                        return@withContext Playlist(
+                        val playlist = Playlist(
                             id = playlistId,
                             title = "Your Likes",
                             author = "You",
                             thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
                             songs = songs
                         )
+                        libraryRepository.savePlaylistSongs(playlistId, songs)
+                        return@withContext playlist
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -484,13 +517,15 @@ class YouTubeRepository @Inject constructor(
                     val json = fetchInternalApi("FEmusic_home")
                     val songs = parseSongsFromInternalJson(json)
                     if (songs.isNotEmpty()) {
-                        return@withContext Playlist(
+                        val playlist = Playlist(
                             id = playlistId,
                             title = "My Supermix",
                             author = "YouTube Music",
                             thumbnailUrl = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked_music_@576.png",
                             songs = songs.take(50) // Limit to 50 songs
                         )
+                        libraryRepository.savePlaylistSongs(playlistId, playlist.songs)
+                        return@withContext playlist
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -510,7 +545,10 @@ class YouTubeRepository @Inject constructor(
             val browseId = if (playlistId.startsWith("VL")) playlistId else "VL$playlistId"
             val json = fetchInternalApi(browseId)
             val playlist = parsePlaylistFromInternalJson(json, playlistId)
-            if (playlist.songs.isNotEmpty()) return@withContext playlist
+            if (playlist.songs.isNotEmpty()) {
+                libraryRepository.savePlaylistSongs(playlistId, playlist.songs)
+                return@withContext playlist
+            }
         } catch(e: Exception) { }
 
         // Fallback to NewPipe for public playlists
@@ -548,15 +586,24 @@ class YouTubeRepository @Inject constructor(
                     )
                 }
             
-            Playlist(
+            val playlist = Playlist(
                 id = playlistId,
                 title = playlistName ?: songs.firstOrNull()?.album?.takeIf { it.isNotBlank() } ?: "Playlist",
                 author = uploaderName?.takeIf { it.isNotBlank() } ?: "",
                 thumbnailUrl = thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
                 songs = songs
             )
+            if (songs.isNotEmpty()) {
+                libraryRepository.savePlaylistSongs(playlistId, songs)
+            }
+            return@withContext playlist
         } catch (e: Exception) {
             e.printStackTrace()
+             // Final fallback: try cache one last time
+            val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+            if (cachedSongs.isNotEmpty()) {
+                return@withContext Playlist(playlistId, "Cached Playlist", "", null, cachedSongs)
+            }
             Playlist(playlistId, "Error loading playlist", "", null, emptyList())
         }
     }
