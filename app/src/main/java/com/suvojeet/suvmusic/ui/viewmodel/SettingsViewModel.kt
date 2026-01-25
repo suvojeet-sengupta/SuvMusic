@@ -58,7 +58,9 @@ data class SettingsUiState(
     val stopMusicOnTaskClear: Boolean = false,
     val pauseMusicOnMediaMuted: Boolean = false,
     // Appearance
-    val pureBlackEnabled: Boolean = false
+    val pureBlackEnabled: Boolean = false,
+    // Lyrics
+    val preferredLyricsProvider: String = "BetterLyrics"
 )
 
 @HiltViewModel
@@ -188,6 +190,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(pureBlackEnabled = enabled) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.preferredLyricsProviderFlow.collect { provider ->
+                _uiState.update { it.copy(preferredLyricsProvider = provider) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -253,7 +261,8 @@ class SettingsViewModel @Inject constructor(
                     hapticsIntensity = hapticsIntensity,
                     stopMusicOnTaskClear = stopMusicOnTaskClear,
                     pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
-                    pureBlackEnabled = pureBlackEnabled
+                    pureBlackEnabled = pureBlackEnabled,
+                    preferredLyricsProvider = sessionManager.getPreferredLyricsProvider()
                 )
             }
         }
@@ -584,6 +593,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPureBlackEnabled(enabled)
             _uiState.update { it.copy(pureBlackEnabled = enabled) }
+        }
+    }
+
+    fun setPreferredLyricsProvider(provider: String) {
+        viewModelScope.launch {
+            sessionManager.setPreferredLyricsProvider(provider)
+            _uiState.update { it.copy(preferredLyricsProvider = provider) }
         }
     }
 }

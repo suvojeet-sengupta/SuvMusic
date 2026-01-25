@@ -22,6 +22,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -29,6 +31,11 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -88,30 +95,45 @@ fun LyricsProvidersScreen(
                 contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp)
             ) {
                 item {
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        LyricsProviderSwitch(
+                    SettingsSectionTitle("Preferred Provider")
+                    Text(
+                        text = "The preferred provider will be tried first. Only enabled providers can be selected.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        LyricsProviderItem(
                             title = "BetterLyrics (Apple Music)",
                             subtitle = "Time-synced lyrics database",
-                            checked = uiState.betterLyricsEnabled,
-                            onCheckedChange = { viewModel.setBetterLyricsEnabled(it) }
+                            enabled = uiState.betterLyricsEnabled,
+                            onEnabledChange = { viewModel.setBetterLyricsEnabled(it) },
+                            isPreferred = uiState.preferredLyricsProvider == "BetterLyrics",
+                            onSelectPreferred = { viewModel.setPreferredLyricsProvider("BetterLyrics") }
                         )
 
                         HorizontalDivider()
 
-                        LyricsProviderSwitch(
+                        LyricsProviderItem(
                             title = "SimpMusic",
                             subtitle = "Community sourced lyrics",
-                            checked = uiState.simpMusicEnabled,
-                            onCheckedChange = { viewModel.setSimpMusicEnabled(it) }
+                            enabled = uiState.simpMusicEnabled,
+                            onEnabledChange = { viewModel.setSimpMusicEnabled(it) },
+                            isPreferred = uiState.preferredLyricsProvider == "SimpMusic",
+                            onSelectPreferred = { viewModel.setPreferredLyricsProvider("SimpMusic") }
                         )
 
                         HorizontalDivider()
 
-                        LyricsProviderSwitch(
+                        LyricsProviderItem(
                             title = "Kugou",
                             subtitle = "Massive lyrics library",
-                            checked = uiState.kuGouEnabled,
-                            onCheckedChange = { viewModel.setKuGouEnabled(it) }
+                            enabled = uiState.kuGouEnabled,
+                            onEnabledChange = { viewModel.setKuGouEnabled(it) },
+                            isPreferred = uiState.preferredLyricsProvider == "Kugou",
+                            onSelectPreferred = { viewModel.setPreferredLyricsProvider("Kugou") }
                         )
                     }
                 }
@@ -153,26 +175,72 @@ private fun HorizontalDivider() {
 }
 
 @Composable
-private fun LyricsProviderSwitch(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = { Text(subtitle) },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        },
-        modifier = Modifier.clickable { onCheckedChange(!checked) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+private fun SettingsSectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
     )
 }
+
+@Composable
+private fun LyricsProviderItem(
+    title: String,
+    subtitle: String,
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    isPreferred: Boolean,
+    onSelectPreferred: () -> Unit
+) {
+    Column {
+        ListItem(
+            headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+            supportingContent = { Text(subtitle) },
+            trailingContent = {
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = onEnabledChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            },
+            modifier = Modifier.clickable { onEnabledChange(!enabled) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        
+        AnimatedVisibility(
+            visible = enabled,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            ListItem(
+                headlineContent = { 
+                    Text(
+                        text = "Preferred",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isPreferred) FontWeight.Bold else FontWeight.Normal
+                    ) 
+                },
+                leadingContent = {
+                    RadioButton(
+                        selected = isPreferred,
+                        onClick = null, // Handled by item click
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelectPreferred() }
+                    .padding(start = 32.dp),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+        }
+    }
+}
+

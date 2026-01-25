@@ -19,6 +19,7 @@ import okhttp3.Request
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.suvojeet.suvmusic.util.encodeUrl
+import com.suvojeet.suvmusic.data.SessionManager
 
 /**
  * Repository for fetching lyrics from multiple providers.
@@ -32,30 +33,38 @@ class LyricsRepository @Inject constructor(
     private val jioSaavnRepository: JioSaavnRepository,
     private val betterLyricsProvider: BetterLyricsProvider,
     private val simpMusicLyricsProvider: SimpMusicLyricsProvider,
-    private val kuGouLyricsProvider: KuGouLyricsProvider
+    private val kuGouLyricsProvider: KuGouLyricsProvider,
+    private val sessionManager: SessionManager
 ) {
     private val cache = LruCache<String, Lyrics>(MAX_CACHE_SIZE)
 
     /**
      * Ordered list of lyrics providers
      */
-    private fun getLyricsProviders(): List<LyricsProvider> {
-        return buildList {
-            // BetterLyrics (Apple Music TTML) - highest quality
-            if (betterLyricsProvider.isEnabled(context)) {
-                add(betterLyricsProvider)
-            }
-            
-            // SimpMusic
-            if (simpMusicLyricsProvider.isEnabled(context)) {
-                add(simpMusicLyricsProvider)
-            }
-
-            // KuGou
-            if (kuGouLyricsProvider.isEnabled(context)) {
-                add(kuGouLyricsProvider)
+    private suspend fun getLyricsProviders(): List<LyricsProvider> {
+        val preferred = sessionManager.getPreferredLyricsProvider()
+        val providers = mutableListOf<LyricsProvider>()
+        
+        if (betterLyricsProvider.isEnabled(context)) providers.add(betterLyricsProvider)
+        if (simpMusicLyricsProvider.isEnabled(context)) providers.add(simpMusicLyricsProvider)
+        if (kuGouLyricsProvider.isEnabled(context)) providers.add(kuGouLyricsProvider)
+        
+        // Reorder: put preferred at top
+        val preferredProvider = providers.find { 
+            when (it) {
+                betterLyricsProvider -> preferred == "BetterLyrics"
+                simpMusicLyricsProvider -> preferred == "SimpMusic"
+                kuGouLyricsProvider -> preferred == "Kugou"
+                else -> false
             }
         }
+        
+        if (preferredProvider != null) {
+            providers.remove(preferredProvider)
+            providers.add(0, preferredProvider)
+        }
+        
+        return providers
     }
 
     suspend fun getLyrics(song: Song, providerType: LyricsProviderType = LyricsProviderType.AUTO): Lyrics? = withContext(Dispatchers.IO) {
