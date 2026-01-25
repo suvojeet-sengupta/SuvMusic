@@ -118,4 +118,5 @@ sealed class Destination(val route: String) {
             }
         }
     }
+    data object PickMusic : Destination("pick_music")
 }
