@@ -486,6 +486,12 @@ fun LyricsScreen(
                                     )
                                     
                                     if (uri != null) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Lyrics saved to Documents/SuvMusic",
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+
                                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                             type = "application/pdf"
                                             putExtra(Intent.EXTRA_STREAM, uri)

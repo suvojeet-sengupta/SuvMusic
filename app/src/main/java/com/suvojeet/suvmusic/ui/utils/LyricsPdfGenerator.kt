@@ -151,7 +151,7 @@ object LyricsPdfGenerator {
                 pageNumber++
             }
             
-            val uri = savePdfToCache(context, pdfDocument, songTitle)
+            val uri = savePdfToDocuments(context, pdfDocument, songTitle)
             pdfDocument.close()
             uri
         } catch (e: Exception) {
@@ -160,26 +160,30 @@ object LyricsPdfGenerator {
         }
     }
 
-    private fun savePdfToCache(context: Context, document: PdfDocument, title: String): android.net.Uri? {
-        val pdfFolder = File(context.cacheDir, "pdfs")
-        if (!pdfFolder.exists()) pdfFolder.mkdirs()
-
-        // Sanitize filename
+    private fun savePdfToDocuments(context: Context, document: PdfDocument, title: String): android.net.Uri? {
         val safeTitle = title.replace(Regex("[^a-zA-Z0-9.-]"), "_")
-        val file = File(pdfFolder, "Lyrics_${safeTitle}_${System.currentTimeMillis()}.pdf")
+        val fileName = "Lyrics_${safeTitle}_${System.currentTimeMillis()}.pdf"
         
-        return try {
-            val stream = FileOutputStream(file)
-            document.writeTo(stream)
-            stream.close()
-            
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.provider",
-                file
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
+        val contentValues = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOCUMENTS + "/SuvMusic")
+        }
+
+        val resolver = context.contentResolver
+        val uri = resolver.insert(android.provider.MediaStore.Files.getContentUri("external"), contentValues)
+
+        return if (uri != null) {
+            try {
+                resolver.openOutputStream(uri)?.use { stream ->
+                    document.writeTo(stream)
+                }
+                uri
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        } else {
             null
         }
     }
