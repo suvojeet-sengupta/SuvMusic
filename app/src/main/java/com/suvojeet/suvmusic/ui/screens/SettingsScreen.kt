@@ -98,7 +98,8 @@ fun SettingsScreen(
     onStorageClick: () -> Unit = {},
     onStatsClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
-    onAboutClick: () -> Unit = {}
+    onAboutClick: () -> Unit = {},
+    onMiscClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -306,51 +307,15 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // --- Content (Lyrics) ---
+                // --- Misc Section ---
                 item {
-                    SettingsSectionTitle("Content")
+                    SettingsSectionTitle("Misc")
                     GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        // Header for Lyrics
-                        ListItem(
-                            headlineContent = { 
-                                Text(
-                                    "Lyrics Providers",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            },
-                            leadingContent = {
-                                Icon(Icons.Default.Lyrics, null, tint = MaterialTheme.colorScheme.primary)
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                        )
-                        
-                        SettingsSwitchItem(
-                            icon = null, // Indented
-                            title = "BetterLyrics (Apple Music)",
-                            subtitle = "Time-synced lyrics database",
-                            checked = uiState.betterLyricsEnabled,
-                            onCheckedChange = { viewModel.setBetterLyricsEnabled(it) },
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
-                        
-                        SettingsSwitchItem(
-                            icon = null, // Indented
-                            title = "SimpMusic",
-                            subtitle = "Community sourced lyrics",
-                            checked = uiState.simpMusicEnabled,
-                            onCheckedChange = { viewModel.setSimpMusicEnabled(it) },
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
-
-                        SettingsSwitchItem(
-                            icon = null, // Indented
-                            title = "Kugou",
-                            subtitle = "Massive lyrics library",
-                            checked = uiState.kuGouEnabled,
-                            onCheckedChange = { viewModel.setKuGouEnabled(it) },
-                            modifier = Modifier.padding(start = 16.dp)
+                        SettingsNavigationItem(
+                            icon = Icons.Default.Tune, // Using Tune or similar generic icon
+                            title = "Misc Settings",
+                            subtitle = "Other settings",
+                            onClick = onMiscClick
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))

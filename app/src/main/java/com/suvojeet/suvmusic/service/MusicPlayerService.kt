@@ -299,6 +299,9 @@ class MusicPlayerService : MediaLibraryService() {
             }
         }
         setMediaNotificationProvider(notificationProvider)
+        
+        // Register Volume Receiver
+        registerReceiver(volumeReceiver, android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
     }
     
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
@@ -306,10 +309,32 @@ class MusicPlayerService : MediaLibraryService() {
     }
     
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaLibrarySession?.player
-        // Fix: Background Playback Termination -> Only stop if NOT playing
-        if (player?.playWhenReady == false && player.mediaItemCount == 0) {
-            stopSelf()
+        serviceScope.launch {
+            if (sessionManager.isStopMusicOnTaskClearEnabled()) {
+                stopSelf()
+            } else {
+                val player = mediaLibrarySession?.player
+                // Fix: Background Playback Termination -> Only stop if NOT playing
+                if (player?.playWhenReady == false && player.mediaItemCount == 0) {
+                    stopSelf()
+                }
+            }
+        }
+    }
+    
+    private val volumeReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: Intent) {
+            if ("android.media.VOLUME_CHANGED_ACTION" == intent.action) {
+                 val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                 val vol = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+                 if (vol == 0) {
+                     serviceScope.launch {
+                         if (sessionManager.isPauseMusicOnMediaMutedEnabled()) {
+                             mediaLibrarySession?.player?.pause()
+                         }
+                     }
+                 }
+            }
         }
     }
     
@@ -459,6 +484,11 @@ class MusicPlayerService : MediaLibraryService() {
 
     override fun onDestroy() {
         serviceScope.cancel() // Cancel scope
+        try {
+            unregisterReceiver(volumeReceiver)
+        } catch (e: Exception) {
+            // Ignore if not registered
+        }
         releaseAudioEffects()
 
         mediaLibrarySession?.run {

@@ -135,6 +135,10 @@ class SessionManager @Inject constructor(
         private val MUSIC_HAPTICS_ENABLED_KEY = booleanPreferencesKey("music_haptics_enabled")
         private val HAPTICS_MODE_KEY = stringPreferencesKey("haptics_mode")
         private val HAPTICS_INTENSITY_KEY = stringPreferencesKey("haptics_intensity")
+
+        // Misc
+        private val STOP_MUSIC_ON_TASK_CLEAR_KEY = booleanPreferencesKey("stop_music_on_task_clear")
+        private val PAUSE_MUSIC_ON_MEDIA_MUTED_KEY = booleanPreferencesKey("pause_music_on_media_muted")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -488,6 +492,34 @@ class SessionManager @Inject constructor(
     suspend fun setHapticsIntensity(intensity: HapticsIntensity) {
         context.dataStore.edit { preferences ->
             preferences[HAPTICS_INTENSITY_KEY] = intensity.name
+        }
+    }
+
+    // --- Misc Settings ---
+
+    suspend fun isStopMusicOnTaskClearEnabled(): Boolean = 
+        context.dataStore.data.first()[STOP_MUSIC_ON_TASK_CLEAR_KEY] ?: false
+
+    val stopMusicOnTaskClearEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[STOP_MUSIC_ON_TASK_CLEAR_KEY] ?: false
+    }
+
+    suspend fun setStopMusicOnTaskClearEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[STOP_MUSIC_ON_TASK_CLEAR_KEY] = enabled
+        }
+    }
+
+    suspend fun isPauseMusicOnMediaMutedEnabled(): Boolean = 
+        context.dataStore.data.first()[PAUSE_MUSIC_ON_MEDIA_MUTED_KEY] ?: false
+
+    val pauseMusicOnMediaMutedEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PAUSE_MUSIC_ON_MEDIA_MUTED_KEY] ?: false
+    }
+
+    suspend fun setPauseMusicOnMediaMutedEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PAUSE_MUSIC_ON_MEDIA_MUTED_KEY] = enabled
         }
     }
     
