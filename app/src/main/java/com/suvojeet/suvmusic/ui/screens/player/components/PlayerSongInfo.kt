@@ -17,10 +17,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarOutline
-import androidx.compose.material.icons.filled.ThumbDown
-import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,10 +48,8 @@ import androidx.compose.foundation.clickable
 fun SongInfoSection(
     song: Song?,
     isFavorite: Boolean,
-    isDisliked: Boolean,
     downloadState: DownloadState,
     onFavoriteClick: () -> Unit,
-    onDislikeClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onMoreClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
@@ -117,7 +113,7 @@ fun SongInfoSection(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MusicNote,
+                        imageVector = Icons.Filled.MusicNote,
                         contentDescription = null,
                         modifier = Modifier.size(12.dp),
                         tint = dominantColors.onBackground.copy(alpha = 0.7f)
@@ -151,7 +147,7 @@ fun SongInfoSection(
                 }
                 DownloadState.DOWNLOADED -> {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = Icons.Filled.CheckCircle,
                         contentDescription = "Downloaded",
                         tint = dominantColors.accent,
                         modifier = Modifier.size(28.dp)
@@ -159,7 +155,7 @@ fun SongInfoSection(
                 }
                 DownloadState.FAILED -> {
                     Icon(
-                        imageVector = Icons.Default.Error,
+                        imageVector = Icons.Filled.Error,
                         contentDescription = "Retry Download",
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(28.dp)
@@ -167,7 +163,7 @@ fun SongInfoSection(
                 }
                 else -> {
                     Icon(
-                        imageVector = Icons.Default.Download,
+                        imageVector = Icons.Filled.Download,
                         contentDescription = "Download",
                         tint = dominantColors.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.size(28.dp)
@@ -178,25 +174,16 @@ fun SongInfoSection(
 
         IconButton(onClick = onFavoriteClick) {
             Icon(
-                imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
-                contentDescription = "Favorite",
+                imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                contentDescription = "Like",
                 tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.size(28.dp)
             )
         }
 
-        IconButton(onClick = onDislikeClick) {
-            Icon(
-                imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                contentDescription = "Dislike",
-                tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(26.dp)
-            )
-        }
-
         IconButton(onClick = onMoreClick) {
             Icon(
-                imageVector = Icons.Default.MoreVert,
+                imageVector = Icons.Filled.MoreVert,
                 contentDescription = "More options",
                 tint = dominantColors.onBackground.copy(alpha = 0.7f)
             )
