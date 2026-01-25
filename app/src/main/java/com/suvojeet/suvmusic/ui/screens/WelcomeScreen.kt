@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -78,6 +79,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun WelcomeScreen(
     onLoginClick: () -> Unit,
+    onSkipLogin: () -> Unit,
     viewModel: WelcomeViewModel = hiltViewModel()
 ) {
     // Brand Colors for the "Player-like" gradient
@@ -89,6 +91,7 @@ fun WelcomeScreen(
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
     var startAnimation by remember { mutableStateOf(false) }
+    var showSkipDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         delay(100)
@@ -220,7 +223,10 @@ fun WelcomeScreen(
                 }
 
                 // Action Buttons
-                Box(modifier = Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 64.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     val isLastPage = pagerState.currentPage == 3
 
                     androidx.compose.animation.AnimatedContent(
@@ -229,25 +235,43 @@ fun WelcomeScreen(
                     ) {
                         lastPage ->
                         if (lastPage) {
-                            // Login Button
-                            Button(
-                                onClick = onLoginClick,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = Color.Black
-                                ),
-                                shape = RoundedCornerShape(16.dp)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(Icons.Default.Login, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Login with YouTube",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                // Login Button
+                                Button(
+                                    onClick = onLoginClick,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White,
+                                        contentColor = Color.Black
+                                    ),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Icon(Icons.Default.Login, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Login with YouTube",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                TextButton(
+                                    onClick = { showSkipDialog = true }
+                                ) {
+                                    Text(
+                                        text = "Continue without login",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
                         } else {
                             // Next Arrow
@@ -279,6 +303,44 @@ fun WelcomeScreen(
 
             }
         }
+    }
+
+    if (showSkipDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showSkipDialog = false },
+            icon = { Icon(Icons.Default.Login, contentDescription = null, tint = brandPrimary) },
+            title = { Text("Login Recommended", color = Color.White) },
+            text = { 
+                Text(
+                    "Logging in allows you to sync your library, access personalized recommendations, and manage your playlists. Are you sure you want to continue without logging in?",
+                    color = Color.White.copy(alpha = 0.8f)
+                ) 
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSkipDialog = false
+                        onLoginClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = brandPrimary)
+                ) {
+                    Text("Login")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showSkipDialog = false
+                        onSkipLogin()
+                    }
+                ) {
+                    Text("Continue without login", color = brandPrimary)
+                }
+            },
+            containerColor = Color(0xFF121212),
+            textContentColor = Color.White,
+            titleContentColor = Color.White
+        )
     }
 }
 
