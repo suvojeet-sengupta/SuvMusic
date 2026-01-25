@@ -142,6 +142,8 @@ fun PlayerScreen(
     onPlayFromQueue: (Int) -> Unit = {},
     onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
     onRefreshDevices: () -> Unit = {},
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {},
 
     onSetPlaybackParameters: (Float, Float) -> Unit = { _, _ -> },
     lyrics: Lyrics? = null,
@@ -565,6 +567,8 @@ fun PlayerScreen(
                                     onFavoriteClick = onToggleLike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { showActionsSheet = true },
+                                    onArtistClick = onArtistClick,
+                                    onAlbumClick = onAlbumClick,
                                     dominantColors = dominantColors
                                 )
 
@@ -708,15 +712,17 @@ fun PlayerScreen(
                             Spacer(modifier = Modifier.height(32.dp))
 
                             // Song Info with actions
-                            SongInfoSection(
-                                song = song,
-                                isFavorite = playerState.isLiked,
-                                downloadState = playerState.downloadState,
-                                onFavoriteClick = onToggleLike,
-                                onDownloadClick = onDownload,
-                                onMoreClick = { showActionsSheet = true },
-                                dominantColors = dominantColors
-                            )
+                                SongInfoSection(
+                                    song = song,
+                                    isFavorite = playerState.isLiked,
+                                    downloadState = playerState.downloadState,
+                                    onFavoriteClick = onToggleLike,
+                                    onDownloadClick = onDownload,
+                                    onMoreClick = { showActionsSheet = true },
+                                    onArtistClick = onArtistClick,
+                                    onAlbumClick = onAlbumClick,
+                                    dominantColors = dominantColors
+                                )
 
                             Spacer(modifier = Modifier.weight(1f))
 

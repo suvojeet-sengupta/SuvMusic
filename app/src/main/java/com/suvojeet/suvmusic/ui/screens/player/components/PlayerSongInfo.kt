@@ -52,6 +52,8 @@ fun SongInfoSection(
     onFavoriteClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onMoreClick: () -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {},
     dominantColors: DominantColors
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
@@ -76,7 +78,10 @@ fun SongInfoSection(
                 ),
                 color = dominantColors.onBackground,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    // Album navigation disabled as Song model doesn't consistently have albumId
+                    // .clickable { onAlbumClick(song.albumId) }
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -86,7 +91,10 @@ fun SongInfoSection(
                 style = MaterialTheme.typography.bodyLarge,
                 color = dominantColors.accent,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (song?.artistId != null) {
+                   Modifier.clickable { onArtistClick(song.artistId) }
+                } else Modifier
             )
 
             // Audio Quality Badge - Apple Music style

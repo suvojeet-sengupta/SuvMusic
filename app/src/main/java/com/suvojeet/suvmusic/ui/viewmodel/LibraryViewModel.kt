@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.ImportResult
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.model.Artist
+import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -21,6 +23,8 @@ data class LibraryUiState(
     val localSongs: List<Song> = emptyList(),
     val downloadedSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    val libraryArtists: List<Artist> = emptyList(),
+    val libraryAlbums: List<Album> = emptyList(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val importState: ImportState = ImportState.Idle,
@@ -134,11 +138,44 @@ class LibraryViewModel @Inject constructor(
                     sessionManager.saveLibraryLikedSongsCache(likedSongs)
                 }
                 
+                // Calculate Artists and Albums from all available songs
+                val downloadedSongs = _uiState.value.downloadedSongs
+                val allSongs = (likedSongs + localSongs + downloadedSongs).distinctBy { it.id }
+                
+                val artists = allSongs.mapNotNull { song ->
+                    if (song.artist.isNotBlank()) {
+                         // We don't have full artist details, so we create a preview
+                         // We might want to group songs by artist to count them
+                         Artist(
+                             id = song.artistId ?: song.artist, // Use name as ID if ID is missing (local songs)
+                             name = song.artist,
+                             thumbnailUrl = null, // We don't have artist thumb easily from here
+                             subscribers = null
+                         )
+                    } else null
+                }.distinctBy { it.name } // Distinct by name to avoid duplicates
+                .sortedBy { it.name }
+
+                val albums = allSongs.mapNotNull { song ->
+                    if (song.album != null && song.album.isNotBlank()) {
+                        Album(
+                            id = song.albumId ?: song.album,
+                            title = song.album,
+                            thumbnailUrl = song.thumbnailUrl, // Use song thumb as album thumb proxy
+                            year = null,
+                            artist = song.artist
+                        )
+                    } else null
+                }.distinctBy { it.title + it.artist } // Distinct by title+artist
+                .sortedBy { it.title }
+
                 _uiState.update { 
                     it.copy(
                         playlists = allPlaylists,
                         localSongs = localSongs,
                         likedSongs = likedSongs,
+                        libraryArtists = artists,
+                        libraryAlbums = albums,
                         isLoading = false,
                         isRefreshing = false,
                         error = null

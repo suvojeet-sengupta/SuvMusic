@@ -55,11 +55,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.model.Artist
+import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.ImportSpotifyDialog
 import com.suvojeet.suvmusic.ui.components.MusicCard
 import com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Library screen with Material 3 design and player-inspired aesthetics.
@@ -69,12 +75,14 @@ import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
 fun LibraryScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (Album) -> Unit = {},
     onDownloadsClick: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Playlists", "Offline", "Liked")
+    val tabs = listOf("Playlists", "Artists", "Albums", "Offline")
     
     // Create playlist dialog state
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
@@ -179,17 +187,19 @@ fun LibraryScreen(
                             onCreatePlaylistClick = { showCreatePlaylistDialog = true },
                             onImportSpotifyClick = { showImportSpotifyDialog = true }
                         )
-                        1 -> OfflineTab(
+                        1 -> ArtistsTab(
+                            artists = uiState.libraryArtists,
+                            onArtistClick = { artist -> onArtistClick(artist.id) }
+                        )
+                        2 -> AlbumsTab(
+                            albums = uiState.libraryAlbums,
+                            onAlbumClick = onAlbumClick
+                        )
+                        3 -> OfflineTab(
                             localSongs = uiState.localSongs,
                             downloadedSongs = uiState.downloadedSongs,
                             onSongClick = onSongClick,
                             onDownloadsClick = onDownloadsClick
-                        )
-                        2 -> LikedTab(
-                            songs = uiState.likedSongs,
-                            isSyncing = uiState.isSyncingLikedSongs,
-                            onSongClick = onSongClick,
-                            onSync = { viewModel.syncLikedSongs() }
                         )
                     }
                 }
@@ -687,5 +697,154 @@ private fun EmptyState(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
             modifier = Modifier.padding(top = 4.dp)
         )
+    }
+}
+
+@Composable
+private fun ArtistsTab(
+    artists: List<Artist>,
+    onArtistClick: (Artist) -> Unit
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(bottom = 140.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (artists.isEmpty()) {
+            item {
+                EmptyState(
+                    icon = Icons.Default.Person,
+                    title = "No artists",
+                    message = "Add songs to your library to see artists here"
+                )
+            }
+        } else {
+            item {
+                Text(
+                    text = "${artists.size} Artists",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp)
+                )
+            }
+            
+            items(artists) { artist ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onArtistClick(artist) }
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                         Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    Text(
+                        text = artist.name,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlbumsTab(
+    albums: List<Album>,
+    onAlbumClick: (Album) -> Unit
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(bottom = 140.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (albums.isEmpty()) {
+            item {
+                EmptyState(
+                    icon = Icons.Default.Album,
+                    title = "No albums",
+                    message = "Add songs to your library to see albums here"
+                )
+            }
+        } else {
+            item {
+                Text(
+                    text = "${albums.size} Albums",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp)
+                )
+            }
+            
+            items(albums) { album ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onAlbumClick(album) }
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        if (album.thumbnailUrl != null) {
+                            coil.compose.AsyncImage(
+                                model = album.thumbnailUrl,
+                                contentDescription = album.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Album,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    Column {
+                        Text(
+                            text = album.title,
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = album.artist,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
     }
 }

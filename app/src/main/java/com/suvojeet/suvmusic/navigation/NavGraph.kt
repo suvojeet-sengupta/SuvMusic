@@ -13,6 +13,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.model.Artist
+import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.ui.screens.AboutScreen
 import com.suvojeet.suvmusic.ui.screens.HowItWorksScreen
@@ -252,6 +254,18 @@ fun NavGraph(
                         ).route
                     )
                 },
+                onArtistClick = { artistId ->
+                    navController.navigate(Destination.Artist(artistId).route)
+                },
+                onAlbumClick = { album ->
+                    navController.navigate(
+                        Destination.Album(
+                            albumId = album.id,
+                            name = album.title,
+                            thumbnailUrl = album.thumbnailUrl
+                        ).route
+                    )
+                },
                 onDownloadsClick = {
                     navController.navigate(Destination.Downloads.route)
                 }
@@ -443,6 +457,30 @@ fun NavGraph(
                 onSetSleepTimer = onSetSleepTimer,
                 volumeKeyEvents = volumeKeyEvents,
                 onSetPlaybackParameters = onSetPlaybackParameters,
+                onArtistClick = { artistId ->
+                    navController.navigate(Destination.Artist(artistId).route) {
+                        launchSingleTop = true
+                    }
+                    // Close player if we are navigating away? Or usually player stays open?
+                    // Standard behavior is to navigate "under" the player or close the player sheet. 
+                    // Since PlayerScreen here seems to be a full screen route (Destination.Player), 
+                    // we are navigating internally. 
+                    // However, standard Compose Navigation pushes to stack.
+                    // The transition for Player is slideUp/slideDown.
+                    // If we navigate to Artist, it might look weird if Player slides down.
+                    // But Destination.Artist will push on top.
+                },
+                onAlbumClick = { albumId ->
+                    navController.navigate(
+                        Destination.Album(
+                            albumId = albumId,
+                            name = null,
+                            thumbnailUrl = null
+                        ).route
+                    ) {
+                        launchSingleTop = true
+                    }
+                },
                 selectedLyricsProvider = selectedLyricsProvider,
                 enabledLyricsProviders = enabledLyricsProviders,
                 onLyricsProviderChange = onLyricsProviderChange,
