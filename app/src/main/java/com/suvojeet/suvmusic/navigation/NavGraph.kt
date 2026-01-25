@@ -35,6 +35,8 @@ import com.suvojeet.suvmusic.ui.screens.StorageScreen
 import com.suvojeet.suvmusic.ui.screens.SupportScreen
 import com.suvojeet.suvmusic.ui.screens.WelcomeScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
+import com.suvojeet.suvmusic.ui.screens.MiscScreen
+import com.suvojeet.suvmusic.ui.screens.LyricsProvidersScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.media3.common.Player
@@ -296,7 +298,8 @@ fun NavGraph(
                 onStorageClick = { navController.navigate(Destination.Storage.route) },
                 onStatsClick = { navController.navigate(Destination.ListeningStats.route) },
                 onSupportClick = { navController.navigate(Destination.Support.route) },
-                onAboutClick = { navController.navigate(Destination.About.route) }
+                onAboutClick = { navController.navigate(Destination.About.route) },
+                onMiscClick = { navController.navigate(Destination.Misc.route) }
             )
         }
         
@@ -382,6 +385,19 @@ fun NavGraph(
         
         composable(Destination.Support.route) {
             SupportScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Destination.Misc.route) {
+            MiscScreen(
+                onBack = { navController.popBackStack() },
+                onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders.route) }
+            )
+        }
+
+        composable(Destination.LyricsProviders.route) {
+            LyricsProvidersScreen(
                 onBack = { navController.popBackStack() }
             )
         }
