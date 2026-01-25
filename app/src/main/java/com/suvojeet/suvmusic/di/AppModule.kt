@@ -141,7 +141,8 @@ object AppModule {
         jioSaavnRepository: JioSaavnRepository,
         betterLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.BetterLyricsProvider,
         simpMusicLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.SimpMusicLyricsProvider,
-        kuGouLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.KuGouLyricsProvider
+        kuGouLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.KuGouLyricsProvider,
+        sessionManager: SessionManager
     ): com.suvojeet.suvmusic.data.repository.LyricsRepository {
         return com.suvojeet.suvmusic.data.repository.LyricsRepository(
             context,
@@ -150,7 +151,8 @@ object AppModule {
             jioSaavnRepository,
             betterLyricsProvider,
             simpMusicLyricsProvider,
-            kuGouLyricsProvider
+            kuGouLyricsProvider,
+            sessionManager
         )
     }
 }
