@@ -128,33 +128,6 @@ class MusicPlayerService : MediaLibraryService() {
                 return MediaSession.ConnectionResult.accept(sessionCommands, connectionResult.availablePlayerCommands)
             }
 
-            override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo, customCommand: androidx.media3.session.SessionCommand, args: android.os.Bundle): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
-                if (customCommand.customAction == "SET_OUTPUT_DEVICE") {
-                    val deviceId = args.getString("DEVICE_ID")
-                    if (deviceId != null) {
-                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
-                        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-
-                        val targetDevice = if (deviceId == "phone_speaker") {
-                            devices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                        } else {
-                            devices.find { it.id.toString() == deviceId }
-                        }
-
-                        val player = mediaLibrarySession?.player as? ExoPlayer
-                        if (targetDevice != null) {
-                            player?.setPreferredAudioDevice(targetDevice)
-                        } else {
-                            player?.setPreferredAudioDevice(null)
-                        }
-                    }
-                    return com.google.common.util.concurrent.Futures.immediateFuture(
-                        androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
-                    )
-                }
-                return super.onCustomCommand(session, controller, customCommand, args)
-            }
-            
             override fun onGetLibraryRoot(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, params: LibraryParams?): com.google.common.util.concurrent.ListenableFuture<LibraryResult<MediaItem>> {
                 val rootItem = MediaItem.Builder()
                     .setMediaId(ROOT_ID)
@@ -304,20 +277,6 @@ class MusicPlayerService : MediaLibraryService() {
         .setSessionActivity(sessionActivityPendingIntent)
         .setBitmapLoader(CoilBitmapLoader(this))
         .build()
-            
-        // Customize the notification provider to ensure seekbar and controls work perfectly
-        val notificationProvider = object : androidx.media3.session.DefaultMediaNotificationProvider(this) {
-            override fun getMediaButtons(
-                session: MediaSession,
-                playerCommands: androidx.media3.common.Player.Commands,
-                customLayout: com.google.common.collect.ImmutableList<androidx.media3.session.CommandButton>,
-                showPauseButton: Boolean
-            ): com.google.common.collect.ImmutableList<androidx.media3.session.CommandButton> {
-                // Ensure standard transport controls are used
-                return super.getMediaButtons(session, playerCommands, customLayout, showPauseButton)
-            }
-        }
-        setMediaNotificationProvider(notificationProvider)
         
         // Register Volume Receiver
         registerReceiver(volumeReceiver, android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
