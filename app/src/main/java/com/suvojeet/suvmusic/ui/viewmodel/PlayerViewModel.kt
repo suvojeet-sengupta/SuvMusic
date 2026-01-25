@@ -261,6 +261,10 @@ class PlayerViewModel @Inject constructor(
     fun dismissMiniPlayer() {
         _isMiniPlayerDismissed.value = true
     }
+
+    fun showMiniPlayer() {
+        _isMiniPlayerDismissed.value = false
+    }
     
     fun seekTo(position: Long) {
         musicPlayer.seekTo(position)
