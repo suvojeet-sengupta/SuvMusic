@@ -166,6 +166,7 @@ fun PlayerScreen(
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
     ringtoneViewModel: RingtoneViewModel = hiltViewModel(),
     playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
+    onToggleDislike: () -> Unit = { playerViewModel.dislikeCurrentSong() },
     volumeKeyEvents: SharedFlow<Unit>? = null,
     sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
     animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
@@ -563,8 +564,10 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
+                                    isDisliked = playerState.isDisliked,
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
+                                    onDislikeClick = onToggleDislike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { showActionsSheet = true },
                                     onArtistClick = onArtistClick,
@@ -715,8 +718,10 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
+                                    isDisliked = playerState.isDisliked,
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
+                                    onDislikeClick = onToggleDislike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { showActionsSheet = true },
                                     onArtistClick = onArtistClick,
@@ -887,6 +892,9 @@ fun PlayerScreen(
                 onDismiss = { showActionsSheet = false },
                 isDownloaded = playerState.downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED,
                 onToggleFavorite = onToggleLike,
+                onToggleDislike = onToggleDislike,
+                isFavorite = playerState.isLiked,
+                isDisliked = playerState.isDisliked,
                 onDownload = onDownload,
                 onDeleteDownload = {
                     playerViewModel.deleteDownload(song.id)

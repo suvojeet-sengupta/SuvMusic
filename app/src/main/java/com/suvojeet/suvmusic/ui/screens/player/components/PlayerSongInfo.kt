@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,8 +50,10 @@ import androidx.compose.foundation.clickable
 fun SongInfoSection(
     song: Song?,
     isFavorite: Boolean,
+    isDisliked: Boolean,
     downloadState: DownloadState,
     onFavoriteClick: () -> Unit,
+    onDislikeClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onMoreClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
@@ -178,6 +182,15 @@ fun SongInfoSection(
                 contentDescription = "Favorite",
                 tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.size(28.dp)
+            )
+        }
+
+        IconButton(onClick = onDislikeClick) {
+            Icon(
+                imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                contentDescription = "Dislike",
+                tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
+                modifier = Modifier.size(26.dp)
             )
         }
 

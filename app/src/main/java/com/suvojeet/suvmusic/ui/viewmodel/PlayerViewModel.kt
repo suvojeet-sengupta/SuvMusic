@@ -722,14 +722,36 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.updateLikeStatus(!currentLikeState)
         
         viewModelScope.launch {
-            val rating = if (!currentLikeState) "LIKE" else "INDIFFERENT" // Toggle
+            val rating = if (!currentLikeState) "LIKE" else "INDIFFERENT"
             val success = youTubeRepository.rateSong(song.id, rating)
             if (!success) {
                 // Revert on failure
                 musicPlayer.updateLikeStatus(currentLikeState)
             } else {
-                // Ideally refresh liked songs list in background
-                // youTubeRepository.refreshLikedSongs() 
+                // If we liked it, we should ensure library cache is eventually updated
+                if (rating == "LIKE") {
+                    // Update local library cache if online
+                    if (youTubeRepository.isOnline()) {
+                        youTubeRepository.getLikedMusic(fetchAll = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun dislikeCurrentSong() {
+        val song = playerState.value.currentSong ?: return
+        val currentDislikeState = playerState.value.isDisliked
+        
+        // Optimistic update
+        musicPlayer.updateDislikeStatus(!currentDislikeState)
+        
+        viewModelScope.launch {
+            val rating = if (!currentDislikeState) "DISLIKE" else "INDIFFERENT"
+            val success = youTubeRepository.rateSong(song.id, rating)
+            if (!success) {
+                // Revert on failure
+                musicPlayer.updateDislikeStatus(currentDislikeState)
             }
         }
     }
