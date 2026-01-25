@@ -51,6 +51,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,7 +93,8 @@ fun CustomizationScreen(
     onBack: () -> Unit,
     onSeekbarStyleClick: () -> Unit = {},
     onArtworkShapeClick: () -> Unit = {},
-    onArtworkSizeClick: () -> Unit = {}
+    onArtworkSizeClick: () -> Unit = {},
+    showStyleSheet: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -120,8 +122,52 @@ fun CustomizationScreen(
     }
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 1f)
-    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
+    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD)
+
     val scope = rememberCoroutineScope()
+    
+    // Style Selection Dialog/Sheet
+    var showStyleSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    if (showStyleSheet) {
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showStyleSheet = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Mini Player Style",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                com.suvojeet.suvmusic.data.model.MiniPlayerStyle.entries.forEach { style ->
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text(style.label) },
+                        leadingContent = {
+                            androidx.compose.material3.RadioButton(
+                                selected = currentMiniPlayerStyle == style,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                scope.launch {
+                                    sessionManager.setMiniPlayerStyle(style)
+                                    showStyleSheet = false
+                                }
+                            },
+                        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -212,16 +258,12 @@ fun CustomizationScreen(
 
                         HorizontalDivider()
 
-                        // Navigation Bar Transparency
-                        TransparencySliderItem(
-                            title = "Navigation Bar",
-                            icon = Icons.Default.Square,
-                            alpha = navBarAlpha,
-                            onAlphaChange = { newAlpha ->
-                                scope.launch {
-                                    sessionManager.setNavBarAlpha(newAlpha)
-                                }
-                            }
+                        // Mini Player Style
+                        SettingItem(
+                            title = "Mini Player Style",
+                            subtitle = currentMiniPlayerStyle.label,
+                            icon = Icons.Default.MusicNote, // Or a better style icon
+                            onClick = { showStyleSheet = true }
                         )
                     }
                 }

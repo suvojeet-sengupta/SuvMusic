@@ -144,6 +144,9 @@ class SessionManager @Inject constructor(
         
         // Appearance
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
+        
+        // Mini Player Style
+        private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -314,6 +317,27 @@ class SessionManager @Inject constructor(
     suspend fun setNavBarAlpha(alpha: Float) {
         context.dataStore.edit { preferences ->
             preferences[NAV_BAR_ALPHA_KEY] = alpha
+        }
+    }
+    
+    // --- Mini Player Style ---
+    
+    suspend fun getMiniPlayerStyle(): com.suvojeet.suvmusic.data.model.MiniPlayerStyle {
+        val styleName = context.dataStore.data.first()[MINI_PLAYER_STYLE_KEY]
+        return styleName?.let {
+            try { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD }
+        } ?: com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD
+    }
+    
+    val miniPlayerStyleFlow: Flow<com.suvojeet.suvmusic.data.model.MiniPlayerStyle> = context.dataStore.data.map { preferences ->
+        preferences[MINI_PLAYER_STYLE_KEY]?.let {
+            try { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD }
+        } ?: com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD
+    }
+    
+    suspend fun setMiniPlayerStyle(style: com.suvojeet.suvmusic.data.model.MiniPlayerStyle) {
+        context.dataStore.edit { preferences ->
+            preferences[MINI_PLAYER_STYLE_KEY] = style.name
         }
     }
     
@@ -1395,3 +1419,4 @@ enum class MusicSource {
     JIOSAAVN,
     BOTH
 }
+
