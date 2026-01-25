@@ -392,12 +392,35 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun getUserPlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) {
+            return@withContext sessionManager.getCachedLibraryPlaylistsSync()
+        }
+
         val playlists = mutableListOf<PlaylistDisplayItem>()
 
         if (sessionManager.isLoggedIn()) {
             try {
                 val jsonResponse = fetchInternalApi("FEmusic_liked_playlists")
-                playlists.addAll(parsePlaylistsFromInternalJson(jsonResponse))
+                val ytPlaylists = parsePlaylistsFromInternalJson(jsonResponse)
+                playlists.addAll(ytPlaylists)
+                
+                // Cache the playlists for offline use
+                if (ytPlaylists.isNotEmpty()) {
+                    sessionManager.saveLibraryPlaylistsCache(ytPlaylists)
+                    
+                    // Also save to Room for persistent storage
+                    ytPlaylists.forEach { item ->
+                        libraryRepository.savePlaylist(
+                            Playlist(
+                                id = item.id,
+                                title = item.name,
+                                author = item.uploaderName,
+                                thumbnailUrl = item.thumbnailUrl,
+                                songs = emptyList() // We don't have songs here, but savePlaylist will save metadata
+                            )
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -445,8 +468,16 @@ class YouTubeRepository @Inject constructor(
                 
                 if (songs.isNotEmpty()) {
                     val distinctSongs = songs.distinctBy { it.id }
-                    // Cache the liked songs
-                    libraryRepository.savePlaylistSongs("LM", distinctSongs)
+                    // Cache the liked songs with metadata
+                    libraryRepository.savePlaylist(
+                        Playlist(
+                            id = "LM",
+                            title = "Your Likes",
+                            author = "You",
+                            thumbnailUrl = distinctSongs.firstOrNull()?.thumbnailUrl,
+                            songs = distinctSongs
+                        )
+                    )
                     return@withContext distinctSongs
                 }
             } catch (e: Exception) {
@@ -466,7 +497,7 @@ class YouTubeRepository @Inject constructor(
         if (!networkMonitor.isCurrentlyConnected()) {
             val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
             if (cachedSongs.isNotEmpty()) {
-                val cachedPlaylist = libraryRepository.getSavedPlaylists().first().find { it.id == playlistId }
+                val cachedPlaylist = libraryRepository.getPlaylistById(playlistId)
                 return@withContext Playlist(
                     id = playlistId,
                     title = cachedPlaylist?.title ?: "Offline Playlist",
@@ -492,7 +523,7 @@ class YouTubeRepository @Inject constructor(
                             thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
                             songs = songs
                         )
-                        libraryRepository.savePlaylistSongs(playlistId, songs)
+                        libraryRepository.savePlaylist(playlist)
                         return@withContext playlist
                     }
                 } catch (e: Exception) {
@@ -524,7 +555,7 @@ class YouTubeRepository @Inject constructor(
                             thumbnailUrl = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked_music_@576.png",
                             songs = songs.take(50) // Limit to 50 songs
                         )
-                        libraryRepository.savePlaylistSongs(playlistId, playlist.songs)
+                        libraryRepository.savePlaylist(playlist)
                         return@withContext playlist
                     }
                 } catch (e: Exception) {
@@ -546,7 +577,7 @@ class YouTubeRepository @Inject constructor(
             val json = fetchInternalApi(browseId)
             val playlist = parsePlaylistFromInternalJson(json, playlistId)
             if (playlist.songs.isNotEmpty()) {
-                libraryRepository.savePlaylistSongs(playlistId, playlist.songs)
+                libraryRepository.savePlaylist(playlist)
                 return@withContext playlist
             }
         } catch(e: Exception) { }
@@ -586,17 +617,24 @@ class YouTubeRepository @Inject constructor(
                     )
                 }
             
-            val playlist = Playlist(
-                id = playlistId,
-                title = playlistName ?: songs.firstOrNull()?.album?.takeIf { it.isNotBlank() } ?: "Playlist",
-                author = uploaderName?.takeIf { it.isNotBlank() } ?: "",
-                thumbnailUrl = thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
-                songs = songs
-            )
             if (songs.isNotEmpty()) {
-                libraryRepository.savePlaylistSongs(playlistId, songs)
+                val playlist = Playlist(
+                    id = playlistId,
+                    title = playlistName ?: songs.firstOrNull()?.album?.takeIf { it.isNotBlank() } ?: "Playlist",
+                    author = uploaderName?.takeIf { it.isNotBlank() } ?: "",
+                    thumbnailUrl = thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
+                    songs = songs
+                )
+                libraryRepository.savePlaylist(playlist)
+                return@withContext playlist
             }
-            return@withContext playlist
+            return@withContext Playlist(
+                id = playlistId,
+                title = playlistName ?: "Playlist",
+                author = uploaderName ?: "",
+                thumbnailUrl = thumbnailUrl,
+                songs = emptyList()
+            )
         } catch (e: Exception) {
             e.printStackTrace()
              // Final fallback: try cache one last time
