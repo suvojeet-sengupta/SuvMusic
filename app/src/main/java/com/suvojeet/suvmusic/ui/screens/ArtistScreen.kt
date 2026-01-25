@@ -80,6 +80,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Radio
+import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 
@@ -102,12 +103,10 @@ fun ArtistScreen(
     ) {
         when {
             uiState.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
+                PremiumLoadingScreen(
+                    thumbnailUrl = null, // No initial thumbnail for artists yet
+                    onBackClick = onBackClick
+                )
             }
             uiState.error != null -> {
                 ArtistErrorView(

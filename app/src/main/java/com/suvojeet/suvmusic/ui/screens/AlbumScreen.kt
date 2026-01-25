@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
@@ -133,12 +134,11 @@ fun AlbumScreen(
                 )
         )
         
-        // Content
         when {
             uiState.isLoading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary
+                PremiumLoadingScreen(
+                    thumbnailUrl = album?.thumbnailUrl,
+                    onBackClick = onBackClick
                 )
             }
             uiState.error != null -> {

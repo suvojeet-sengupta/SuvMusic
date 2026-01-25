@@ -70,6 +70,7 @@ import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
+import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 
 @Composable
@@ -175,9 +176,9 @@ fun PlaylistScreen(
 
         // Content
         if (uiState.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = MaterialTheme.colorScheme.primary
+            PremiumLoadingScreen(
+                thumbnailUrl = playlist?.thumbnailUrl,
+                onBackClick = onBackClick
             )
         } else if (playlist != null) {
             LazyColumn(
