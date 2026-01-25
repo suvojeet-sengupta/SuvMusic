@@ -144,7 +144,7 @@ class MusicPlayerService : MediaLibraryService() {
                                  if (speaker != null) {
                                      player.setPreferredAudioDevice(speaker)
                                  } else {
-                                     player.clearPreferredAudioDevice()
+                                     player.setPreferredAudioDevice(null)
                                  }
                              } else {
                                  // Route to specific device
@@ -152,7 +152,7 @@ class MusicPlayerService : MediaLibraryService() {
                                  if (targetDevice != null) {
                                      player.setPreferredAudioDevice(targetDevice)
                                  } else {
-                                     player.clearPreferredAudioDevice()
+                                     player.setPreferredAudioDevice(null)
                                  }
                              }
                         }
