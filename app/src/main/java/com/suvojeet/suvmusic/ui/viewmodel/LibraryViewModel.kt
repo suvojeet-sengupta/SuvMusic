@@ -37,7 +37,8 @@ sealed class ImportState {
     object Idle : ImportState()
     object Loading : ImportState()
     data class Matching(val current: Int, val total: Int) : ImportState()
-    data class Success(val results: List<ImportResult>) : ImportState()
+    data class Adding(val current: Int, val total: Int, val successCount: Int) : ImportState()
+    data class Success(val results: List<ImportResult>, val successCount: Int, val totalCount: Int) : ImportState()
     data class Error(val message: String) : ImportState()
 }
 
@@ -275,10 +276,31 @@ class LibraryViewModel @Inject constructor(
                 val playlistId = youTubeRepository.createPlaylist(playlistTitle, "Imported from Spotify via SuvMusic")
                 
                 if (playlistId != null) {
-                    matchedSongs.forEach { song ->
-                        youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                    var successCount = 0
+                    val totalToAdd = matchedSongs.size
+                    
+                    _uiState.update { it.copy(importState = ImportState.Adding(0, totalToAdd, 0)) }
+                    
+                    matchedSongs.forEachIndexed { index, song ->
+                        try {
+                            // Add delay to prevent rate limiting (300ms)
+                            kotlinx.coroutines.delay(300)
+                            
+                            val added = youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                            if (added) successCount++
+                            
+                            _uiState.update { 
+                                it.copy(importState = ImportState.Adding(index + 1, totalToAdd, successCount)) 
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            // Continue with next song even if one fails
+                        }
                     }
-                    _uiState.update { it.copy(importState = ImportState.Success(importResults)) }
+                    
+                    _uiState.update { 
+                        it.copy(importState = ImportState.Success(importResults, successCount, totalToAdd)) 
+                    }
                     refresh() // Refresh to show new playlist
                 } else {
                     _uiState.update { it.copy(importState = ImportState.Error("Failed to create playlist on YouTube. Are you logged in?")) }
