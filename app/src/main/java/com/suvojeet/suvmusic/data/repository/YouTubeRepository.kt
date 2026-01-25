@@ -184,6 +184,8 @@ class YouTubeRepository @Inject constructor(
     suspend fun getRelatedSongs(videoId: String): List<Song> = 
         searchService.getRelatedSongs(videoId)
 
+    fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
+
     // ============================================================================================
     // Browsing (Internal API)
     // ============================================================================================
@@ -608,6 +610,79 @@ class YouTubeRepository @Inject constructor(
             e.printStackTrace()
             emptyList()
         }
+    }
+
+    suspend fun getLibraryArtists(): List<Artist> = withContext(Dispatchers.IO) {
+        if (!sessionManager.isLoggedIn()) return@withContext emptyList()
+        try {
+            // FEmusic_library_corpus_track_artists contains artists from songs in your library
+            val json = fetchInternalApi("FEmusic_library_corpus_track_artists")
+            parseLibraryArtistsFromJson(json)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    private fun parseLibraryArtistsFromJson(json: String): List<Artist> {
+        val artists = mutableListOf<Artist>()
+        try {
+            val root = JSONObject(json)
+            val contents = root.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+
+            if (contents != null) {
+                for (i in 0 until contents.length()) {
+                    val item = contents.optJSONObject(i)
+                    val gridItems = item?.optJSONObject("gridRenderer")?.optJSONArray("items")
+                        ?: item?.optJSONObject("itemSectionRenderer")?.optJSONArray("contents")
+
+                    if (gridItems != null) {
+                        for (j in 0 until gridItems.length()) {
+                            val gridItem = gridItems.optJSONObject(j)
+                            val musicStatsRenderer = gridItem?.optJSONObject("musicTwoRowItemRenderer")
+                            
+                            if (musicStatsRenderer != null) {
+                                val titleObj = musicStatsRenderer.optJSONObject("title")
+                                val artistName = getRunText(titleObj) ?: continue
+                                
+                                val navEndpoint = musicStatsRenderer.optJSONObject("navigationEndpoint")
+                                val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId") ?: ""
+                                
+                                val thumbnailRenderer = musicStatsRenderer.optJSONObject("thumbnailRenderer")
+                                val thumbnails = thumbnailRenderer?.optJSONObject("musicThumbnailRenderer")
+                                    ?.optJSONObject("thumbnail")?.optJSONArray("thumbnails")
+                                
+                                val thumbnailUrl = thumbnails?.let { 
+                                    it.optJSONObject(it.length() - 1)?.optString("url") 
+                                }
+
+                                val subtitleObj = musicStatsRenderer.optJSONObject("subtitle")
+                                val subscriberCount = getRunText(subtitleObj)
+
+                                if (browseId.isNotEmpty()) {
+                                    artists.add(Artist(
+                                        id = browseId,
+                                        name = artistName,
+                                        thumbnailUrl = thumbnailUrl,
+                                        subscribers = subscriberCount
+                                    ))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return artists
     }
 
     private fun fetchInternalApiWithParams(browseId: String, params: String): String =

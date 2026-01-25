@@ -33,17 +33,37 @@ class PickMusicViewModel @Inject constructor(
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     init {
-        // Load initial suggestions (e.g., trending artists or just some popular ones)
-        // Since we don't have a direct "popular artists" endpoint handy, 
-        // we can search for a generic term or leave it empty/show a message.
-        // For now, let's search for "Trending Artists" to populate the grid.
-        searchArtists("Trending Artists")
+        loadPersonalizedArtists()
     }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
         if (query.length > 2) {
             searchArtists(query)
+        } else if (query.isEmpty()) {
+            // Restore personalized list if query cleared
+            loadPersonalizedArtists()
+        }
+    }
+
+    private fun loadPersonalizedArtists() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // 1. Try to fetch personalized library artists
+                val libraryArtists = repository.getLibraryArtists()
+                if (libraryArtists.isNotEmpty()) {
+                    _searchResults.value = libraryArtists
+                } else {
+                    // 2. Fallback to Trending/Popular if library is empty or not logged in
+                    searchArtists("Trending Artists") // or "Top Artists"
+                }
+            } catch (e: Exception) {
+                // Fallback
+                 searchArtists("Trending Artists")
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -76,6 +96,11 @@ class PickMusicViewModel @Inject constructor(
 
     fun createMix(onMixReady: (List<Song>) -> Unit) {
         viewModelScope.launch {
+            if (!repository.isLoggedIn()) {
+                _uiState.value = PickMusicUiState.LoginRequired
+                return@launch
+            }
+
             _uiState.value = PickMusicUiState.Loading
             val mixPlaylist = mutableListOf<Song>()
             val artists = _selectedArtists.value
@@ -130,12 +155,15 @@ class PickMusicViewModel @Inject constructor(
                     if (playlistId != null) {
                         repository.addSongsToPlaylist(playlistId, finalMix.map { it.id })
                         
-                        // Show Success State
+                        // Show Success State with first song's thumbnail as preview
                         val message = getRandomSuccessMessage()
+                        val thumbnailUrl = finalMix.firstOrNull()?.thumbnailUrl
+                        
                         _uiState.value = PickMusicUiState.Success(
                             playlistId = playlistId, 
                             message = message,
-                            playlistName = playlistName
+                            playlistName = playlistName,
+                            thumbnailUrl = thumbnailUrl
                         )
                         return@launch
                     }
@@ -179,9 +207,11 @@ class PickMusicViewModel @Inject constructor(
 sealed class PickMusicUiState {
     object Selection : PickMusicUiState()
     object Loading : PickMusicUiState()
+    object LoginRequired : PickMusicUiState()
     data class Success(
         val playlistId: String, 
         val message: String,
-        val playlistName: String
+        val playlistName: String,
+        val thumbnailUrl: String? = null
     ) : PickMusicUiState()
 }
