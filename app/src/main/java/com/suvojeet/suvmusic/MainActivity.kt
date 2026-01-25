@@ -480,10 +480,75 @@ fun SuvMusicApp(
     
 
     
+    // Welcome Dialog State
+    val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsState(initial = true) // Start assuming true to avoid flicker if already done
+    var showWelcomeDialog by remember { mutableStateOf(false) }
+    
+    // Check actual onboarding status on launch
+    LaunchedEffect(Unit) {
+        if (!sessionManager.isOnboardingCompleted()) {
+            showWelcomeDialog = true
+        }
+    }
+
+    if (showWelcomeDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { /* Prevent dismiss */ },
+            title = { 
+                androidx.compose.material3.Text(
+                    "Welcome to SuvMusic", 
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontSize = androidx.compose.ui.unit.sp(22)
+                ) 
+            },
+            text = { 
+                Column {
+                    androidx.compose.material3.Text("Experience music like never before.\n\nSuvMusic offers high-quality playback, ad-free experience, and seamless streaming from YouTube Music.")
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+                    androidx.compose.material3.Text("Login to sync your library or continue as guest.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = { 
+                        showWelcomeDialog = false
+                        // Navigate to Login, which will set onboarding completed on success
+                        navController.navigate(Destination.YouTubeLogin.route)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    androidx.compose.material3.Text("Login with YT Music")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { 
+                        showWelcomeDialog = false
+                         // Mark onboarding as complete and stay on Home
+                        playerViewModel.viewModelScope.launch {
+                            sessionManager.setOnboardingCompleted(true)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    androidx.compose.material3.Text("Continue without Login")
+                }
+            },
+            icon = {
+                 androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_music_note), // Ensure this resource exists or use vector
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                 )
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
         androidx.compose.animation.SharedTransitionLayout {
-            Scaffold(
+             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 snackbarHost = {
                     SnackbarHost(hostState = snackbarHostState) { data ->
@@ -576,7 +641,7 @@ fun SuvMusicApp(
                         selectedLyricsProvider = selectedLyricsProvider,
                         enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsState().value,
                         onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
-                        startDestination = if (sessionManager.onboardingCompletedFlow.collectAsState(initial = false).value) Destination.Home.route else Destination.Welcome.route,
+                        startDestination = Destination.Home.route, // Always start at Home
                         sharedTransitionScope = this@SharedTransitionLayout
                     )
 
