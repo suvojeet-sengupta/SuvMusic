@@ -538,12 +538,6 @@ fun NavGraph(
                 onLoginClick = {
                     // Navigate to login page
                     navController.navigate(Destination.YouTubeLogin.route)
-                },
-                onSkipClick = {
-                    // Navigate to home, and clear back stack
-                    navController.navigate(Destination.Home.route) {
-                        popUpTo(Destination.Welcome.route) { inclusive = true }
-                    }
                 }
             )
         }

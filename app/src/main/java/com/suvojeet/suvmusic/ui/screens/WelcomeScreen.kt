@@ -78,7 +78,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun WelcomeScreen(
     onLoginClick: () -> Unit,
-    onSkipClick: () -> Unit,
     viewModel: WelcomeViewModel = hiltViewModel()
 ) {
     // Brand Colors for the "Player-like" gradient
@@ -251,27 +250,8 @@ fun WelcomeScreen(
                                 )
                             }
                         } else {
-                            // Next Button (Circular)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Skip Text
-                                TextButton(
-                                    onClick = {
-                                        viewModel.setOnboardingCompleted()
-                                        onSkipClick()
-                                    }
-                                ) {
-                                    Text(
-                                        text = "Skip",
-                                        color = Color.White.copy(alpha = 0.6f),
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                }
-
-                                // Next Arrow
+                            // Next Arrow
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                                 Button(
                                     onClick = {
                                         scope.launch {
@@ -296,23 +276,7 @@ fun WelcomeScreen(
                     }
                 }
                 
-                // Extra space for last page skip button
-                if (pagerState.currentPage == 3) {
-                   Spacer(modifier = Modifier.height(16.dp))
-                   TextButton(
-                        onClick = {
-                            viewModel.setOnboardingCompleted()
-                            onSkipClick()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Continue as Guest",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
-                    }
-                }
+
             }
         }
     }
