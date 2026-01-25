@@ -159,7 +159,7 @@ class LibraryViewModel @Inject constructor(
                 val albums = allSongs.mapNotNull { song ->
                     if (song.album != null && song.album.isNotBlank()) {
                         Album(
-                            id = song.albumId ?: song.album,
+                            id = song.collectionId ?: song.album,
                             title = song.album,
                             thumbnailUrl = song.thumbnailUrl, // Use song thumb as album thumb proxy
                             year = null,

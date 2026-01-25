@@ -579,17 +579,16 @@ fun SearchScreen(
         
         if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {
             AddToPlaylistSheet(
+                song = playlistUiState.selectedSong!!,
                 isVisible = playlistUiState.showAddToPlaylistSheet,
-                onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
                 playlists = playlistUiState.userPlaylists,
-                onPlaylistClick = { playlist ->
-                    playlistViewModel.addSongToPlaylist(playlist.id)
+                isLoading = playlistUiState.isLoadingPlaylists,
+                onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+                onAddToPlaylist = { playlistId ->
+                    playlistViewModel.addSongToPlaylist(playlistId)
                 },
-                onCreateNewPlaylist = { name ->
+                onCreateNewPlaylist = {
                     playlistViewModel.showCreatePlaylistDialog()
-                    // We need to handle this differently or just let the dialog appear over this sheet?
-                    // PlaylistManagementViewModel handles creating playlist separately.
-                    // For now, let's just show the dialog.
                 }
             )
         }
