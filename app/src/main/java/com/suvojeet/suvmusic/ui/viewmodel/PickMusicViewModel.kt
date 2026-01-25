@@ -76,31 +76,65 @@ class PickMusicViewModel @Inject constructor(
             _isLoading.value = true
             val mixPlaylist = mutableListOf<Song>()
             val artists = _selectedArtists.value
+            
+            if (artists.isEmpty()) {
+                _isLoading.value = false
+                return@launch
+            }
 
-            // Fetch top songs for each selected artist
+            // Target roughly 100 songs
+            val targetTotal = 100
+            val songsPerArtist = (targetTotal / artists.size).coerceAtLeast(10)
+
+            // Fetch songs for each selected artist
             artists.forEach { artist ->
                 try {
-                    // Try to get artist details which usually includes top songs
+                    // 1. Try to get artist details which usually includes top songs
                     val artistDetails = repository.getArtist(artist.id)
+                    val collectedForArtist = mutableListOf<Song>()
+                    
                     if (artistDetails != null) {
-                        mixPlaylist.addAll(artistDetails.songs.take(5)) // Take top 5 songs from each
-                    } else {
-                        // Fallback: search for "Artist Name Top Songs"
-                        val searchSongs = repository.search("${artist.name} top songs")
-                        mixPlaylist.addAll(searchSongs.take(3))
+                        collectedForArtist.addAll(artistDetails.songs)
                     }
+                    
+                    // 2. If not enough, search for artist songs specifically
+                    if (collectedForArtist.size < songsPerArtist) {
+                        val searchSongs = repository.search("${artist.name} songs", YouTubeRepository.FILTER_SONGS)
+                        collectedForArtist.addAll(searchSongs)
+                    }
+                    
+                    // Add distinct songs to mix limits
+                    mixPlaylist.addAll(collectedForArtist.distinctBy { it.id }.take(songsPerArtist))
+                    
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }
 
-            // Shuffle the result for a "Mix" feel
-            val shuffledMix = mixPlaylist.shuffled().distinctBy { it.id }
+            // Shuffle the result for a "Mix" feel and ensure uniqueness
+            val finalMix = mixPlaylist.shuffled().distinctBy { it.id }
+            
+            // Create Playlist on YouTube Music if logged in
+            if (finalMix.isNotEmpty()) {
+                try {
+                    val playlistName = "SuvMusic Mix ${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())}"
+                    val playlistId = repository.createPlaylist(
+                        title = playlistName,
+                        description = "Created with SuvMusic featuring ${artists.joinToString { it.name }}",
+                        privacyStatus = "PRIVATE"
+                    )
+                    
+                    if (playlistId != null) {
+                        repository.addSongsToPlaylist(playlistId, finalMix.map { it.id })
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                
+                onMixReady(finalMix)
+            }
             
             _isLoading.value = false
-            if (shuffledMix.isNotEmpty()) {
-                onMixReady(shuffledMix)
-            }
         }
     }
 }
