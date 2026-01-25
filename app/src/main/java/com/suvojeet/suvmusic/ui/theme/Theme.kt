@@ -146,10 +146,11 @@ private val LoveLightColorScheme = lightColorScheme(
 fun SuvMusicTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
+    pureBlack: Boolean = false,
     appTheme: AppTheme = AppTheme.DEFAULT,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
+    var colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -168,6 +169,20 @@ fun SuvMusicTheme(
             AppTheme.NATURE -> NatureLightColorScheme
             AppTheme.LOVE -> LoveLightColorScheme
         }
+    }
+
+    if (darkTheme && pureBlack) {
+        colorScheme = colorScheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceVariant = Color.Black,
+            surfaceContainer = Color.Black,
+            surfaceContainerHigh = Color.Black,
+            surfaceContainerHighest = Color.Black,
+            surfaceContainerLow = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            scrim = Color.Black
+        )
     }
     
     val view = LocalView.current

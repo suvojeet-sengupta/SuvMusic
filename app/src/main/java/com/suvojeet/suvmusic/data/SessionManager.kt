@@ -139,6 +139,9 @@ class SessionManager @Inject constructor(
         // Misc
         private val STOP_MUSIC_ON_TASK_CLEAR_KEY = booleanPreferencesKey("stop_music_on_task_clear")
         private val PAUSE_MUSIC_ON_MEDIA_MUTED_KEY = booleanPreferencesKey("pause_music_on_media_muted")
+        
+        // Appearance
+        private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -520,6 +523,21 @@ class SessionManager @Inject constructor(
     suspend fun setPauseMusicOnMediaMutedEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PAUSE_MUSIC_ON_MEDIA_MUTED_KEY] = enabled
+        }
+    }
+
+    // --- Appearance Settings ---
+
+    suspend fun isPureBlackEnabled(): Boolean = 
+        context.dataStore.data.first()[PURE_BLACK_KEY] ?: false
+
+    val pureBlackEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PURE_BLACK_KEY] ?: false
+    }
+
+    suspend fun setPureBlackEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PURE_BLACK_KEY] = enabled
         }
     }
     
