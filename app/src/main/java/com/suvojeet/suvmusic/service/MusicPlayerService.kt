@@ -77,9 +77,10 @@ class MusicPlayerService : MediaLibraryService() {
         // Ultra-fast buffer for instant playback
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                5_000, 30_000, 500, 1_500
+                5_000, 50_000, 250, 1_000
             )
             .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(30_000, true) // Keep 30s back buffer for rewinding/looping
             .build()
             
         val player = ExoPlayer.Builder(this)
