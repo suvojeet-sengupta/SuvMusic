@@ -35,8 +35,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -564,10 +562,8 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
-                                    isDisliked = playerState.isDisliked,
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
-                                    onDislikeClick = onToggleDislike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { showActionsSheet = true },
                                     onArtistClick = onArtistClick,
@@ -718,10 +714,8 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
-                                    isDisliked = playerState.isDisliked,
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
-                                    onDislikeClick = onToggleDislike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { showActionsSheet = true },
                                     onArtistClick = onArtistClick,
