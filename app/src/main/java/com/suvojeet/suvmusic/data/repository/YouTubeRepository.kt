@@ -828,6 +828,69 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+
+    /**
+     * Add multiple songs to an existing YouTube Music playlist.
+     * @param playlistId The ID of the playlist
+     * @param videoIds List of video IDs to add
+     * @return True if successful
+     */
+    suspend fun addSongsToPlaylist(playlistId: String, videoIds: List<String>): Boolean = withContext(Dispatchers.IO) {
+        try {
+            if (!sessionManager.isLoggedIn()) return@withContext false
+            if (videoIds.isEmpty()) return@withContext true
+            
+            val cookies = sessionManager.getCookies() ?: return@withContext false
+            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            
+            val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
+            
+            // Chunk requests to avoid hitting limits (50 per request is safe)
+            var allSuccess = true
+            
+            videoIds.chunked(50).forEach { chunk ->
+                val jsonBody = JSONObject().apply {
+                    put("context", JSONObject().apply {
+                        put("client", JSONObject().apply {
+                            put("clientName", "WEB_REMIX")
+                            put("clientVersion", "1.20230102.01.00")
+                            put("hl", "en")
+                            put("gl", "US")
+                        })
+                    })
+                    put("playlistId", realPlaylistId)
+                    put("actions", JSONArray().apply {
+                        chunk.forEach { videoId ->
+                            put(JSONObject().apply {
+                                put("action", "ACTION_ADD_VIDEO")
+                                put("addedVideoId", videoId)
+                            })
+                        }
+                    })
+                }
+                
+                val request = okhttp3.Request.Builder()
+                    .url("https://music.youtube.com/youtubei/v1/browse/edit_playlist")
+                    .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                    .addHeader("Cookie", cookies)
+                    .addHeader("Authorization", authHeader)
+                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .addHeader("Origin", "https://music.youtube.com")
+                    .addHeader("X-Goog-AuthUser", "0")
+                    .build()
+                
+                val response = okHttpClient.newCall(request).execute()
+                if (!response.isSuccessful) allSuccess = false
+                response.close()
+            }
+            
+            allSuccess
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     /**
      * Rename a playlist.
      * @param playlistId The ID of the playlist
