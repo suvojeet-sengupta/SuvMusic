@@ -470,6 +470,13 @@ fun SuvMusicApp(
         Destination.Settings.route
     )
     
+    // Auto-show MiniPlayer when returning to Home
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == Destination.Home.route) {
+            playerViewModel.showMiniPlayer()
+        }
+    }
+    
     // Don't show MiniPlayer on Player screen itself or if explicitly dismissed
     val showMiniPlayer = currentRoute != Destination.Player.route && !isMiniPlayerDismissed
     
