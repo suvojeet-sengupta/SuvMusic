@@ -1541,6 +1541,22 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    private fun extractSongCount(subtitle: String): Int {
+        // Try to find "X songs"
+        val songCountRegex = Regex("(\\d+)\\s*song")
+        songCountRegex.find(subtitle)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
+        
+        // Sometimes just digits if it's a list item validation? No, usually valid text.
+        // Try finding any large number if "song" is missing but it looks like a stat? 
+        // Maybe unsafe. Stick to "songs" for now.
+        
+        // Handle "100+ songs" case
+        val plusRegex = Regex("(\\d+)\\+\\s*song")
+        plusRegex.find(subtitle)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
+
+        return 0
+    }
+
     private fun parsePlaylistItem(item: JSONObject): PlaylistDisplayItem? {
         val title = extractTitle(item)
         val thumbnail = extractThumbnail(item)
@@ -1557,8 +1573,6 @@ class YouTubeRepository @Inject constructor(
         
         // Simple heuristic for song count and uploader
         val parts = subtitle.split("•").map { it.trim() }
-        val songCountStr = parts.find { it.contains("song", ignoreCase = true) }
-        val songCount = songCountStr?.filter { it.isDigit() }?.toIntOrNull() ?: 0
         
         val uploader = parts.firstOrNull { !it.contains("song", ignoreCase = true) } ?: "YouTube User"
 
@@ -1568,7 +1582,7 @@ class YouTubeRepository @Inject constructor(
             url = "https://music.youtube.com/playlist?list=$browseId",
             uploaderName = uploader,
             thumbnailUrl = thumbnail,
-            songCount = songCount
+            songCount = extractSongCount(subtitle)
         )
     }
 
@@ -1706,12 +1720,9 @@ class YouTubeRepository @Inject constructor(
                         val title = getRunText(item.optJSONObject("title")) ?: "Unknown Playlist"
                         val subtitle = getRunText(item.optJSONObject("subtitle")) ?: "Unknown"
                         
-                        // Parse song count from subtitle (e.g., "Suvojeet • 50 songs")
+                        // Parse song count more robustly
                         val parts = subtitle.split("•").map { it.trim() }
-                        val songCountStr = parts.find { it.contains("song", ignoreCase = true) }
-                        val songCount = songCountStr?.filter { it.isDigit() }?.toIntOrNull() ?: 0
                         
-                        // Uploader is usually the first part if it's not the song count
                         val uploaderName = parts.firstOrNull { !it.contains("song", ignoreCase = true) } ?: subtitle
                         
                         val thumbnailUrl = extractThumbnail(item)
@@ -1722,7 +1733,7 @@ class YouTubeRepository @Inject constructor(
                             url = "https://music.youtube.com/playlist?list=$cleanId",
                             uploaderName = uploaderName,
                             thumbnailUrl = thumbnailUrl,
-                            songCount = songCount
+                            songCount = extractSongCount(subtitle)
                         ))
                     }
                 } catch (e: Exception) { }
