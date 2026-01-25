@@ -72,8 +72,11 @@ import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ResultFilter
 import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
+import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
+import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
 import coil.request.ImageRequest
@@ -88,15 +91,18 @@ fun SearchScreen(
     onArtistClick: (String) -> Unit = {}, // Artist browse ID
     onPlaylistClick: (String) -> Unit = {}, // Playlist ID
     onAlbumClick: (Album) -> Unit = {},
-    viewModel: SearchViewModel = hiltViewModel()
+    viewModel: SearchViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
     var isSearchFocused by remember { mutableStateOf(false) }
 
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
+    var showAddToPlaylistSheet by remember { mutableStateOf(false) }
     
     // Accent color for the app (works in both light/dark)
     val accentColor = MaterialTheme.colorScheme.primary
@@ -225,7 +231,6 @@ fun SearchScreen(
                         }
 
                         // Voice Search Button (Visible when query is empty)
-                        val context = LocalContext.current
                         AnimatedVisibility(visible = uiState.query.isEmpty()) {
                             IconButton(
                                 onClick = {
@@ -541,6 +546,69 @@ fun SearchScreen(
                     }
                 }
             }
+        }
+        
+        // Song Menu Sheet
+        if (showSongMenu && selectedSong != null) {
+            SongMenuBottomSheet(
+                isVisible = showSongMenu,
+                onDismiss = { showSongMenu = false },
+                song = selectedSong!!,
+                onPlayNext = { viewModel.playNext(selectedSong!!) },
+                onAddToQueue = { viewModel.addToQueue(selectedSong!!) },
+                onAddToPlaylist = { 
+                    playlistViewModel.showAddToPlaylistSheet(selectedSong!!)
+                },
+                onDownload = { viewModel.downloadSong(selectedSong!!) },
+                onShare = {
+                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this song: ${selectedSong!!.title} by ${selectedSong!!.artist}")
+                    }
+                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Song"))
+                },
+                onViewArtist = if (selectedSong!!.artistId != null) { 
+                    { onArtistClick(selectedSong!!.artistId!!) } 
+                } else null,
+                onViewAlbum = null // Album navigation via ID not supported yet as Song doesn't have albumId
+            )
+        }
+        
+        // Observe Playlist ViewModel state for Add to Playlist Sheet
+        val playlistUiState by playlistViewModel.uiState.collectAsState()
+        
+        if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {
+            AddToPlaylistSheet(
+                isVisible = playlistUiState.showAddToPlaylistSheet,
+                onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+                playlists = playlistUiState.userPlaylists,
+                onPlaylistClick = { playlist ->
+                    playlistViewModel.addSongToPlaylist(playlist.id)
+                },
+                onCreateNewPlaylist = { name ->
+                    playlistViewModel.showCreatePlaylistDialog()
+                    // We need to handle this differently or just let the dialog appear over this sheet?
+                    // PlaylistManagementViewModel handles creating playlist separately.
+                    // For now, let's just show the dialog.
+                }
+            )
+        }
+        
+        // Also handle Create Playlist Dialog if it is triggered
+        if (playlistUiState.showCreatePlaylistDialog) {
+             // We need to implement the dialog here or ensure it's handled. 
+             // LibraryScreen has CreatePlaylistDialog. SearchScreen might need it too?
+             // Or we just don't support creating new playlist from search directly yet unless we add the component.
+             // Let's add the component.
+             com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog(
+                isVisible = playlistUiState.showCreatePlaylistDialog,
+                isCreating = playlistUiState.isCreatingPlaylist,
+                onDismiss = { playlistViewModel.hideCreatePlaylistDialog() },
+                onCreate = { title, description, isPrivate ->
+                    playlistViewModel.createPlaylist(title, description, isPrivate)
+                },
+                isLoggedIn = true // Assuming logged in if we are here
+             )
         }
     }
 }
