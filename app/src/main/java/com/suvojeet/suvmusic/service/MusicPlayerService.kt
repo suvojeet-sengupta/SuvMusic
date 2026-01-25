@@ -128,6 +128,40 @@ class MusicPlayerService : MediaLibraryService() {
                 return MediaSession.ConnectionResult.accept(sessionCommands, connectionResult.availablePlayerCommands)
             }
 
+            override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo, customCommand: androidx.media3.session.SessionCommand, args: android.os.Bundle): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+                if (customCommand.customAction == "SET_OUTPUT_DEVICE") {
+                    val deviceId = args.getString("DEVICE_ID")
+                    val player = session.player as? ExoPlayer
+                    
+                    if (deviceId != null && player != null) {
+                        serviceScope.launch {
+                             val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                             val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+                             
+                             if (deviceId == "phone_speaker") {
+                                 // Route to built-in speaker
+                                 val speaker = devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                                 if (speaker != null) {
+                                     player.setPreferredAudioDevice(speaker)
+                                 } else {
+                                     player.clearPreferredAudioDevice()
+                                 }
+                             } else {
+                                 // Route to specific device
+                                 val targetDevice = devices.find { it.id.toString() == deviceId }
+                                 if (targetDevice != null) {
+                                     player.setPreferredAudioDevice(targetDevice)
+                                 } else {
+                                     player.clearPreferredAudioDevice()
+                                 }
+                             }
+                        }
+                    }
+                    return com.google.common.util.concurrent.Futures.immediateFuture(androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS))
+                }
+                return super.onCustomCommand(session, controller, customCommand, args)
+            }
+
             override fun onGetLibraryRoot(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, params: LibraryParams?): com.google.common.util.concurrent.ListenableFuture<LibraryResult<MediaItem>> {
                 val rootItem = MediaItem.Builder()
                     .setMediaId(ROOT_ID)
