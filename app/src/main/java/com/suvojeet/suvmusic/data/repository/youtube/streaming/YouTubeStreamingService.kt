@@ -23,6 +23,35 @@ class YouTubeStreamingService @Inject constructor(
     private val CACHE_EXPIRY_MS = 3 * 60 * 60 * 1000L // 3 hours
 
     /**
+     * Helper to retry operations with exponential backoff.
+     */
+    private suspend fun <T> retryWithBackoff(
+        times: Int = 3,
+        initialDelay: Long = 500, // 0.5 sec
+        maxDelay: Long = 2000,    // 2 sec
+        factor: Double = 2.0,
+        block: suspend () -> T
+    ): T? {
+        var currentDelay = initialDelay
+        repeat(times - 1) {
+            try {
+                return block()
+            } catch (e: Exception) {
+                // Log and retry
+                android.util.Log.w("YouTubeStreaming", "Operation failed, retrying in ${currentDelay}ms", e)
+                kotlinx.coroutines.delay(currentDelay)
+                currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
+            }
+        }
+        return try {
+            block() // Final attempt
+        } catch (e: Exception) {
+            android.util.Log.e("YouTubeStreaming", "Operation failed after multiple retries", e)
+            null
+        }
+    }
+
+    /**
      * Get audio stream URL for playback.
      * Uses user's audio quality preference and caches the result.
      */
@@ -36,10 +65,10 @@ class YouTubeStreamingService @Inject constructor(
             }
         }
         
-        try {
+        retryWithBackoff {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: return@withContext null
+                ?: throw IllegalStateException("YouTube service not found")
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
@@ -60,9 +89,6 @@ class YouTubeStreamingService @Inject constructor(
                 // Cache the result
                 streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
     }
 
@@ -80,10 +106,10 @@ class YouTubeStreamingService @Inject constructor(
             }
         }
         
-        try {
+        retryWithBackoff {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: return@withContext null
+                ?: throw IllegalStateException("YouTube service not found")
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
@@ -109,9 +135,6 @@ class YouTubeStreamingService @Inject constructor(
                 // Cache the result
                 streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
             }
-        } catch (e: Exception) {
-            android.util.Log.e("YouTubeStreaming", "Error getting video stream", e)
-            null
         }
     }
 
@@ -133,10 +156,10 @@ class YouTubeStreamingService @Inject constructor(
             }
         }
         
-        try {
+        retryWithBackoff {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: return@withContext null
+                ?: throw IllegalStateException("YouTube service not found")
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
@@ -155,9 +178,6 @@ class YouTubeStreamingService @Inject constructor(
             }
             
             bestAudioStream?.content
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
     }
 
@@ -166,10 +186,10 @@ class YouTubeStreamingService @Inject constructor(
      * Used for deep linking to play songs from YouTube/YouTube Music URLs.
      */
     suspend fun getSongDetails(videoId: String): Song? = withContext(Dispatchers.IO) {
-        try {
+        retryWithBackoff {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: return@withContext null
+                ?: throw IllegalStateException("YouTube service not found")
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
@@ -189,9 +209,6 @@ class YouTubeStreamingService @Inject constructor(
                 duration = duration,
                 source = com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE
             )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
     }
 }
