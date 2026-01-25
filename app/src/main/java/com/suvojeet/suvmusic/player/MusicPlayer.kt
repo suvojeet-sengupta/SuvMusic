@@ -323,6 +323,7 @@ class MusicPlayer @Inject constructor(
                         currentPosition = 0L,
                         duration = controller.duration.coerceAtLeast(0L),
                         isLiked = false,
+                        isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
                         isVideoMode = false // Reset video mode on song change
                     )
@@ -999,7 +1000,11 @@ class MusicPlayer @Inject constructor(
     }
     
     fun updateLikeStatus(isLiked: Boolean) {
-        _playerState.update { it.copy(isLiked = isLiked) }
+        _playerState.update { it.copy(isLiked = isLiked, isDisliked = if (isLiked) false else it.isDisliked) }
+    }
+    
+    fun updateDislikeStatus(isDisliked: Boolean) {
+        _playerState.update { it.copy(isDisliked = isDisliked, isLiked = if (isDisliked) false else it.isLiked) }
     }
     
     fun updateDownloadState(state: DownloadState) {

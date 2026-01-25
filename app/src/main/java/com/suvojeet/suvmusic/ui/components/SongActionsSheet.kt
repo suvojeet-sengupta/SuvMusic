@@ -24,7 +24,10 @@ import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.RingVolume
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -62,6 +65,9 @@ fun SongActionsSheet(
     onViewComments: () -> Unit = {},
     onSleepTimer: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
+    onToggleDislike: () -> Unit = {},
+    isFavorite: Boolean = false,
+    isDisliked: Boolean = false,
     onSetRingtone: () -> Unit = {},
     onStartRadio: () -> Unit = {},
     onPlaybackSpeed: () -> Unit = {},
@@ -223,10 +229,17 @@ fun SongActionsSheet(
                 )
                 
                 ActionItem(
-                    icon = Icons.Default.StarOutline,
-                    title = "Add to Favourites",
-                    iconTint = MaterialTheme.colorScheme.primary,
+                    icon = if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
+                    title = if (isFavorite) "Remove from Favourites" else "Add to Favourites",
+                    iconTint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     onClick = { onToggleFavorite(); onDismiss() }
+                )
+
+                ActionItem(
+                    icon = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                    title = if (isDisliked) "Remove Dislike" else "Dislike Song",
+                    iconTint = if (isDisliked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    onClick = { onToggleDislike(); onDismiss() }
                 )
                 
                 ActionItem(
