@@ -53,7 +53,10 @@ data class SettingsUiState(
     // Music Haptics
     val musicHapticsEnabled: Boolean = false,
     val hapticsMode: HapticsMode = HapticsMode.BASIC,
-    val hapticsIntensity: HapticsIntensity = HapticsIntensity.MEDIUM
+    val hapticsIntensity: HapticsIntensity = HapticsIntensity.MEDIUM,
+    // Misc
+    val stopMusicOnTaskClear: Boolean = false,
+    val pauseMusicOnMediaMuted: Boolean = false
 )
 
 @HiltViewModel
@@ -165,6 +168,18 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(hapticsIntensity = intensity) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.stopMusicOnTaskClearEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(stopMusicOnTaskClear = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.pauseMusicOnMediaMutedEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(pauseMusicOnMediaMuted = enabled) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -198,6 +213,8 @@ class SettingsViewModel @Inject constructor(
             val musicHapticsEnabled = sessionManager.isMusicHapticsEnabled()
             val hapticsMode = sessionManager.getHapticsMode()
             val hapticsIntensity = sessionManager.getHapticsIntensity()
+            val stopMusicOnTaskClear = sessionManager.isStopMusicOnTaskClearEnabled()
+            val pauseMusicOnMediaMuted = sessionManager.isPauseMusicOnMediaMutedEnabled()
 
             _uiState.update { 
                 it.copy(
@@ -224,7 +241,9 @@ class SettingsViewModel @Inject constructor(
                     // Music Haptics
                     musicHapticsEnabled = musicHapticsEnabled,
                     hapticsMode = hapticsMode,
-                    hapticsIntensity = hapticsIntensity
+                    hapticsIntensity = hapticsIntensity,
+                    stopMusicOnTaskClear = stopMusicOnTaskClear,
+                    pauseMusicOnMediaMuted = pauseMusicOnMediaMuted
                 )
             }
         }
@@ -532,6 +551,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setHapticsIntensity(intensity)
             _uiState.update { it.copy(hapticsIntensity = intensity) }
+        }
+    }
+
+    // --- Misc Settings ---
+
+    fun setStopMusicOnTaskClear(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setStopMusicOnTaskClearEnabled(enabled)
+            _uiState.update { it.copy(stopMusicOnTaskClear = enabled) }
+        }
+    }
+
+    fun setPauseMusicOnMediaMuted(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setPauseMusicOnMediaMutedEnabled(enabled)
+            _uiState.update { it.copy(pauseMusicOnMediaMuted = enabled) }
         }
     }
 }
