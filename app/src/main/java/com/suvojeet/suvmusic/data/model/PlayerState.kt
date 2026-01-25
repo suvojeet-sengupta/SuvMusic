@@ -17,6 +17,7 @@ data class PlayerState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLiked: Boolean = false,
+    val isDisliked: Boolean = false,
     val downloadState: DownloadState = DownloadState.NOT_DOWNLOADED,
     val isAutoplayEnabled: Boolean = true,
     val isVideoMode: Boolean = false, // Video playback mode for YouTube songs

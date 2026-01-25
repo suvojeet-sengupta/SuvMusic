@@ -613,6 +613,7 @@ fun SuvMusicApp(
                         onPrevious = { playerViewModel.seekToPrevious() },
                         onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
                         onLikeCurrentSong = { playerViewModel.likeCurrentSong() },
+                        onDislikeCurrentSong = { playerViewModel.dislikeCurrentSong() },
                         onShuffleToggle = { playerViewModel.toggleShuffle() },
                         onRepeatToggle = { playerViewModel.toggleRepeat() },
                         onToggleAutoplay = { playerViewModel.toggleAutoplay() },

@@ -51,6 +51,8 @@ class YouTubeRepository @Inject constructor(
         const val FILTER_ARTISTS = "music_artists"
     }
 
+    fun isOnline(): Boolean = networkMonitor.isCurrentlyConnected()
+
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
