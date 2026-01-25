@@ -1237,6 +1237,20 @@ class MusicPlayer @Inject constructor(
         }
     }
     
+    fun stop() {
+        mediaController?.stop()
+        mediaController?.clearMediaItems()
+        _playerState.update { 
+            it.copy(
+                currentSong = null,
+                isPlaying = false,
+                currentPosition = 0,
+                duration = 0,
+                queue = emptyList()
+            ) 
+        }
+    }
+
     fun release() {
         positionUpdateJob?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }

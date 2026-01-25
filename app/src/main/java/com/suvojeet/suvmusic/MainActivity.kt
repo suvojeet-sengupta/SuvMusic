@@ -664,6 +664,9 @@ fun SuvMusicApp(
                             onPreviousClick = { playerViewModel.seekToPrevious() },
                             onPlayerClick = { navController.navigate(Destination.Player.route) },
                             modifier = Modifier,
+                            onCloseClick = if (currentRoute != Destination.Home.route) {
+                                { playerViewModel.stop() }
+                            } else null,
                             alpha = miniPlayerAlpha,
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedVisibilityScope = this
