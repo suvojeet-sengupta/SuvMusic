@@ -414,46 +414,6 @@ fun PlayerScreen(
                 )
         )
 
-        // Volume Gesture Layer (Right side only - doesn't interfere with swipe dismiss)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures(
-                        onDragStart = { offset ->
-                            // Activate on right 50% of screen (from center to right)
-                            if (offset.x > size.width * 0.5f) {
-                                lastVolumeChangeTime = System.currentTimeMillis()
-                            }
-                        },
-                        onVerticalDrag = { change, dragAmount ->
-                            // Only handle if on right side
-                            if (change.position.x > size.width * 0.5f) {
-                                change.consume()
-                                // Adjust volume (drag up = increase, drag down = decrease)
-                                val volumeChange = (-dragAmount / 30).roundToInt()
-                                val newVolume = (currentVolume + volumeChange).coerceIn(0, maxVolume)
-                                if (newVolume != currentVolume) {
-                                    audioManager.setStreamVolume(
-                                        AudioManager.STREAM_MUSIC,
-                                        newVolume,
-                                        0
-                                    )
-                                    // currentVolume will be updated by observer, but update strictly for responsiveness
-                                    currentVolume = newVolume
-                                    lastVolumeChangeTime = System.currentTimeMillis()
-                                } else {
-                                    // Even if volume doesn't change (max/min), keep indicator alive
-                                    lastVolumeChangeTime = System.currentTimeMillis()
-                                }
-                            }
-                        },
-                        onDragEnd = {
-                            // Timer handles hiding
-                        }
-                    )
-                }
-        )
 
         // Main Content Layer that moves with drag
         Box(
