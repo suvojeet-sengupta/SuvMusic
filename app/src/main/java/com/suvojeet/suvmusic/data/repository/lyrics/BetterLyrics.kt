@@ -71,10 +71,27 @@ object BetterLyrics {
         duration: Int,
         album: String? = null
     ) = runCatching {
-        // Use exact title and artist - no normalization to ensure correct sync
-        // Normalizing can return wrong lyrics (e.g., radio edit vs original)
-        val ttml = fetchTTML(artist, title, duration, album)
-            ?: throw IllegalStateException("Lyrics unavailable")
+        // 1. Try exact match first
+        var ttml = fetchTTML(artist, title, duration, album)
+        
+        // 2. If failed, try with cleaned title/artist and relaxed constraints
+        if (ttml == null) {
+            val cleanTitle = title.replace(Regex("\\s*\\(.*?\\)"), "")
+                .replace(Regex("\\s*\\[.*?\\]"), "")
+                .replace(Regex("\\s*-\\s*.*"), "") // Remove after dash (e.g. - Remastered)
+                .trim()
+            
+            val cleanArtist = artist.split(",", "&", "feat.", "ft.").firstOrNull()?.trim() ?: artist
+            
+            if (cleanTitle != title || cleanArtist != artist) {
+                // Retry without duration/album to be more lenient
+                ttml = fetchTTML(cleanArtist, cleanTitle, -1, null)
+            }
+        }
+
+        if (ttml == null) {
+            throw IllegalStateException("Lyrics unavailable")
+        }
         
         val parsedLines = TTMLParser.parseTTML(ttml)
         if (parsedLines.isEmpty()) {
