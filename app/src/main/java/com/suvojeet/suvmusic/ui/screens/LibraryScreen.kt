@@ -58,7 +58,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
-import com.suvojeet.suvmusic.ui.components.ImportSpotifyDialog
+import com.suvojeet.suvmusic.ui.screens.ImportPlaylistScreen
 import com.suvojeet.suvmusic.ui.components.MusicCard
 import com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
@@ -222,7 +222,7 @@ fun LibraryScreen(
         )
 
         // Import Spotify Dialog
-        ImportSpotifyDialog(
+        ImportPlaylistScreen(
             isVisible = showImportSpotifyDialog,
             importState = uiState.importState,
             onDismiss = { 
@@ -231,6 +231,9 @@ fun LibraryScreen(
             },
             onImport = { url ->
                 viewModel.importSpotifyPlaylist(url)
+            },
+            onReset = {
+                viewModel.resetImportState()
             }
         )
     }
