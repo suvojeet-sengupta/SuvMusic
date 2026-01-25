@@ -3,6 +3,8 @@ package com.suvojeet.suvmusic.service
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -126,10 +128,26 @@ class MusicPlayerService : MediaLibraryService() {
             }
 
             override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo, customCommand: androidx.media3.session.SessionCommand, args: android.os.Bundle): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
-                // ... (Keep existing custom command logic) ...
                 if (customCommand.customAction == "SET_OUTPUT_DEVICE") {
-                     // ... (Keep existing logic) ...
-                     return com.google.common.util.concurrent.Futures.immediateFuture(
+                    val deviceId = args.getString("DEVICE_ID")
+                    if (deviceId != null) {
+                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
+                        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+
+                        val targetDevice = if (deviceId == "phone_speaker") {
+                            devices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                        } else {
+                            devices.find { it.id.toString() == deviceId }
+                        }
+
+                        val player = mediaLibrarySession?.player as? ExoPlayer
+                        if (targetDevice != null) {
+                            player?.setPreferredAudioDevice(targetDevice)
+                        } else {
+                            player?.setPreferredAudioDevice(null)
+                        }
+                    }
+                    return com.google.common.util.concurrent.Futures.immediateFuture(
                         androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
                     )
                 }
