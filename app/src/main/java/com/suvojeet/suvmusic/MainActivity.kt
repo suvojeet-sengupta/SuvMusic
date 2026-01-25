@@ -144,6 +144,7 @@ class MainActivity : ComponentActivity() {
             val themeMode by sessionManager.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
             val dynamicColor by sessionManager.dynamicColorFlow.collectAsState(initial = true)
             val appTheme by sessionManager.appThemeFlow.collectAsState(initial = AppTheme.DEFAULT)
+            val pureBlackEnabled by sessionManager.pureBlackEnabledFlow.collectAsState(initial = false)
             val systemDarkTheme = isSystemInDarkTheme()
             
             val darkTheme = when (themeMode) {
@@ -155,7 +156,8 @@ class MainActivity : ComponentActivity() {
             SuvMusicTheme(
                 darkTheme = darkTheme, 
                 dynamicColor = dynamicColor,
-                appTheme = appTheme
+                appTheme = appTheme,
+                pureBlack = pureBlackEnabled
             ) {
                 SuvMusicApp(
                     initialDeepLink = if (audioFileUri == null) deepLinkUrl else null,
