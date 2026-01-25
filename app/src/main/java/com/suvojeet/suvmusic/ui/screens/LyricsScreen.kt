@@ -48,7 +48,11 @@ import com.suvojeet.suvmusic.data.model.Lyrics
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.PictureAsPdf
+import com.suvojeet.suvmusic.ui.utils.LyricsPdfGenerator
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LyricsScreen(
     lyrics: Lyrics?,
@@ -78,6 +82,9 @@ fun LyricsScreen(
     
     val context = LocalContext.current
     var showProviderDialog by remember { mutableStateOf(false) }
+    var showShareSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
     
     // Formatting helper for seek bar
     fun formatTime(ms: Long): String {
@@ -205,24 +212,7 @@ fun LyricsScreen(
 
                 // Share Button (Middle Left)
                 IconButton(
-                    onClick = {
-                        val shareText = buildString {
-                            append("$songTitle - $artistName\n\n")
-                            lyrics?.lines?.forEach { line ->
-                                append(line.text)
-                                append("\n")
-                            }
-                            append("\nShared via SuvMusic")
-                        }
-                        
-                        val sendIntent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, shareText)
-                            type = "text/plain"
-                        }
-                        val shareIntent = Intent.createChooser(sendIntent, "Share Lyrics")
-                        context.startActivity(shareIntent)
-                    },
+                    onClick = { showShareSheet = true },
                     modifier = Modifier
                         .size(32.dp)
                         .background(textColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
@@ -421,6 +411,93 @@ fun LyricsScreen(
                 }
             } else {
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+        
+        if (showShareSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showShareSheet = false },
+                sheetState = sheetState,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Share Lyrics",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    // Option 1: Share as Text
+                    ListItem(
+                        headlineContent = { Text("Share as Text") },
+                        leadingContent = { 
+                            Icon(Icons.Default.Description, contentDescription = null) 
+                        },
+                        modifier = Modifier.clickable {
+                            scope.launch {
+                                sheetState.hide()
+                                showShareSheet = false
+                                
+                                val shareText = buildString {
+                                    append("$songTitle - $artistName\n\n")
+                                    lyrics?.lines?.forEach { line ->
+                                        append(line.text)
+                                        append("\n")
+                                    }
+                                    append("\nShared via SuvMusic")
+                                }
+                                
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, "Share Lyrics")
+                                context.startActivity(shareIntent)
+                            }
+                        }
+                    )
+                    
+                    // Option 2: Export as PDF
+                    ListItem(
+                        headlineContent = { Text("Export as PDF") },
+                        leadingContent = { 
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null) 
+                        },
+                        modifier = Modifier.clickable {
+                            scope.launch {
+                                // Close sheet first
+                                sheetState.hide()
+                                showShareSheet = false
+                                
+                                if (lyrics != null) {
+                                    val lines = lyrics.lines.map { it.text }
+                                    val uri = LyricsPdfGenerator.generateAndSharePdf(
+                                        context,
+                                        lines,
+                                        songTitle,
+                                        artistName
+                                    )
+                                    
+                                    if (uri != null) {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "application/pdf"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Share Lyrics PDF"))
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
     }
