@@ -65,7 +65,7 @@ class HomeViewModel @Inject constructor(
         }
     }
     
-    private fun loadData() {
+    private fun loadData(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             val source = sessionManager.getMusicSource()
             _uiState.update { it.copy(currentSource = source) }
@@ -77,33 +77,55 @@ class HomeViewModel @Inject constructor(
                 sessionManager.getCachedHomeSectionsSync()
             }
             
+            // Display cache if available
             if (cachedSections.isNotEmpty()) {
                 _uiState.update { 
                     it.copy(
                         homeSections = cachedSections, 
                         isLoading = false,
-                        isRefreshing = true,
+                        isRefreshing = false, // Not explicitly refreshing unless we decide to fetch
                         error = null
                     ) 
                 }
+            }
+            
+            // 2. Determine if we need to fetch fresh data
+            val lastFetchTime = sessionManager.getLastHomeFetchTime(source)
+            val currentTime = System.currentTimeMillis()
+            val timeSinceLastFetch = currentTime - lastFetchTime
+            val cacheExpired = timeSinceLastFetch > 30 * 60 * 1000 // 30 minutes
+            
+            val shouldFetch = forceRefresh || cachedSections.isEmpty() || cacheExpired
+            
+            // Show loading indicators
+            if (shouldFetch) {
+                 if (cachedSections.isNotEmpty()) {
+                     _uiState.update { it.copy(isRefreshing = true) }
+                 } else {
+                     _uiState.update { it.copy(isLoading = true, error = null) }
+                 }
             } else {
-                 _uiState.update { it.copy(isLoading = true, error = null) }
+                // No need to fetch, we are done
+                return@launch
             }
 
             try {
-                // 2. Fetch fresh data based on source
+                // 3. Fetch fresh data based on source
                 val sections = when (source) {
                     MusicSource.JIOSAAVN -> jioSaavnRepository.getHomeSections()
                     else -> youTubeRepository.getHomeSections()
                 }
                 
-                // 3. Update cache and UI
+                // 4. Update cache and UI
                 if (sections.isNotEmpty()) {
                     if (source == MusicSource.JIOSAAVN) {
                         sessionManager.saveJioSaavnHomeCache(sections)
                     } else {
                         sessionManager.saveHomeCache(sections)
                     }
+                    
+                    // Update timestamp on successful fetch
+                    sessionManager.updateLastHomeFetchTime(source)
                     
                     _uiState.update { 
                         it.copy(
@@ -133,7 +155,7 @@ class HomeViewModel @Inject constructor(
     }
     
     fun refresh() {
-        loadData()
+        loadData(forceRefresh = true)
         loadRecommendations()
     }
     

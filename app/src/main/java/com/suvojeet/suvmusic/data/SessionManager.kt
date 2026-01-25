@@ -77,6 +77,8 @@ class SessionManager @Inject constructor(
         // Home Cache
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
         private val JIOSAAVN_HOME_CACHE_KEY = stringPreferencesKey("jiosaavn_home_cache")
+        private val LAST_FETCH_TIME_YOUTUBE_KEY = androidx.datastore.preferences.core.longPreferencesKey("last_fetch_time_youtube")
+        private val LAST_FETCH_TIME_JIOSAAVN_KEY = androidx.datastore.preferences.core.longPreferencesKey("last_fetch_time_jiosaavn")
         
         // Library Cache
         private val LIBRARY_PLAYLISTS_CACHE_KEY = stringPreferencesKey("library_playlists_cache")
@@ -1097,6 +1099,20 @@ class SessionManager @Inject constructor(
         val json = prefs[JIOSAAVN_HOME_CACHE_KEY]
         withContext(Dispatchers.Default) {
             parseHomeSections(json)
+        }
+    }
+
+    // --- Home Refresh Timestamp ---
+
+    suspend fun getLastHomeFetchTime(source: com.suvojeet.suvmusic.data.MusicSource): Long {
+        val key = if (source == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
+        return context.dataStore.data.first()[key] ?: 0L
+    }
+
+    suspend fun updateLastHomeFetchTime(source: com.suvojeet.suvmusic.data.MusicSource) {
+        val key = if (source == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
+        context.dataStore.edit { preferences ->
+            preferences[key] = System.currentTimeMillis()
         }
     }
     
