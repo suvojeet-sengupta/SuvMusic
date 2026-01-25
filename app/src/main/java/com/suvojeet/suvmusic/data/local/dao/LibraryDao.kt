@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.suvojeet.suvmusic.data.local.entity.LibraryEntity
+import com.suvojeet.suvmusic.data.local.entity.PlaylistSongEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,4 +27,17 @@ interface LibraryDao {
 
     @Query("SELECT * FROM library_items ORDER BY timestamp DESC")
     fun getAllItems(): Flow<List<LibraryEntity>>
+
+    // Playlist Songs Caching
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPlaylistSongs(songs: List<PlaylistSongEntity>)
+
+    @Query("DELETE FROM playlist_songs WHERE playlistId = :playlistId")
+    suspend fun deletePlaylistSongs(playlistId: String)
+
+    @Query("SELECT * FROM playlist_songs WHERE playlistId = :playlistId ORDER BY `order` ASC")
+    suspend fun getPlaylistSongs(playlistId: String): List<PlaylistSongEntity>
+
+    @Query("SELECT * FROM playlist_songs WHERE playlistId = :playlistId ORDER BY `order` ASC")
+    fun getPlaylistSongsFlow(playlistId: String): Flow<List<PlaylistSongEntity>>
 }
