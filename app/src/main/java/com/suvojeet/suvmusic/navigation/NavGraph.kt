@@ -33,7 +33,6 @@ import com.suvojeet.suvmusic.ui.screens.SeekbarStyleScreen
 import com.suvojeet.suvmusic.ui.screens.SettingsScreen
 import com.suvojeet.suvmusic.ui.screens.StorageScreen
 import com.suvojeet.suvmusic.ui.screens.SupportScreen
-import com.suvojeet.suvmusic.ui.screens.WelcomeScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
 import com.suvojeet.suvmusic.ui.screens.MiscScreen
 import com.suvojeet.suvmusic.ui.screens.LyricsProvidersScreen
@@ -529,24 +528,6 @@ fun NavGraph(
                 },
                 onBack = {
                     navController.popBackStack()
-                }
-            )
-        }
-
-        composable(Destination.Welcome.route) {
-            WelcomeScreen(
-                onLoginClick = {
-                    // Navigate to login page
-                    navController.navigate(Destination.YouTubeLogin.route)
-                },
-                onSkipLogin = {
-                    scope.launch {
-                        sessionManager.setOnboardingCompleted(true)
-                    }
-                    navController.navigate(Destination.Home.route) {
-                        popUpTo(0) { inclusive = true }
-                        launchSingleTop = true
-                    }
                 }
             )
         }
