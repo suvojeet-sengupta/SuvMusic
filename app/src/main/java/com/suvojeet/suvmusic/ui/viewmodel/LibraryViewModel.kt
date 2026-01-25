@@ -115,7 +115,11 @@ class LibraryViewModel @Inject constructor(
                     emptyList()
                 }
                 
-                val allPlaylists = ytPlaylists + jioPlaylists
+                val allPlaylists = if (ytPlaylists.isEmpty() && jioPlaylists.isEmpty()) {
+                    cachedPlaylists
+                } else {
+                    ytPlaylists + jioPlaylists
+                }
                 val localSongs = localAudioRepository.getAllLocalSongs()
                 
                 // Fetch only first page of liked songs and merge with cache to preserve older songs

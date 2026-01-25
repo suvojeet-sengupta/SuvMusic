@@ -108,6 +108,8 @@ class LibraryRepository @Inject constructor(
         return libraryDao.isItemSavedFlow(albumId)
     }
 
+    suspend fun getPlaylistById(id: String): LibraryEntity? = libraryDao.getItem(id)
+
     fun getSavedPlaylists(): Flow<List<LibraryEntity>> {
         return libraryDao.getItemsByType("PLAYLIST")
     }
