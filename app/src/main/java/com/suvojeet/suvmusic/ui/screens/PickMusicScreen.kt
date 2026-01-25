@@ -49,7 +49,8 @@ import com.suvojeet.suvmusic.ui.viewmodel.PickMusicViewModel
 fun PickMusicScreen(
     onBackClick: () -> Unit,
     onMixCreated: (List<Song>) -> Unit,
-    viewModel: PickMusicViewModel = hiltViewModel()
+    viewModel: PickMusicViewModel = hiltViewModel(),
+    onLoginClick: () -> Unit = {} // Add login navigation if possible
 ) {
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val selectedArtists by viewModel.selectedArtists.collectAsStateWithLifecycle()
@@ -57,6 +58,28 @@ fun PickMusicScreen(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // Handle Login Required Popup
+    if (uiState is PickMusicUiState.LoginRequired) {
+        AlertDialog(
+            onDismissRequest = { viewModel.resetState() },
+            title = { Text("Login Required") },
+            text = { Text("You need to be logged in to YouTube Music to create and save personalized mixes.") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    viewModel.resetState()
+                    onLoginClick()
+                }) {
+                    Text("Login Now")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.resetState() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     AnimatedContent(
         targetState = uiState,
@@ -66,7 +89,7 @@ fun PickMusicScreen(
         label = "PickMusicState"
     ) { state ->
         when (state) {
-            is PickMusicUiState.Selection -> {
+            is PickMusicUiState.Selection, is PickMusicUiState.LoginRequired -> {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -197,27 +220,37 @@ fun PickMusicScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     
-                    // Success Icon/Animation Placeholder
+                    // Success Icon/Animation with Playlist Thumbnail
                     Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.tertiary
-                                    )
-                                ),
-                                shape = CircleShape
-                            ),
+                        modifier = Modifier.size(200.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                         Icon(
-                             imageVector = Icons.Default.Done,
-                             contentDescription = "Success",
-                             tint = Color.White,
-                             modifier = Modifier.size(60.dp)
-                         )
+                        // Blurred background thumbnail
+                        AsyncImage(
+                            model = successState.thumbnailUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                        
+                        // Overlay Checkmark
+                        Box(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                                .border(2.dp, Color.White, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                             Icon(
+                                 imageVector = Icons.Default.Done,
+                                 contentDescription = "Success",
+                                 tint = Color.White,
+                                 modifier = Modifier.size(32.dp)
+                             )
+                        }
                     }
                     
                     Spacer(modifier = Modifier.height(32.dp))
