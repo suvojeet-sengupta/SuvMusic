@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -62,6 +63,7 @@ fun HomeScreen(
     onRecentsClick: () -> Unit = {},
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
+    onCreateMixClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -100,6 +102,15 @@ fun HomeScreen(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             onRecentsClick = onRecentsClick
                         )
+                    }
+
+                    // Create a Mix Section (Quick Access)
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            HomeSectionHeader(title = "Start a mix")
+                            Spacer(modifier = Modifier.height(12.dp))
+                            CreateMixCard(onClick = onCreateMixClick)
+                        }
                     }
                     
                     // For You - Personalized Recommendations
@@ -585,5 +596,54 @@ private fun AppFooter(
         }
         
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun CreateMixCard(
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .width(160.dp)
+            .height(160.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF004D40) // Dark teal-ish green
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color.White, androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Create",
+                    tint = Color.Black,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Pick artists and",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "fine-tune your mix",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }

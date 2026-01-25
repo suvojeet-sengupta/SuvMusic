@@ -151,7 +151,10 @@ fun NavGraph(
                         navController.navigate(Destination.Explore.buildRoute(browseId, title))
                     }
                 },
-                onStartRadio = onStartRadio
+                onStartRadio = onStartRadio,
+                onCreateMixClick = {
+                    navController.navigate(Destination.PickMusic.route)
+                }
             )
         }
         
@@ -398,6 +401,22 @@ fun NavGraph(
         composable(Destination.LyricsProviders.route) {
             LyricsProvidersScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Destination.PickMusic.route) {
+            com.suvojeet.suvmusic.ui.screens.PickMusicScreen(
+                onBackClick = { navController.popBackStack() },
+                onMixCreated = { songs ->
+                    if (songs.isNotEmpty()) {
+                        // Play the mixed playlist
+                         onPlaySong(songs, 0)
+                         // Navigate to player
+                         navController.navigate(Destination.Player.route)
+                    } else {
+                         navController.popBackStack()
+                    }
+                }
             )
         }
         
