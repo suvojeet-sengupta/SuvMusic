@@ -325,7 +325,8 @@ class MusicPlayer @Inject constructor(
                         isLiked = false,
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
-                        isVideoMode = it.isVideoMode // Persist video mode across songs
+                        isVideoMode = it.isVideoMode, // Persist video mode across songs
+                        videoNotFound = false // Reset error flag on track change
                     )
                 }
                 
@@ -470,7 +471,7 @@ class MusicPlayer @Inject constructor(
     
     private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int, shouldPlay: Boolean = true) {
         try {
-            _playerState.update { it.copy(isLoading = true) }
+            _playerState.update { it.copy(isLoading = true, videoNotFound = false) }
             
             // Check for Developer Mode restriction for JioSaavn
             if (song.source == SongSource.JIOSAAVN && !sessionManager.isDeveloperMode()) {
@@ -517,9 +518,12 @@ class MusicPlayer @Inject constructor(
             // Handle null stream URL - show error and clear loading state
             if (streamUrl == null) {
                 android.util.Log.e("MusicPlayer", "Failed to resolve stream URL for: ${song.id} after retries")
+                
+                val isVideoMode = _playerState.value.isVideoMode
                 _playerState.update { 
                     it.copy(
-                        error = "Could not load song. Please check your connection.",
+                        error = if (!isVideoMode) "Could not load song. Please check your connection." else null,
+                        videoNotFound = isVideoMode,
                         isLoading = false
                     )
                 }
@@ -1179,7 +1183,7 @@ class MusicPlayer @Inject constructor(
         val wasPlaying = mediaController?.isPlaying == true
         val newVideoMode = !state.isVideoMode
         
-        _playerState.update { it.copy(isLoading = true, isVideoMode = newVideoMode) }
+        _playerState.update { it.copy(isLoading = true, isVideoMode = newVideoMode, videoNotFound = false) }
         
         scope.launch {
             try {
@@ -1223,7 +1227,13 @@ class MusicPlayer @Inject constructor(
                 
                 if (streamUrl == null) {
                     // Fallback - revert state
-                    _playerState.update { it.copy(isLoading = false, isVideoMode = !newVideoMode) }
+                    _playerState.update { 
+                        it.copy(
+                            isLoading = false, 
+                            isVideoMode = if (newVideoMode) false else !newVideoMode,
+                            videoNotFound = newVideoMode 
+                        ) 
+                    }
                     return@launch
                 }
                 
@@ -1261,6 +1271,10 @@ class MusicPlayer @Inject constructor(
                 _playerState.update { it.copy(isLoading = false, isVideoMode = !newVideoMode, error = e.message) }
             }
         }
+    }
+    
+    fun dismissVideoError() {
+        _playerState.update { it.copy(videoNotFound = false) }
     }
     
     fun stop() {
