@@ -294,6 +294,10 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.toggleVideoMode()
     }
 
+    fun dismissVideoError() {
+        musicPlayer.dismissVideoError()
+    }
+
     fun switchOutputDevice(device: com.suvojeet.suvmusic.data.model.OutputDevice) {
         musicPlayer.switchOutputDevice(device)
     }
