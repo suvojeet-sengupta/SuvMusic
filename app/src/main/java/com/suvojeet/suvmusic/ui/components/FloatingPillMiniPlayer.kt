@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -52,6 +53,8 @@ fun FloatingPillMiniPlayer(
     onPreviousClick: () -> Unit,
     onPlayerClick: () -> Unit,
     onCloseClick: (() -> Unit)? = null,
+    onLikeClick: () -> Unit,
+    isLiked: Boolean,
     progress: Float,
     alpha: Float = 1f
 ) {
@@ -171,11 +174,11 @@ fun FloatingPillMiniPlayer(
                 }
 
                 // Heart/Like Icon
-                IconButton(onClick = { /* TODO: Like logic */ }) {
+                IconButton(onClick = onLikeClick) {
                     Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = "Like",
-                        tint = dominantColors.onBackground.copy(alpha = 0.6f),
+                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isLiked) "Unlike" else "Like",
+                        tint = if (isLiked) Color.Red else dominantColors.onBackground.copy(alpha = 0.6f),
                         modifier = Modifier.size(24.dp)
                     )
                 }

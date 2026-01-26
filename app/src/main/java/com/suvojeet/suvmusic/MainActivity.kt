@@ -672,6 +672,7 @@ fun SuvMusicApp(
                             onNextClick = { playerViewModel.seekToNext() },
                             onPreviousClick = { playerViewModel.seekToPrevious() },
                             onPlayerClick = { navController.navigate(Destination.Player.route) },
+                            onLikeClick = { playerViewModel.likeCurrentSong() },
                             modifier = Modifier,
                             onCloseClick = if (currentRoute != Destination.Home.route) {
                                 { playerViewModel.dismissMiniPlayer() }
