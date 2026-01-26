@@ -38,9 +38,16 @@ data class LibraryUiState(
 sealed class ImportState {
     object Idle : ImportState()
     object Loading : ImportState()
-    data class Matching(val current: Int, val total: Int) : ImportState()
-    data class Adding(val current: Int, val total: Int, val successCount: Int) : ImportState()
-    data class Success(val results: List<ImportResult>, val successCount: Int, val totalCount: Int) : ImportState()
+    data class Processing(
+        val currentSong: String,
+        val currentArtist: String,
+        val thumbnail: String?,
+        val currentIndex: Int,
+        val totalSongs: Int,
+        val successCount: Int,
+        val status: String // "Searching...", "Adding...", "Failed"
+    ) : ImportState()
+    data class Success(val successCount: Int, val totalCount: Int) : ImportState() // Removed results list as we don't track it anymore for minimal UI
     data class Error(val message: String) : ImportState()
 }
 
@@ -284,48 +291,60 @@ class LibraryViewModel @Inject constructor(
                     return@launch
                 }
 
-                _uiState.update { it.copy(importState = ImportState.Matching(0, spotifySongs.size)) }
-                
-                val importResults = spotifyImportHelper.matchSongsOnYouTube(spotifySongs) { current, total ->
-                    _uiState.update { it.copy(importState = ImportState.Matching(current, total)) }
-                }
-
-                val matchedSongs = importResults.mapNotNull { it.matchedSong }
-
-                if (matchedSongs.isEmpty()) {
-                    _uiState.update { it.copy(importState = ImportState.Error("Could not find any of the songs on YouTube Music.")) }
-                    return@launch
-                }
-
-                // Create a new playlist on YouTube with the matched songs
+                // Create a new playlist on YouTube
                 val playlistTitle = "Spotify Import ${System.currentTimeMillis() / 1000}"
                 val playlistId = youTubeRepository.createPlaylist(playlistTitle, "Imported from Spotify via SuvMusic")
                 
                 if (playlistId != null) {
                     var successCount = 0
-                    val totalToAdd = matchedSongs.size
+                    val totalToAdd = spotifySongs.size
                     
-                    _uiState.update { it.copy(importState = ImportState.Adding(0, totalToAdd, 0)) }
-                    
-                    matchedSongs.forEachIndexed { index, song ->
-                        try {
-                            // Add delay to prevent rate limiting (300ms)
-                            kotlinx.coroutines.delay(300)
+                    spotifySongs.forEachIndexed { index, (title, artist) ->
+                        // State: Searching
+                       _uiState.update { it.copy(importState = ImportState.Processing(
+                            currentSong = title,
+                            currentArtist = artist,
+                            thumbnail = null,
+                            currentIndex = index + 1,
+                            totalSongs = totalToAdd,
+                            successCount = successCount,
+                            status = "Searching..."
+                        )) }
+
+                        val match = spotifyImportHelper.findMatch(title, artist)
+                        
+                        if (match != null) {
+                             // State: Found/Adding
+                            _uiState.update { it.copy(importState = ImportState.Processing(
+                                currentSong = match.title,
+                                currentArtist = match.artist,
+                                thumbnail = match.thumbnailUrl,
+                                currentIndex = index + 1,
+                                totalSongs = totalToAdd,
+                                successCount = successCount,
+                                status = "Adding..."
+                            )) }
                             
-                            val added = youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                            val added = youTubeRepository.addSongToPlaylist(playlistId, match.id)
                             if (added) successCount++
-                            
-                            _uiState.update { 
-                                it.copy(importState = ImportState.Adding(index + 1, totalToAdd, successCount)) 
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            // Continue with next song even if one fails
+                        } else {
+                            // State: Failed (briefly show?)
+                             _uiState.update { it.copy(importState = ImportState.Processing(
+                                currentSong = title,
+                                currentArtist = artist,
+                                thumbnail = null,
+                                currentIndex = index + 1,
+                                totalSongs = totalToAdd,
+                                successCount = successCount,
+                                status = "Not Found"
+                            )) }
+                            // Small delay to let user see "Not Found"
+                             kotlinx.coroutines.delay(500)
                         }
                     }
                     
                     _uiState.update { 
-                        it.copy(importState = ImportState.Success(importResults, successCount, totalToAdd)) 
+                        it.copy(importState = ImportState.Success(successCount, totalToAdd)) 
                     }
                     refresh() // Refresh to show new playlist
                 } else {

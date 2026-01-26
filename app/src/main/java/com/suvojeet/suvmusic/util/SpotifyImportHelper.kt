@@ -105,25 +105,31 @@ class SpotifyImportHelper @Inject constructor(
     }
 
     /**
-     * Matches Spotify songs to YouTube Music songs.
+     * Matches Spotify songs to YouTube Music songs (Batch).
      */
     suspend fun matchSongsOnYouTube(spotifySongs: List<Pair<String, String>>, onProgress: (Int, Int) -> Unit): List<ImportResult> {
         val results = mutableListOf<ImportResult>()
         spotifySongs.forEachIndexed { index, (title, artist) ->
-            try {
-                val query = "$title $artist"
-                val searchResults = youTubeRepository.search(query)
-                val bestMatch = searchResults.firstOrNull { 
-                    it.title.contains(title, ignoreCase = true) || title.contains(it.title, ignoreCase = true)
-                } ?: searchResults.firstOrNull()
-                
-                results.add(ImportResult(title, artist, bestMatch))
-            } catch (e: Exception) {
-                e.printStackTrace()
-                results.add(ImportResult(title, artist, null))
-            }
+            val match = findMatch(title, artist)
+            results.add(ImportResult(title, artist, match))
             onProgress(index + 1, spotifySongs.size)
         }
         return results
+    }
+
+    /**
+     * Finds a single match for a song on YouTube Music.
+     */
+    suspend fun findMatch(title: String, artist: String): Song? {
+        return try {
+            val query = "$title $artist"
+            val searchResults = youTubeRepository.search(query)
+            searchResults.firstOrNull { 
+                it.title.contains(title, ignoreCase = true) || title.contains(it.title, ignoreCase = true)
+            } ?: searchResults.firstOrNull()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 }
