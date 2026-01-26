@@ -60,7 +60,9 @@ data class SettingsUiState(
     // Appearance
     val pureBlackEnabled: Boolean = false,
     // Lyrics
-    val preferredLyricsProvider: String = "BetterLyrics"
+    val preferredLyricsProvider: String = "BetterLyrics",
+    // Audio Offload
+    val audioOffloadEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -196,6 +198,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(preferredLyricsProvider = provider) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.audioOffloadEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(audioOffloadEnabled = enabled) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -262,7 +270,8 @@ class SettingsViewModel @Inject constructor(
                     stopMusicOnTaskClear = stopMusicOnTaskClear,
                     pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
                     pureBlackEnabled = pureBlackEnabled,
-                    preferredLyricsProvider = sessionManager.getPreferredLyricsProvider()
+                    preferredLyricsProvider = sessionManager.getPreferredLyricsProvider(),
+                    audioOffloadEnabled = sessionManager.isAudioOffloadEnabled()
                 )
             }
         }
@@ -600,6 +609,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPreferredLyricsProvider(provider)
             _uiState.update { it.copy(preferredLyricsProvider = provider) }
+        }
+    }
+
+    fun setAudioOffloadEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setAudioOffloadEnabled(enabled)
+            _uiState.update { it.copy(audioOffloadEnabled = enabled) }
         }
     }
 }
