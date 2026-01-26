@@ -83,6 +83,7 @@ class MusicPlayerService : MediaLibraryService() {
             .setBackBuffer(30_000, true) // Keep 30s back buffer for rewinding/looping
             .build()
             
+        val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
@@ -98,6 +99,16 @@ class MusicPlayerService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
             .apply {
+                if (isOffloadEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    trackSelectionParameters = trackSelectionParameters.buildUpon()
+                        .setAudioOffloadPreferences(
+                            androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                                .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+                                .setIsGaplessSupportRequired(false) // Allow offload even if gapless isn't hardware-supported for better battery
+                                .build()
+                        )
+                        .build()
+                }
                 pauseAtEndOfMediaItems = false
                 addListener(object : androidx.media3.common.Player.Listener {
                     override fun onAudioSessionIdChanged(audioSessionId: Int) {
