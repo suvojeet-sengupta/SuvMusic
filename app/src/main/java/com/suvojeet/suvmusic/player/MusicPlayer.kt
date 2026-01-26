@@ -325,7 +325,7 @@ class MusicPlayer @Inject constructor(
                         isLiked = false,
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
-                        isVideoMode = if (it.currentSong?.id != song?.id) false else it.isVideoMode
+                        isVideoMode = it.isVideoMode // Persist video mode across songs
                     )
                 }
                 
@@ -851,13 +851,20 @@ class MusicPlayer @Inject constructor(
             }
             else -> {
                 if (resolveStream) {
-                    // Retry once if first attempt fails
-                    youTubeRepository.getStreamUrl(song.id)
-                        ?: run {
-                            kotlinx.coroutines.delay(500)
-                            youTubeRepository.getStreamUrl(song.id)
+                    if (_playerState.value.isVideoMode) {
+                        val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
+                            resolvedVideoIds.put(song.id, it) 
                         }
-                        ?: ""
+                        youTubeRepository.getVideoStreamUrl(videoId) ?: ""
+                    } else {
+                        // Retry once if first attempt fails
+                        youTubeRepository.getStreamUrl(song.id)
+                            ?: run {
+                                kotlinx.coroutines.delay(500)
+                                youTubeRepository.getStreamUrl(song.id)
+                            }
+                            ?: ""
+                    }
                 } else {
                     "https://youtube.com/watch?v=${song.id}"
                 }
