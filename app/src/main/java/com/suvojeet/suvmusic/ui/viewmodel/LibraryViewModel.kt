@@ -2,14 +2,16 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.data.model.Album
+import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.ImportResult
+import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.Artist
-import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.player.MusicPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +51,9 @@ class LibraryViewModel @Inject constructor(
     private val localAudioRepository: LocalAudioRepository,
     private val downloadRepository: DownloadRepository,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
-    private val spotifyImportHelper: com.suvojeet.suvmusic.util.SpotifyImportHelper
+    private val spotifyImportHelper: com.suvojeet.suvmusic.util.SpotifyImportHelper,
+    private val libraryRepository: com.suvojeet.suvmusic.data.repository.LibraryRepository,
+    private val musicPlayer: MusicPlayer
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -60,6 +64,28 @@ class LibraryViewModel @Inject constructor(
         _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
         loadData()
         observeDownloads()
+        observeLibraryPlaylists()
+    }
+
+    private fun observeLibraryPlaylists() {
+        viewModelScope.launch {
+            libraryRepository.getSavedPlaylists().collect { savedItems ->
+                val displayItems = savedItems.map { entity ->
+                    PlaylistDisplayItem(
+                        id = entity.id,
+                        name = entity.title,
+                        url = "https://music.youtube.com/playlist?list=${entity.id}",
+                        uploaderName = entity.subtitle ?: "",
+                        thumbnailUrl = entity.thumbnailUrl,
+                        songCount = 0 // We don't have count in entity yet, but it's fine
+                    )
+                }
+                _uiState.update { state ->
+                    val combined = (state.playlists + displayItems).distinctBy { it.id }
+                    state.copy(playlists = combined)
+                }
+            }
+        }
     }
     
     private fun observeDownloads() {
@@ -313,5 +339,62 @@ class LibraryViewModel @Inject constructor(
 
     fun resetImportState() {
         _uiState.update { it.copy(importState = ImportState.Idle) }
+    }
+
+    // --- Playlist Management ---
+
+    fun downloadPlaylist(playlistItem: PlaylistDisplayItem) {
+        viewModelScope.launch {
+            try {
+                val fullPlaylist = youTubeRepository.getPlaylist(playlistItem.id)
+                downloadRepository.downloadPlaylist(fullPlaylist)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to download playlist: ${e.message}") }
+            }
+        }
+    }
+
+    fun deletePlaylist(playlistId: String) {
+        viewModelScope.launch {
+            try {
+                val success = youTubeRepository.deletePlaylist(playlistId)
+                if (success) {
+                    refresh()
+                    libraryRepository.removePlaylist(playlistId)
+                }
+            } catch (e: Exception) {
+                 _uiState.update { it.copy(error = "Failed to delete: ${e.message}") }
+            }
+        }
+    }
+
+    fun shufflePlay(playlistId: String) {
+        viewModelScope.launch {
+            try {
+                val playlist = youTubeRepository.getPlaylist(playlistId)
+                if (playlist.songs.isNotEmpty()) {
+                    val shuffled = playlist.songs.shuffled()
+                    musicPlayer.playSong(shuffled.first(), shuffled, 0, true)
+                }
+            } catch (e: Exception) { }
+        }
+    }
+
+    fun playNext(playlistId: String) {
+         viewModelScope.launch {
+            try {
+                val playlist = youTubeRepository.getPlaylist(playlistId)
+                musicPlayer.playNext(playlist.songs)
+            } catch (e: Exception) { }
+        }
+    }
+
+    fun addToQueue(playlistId: String) {
+         viewModelScope.launch {
+            try {
+                val playlist = youTubeRepository.getPlaylist(playlistId)
+                musicPlayer.addToQueue(playlist.songs)
+            } catch (e: Exception) { }
+        }
     }
 }

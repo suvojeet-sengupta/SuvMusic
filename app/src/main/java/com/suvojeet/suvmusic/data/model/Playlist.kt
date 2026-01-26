@@ -5,5 +5,6 @@ data class Playlist(
     val title: String,
     val author: String,
     val thumbnailUrl: String?,
-    val songs: List<Song>
+    val songs: List<Song>,
+    val description: String? = null
 )

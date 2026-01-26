@@ -10,7 +10,8 @@ data class PlaylistDisplayItem(
     val url: String,
     val uploaderName: String,
     val thumbnailUrl: String? = null,
-    val songCount: Int = 0
+    val songCount: Int = 0,
+    val description: String? = null
 ) {
     /**
      * Extract the playlist ID from the URL.
