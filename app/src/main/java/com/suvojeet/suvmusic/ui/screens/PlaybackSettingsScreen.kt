@@ -20,9 +20,11 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +37,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -85,7 +88,34 @@ fun PlaybackSettingsScreen(
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    
+    var showOffloadInfo by remember { mutableStateOf(false) }
+
+    if (showOffloadInfo) {
+        AlertDialog(
+            onDismissRequest = { showOffloadInfo = false },
+            title = { 
+                Text(
+                    "What is Audio Offload?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = {
+                Text(
+                    "Audio Offload enables your phone's specialized audio hardware to handle music playback instead of the main processor (CPU).\n\n" +
+                    "• Battery Save: Reduces CPU load, which helps improve battery life.\n" +
+                    "• Performance: Allows background tasks to run more smoothly.\n\n" +
+                    "Note: If you experience any playback issues or stutters, please disable this feature.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showOffloadInfo = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
     Scaffold(
         topBar = {
             LargeTopAppBar(
@@ -253,9 +283,25 @@ fun PlaybackSettingsScreen(
             )
 
             ListItem(
-                headlineContent = { Text("Enable offload") },
+                headlineContent = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Enable offload")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { showOffloadInfo = true },
+                            modifier = Modifier.height(24.dp).width(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.height(16.dp).width(16.dp)
+                            )
+                        }
+                    }
+                },
                 supportingContent = { 
-                    Text("Use the offload audio path for audio playback. Disabling this may increase power usage but can be useful if you experience issues with audio playback or post processing.") 
+                    Text("Use the offload audio path for audio playback. Disabling this may increase power usage.") 
                 },
                 leadingContent = {
                     Icon(
