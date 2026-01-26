@@ -871,6 +871,30 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    suspend fun ratePlaylist(playlistId: String, rating: String): Boolean = withContext(Dispatchers.IO) {
+        // rating: LIKE, DISLIKE, INDIFFERENT
+        try {
+            val endpoint = when(rating) {
+                "LIKE" -> "like/like"
+                "DISLIKE" -> "like/dislike"
+                else -> "like/removelike"
+            }
+            
+            val body = """
+                {
+                    "target": {
+                        "playlistId": "$playlistId"
+                    }
+                }
+            """.trimIndent()
+            
+            performAuthenticatedAction(endpoint, body)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     suspend fun subscribe(channelId: String, isSubscribe: Boolean): Boolean = withContext(Dispatchers.IO) {
         try {
              val endpoint = if (isSubscribe) "subscription/subscribe" else "subscription/unsubscribe"
