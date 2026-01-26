@@ -77,6 +77,7 @@ import kotlinx.coroutines.Dispatchers
 import androidx.media3.datasource.cache.Cache
 import javax.inject.Inject
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     
@@ -90,8 +91,11 @@ class MainActivity : ComponentActivity() {
     lateinit var downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
 
     @Inject
+    lateinit var musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer
+
+    @Inject
     lateinit var playerCache: Cache
-    
+
     private lateinit var audioManager: AudioManager
     
     // Track whether song is playing for volume key interception
@@ -263,6 +267,10 @@ class MainActivity : ComponentActivity() {
     
     override fun onPause() {
         super.onPause()
+        
+        // Disable video track for bandwidth optimization when backgrounded
+        musicPlayer.optimizeBandwidth(true)
+        
         // Start Floating Player if enabled and music might be playing
         lifecycleScope.launch {
             if (sessionManager.isDynamicIslandEnabled() && 
@@ -274,6 +282,10 @@ class MainActivity : ComponentActivity() {
     
     override fun onResume() {
         super.onResume()
+        
+        // Re-enable video track when returning to foreground
+        musicPlayer.optimizeBandwidth(false)
+        
         // Stop Floating Player when app comes to foreground
         DynamicIslandService.stop(this)
     }

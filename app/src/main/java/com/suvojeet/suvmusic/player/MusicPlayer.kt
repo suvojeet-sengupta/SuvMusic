@@ -410,10 +410,11 @@ class MusicPlayer @Inject constructor(
             val cause = error.cause
             val isHttpError = cause is androidx.media3.datasource.HttpDataSource.HttpDataSourceException
             val responseCode = (cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode ?: 0
-            val isexpiredUrl = (isHttpError && (responseCode == 403 || responseCode == 410)) || (responseCode == 403 || responseCode == 410)
+            val isexpiredUrl = (isHttpError && (responseCode == 403 || responseCode == 410))
             val isNetworkError = cause is java.net.UnknownHostException || cause is java.net.SocketTimeoutException
+            val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED
             
-            if (isexpiredUrl || isNetworkError) {
+            if (isexpiredUrl || isNetworkError || isDecoderError) {
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
@@ -421,13 +422,22 @@ class MusicPlayer @Inject constructor(
                     android.util.Log.d("MusicPlayer", "Attempting to recover from playback error for: ${currentSong.id}")
                     
                     scope.launch {
-                        _playerState.update { it.copy(isLoading = true, error = null) } // Clear error state during recovery
-                        
-                        // Clear invalid cache entry
-                        if (currentSong.source == SongSource.YOUTUBE) {
-                             // This will be handled by re-fetching which overwrites cache
+                        // Fallback logic: If in Video Mode, switch to Audio Mode first
+                        if (_playerState.value.isVideoMode) {
+                             android.util.Log.d("MusicPlayer", "Video playback failed, falling back to audio")
+                             _playerState.update { 
+                                 it.copy(
+                                     isVideoMode = false, 
+                                     videoNotFound = true,
+                                     error = "Video unavailable, switching to audio..."
+                                 ) 
+                             }
+                             // Clear cached video entry if it might be bad
+                             resolvedVideoIds.remove(currentSong.id)
+                        } else {
+                             _playerState.update { it.copy(isLoading = true, error = null) }
                         }
-                        
+
                         // Wait a bit before retrying
                         delay(1000)
                         
@@ -435,12 +445,7 @@ class MusicPlayer @Inject constructor(
                         val resumePosition = _playerState.value.currentPosition
                         
                         // Re-resolve and play (force resolution)
-                        // Note: We need to modify resolveAndPlayCurrentItem to support forcing re-resolution
-                        // For now, we manually trigger the flow
-                        
                         try {
-                             // Force clear any in-memory cache for this ID in repository (conceptual)
-                             // Re-resolve
                              resolveAndPlayCurrentItem(currentSong, _playerState.value.currentIndex, shouldPlay = true)
                              
                              // Seek to previous position once ready
@@ -715,6 +720,7 @@ class MusicPlayer @Inject constructor(
         if (currentPosition < preloadStartMs) return
         
         val state = _playerState.value
+        val isVideoMode = state.isVideoMode
         var nextIndex = state.currentIndex + 1
         
         // Handle shuffle mode
@@ -737,6 +743,8 @@ class MusicPlayer @Inject constructor(
         val nextSong = state.queue.getOrNull(nextIndex) ?: return
         
         // Check if already preloaded
+        // Important: check if preloaded type (audio/video) matches current mode? 
+        // For simplicity, we just check ID. A mode switch usually clears preload.
         if (preloadedNextSongId == nextSong.id && preloadedStreamUrl != null) {
             return
         }
@@ -747,7 +755,17 @@ class MusicPlayer @Inject constructor(
                 val streamUrl = when (nextSong.source) {
                     SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
                     SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
-                    else -> youTubeRepository.getStreamUrl(nextSong.id)
+                    else -> {
+                        if (isVideoMode) {
+                            // Smart Video Matching for Preload
+                            val videoId = resolvedVideoIds[nextSong.id] ?: youTubeRepository.getBestVideoId(nextSong).also { 
+                                resolvedVideoIds.put(nextSong.id, it) 
+                            }
+                            youTubeRepository.getVideoStreamUrl(videoId)
+                        } else {
+                            youTubeRepository.getStreamUrl(nextSong.id)
+                        }
+                    }
                 }
                 
                 if (streamUrl != null) {
@@ -786,8 +804,12 @@ class MusicPlayer @Inject constructor(
                     .build()
                 
                 // Replace the placeholder media item with resolved one
-                controller.removeMediaItem(index)
-                controller.addMediaItem(index, newMediaItem)
+                try {
+                    controller.removeMediaItem(index)
+                    controller.addMediaItem(index, newMediaItem)
+                } catch (e: Exception) {
+                   // Index might have changed or race condition
+                }
             }
         }
     }
@@ -1325,6 +1347,25 @@ class MusicPlayer @Inject constructor(
                       .replace(Regex("=s\\d+"), "=s544")
                 else -> it
             }
+        }
+    }
+
+    /**
+     * Optimize bandwidth usage by disabling video tracks when the app is in the background.
+     * To be called from MainActivity lifecycle.
+     */
+    fun optimizeBandwidth(isBackground: Boolean) {
+        val player = mediaController ?: return
+        val isVideoMode = _playerState.value.isVideoMode
+
+        // Only act if we are in video mode (if audio mode, video track is likely not selected anyway)
+        if (isVideoMode) {
+            val parameters = player.trackSelectionParameters
+            val newParameters = parameters.buildUpon()
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, isBackground)
+                .build()
+            
+            player.trackSelectionParameters = newParameters
         }
     }
 }
