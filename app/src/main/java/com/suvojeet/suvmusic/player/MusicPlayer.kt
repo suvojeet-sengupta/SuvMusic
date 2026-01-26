@@ -495,7 +495,17 @@ class MusicPlayer @Inject constructor(
                     when (song.source) {
                         SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
                         SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id)
-                        else -> youTubeRepository.getStreamUrl(song.id)
+                        else -> {
+                            if (_playerState.value.isVideoMode) {
+                                // Smart Video Matching
+                                val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
+                                    resolvedVideoIds.put(song.id, it) 
+                                }
+                                youTubeRepository.getVideoStreamUrl(videoId)
+                            } else {
+                                youTubeRepository.getStreamUrl(song.id)
+                            }
+                        }
                     }
                 }
                 if (streamUrl == null) {
@@ -1169,10 +1179,14 @@ class MusicPlayer @Inject constructor(
                 val streamUrl = if (newVideoMode) {
                     // Switch to video stream
                     // 1. Determine Video ID
+                    // Video ID determination with Smart Match
                     val videoId = if (song.source == SongSource.YOUTUBE) {
-                        song.id
+                         // Check cache or resolve smart match
+                         resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
+                             resolvedVideoIds.put(song.id, it) 
+                         }
                     } else {
-                        // Check cache or search
+                        // For non-YouTube songs (JioSaavn), we can also try to find a video
                         resolvedVideoIds[song.id] ?: run {
                             // Search for video
                             val query = "${song.title} ${song.artist} official video"
