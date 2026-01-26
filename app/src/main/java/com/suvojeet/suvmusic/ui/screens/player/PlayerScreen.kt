@@ -613,7 +613,7 @@ fun PlayerScreen(
                                 // Video Player
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth(0.85f)
+                                        .fillMaxWidth()
                                         .aspectRatio(16f / 9f)
                                         .shadow(
                                             elevation = 32.dp,
@@ -683,7 +683,11 @@ fun PlayerScreen(
                                     dominantColors = dominantColors
                                 )
 
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (playerState.isVideoMode) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
 
                             // Progress & Waveform
                             WaveformSeeker(
