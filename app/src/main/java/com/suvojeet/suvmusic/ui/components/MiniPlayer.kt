@@ -110,7 +110,15 @@ fun MiniPlayer(
         var offsetY by remember { mutableFloatStateOf(0f) }
         val swipeThreshold = 100f
 
-        val sharedModifier = Modifier.offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+        val sharedModifier = Modifier
+            .offset { 
+                // Apply resistance to the drag visualization so it doesn't float freely
+                // Only allow small vertical movement to indicate swipe intent
+                IntOffset(
+                    (offsetX * 0.1f).roundToInt(), 
+                    (offsetY * 0.2f).roundToInt().coerceAtMost(0) // Only allow pulling up visually
+                ) 
+            }
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragEnd = {
