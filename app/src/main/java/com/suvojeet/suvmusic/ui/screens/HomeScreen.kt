@@ -74,21 +74,7 @@ fun HomeScreen(
             .fillMaxSize()
             .background(backgroundColor)
     ) {
-        // Gradient Background Layer
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(400.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            GlassPurple.copy(alpha = 0.6f),
-                            GlassPurple.copy(alpha = 0.2f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
+
 
         // Content
         when {
