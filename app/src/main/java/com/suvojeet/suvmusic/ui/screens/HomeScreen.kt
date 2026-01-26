@@ -104,14 +104,7 @@ fun HomeScreen(
                         )
                     }
 
-                    // Create a Mix Section (Quick Access)
-                    item {
-                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            HomeSectionHeader(title = "Start a mix")
-                            Spacer(modifier = Modifier.height(12.dp))
-                            CreateMixCard(onClick = onCreateMixClick)
-                        }
-                    }
+
                     
                     // For You - Personalized Recommendations
                     if (uiState.recommendations.isNotEmpty()) {
@@ -188,6 +181,15 @@ fun HomeScreen(
                                     onExploreItemClick = onExploreClick
                                 )
                             }
+                        }
+                    }
+
+                    // Create a Mix Section (Quick Access)
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            HomeSectionHeader(title = "Start a mix")
+                            Spacer(modifier = Modifier.height(12.dp))
+                            CreateMixCard(onClick = onCreateMixClick)
                         }
                     }
 
