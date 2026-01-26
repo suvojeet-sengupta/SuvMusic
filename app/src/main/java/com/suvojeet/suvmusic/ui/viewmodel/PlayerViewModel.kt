@@ -742,12 +742,15 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val rating = if (!currentLikeState) "LIKE" else "INDIFFERENT"
             val success = youTubeRepository.rateSong(song.id, rating)
+            
             if (!success) {
                 // Revert on failure
                 musicPlayer.updateLikeStatus(currentLikeState)
+                android.widget.Toast.makeText(context, "Failed to update like status", android.widget.Toast.LENGTH_SHORT).show()
             } else {
                 // If we liked it, we should ensure library cache is eventually updated
                 if (rating == "LIKE") {
+                    android.widget.Toast.makeText(context, "Added to Liked Music", android.widget.Toast.LENGTH_SHORT).show()
                     // Update local library cache if online
                     if (youTubeRepository.isOnline()) {
                         youTubeRepository.getLikedMusic(fetchAll = false)
@@ -755,6 +758,7 @@ class PlayerViewModel @Inject constructor(
                 } else {
                     // If we unliked it (INDIFFERENT), remove from local cache immediately
                     youTubeRepository.removeFromLikedCache(song.id)
+                    android.widget.Toast.makeText(context, "Removed from Liked Music", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
         }
