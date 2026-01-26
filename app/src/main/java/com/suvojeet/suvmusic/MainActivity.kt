@@ -674,7 +674,7 @@ fun SuvMusicApp(
                             onPlayerClick = { navController.navigate(Destination.Player.route) },
                             onLikeClick = { playerViewModel.likeCurrentSong() },
                             modifier = Modifier,
-                            onCloseClick = if (currentRoute != Destination.Home.route) {
+                            onCloseClick = if (currentRoute != Destination.Home.route && currentRoute != Destination.Player.route) {
                                 { playerViewModel.dismissMiniPlayer() }
                             } else null,
                             alpha = miniPlayerAlpha,
