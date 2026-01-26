@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,6 +82,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Playlists", "Artists", "Albums", "Offline")
     
@@ -236,6 +238,36 @@ fun LibraryScreen(
                 viewModel.resetImportState()
             }
         )
+
+        // Playlist Menu Bottom Sheet
+        if (showPlaylistMenu && selectedPlaylist != null) {
+            val playlist = selectedPlaylist!!
+            MediaMenuBottomSheet(
+                isVisible = showPlaylistMenu,
+                onDismiss = { showPlaylistMenu = false },
+                title = playlist.name,
+                subtitle = "${playlist.songCount} songs",
+                thumbnailUrl = playlist.thumbnailUrl,
+                isUserPlaylist = playlist.id.startsWith("PL") || playlist.id.startsWith("VL"), // Simple check
+                onShuffle = { viewModel.shufflePlay(playlist.id) },
+                onStartRadio = { viewModel.shufflePlay(playlist.id) }, // Same as shuffle for now
+                onPlayNext = { viewModel.playNext(playlist.id) },
+                onAddToQueue = { viewModel.addToQueue(playlist.id) },
+                onAddToPlaylist = { /* Already handled elsewhere? */ },
+                onDownload = { viewModel.downloadPlaylist(playlist) },
+                onShare = { 
+                    val shareText = "Check out this playlist: ${playlist.name}\n${playlist.url}"
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                        type = "text/plain"
+                    }
+                    val shareIntent = Intent.createChooser(sendIntent, null)
+                    context.startActivity(shareIntent)
+                },
+                onRename = { /* Handle rename dialog if needed */ },
+                onDelete = { viewModel.deletePlaylist(playlist.id) }
+            )
+        }
     }
 }
 

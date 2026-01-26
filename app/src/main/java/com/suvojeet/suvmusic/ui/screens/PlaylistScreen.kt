@@ -27,11 +27,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
@@ -195,6 +196,8 @@ fun PlaylistScreen(
                         onPlayAll = { onPlayAll(playlist.songs) },
                         onShufflePlay = { onShufflePlay(playlist.songs) },
                         onToggleSave = { viewModel.toggleSaveToLibrary() },
+                        onDownload = { viewModel.downloadPlaylist(playlist) },
+                        onShare = { sharePlaylist(playlist) },
                         onMoreClick = { showMediaMenu = true },
                         contentColor = contentColor,
                         secondaryContentColor = secondaryContentColor,
@@ -452,6 +455,8 @@ private fun PlaylistHeader(
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
     onToggleSave: () -> Unit,
+    onDownload: () -> Unit,
+    onShare: () -> Unit,
     onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color,
@@ -544,39 +549,54 @@ private fun PlaylistHeader(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // Actions Row (Heart, Play, More)
+        // Actions Row (Download, Save, Play, Share, More)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Favorite Button
+            // Download Button
+            IconButton(
+                onClick = onDownload,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = "Download Playlist",
+                    tint = contentColor
+                )
+            }
+
+            // Save Button (Bookmark icon as requested)
             IconButton(
                 onClick = onToggleSave,
                 modifier = Modifier
                     .size(48.dp)
                     .background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = CircleShape
                     )
             ) {
                 Icon(
-                    imageVector = if (isSaved) androidx.compose.material.icons.Icons.Default.Favorite else androidx.compose.material.icons.Icons.Default.FavoriteBorder, 
-                    contentDescription = if (isSaved) "Remove from Library" else "Add to Library",
-                    tint = if (isSaved) Color(0xFFFF4081) else contentColor
+                    imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
+                    tint = if (isSaved) MaterialTheme.colorScheme.primary else contentColor
                 )
             }
             
-            Spacer(modifier = Modifier.width(24.dp))
-            
-            // Play Button (Big Fab-like)
+            // Play Button (Large Central)
             androidx.compose.material3.FilledIconButton(
                 onClick = onPlayAll,
                 modifier = Modifier
-                    .size(64.dp)
-                    .shadow(elevation = 8.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary),
+                    .size(72.dp)
+                    .shadow(elevation = 12.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary),
                 colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -585,11 +605,26 @@ private fun PlaylistHeader(
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
             
-            Spacer(modifier = Modifier.width(24.dp))
+            // Share Button
+            IconButton(
+                onClick = onShare,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share",
+                    tint = contentColor
+                )
+            }
             
             // More Button
             IconButton(
@@ -597,8 +632,8 @@ private fun PlaylistHeader(
                 modifier = Modifier
                     .size(48.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = CircleShape
                     )
             ) {
                 Icon(
@@ -609,7 +644,7 @@ private fun PlaylistHeader(
             }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
