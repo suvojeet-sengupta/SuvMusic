@@ -24,7 +24,8 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val currentSource: MusicSource = MusicSource.YOUTUBE
+    val currentSource: MusicSource = MusicSource.YOUTUBE,
+    val selectedMood: String? = null
 )
 
 @HiltViewModel
@@ -64,8 +65,63 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun onMoodSelected(mood: String) {
+        val currentMood = _uiState.value.selectedMood
+        if (currentMood == mood) {
+            // Deselect and reload default home
+            _uiState.update { it.copy(selectedMood = null) }
+            loadData(forceRefresh = true) 
+        } else {
+            // Select new mood
+            _uiState.update { it.copy(selectedMood = mood) }
+            fetchMoodContent(mood)
+        }
+    }
+
+    private fun fetchMoodContent(mood: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                // Determine source (JioSaavn usually doesn't have this granular mood flow implemented yet, but fallback to search works)
+                val sections = if (_uiState.value.currentSource == MusicSource.JIOSAAVN) {
+                     // Simple fallback for JioSaavn
+                     val songs = jioSaavnRepository.search(mood)
+                     listOf(
+                         com.suvojeet.suvmusic.data.model.HomeSection(
+                             title = "$mood Music",
+                             items = songs.map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) },
+                             type = com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                         )
+                     )
+                } else {
+                    youTubeRepository.getHomeSectionsForMood(mood)
+                }
+
+                _uiState.update { 
+                    it.copy(
+                        homeSections = sections,
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = if (sections.isEmpty()) "No content found for $mood" else null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        error = e.message
+                    ) 
+                }
+            }
+        }
+    }
     
     private fun loadData(forceRefresh: Boolean = false) {
+        // If a mood is selected, ignore standard loadData (unless we want to support refresh for mood)
+        // But logic in onMoodSelected handles deselecting.
+        if (_uiState.value.selectedMood != null && !forceRefresh) return
+
         viewModelScope.launch {
             val source = sessionManager.getMusicSource()
             _uiState.update { it.copy(currentSource = source) }

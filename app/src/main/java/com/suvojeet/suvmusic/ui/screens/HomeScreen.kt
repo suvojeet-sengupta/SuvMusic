@@ -103,6 +103,14 @@ fun HomeScreen(
                             )
                         }
 
+                        // Mood Chips Section
+                        item {
+                            MoodChipsSection(
+                                selectedMood = uiState.selectedMood,
+                                onMoodSelected = viewModel::onMoodSelected
+                            )
+                        }
+
                         // Top "Quick Access" Grid (2x3) - Spotify Style
                         if (uiState.recommendations.isNotEmpty()) {
                             item {

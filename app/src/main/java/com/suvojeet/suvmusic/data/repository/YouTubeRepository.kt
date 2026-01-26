@@ -356,6 +356,62 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    suspend fun getHomeSectionsForMood(moodTitle: String): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
+        try {
+            // 1. Get all moods categories
+            val categories = getMoodsAndGenres()
+            
+            // 2. Find matching category
+            // We use standard YT Music mood names mapping if needed, but direct match first
+            var category = categories.find { it.title.equals(moodTitle, ignoreCase = true) }
+            
+            // Fallback mappings if direct match fails
+            if (category == null) {
+                val mappedTitle = when(moodTitle.lowercase()) {
+                    "sad" -> "Sad" // Usually exists
+                    "energize" -> "Energy"
+                    "party" -> "Party"
+                    "romance" -> "Romance"
+                    "sleep" -> "Sleep"
+                    "focus" -> "Focus"
+                    "relax" -> "Relax"
+                    "workout" -> "Workout"
+                    "commute" -> "Commute"
+                    "feel good" -> "Feel Good"
+                    else -> moodTitle
+                }
+                 category = categories.find { it.title.equals(mappedTitle, ignoreCase = true) }
+            }
+            
+            if (category != null) {
+                // 3. Fetch specific mood page
+                val json = if (category.params != null) {
+                    fetchInternalApiWithParams(category.browseId, category.params)
+                } else {
+                    fetchInternalApi(category.browseId)
+                }
+                return@withContext parseHomeSectionsFromInternalJson(json)
+            }
+            
+            // 4. Fallback: Search (High accuracy fallback)
+             val songs = search("$moodTitle music", FILTER_SONGS)
+             if (songs.isNotEmpty()) {
+                 return@withContext listOf(
+                     com.suvojeet.suvmusic.data.model.HomeSection(
+                         title = "$moodTitle Music",
+                         items = songs.map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) },
+                         type = com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                     )
+                 )
+             }
+             emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
     private fun extractContinuationToken(json: JSONObject): String? = jsonParser.extractContinuationToken(json)
 
     private fun fetchInternalApiWithContinuation(continuationToken: String): String =
