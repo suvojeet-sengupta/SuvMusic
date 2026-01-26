@@ -601,6 +601,7 @@ class YouTubeRepository @Inject constructor(
             // Get playlist metadata with proper method calls
             val playlistName = try { playlistExtractor.getName() } catch (e: Exception) { null }
             val uploaderName = try { playlistExtractor.getUploaderName() } catch (e: Exception) { null }
+            val description = try { (playlistExtractor as? org.schabi.newpipe.extractor.playlist.PlaylistExtractor)?.description?.content } catch (e: Exception) { null }
             val thumbnailUrl = try { 
                 playlistExtractor.thumbnails?.lastOrNull()?.url 
             } catch (e: Exception) { null }
@@ -629,7 +630,8 @@ class YouTubeRepository @Inject constructor(
                     title = playlistName ?: songs.firstOrNull()?.album?.takeIf { it.isNotBlank() } ?: "Playlist",
                     author = uploaderName?.takeIf { it.isNotBlank() } ?: "",
                     thumbnailUrl = thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
-                    songs = songs
+                    songs = songs,
+                    description = description
                 )
                 libraryRepository.savePlaylist(playlist)
                 return@withContext playlist
@@ -1630,6 +1632,10 @@ class YouTubeRepository @Inject constructor(
             ?.trim()
             ?.takeIf { it.isNotBlank() && it.lowercase() != "unknown" }
             ?: ""
+
+        // Extract description
+        val description = getRunText(header?.optJSONObject("description"))
+            ?: getRunText(header?.optJSONObject("descriptionText"))
         
         // Extract thumbnail from multiple possible locations
         var thumbnailUrl: String? = null
@@ -1667,7 +1673,8 @@ class YouTubeRepository @Inject constructor(
             title = title,
             author = author,
             thumbnailUrl = thumbnailUrl,
-            songs = songs
+            songs = songs,
+            description = description
         )
     }
     
