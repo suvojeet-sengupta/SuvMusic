@@ -433,7 +433,7 @@ fun NavGraph(
                 // Slide up from bottom when opening
                 slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = tween(400)
+                    animationSpec = tween(300)
                 )
             },
             exitTransition = {
@@ -448,7 +448,7 @@ fun NavGraph(
                 // Slide down to bottom when closing (back)
                 slideOutOfContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Down,
-                    animationSpec = tween(400)
+                    animationSpec = tween(300)
                 )
             }
         ) {
