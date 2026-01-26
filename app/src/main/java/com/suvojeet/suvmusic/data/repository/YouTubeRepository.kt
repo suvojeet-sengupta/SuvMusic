@@ -592,7 +592,8 @@ class YouTubeRepository @Inject constructor(
                             thumbnailUrl = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked_music_@576.png",
                             songs = songs.take(50) // Limit to 50 songs
                         )
-                        libraryRepository.savePlaylist(playlist)
+                        // Don't auto-save Supermix
+                        // libraryRepository.savePlaylist(playlist) 
                         return@withContext playlist
                     }
                 } catch (e: Exception) {
@@ -614,7 +615,7 @@ class YouTubeRepository @Inject constructor(
             val json = fetchInternalApi(browseId)
             val playlist = parsePlaylistFromInternalJson(json, playlistId)
             if (playlist.songs.isNotEmpty()) {
-                libraryRepository.savePlaylist(playlist)
+                // libraryRepository.savePlaylist(playlist)
                 return@withContext playlist
             }
         } catch(e: Exception) { }
@@ -664,7 +665,7 @@ class YouTubeRepository @Inject constructor(
                     songs = songs,
                     description = description
                 )
-                libraryRepository.savePlaylist(playlist)
+                // libraryRepository.savePlaylist(playlist)
                 return@withContext playlist
             }
             return@withContext Playlist(
