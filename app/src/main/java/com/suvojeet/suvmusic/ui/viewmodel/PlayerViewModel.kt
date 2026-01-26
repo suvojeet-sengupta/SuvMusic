@@ -748,6 +748,9 @@ class PlayerViewModel @Inject constructor(
                     if (youTubeRepository.isOnline()) {
                         youTubeRepository.getLikedMusic(fetchAll = false)
                     }
+                } else {
+                    // If we unliked it (INDIFFERENT), remove from local cache immediately
+                    youTubeRepository.removeFromLikedCache(song.id)
                 }
             }
         }

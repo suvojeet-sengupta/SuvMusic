@@ -85,6 +85,10 @@ class LibraryRepository @Inject constructor(
         libraryDao.deletePlaylistSongs(playlistId)
     }
 
+    suspend fun removeSongFromPlaylist(playlistId: String, songId: String) {
+        libraryDao.deleteSongFromPlaylist(playlistId, songId)
+    }
+
     suspend fun saveAlbum(album: Album) {
         val entity = LibraryEntity(
             id = album.id,

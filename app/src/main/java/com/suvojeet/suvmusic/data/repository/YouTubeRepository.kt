@@ -493,6 +493,10 @@ class YouTubeRepository @Inject constructor(
         }
         fallback
     }
+
+    suspend fun removeFromLikedCache(songId: String) {
+        libraryRepository.removeSongFromPlaylist("LM", songId)
+    }
     
     suspend fun getPlaylist(playlistId: String): Playlist = withContext(Dispatchers.IO) {
         // Fallback to cache if offline
