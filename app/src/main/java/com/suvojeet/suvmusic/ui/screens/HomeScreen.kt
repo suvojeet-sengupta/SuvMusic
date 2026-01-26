@@ -302,22 +302,10 @@ private fun ProfileHeader(
         // Actions Row
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = "Notifications",
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(24.dp).clickable { }
-            )
-            Icon(
                 imageVector = Icons.Default.History,
                 contentDescription = "Recents",
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(24.dp).clickable(onClick = onRecentsClick)
-            )
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(24.dp).clickable { }
             )
         }
     }
