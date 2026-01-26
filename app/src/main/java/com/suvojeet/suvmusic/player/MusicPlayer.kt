@@ -325,7 +325,7 @@ class MusicPlayer @Inject constructor(
                         isLiked = false,
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
-                        isVideoMode = false // Reset video mode on song change
+                        isVideoMode = if (it.currentSong?.id != song?.id) false else it.isVideoMode
                     )
                 }
                 
