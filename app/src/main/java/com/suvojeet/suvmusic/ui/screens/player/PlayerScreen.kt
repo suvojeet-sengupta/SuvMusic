@@ -101,6 +101,7 @@ import com.suvojeet.suvmusic.ui.screens.player.components.PlaybackControls
 import com.suvojeet.suvmusic.ui.screens.player.components.PlayerTopBar
 import com.suvojeet.suvmusic.ui.screens.player.components.QueueView
 import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
+import com.suvojeet.suvmusic.ui.components.VideoErrorDialog
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
 import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
 import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
@@ -132,6 +133,7 @@ fun PlayerScreen(
     onRepeatToggle: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onToggleVideoMode: () -> Unit = {},
+    onDismissVideoError: () -> Unit = {},
     onStartRadio: () -> Unit = {},
     onLoadMoreRadioSongs: () -> Unit = {},
     isRadioMode: Boolean = false,
@@ -1007,6 +1009,18 @@ fun PlayerScreen(
                     onSetPlaybackParameters(speed, pitch)
                 }
             )
+            
+            // Video Error Dialog
+            if (playerState.videoNotFound) {
+                VideoErrorDialog(
+                    onDismiss = onDismissVideoError,
+                    onSwitchToAudio = {
+                        onDismissVideoError()
+                        onToggleVideoMode() // Switch back to audio
+                    },
+                    dominantColors = dominantColors
+                )
+            }
         }
     }
 }
