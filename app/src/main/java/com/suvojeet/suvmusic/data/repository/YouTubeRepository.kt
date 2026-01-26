@@ -188,6 +188,37 @@ class YouTubeRepository @Inject constructor(
     suspend fun getRelatedSongs(videoId: String): List<Song> = 
         searchService.getRelatedSongs(videoId)
 
+    /**
+     * Tries to find the official music video ID for a given song.
+     * Use this when switching to Video Mode to play the actual video instead of static art track.
+     */
+    suspend fun getBestVideoId(song: Song): String = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) return@withContext song.id
+        
+        // If it's already likely a video (not from "Topic" channel), keep it
+        // Note: NewPipe extractor might settle on "Unknown Artist" if not detailed, 
+        // but typically Topic channels have " - Topic" suffix or we can check simple heuristics.
+        
+        // Heuristic: If title contains "Official Video" or "Music Video", trust it.
+        if (song.title.contains("Official Video", ignoreCase = true) || 
+            song.title.contains("Music Video", ignoreCase = true)) {
+            return@withContext song.id
+        }
+        
+        // If it seems to be an audio track, try to find the video
+        // We search for "Song Title Artist Name Official Video"
+        try {
+            val query = "${song.title} ${song.artist} Official Video"
+            val results = search(query, FILTER_VIDEOS)
+            
+            // Return the first video result if available
+            return@withContext results.firstOrNull()?.id ?: song.id
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext song.id
+        }
+    }
+
     fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
 
     // ============================================================================================
