@@ -77,6 +77,7 @@ fun MiniPlayer(
     onPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
     onCloseClick: (() -> Unit)? = null,
+    onLikeClick: () -> Unit = {},
     progressProvider: () -> Float = { playerState.progress },
     alpha: Float = 1f,
     sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
@@ -149,6 +150,8 @@ fun MiniPlayer(
                 onPreviousClick = onPreviousClick,
                 onPlayerClick = onPlayerClick,
                 onCloseClick = onCloseClick,
+                onLikeClick = onLikeClick,
+                isLiked = playerState.isLiked,
                 progress = animatedProgress,
                 alpha = alpha
             )
