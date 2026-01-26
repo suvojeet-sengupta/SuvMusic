@@ -147,6 +147,9 @@ class SessionManager @Inject constructor(
         
         // Mini Player Style
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
+
+        // Audio Offload
+        private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -774,6 +777,21 @@ class SessionManager @Inject constructor(
     suspend fun setDownloadQuality(quality: DownloadQuality) {
         context.dataStore.edit { preferences ->
             preferences[DOWNLOAD_QUALITY_KEY] = quality.name
+        }
+    }
+
+    // --- Audio Offload ---
+
+    suspend fun isAudioOffloadEnabled(): Boolean = 
+        context.dataStore.data.first()[AUDIO_OFFLOAD_ENABLED_KEY] ?: false
+
+    val audioOffloadEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[AUDIO_OFFLOAD_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setAudioOffloadEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[AUDIO_OFFLOAD_ENABLED_KEY] = enabled
         }
     }
 

@@ -251,6 +251,28 @@ fun PlaybackSettingsScreen(
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
+
+            ListItem(
+                headlineContent = { Text("Enable offload") },
+                supportingContent = { 
+                    Text("Use the offload audio path for audio playback. Disabling this may increase power usage but can be useful if you experience issues with audio playback or post processing.") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.HighQuality,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.audioOffloadEnabled,
+                        onCheckedChange = { 
+                            viewModel.setAudioOffloadEnabled(it)
+                        }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
             
             // Gestures
             SectionTitle("Gestures")
