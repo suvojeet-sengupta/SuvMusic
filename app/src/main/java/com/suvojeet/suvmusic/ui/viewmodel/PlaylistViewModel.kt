@@ -95,7 +95,17 @@ class PlaylistViewModel @Inject constructor(
     fun toggleSaveToLibrary() {
         viewModelScope.launch {
             val playlist = _uiState.value.playlist ?: return@launch
-            if (_uiState.value.isSaved) {
+            val isCurrentlySaved = _uiState.value.isSaved
+            
+            // Sync with YouTube if logged in
+            if (sessionManager.isLoggedIn()) {
+                val rating = if (isCurrentlySaved) "INDIFFERENT" else "LIKE"
+                launch {
+                    youTubeRepository.ratePlaylist(playlist.id, rating)
+                }
+            }
+
+            if (isCurrentlySaved) {
                 libraryRepository.removePlaylist(playlist.id)
             } else {
                 libraryRepository.savePlaylist(playlist)

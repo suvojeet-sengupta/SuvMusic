@@ -195,7 +195,11 @@ fun PlaylistScreen(
                         isSaved = uiState.isSaved,
                         onPlayAll = { onPlayAll(playlist.songs) },
                         onShufflePlay = { onShufflePlay(playlist.songs) },
-                        onToggleSave = { viewModel.toggleSaveToLibrary() },
+                        onToggleSave = { 
+                            viewModel.toggleSaveToLibrary()
+                            val message = if (uiState.isSaved) "Removed from Library" else "Saved to Library"
+                            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                        },
                         onDownload = { viewModel.downloadPlaylist(playlist) },
                         onShare = { sharePlaylist(playlist) },
                         onMoreClick = { showMediaMenu = true },
