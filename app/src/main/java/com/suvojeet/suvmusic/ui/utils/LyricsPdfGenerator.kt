@@ -29,51 +29,78 @@ object LyricsPdfGenerator {
     ): android.net.Uri? = withContext(Dispatchers.IO) {
         try {
             // A4 size in points (approx 595 x 842)
-            // Let's use a standard resolution, e.g., 72dpi -> 595x842
-            // Or higher for better quality on screens -> 300dpi is standard for print but maybe large for canvas ops
-            // Android PdfDocument uses points (1/72 inch).
             val pageWidth = 595
             val pageHeight = 842
             
+            // Branding Colors (Matching SuvMusic Theme)
+            val primaryColor = Color.parseColor("#5A189A") // Purple40 - Deep Electric Purple
+            val secondaryColor = Color.parseColor("#D43A9C") // Magenta60 - Hot Magenta
+            val accentColor = Color.parseColor("#00BDD6") // Cyan70 - Neon Cyan
+            val pageBackgroundColor = Color.rgb(252, 252, 255) // Very light blue-ish white
+            val textColor = Color.rgb(33, 33, 33) // Soft Black
+            
             val pdfDocument = PdfDocument()
-            val paint = Paint()
+            
+            // Paints
+            val backgroundPaint = Paint().apply { color = pageBackgroundColor }
+            val headerPaint = Paint().apply { color = primaryColor }
+            
             val titlePaint = TextPaint().apply {
-                color = Color.BLACK
-                textSize = 24f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                color = Color.WHITE
+                textSize = 28f
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                 isAntiAlias = true
+                textAlign = Paint.Align.LEFT
             }
+            
             val artistPaint = TextPaint().apply {
-                color = Color.DKGRAY
+                color = Color.parseColor("#E8BFFF") // Purple90 - Light Lavender
                 textSize = 18f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
                 isAntiAlias = true
+                textAlign = Paint.Align.LEFT
             }
-            val bodyPaint = TextPaint().apply {
-                color = Color.BLACK
+            
+            val brandingPaint = TextPaint().apply {
+                color = accentColor
                 textSize = 14f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                isAntiAlias = true
+                textAlign = Paint.Align.RIGHT
+            }
+            
+            val bodyPaint = TextPaint().apply {
+                color = textColor
+                textSize = 16f
+                typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
                 isAntiAlias = true
             }
 
-            // Layout the entire text to determine pages
-            val contentWidth = pageWidth - 80 // 40 padding each side
-            val fullText = lyricsLines.joinToString("\n")
+            val footerPaint = TextPaint().apply {
+                color = Color.GRAY
+                textSize = 10f
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.ITALIC)
+                isAntiAlias = true
+                textAlign = Paint.Align.CENTER
+            }
+
+            // Layout setup
+            val contentWidth = pageWidth - 100 // 50 padding each side
+            val fullText = lyricsLines.joinToString("\n\n") 
             
             val staticLayout = StaticLayout.Builder.obtain(
                 fullText, 0, fullText.length, bodyPaint, contentWidth
             )
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .setLineSpacing(0f, 1.2f)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setLineSpacing(10f, 1.3f)
                 .build()
 
-            // Header height (Title + Artist + spacing)
-            val headerHeight = 100
-            val footerHeight = 50
+            val headerHeight = 140
+            val footerHeight = 60
             val contentHeightPerPage = pageHeight - headerHeight - footerHeight
             
-            var currentLine = 0
             val totalLines = staticLayout.lineCount
+            var currentLine = 0
             var pageNumber = 1
 
             while (currentLine < totalLines) {
@@ -81,73 +108,75 @@ object LyricsPdfGenerator {
                 val page = pdfDocument.startPage(pageInfo)
                 val canvas = page.canvas
 
-                // Draw Header (Title & Artist) - Only on first page? Or all? Let's do all for clarity
-                canvas.drawText(songTitle, 40f, 50f, titlePaint)
-                canvas.drawText(artistName, 40f, 75f, artistPaint)
+                // 1. Background
+                canvas.drawRect(0f, 0f, pageWidth.toFloat(), pageHeight.toFloat(), backgroundPaint)
                 
-                // Draw Page Number
-                // canvas.drawText("Page $pageNumber", pageWidth - 80f, pageHeight - 30f, artistPaint)
+                // 2. Header Background
+                canvas.drawRect(0f, 0f, pageWidth.toFloat(), 120f, headerPaint)
                 
-                // Draw Footer branding
-                paint.color = Color.LTGRAY
-                paint.textSize = 10f
-                canvas.drawText("Shared via SuvMusic", pageWidth / 2f - 40f, pageHeight - 30f, paint)
+                // 3. Header Content
+                val safeTitle = if (songTitle.length > 30) songTitle.take(27) + "..." else songTitle
+                canvas.drawText(safeTitle, 50f, 60f, titlePaint)
                 
-                // Draw Lyrics Content
+                // Artist
+                canvas.drawText(artistName, 50f, 90f, artistPaint)
+                
+                // App Branding (Top Right)
+                canvas.drawText("SuvMusic", pageWidth - 50f, 60f, brandingPaint)
+                
+                // Decorative accent line
+                val linePaint = Paint().apply { 
+                    color = secondaryColor
+                    strokeWidth = 3f 
+                }
+                canvas.drawLine(50f, 105f, 180f, 105f, linePaint) 
+
+                // 4. Content
                 canvas.save()
-                canvas.translate(40f, headerHeight.toFloat())
+                canvas.translate(50f, headerHeight.toFloat())
                 
-                // Calculate how many lines fit this page
-                // We need to render the portion of StaticLayout relevant to this page
-                // Since StaticLayout doesn't easily support drawing a range of lines without clipping or new layouts,
-                // we'll use clipping.
-                
-                // Determine the height to draw
-                // We need to scroll the layout
-                val lineTop = staticLayout.getLineTop(currentLine)
-                canvas.translate(0f, (-lineTop).toFloat())
-                
-                // Set clip to only show content area
-                // Since we translated up by lineTop, the current line starts at y=0 relative to clip
-                // But the clip rect needs to be in current canvas coordinates?
-                // Actually, easier approach:
-                // Draw the layout, but clip the canvas to the content area BEFORE translating?
-                // No, translation affects where it draws.
-                
-                // Let's create a new StaticLayout for each page or complex clipping?
-                // Simpler: Just extract text for this page.
-                
+                // Determine lines for this page
                 var pageLinesHeight = 0
                 val startLine = currentLine
-                while (currentLine < totalLines) {
-                    val lineHeight = staticLayout.getLineBottom(currentLine) - staticLayout.getLineTop(currentLine)
+                var endLine = currentLine
+                
+                while (endLine < totalLines) {
+                    val lineHeight = staticLayout.getLineBottom(endLine) - staticLayout.getLineTop(endLine)
                     if (pageLinesHeight + lineHeight > contentHeightPerPage) {
                         break
                     }
                     pageLinesHeight += lineHeight
-                    currentLine++
+                    endLine++
                 }
                 
-                // Extract text for this range
-                val startChar = staticLayout.getLineStart(startLine)
-                val endChar = staticLayout.getLineEnd(currentLine - 1)
-                val pageText = fullText.substring(startChar, endChar)
+                // If a single line is too huge (unlikely) or we made no progress, force at least one line to avoid infinite loop
+                if (endLine == startLine && endLine < totalLines) {
+                    endLine++
+                }
+
+                // Draw the specific range of lines
+                // We need to translate the canvas upwards so that the 'startLine' is at y=0
+                val scrollY = staticLayout.getLineTop(startLine)
+                canvas.translate(0f, -scrollY.toFloat())
                 
-                // Restore canvas to remove the previous complicate translation attempt
-                canvas.restore() 
+                // Clip the canvas to show only the height we calculated
+                // The clip rectangle must be in the current coordinate system (which is shifted by -scrollY)
+                // Actually, clipRect is applied relative to current matrix.
+                // We want to clip from y=scrollY to y=scrollY + pageLinesHeight
+                canvas.clipRect(0, scrollY, contentWidth, scrollY + pageLinesHeight)
                 
-                // New save for actual drawing
-                canvas.save()
-                canvas.translate(40f, headerHeight.toFloat())
-                
-                val pageLayout = StaticLayout.Builder.obtain(
-                    pageText, 0, pageText.length, bodyPaint, contentWidth
-                ).build()
-                
-                pageLayout.draw(canvas)
+                staticLayout.draw(canvas)
                 
                 canvas.restore()
+
+                // 5. Footer
+                canvas.drawLine(50f, pageHeight - 50f, pageWidth - 50f, pageHeight - 50f, Paint().apply { color = Color.LTGRAY })
+                canvas.drawText("Page $pageNumber", pageWidth / 2f, pageHeight - 30f, footerPaint)
+                canvas.drawText("Exported from SuvMusic", pageWidth / 2f, pageHeight - 15f, footerPaint.apply { textSize = 8f })
+
                 pdfDocument.finishPage(page)
+                
+                currentLine = endLine
                 pageNumber++
             }
             
