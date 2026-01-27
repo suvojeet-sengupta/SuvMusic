@@ -75,9 +75,16 @@ class YouTubeJsonParser @Inject constructor() {
         val subtitleFormatted = flexColumns?.optJSONObject(1)
             ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
             ?.optJSONObject("text")
-        val subtitleRuns = subtitleFormatted?.optJSONArray("runs")
-            ?: item.optJSONObject("subtitle")?.optJSONArray("runs")
-        return subtitleRuns?.optJSONObject(0)?.optString("text") ?: "Unknown Artist"
+        
+        // Use getRunText to get the full subtitle string (concatenated runs)
+        // This ensures we get "Artist A & Artist B" instead of just "Artist A"
+        val fullSubtitle = getRunText(subtitleFormatted) 
+            ?: getRunText(item.optJSONObject("subtitle"))
+            ?: return "Unknown Artist"
+            
+        // Split by " • " separator which divides Metadata (Artist • Album • Year)
+        // The first part is usually the Artist(s)
+        return fullSubtitle.split(" • ").firstOrNull()?.trim() ?: "Unknown Artist"
     }
 
     fun extractThumbnail(item: JSONObject?): String? {
