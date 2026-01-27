@@ -22,8 +22,11 @@ import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.MainActivity
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -50,6 +53,9 @@ class MusicPlayerService : MediaLibraryService() {
     @Inject
     lateinit var localAudioRepository: LocalAudioRepository
 
+    @Inject
+    lateinit var sponsorBlockRepository: SponsorBlockRepository
+
     private var mediaLibrarySession: MediaLibrarySession? = null
     
     // Constants for Android Auto browsing
@@ -68,7 +74,8 @@ class MusicPlayerService : MediaLibraryService() {
     private val serviceScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
     private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
     private var dynamicsProcessing: android.media.audiofx.DynamicsProcessing? = null
-    
+    private var sponsorBlockJob: kotlinx.coroutines.Job? = null
+
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
@@ -116,6 +123,26 @@ class MusicPlayerService : MediaLibraryService() {
                             setupAudioNormalization(audioSessionId)
                         }
                     }
+
+                    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                        super.onMediaItemTransition(mediaItem, reason)
+                        mediaItem?.mediaId?.let { videoId ->
+                            // Load SponsorBlock segments when song starts
+                            // We assume mediaId is the YouTube Video ID
+                            if (videoId.isNotEmpty()) {
+                                sponsorBlockRepository.loadSegments(videoId)
+                            }
+                        }
+                    }
+
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        super.onIsPlayingChanged(isPlaying)
+                        if (isPlaying) {
+                            startSponsorBlockMonitoring()
+                        } else {
+                            sponsorBlockJob?.cancel()
+                        }
+                    }
                 })
             }
         
@@ -130,12 +157,12 @@ class MusicPlayerService : MediaLibraryService() {
                  updateAudioEffects(normEnabled, boostEnabled, boostAmount, animate = true)
             }
         }
-        
+
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        
+
         mediaLibrarySession = MediaLibrarySession.Builder(this, player, object : MediaLibrarySession.Callback {
             override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
                 val connectionResult = super.onConnect(session, controller)
@@ -268,7 +295,7 @@ class MusicPlayerService : MediaLibraryService() {
                 }
                 return future
             }
-            
+
             override fun onSearch(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, query: String, params: LibraryParams?): com.google.common.util.concurrent.ListenableFuture<LibraryResult<Void>> {
                 val future = com.google.common.util.concurrent.SettableFuture.create<LibraryResult<Void>>()
                 serviceScope.launch {
@@ -301,10 +328,10 @@ class MusicPlayerService : MediaLibraryService() {
                  }
                  return future
             }
-            
+
             override fun onAddMediaItems(mediaSession: MediaSession, controller: MediaSession.ControllerInfo, mediaItems: MutableList<MediaItem>): com.google.common.util.concurrent.ListenableFuture<MutableList<MediaItem>> {
                  val updatedMediaItemsFuture = com.google.common.util.concurrent.SettableFuture.create<MutableList<MediaItem>>()
-                 
+
                  serviceScope.launch {
                      val updatedList = mediaItems.map { item ->
                         if (item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
@@ -328,9 +355,16 @@ class MusicPlayerService : MediaLibraryService() {
         .setSessionActivity(sessionActivityPendingIntent)
         .setBitmapLoader(CoilBitmapLoader(this))
         .build()
-        
+
         // Register Volume Receiver
         registerReceiver(volumeReceiver, android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
+
+        // Sponsorblock
+        serviceScope.launch {
+            sessionManager.sponsorBlockEnabledFlow.collect { enabled ->
+                sponsorBlockRepository.setEnabled(enabled)
+            }
+        }
     }
     
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
@@ -366,7 +400,7 @@ class MusicPlayerService : MediaLibraryService() {
             }
         }
     }
-    
+
     private  var audioEffectsJob: kotlinx.coroutines.Job? = null
 
     private fun setupAudioNormalization(sessionId: Int) {
@@ -374,11 +408,30 @@ class MusicPlayerService : MediaLibraryService() {
             val normEnabled = sessionManager.isVolumeNormalizationEnabled()
             val boostEnabled = sessionManager.isVolumeBoostEnabled()
             val boostAmount = sessionManager.getVolumeBoostAmount()
-            
+
             if (normEnabled || (boostEnabled && boostAmount > 0)) {
                 // Determine if we need to create/reset effects for the new session
                 // For new session, we apply instantly (no fade) to avoid dips at track start
                 updateAudioEffects(normEnabled, boostEnabled, boostAmount, animate = false, forcedSessionId = sessionId)
+            }
+        }
+    }
+
+    private fun startSponsorBlockMonitoring() {
+        sponsorBlockJob?.cancel()
+        sponsorBlockJob = serviceScope.launch {
+            while (isActive) {
+                val player = mediaLibrarySession?.player
+                if (player != null && player.isPlaying) {
+                    val currentPos = player.currentPosition / 1000f // Convert to seconds
+                    val skipTo = sponsorBlockRepository.checkSkip(currentPos)
+
+                    if (skipTo != null) {
+                        player.seekTo((skipTo * 1000).toLong())
+                        // Note: Toast might not be appropriate from Service, could send custom command to UI
+                    }
+                }
+                delay(1000L) // Check every second
             }
         }
     }
@@ -417,8 +470,8 @@ class MusicPlayerService : MediaLibraryService() {
 
                     if (animate) {
                         // Smooth Ramp to Target
-                        // We need to know current gain? Simplified: just ramp 0 -> Target if starting, 
-                        // or strict update if just changing value? 
+                        // We need to know current gain? Simplified: just ramp 0 -> Target if starting,
+                        // or strict update if just changing value?
                         // For simplicity, we just set the target directly unless it's a fresh enable.
                         // But to be safe on sudden jumps, let's ramp if the jump is large?
                         // Just applying instantly for slider changes is better responsiveness.
@@ -462,7 +515,7 @@ class MusicPlayerService : MediaLibraryService() {
                 .build()
 
                 dynamicsProcessing = android.media.audiofx.DynamicsProcessing(0, sessionId, config)
-                
+
                 dynamicsProcessing?.apply {
                     // Set Limiter Config (Fixed)
                     val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
@@ -525,6 +578,7 @@ class MusicPlayerService : MediaLibraryService() {
 
     override fun onDestroy() {
         serviceScope.cancel() // Cancel scope
+        sponsorBlockJob?.cancel()
         try {
             unregisterReceiver(volumeReceiver)
         } catch (e: Exception) {

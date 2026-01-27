@@ -70,7 +70,9 @@ data class SettingsUiState(
     val audioOffloadEnabled: Boolean = false,
     // Volume Boost
     val volumeBoostEnabled: Boolean = false,
-    val volumeBoostAmount: Int = 0
+    val volumeBoostAmount: Int = 0,
+    // SponsorBlock
+    val sponsorBlockEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -95,7 +97,10 @@ class SettingsViewModel @Inject constructor(
     
     // Volume Slider enabled state
     val volumeSliderEnabledFlow = sessionManager.volumeSliderEnabledFlow // Renamed to avoid name clash
-    
+
+    // SponsorBlock enabled state
+    val sponsorBlockEnabled = sessionManager.sponsorBlockEnabledFlow
+
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
     }
@@ -242,6 +247,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(volumeBoostAmount = amount) }
             }
         }
+
+        viewModelScope.launch {
+            sessionManager.sponsorBlockEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(sponsorBlockEnabled = enabled) }
+            }
+        }
         
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -279,6 +290,7 @@ class SettingsViewModel @Inject constructor(
             val pauseMusicOnMediaMuted = sessionManager.isPauseMusicOnMediaMutedEnabled()
             val keepScreenOn = sessionManager.isKeepScreenOnEnabled()
             val pureBlackEnabled = sessionManager.isPureBlackEnabled()
+            val sponsorBlockEnabled = sessionManager.isSponsorBlockEnabled()
 
             _uiState.update { 
                 it.copy(
@@ -315,7 +327,8 @@ class SettingsViewModel @Inject constructor(
                     lyricsAnimationType = sessionManager.getLyricsAnimationType(),
                     audioOffloadEnabled = sessionManager.isAudioOffloadEnabled(),
                     volumeBoostEnabled = sessionManager.isVolumeBoostEnabled(),
-                    volumeBoostAmount = sessionManager.getVolumeBoostAmount()
+                    volumeBoostAmount = sessionManager.getVolumeBoostAmount(),
+                    sponsorBlockEnabled = sponsorBlockEnabled
                 )
             }
         }
@@ -695,6 +708,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setVolumeBoostAmount(amount)
             _uiState.update { it.copy(volumeBoostAmount = amount) }
+        }
+    }
+    fun setSponsorBlockEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setSponsorBlockEnabled(enabled)
+            _uiState.update { it.copy(sponsorBlockEnabled = enabled) }
         }
     }
 }
