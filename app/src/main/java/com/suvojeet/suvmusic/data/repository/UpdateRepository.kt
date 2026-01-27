@@ -101,13 +101,38 @@ class UpdateRepository @Inject constructor(
             )
             
             // Check if update is available
+            val remotePublishedTime = parsePublishedDate(publishedAt)
+            val localLastUpdateTime = getLocalLastUpdateTime()
+
             if (remoteVersionCode > currentVersionCode) {
+                Result.success(update)
+            } else if (remoteVersionCode == currentVersionCode && remotePublishedTime > localLastUpdateTime) {
+                // Same version but newer build/release date
                 Result.success(update)
             } else {
                 Result.success(null) // No update available
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun parsePublishedDate(dateString: String): Long {
+        return try {
+            // ISO 8601 format: 2024-01-28T10:00:00Z
+            val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+            format.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            format.parse(dateString)?.time ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    private fun getLocalLastUpdateTime(): Long {
+        return try {
+            context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+        } catch (e: Exception) {
+            System.currentTimeMillis() // Fallback to now to avoid unnecessary updates if check fails
         }
     }
     
