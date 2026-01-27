@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -281,6 +282,61 @@ fun PlaybackSettingsScreen(
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
+
+            ListItem(
+                headlineContent = { Text("Volume Boost") },
+                supportingContent = { 
+                    Text("Boost volume beyond 100%. Use with caution.") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.volumeBoostEnabled,
+                        onCheckedChange = { 
+                            viewModel.setVolumeBoostEnabled(it)
+                        }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            if (uiState.volumeBoostEnabled) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Boost Amount",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "+${(uiState.volumeBoostAmount * 0.15).toInt()} dB",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Slider(
+                        value = uiState.volumeBoostAmount.toFloat(),
+                        onValueChange = { viewModel.setVolumeBoostAmount(it.toInt()) },
+                        valueRange = 0f..100f,
+                        steps = 19
+                    )
+                }
+            }
 
             ListItem(
                 headlineContent = { 

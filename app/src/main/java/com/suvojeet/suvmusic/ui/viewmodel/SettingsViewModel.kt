@@ -62,7 +62,10 @@ data class SettingsUiState(
     // Lyrics
     val preferredLyricsProvider: String = "BetterLyrics",
     // Audio Offload
-    val audioOffloadEnabled: Boolean = false
+    val audioOffloadEnabled: Boolean = false,
+    // Volume Boost
+    val volumeBoostEnabled: Boolean = false,
+    val volumeBoostAmount: Int = 0
 )
 
 @HiltViewModel
@@ -205,6 +208,18 @@ class SettingsViewModel @Inject constructor(
             }
         }
         
+        viewModelScope.launch {
+            sessionManager.volumeBoostEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(volumeBoostEnabled = enabled) }
+            }
+        }
+        
+        viewModelScope.launch {
+            sessionManager.volumeBoostAmountFlow.collect { amount ->
+                _uiState.update { it.copy(volumeBoostAmount = amount) }
+            }
+        }
+        
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -271,7 +286,9 @@ class SettingsViewModel @Inject constructor(
                     pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
                     pureBlackEnabled = pureBlackEnabled,
                     preferredLyricsProvider = sessionManager.getPreferredLyricsProvider(),
-                    audioOffloadEnabled = sessionManager.isAudioOffloadEnabled()
+                    audioOffloadEnabled = sessionManager.isAudioOffloadEnabled(),
+                    volumeBoostEnabled = sessionManager.isVolumeBoostEnabled(),
+                    volumeBoostAmount = sessionManager.getVolumeBoostAmount()
                 )
             }
         }
@@ -616,6 +633,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAudioOffloadEnabled(enabled)
             _uiState.update { it.copy(audioOffloadEnabled = enabled) }
+        }
+    }
+
+    fun setVolumeBoostEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setVolumeBoostEnabled(enabled)
+            _uiState.update { it.copy(volumeBoostEnabled = enabled) }
+        }
+    }
+
+    fun setVolumeBoostAmount(amount: Int) {
+        viewModelScope.launch {
+            sessionManager.setVolumeBoostAmount(amount)
+            _uiState.update { it.copy(volumeBoostAmount = amount) }
         }
     }
 }

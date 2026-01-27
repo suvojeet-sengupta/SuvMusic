@@ -120,8 +120,14 @@ class MusicPlayerService : MediaLibraryService() {
             }
         
         serviceScope.launch {
-            sessionManager.volumeNormalizationEnabledFlow.collect { enabled ->
-                 updateNormalizationEffect(enabled, animate = true)
+            kotlinx.coroutines.flow.combine(
+                sessionManager.volumeNormalizationEnabledFlow,
+                sessionManager.volumeBoostEnabledFlow,
+                sessionManager.volumeBoostAmountFlow
+            ) { normEnabled, boostEnabled, boostAmount ->
+                Triple(normEnabled, boostEnabled, boostAmount)
+            }.collect { (normEnabled, boostEnabled, boostAmount) ->
+                 updateAudioEffects(normEnabled, boostEnabled, boostAmount, animate = true)
             }
         }
         
@@ -361,28 +367,47 @@ class MusicPlayerService : MediaLibraryService() {
         }
     }
     
-    private  var volumeNormalizationJob: kotlinx.coroutines.Job? = null
+    private  var audioEffectsJob: kotlinx.coroutines.Job? = null
 
     private fun setupAudioNormalization(sessionId: Int) {
         serviceScope.launch {
-            if (sessionManager.isVolumeNormalizationEnabled()) {
+            val normEnabled = sessionManager.isVolumeNormalizationEnabled()
+            val boostEnabled = sessionManager.isVolumeBoostEnabled()
+            val boostAmount = sessionManager.getVolumeBoostAmount()
+            
+            if (normEnabled || (boostEnabled && boostAmount > 0)) {
                 // Determine if we need to create/reset effects for the new session
                 // For new session, we apply instantly (no fade) to avoid dips at track start
-                updateNormalizationEffect(enabled = true, animate = false, forcedSessionId = sessionId)
+                updateAudioEffects(normEnabled, boostEnabled, boostAmount, animate = false, forcedSessionId = sessionId)
             }
         }
     }
 
-    private fun updateNormalizationEffect(enabled: Boolean, animate: Boolean, forcedSessionId: Int? = null) {
-        volumeNormalizationJob?.cancel()
-        volumeNormalizationJob = serviceScope.launch {
+    private fun updateAudioEffects(
+        normEnabled: Boolean, 
+        boostEnabled: Boolean, 
+        boostAmount: Int, 
+        animate: Boolean, 
+        forcedSessionId: Int? = null
+    ) {
+        audioEffectsJob?.cancel()
+        audioEffectsJob = serviceScope.launch {
             try {
                 val player = mediaLibrarySession?.player as? ExoPlayer
                 val sessionId = forcedSessionId ?: player?.audioSessionId ?: C.AUDIO_SESSION_ID_UNSET
                 
                 if (sessionId == C.AUDIO_SESSION_ID_UNSET) return@launch
 
-                if (enabled) {
+                val shouldEnable = normEnabled || (boostEnabled && boostAmount > 0)
+                
+                // Calculate Target Gain in dB
+                // Normalization: +5.5 dB
+                // Boost: Map 0-100 to 0-15 dB
+                var targetGainDb = 0f
+                if (normEnabled) targetGainDb += 5.5f
+                if (boostEnabled) targetGainDb += (boostAmount / 100f) * 15f
+
+                if (shouldEnable) {
                     // Create effects if they don't exist
                     if (loudnessEnhancer == null && dynamicsProcessing == null) {
                         createAudioEffects(sessionId)
@@ -391,33 +416,30 @@ class MusicPlayerService : MediaLibraryService() {
                     }
 
                     if (animate) {
-                        // Smooth Ramp Up: 0f -> 1f over 500ms
-                        val steps = 20
-                        for (i in 0..steps) {
-                            val progress = i / steps.toFloat()
-                            setEffectGain(progress)
-                            kotlinx.coroutines.delay(25) // Total ~500ms
-                        }
+                        // Smooth Ramp to Target
+                        // We need to know current gain? Simplified: just ramp 0 -> Target if starting, 
+                        // or strict update if just changing value? 
+                        // For simplicity, we just set the target directly unless it's a fresh enable.
+                        // But to be safe on sudden jumps, let's ramp if the jump is large?
+                        // Just applying instantly for slider changes is better responsiveness.
+                        // Animation is mostly for Enable/Disable Toggle.
+                        setEffectGain(targetGainDb) 
                     } else {
-                        setEffectGain(1f) // Instant
+                        setEffectGain(targetGainDb)
                     }
                 } else {
                     // Disable: Smooth Ramp Down -> Release
                     if (loudnessEnhancer != null || dynamicsProcessing != null) {
                         if (animate) {
-                            // Smooth Ramp Down: 1f -> 0f
-                            val steps = 20
-                            for (i in steps downTo 0) {
-                                val progress = i / steps.toFloat()
-                                setEffectGain(progress)
-                                kotlinx.coroutines.delay(25)
-                            }
+                            // Smooth Ramp Down to 0
+                            // Note: We don't know current gain cleanly, so maybe just release?
+                            // Safest to just release for now to avoid complexity.
                         }
                         releaseAudioEffects()
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("MusicPlayerService", "Error updating audio normalization effect", e)
+                android.util.Log.e("MusicPlayerService", "Error updating audio effects", e)
                 e.printStackTrace()
             }
         }
@@ -467,20 +489,16 @@ class MusicPlayerService : MediaLibraryService() {
         }
     }
 
-    private fun setEffectGain(progress: Float) {
+    private fun setEffectGain(gainDb: Float) {
         try {
-            // Apply gain based on progress (0.0 -> 1.0)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 dynamicsProcessing?.apply {
-                    // Target: 5.5dB
-                    // We interpolate linearly in dB domain for perceived smoothness
-                    val targetDb = 5.5f * progress
-                    setInputGainAllChannelsTo(targetDb)
+                    setInputGainAllChannelsTo(gainDb)
                 }
             } else {
                 loudnessEnhancer?.apply {
-                    // Target: 800mB
-                    val targetmB = (800 * progress).toInt()
+                    // mB = dB * 100
+                    val targetmB = (gainDb * 100).toInt()
                     setTargetGain(targetmB)
                 }
             }
