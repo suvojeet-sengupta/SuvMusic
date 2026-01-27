@@ -148,6 +148,37 @@ class YouTubeSearchService @Inject constructor(
             e.printStackTrace()
             emptyList()
         }
+    /**
+     * Search for albums on YouTube Music.
+     */
+    suspend fun searchAlbums(query: String): List<com.suvojeet.suvmusic.data.model.Album> = withContext(Dispatchers.IO) {
+        try {
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+                ?: return@withContext emptyList()
+            
+            val searchExtractor = ytService.getSearchExtractor(query, listOf(FILTER_ALBUMS), "")
+            searchExtractor.fetchPage()
+            
+            searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.playlist.PlaylistInfoItem>().mapNotNull { item ->
+                try {
+                    val albumId = item.url?.substringAfter("list=")?.substringBefore("&")
+                    if (albumId.isNullOrBlank()) return@mapNotNull null
+                    
+                    com.suvojeet.suvmusic.data.model.Album(
+                        browseId = albumId,
+                        title = item.name ?: "Unknown Album",
+                        artist = item.uploaderName ?: "Unknown Artist",
+                        thumbnailUrl = item.thumbnails?.lastOrNull()?.url,
+                        year = "" // NewPipe often doesn't give year in search results
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 
     /**

@@ -313,6 +313,45 @@ fun SearchScreen(
                     }
                 }
             }
+
+            // Category Chips (Only for YouTube Music tab)
+            AnimatedVisibility(
+                visible = uiState.query.isNotBlank() && uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                val filters = listOf(
+                    ResultFilter.ALL to "All",
+                    ResultFilter.SONGS to "Songs",
+                    ResultFilter.VIDEOS to "Videos",
+                    ResultFilter.ALBUMS to "Albums",
+                    ResultFilter.ARTISTS to "Artists",
+                    ResultFilter.COMMUNITY_PLAYLISTS to "Community Playlists",
+                    ResultFilter.FEATURED_PLAYLISTS to "Featured Playlists"
+                )
+                
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    items(filters) { (filter, label) ->
+                        FilterChip(
+                            selected = uiState.resultFilter == filter,
+                            onClick = { viewModel.setResultFilter(filter) },
+                            label = { Text(label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = accentColor.copy(alpha = 0.2f),
+                                selectedLabelColor = accentColor,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                labelColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            border = null,
+                            shape = CircleShape
+                        )
+                    }
+                }
+            }
             
             // Content Area
             LazyColumn(
@@ -351,98 +390,145 @@ fun SearchScreen(
                     }
                 }
                 
-                // Artist Results (show at top)
-                if (uiState.query.isNotBlank() && uiState.artistResults.isNotEmpty()) {
-                    item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        ) {
+                // Filtered Views
+                if (uiState.resultFilter != ResultFilter.ALL && !uiState.isLoading) {
+                    when (uiState.resultFilter) {
+                        ResultFilter.SONGS, ResultFilter.VIDEOS -> {
+                            itemsIndexed(uiState.results) { index, song ->
+                                SearchResultItem(
+                                    song = song,
+                                    onClick = {
+                                        viewModel.addToRecentSearches(song)
+                                        onSongClick(uiState.results, index)
+                                    },
+                                    onArtistClick = { artistId -> onArtistClick(artistId) },
+                                    onMoreClick = {
+                                        selectedSong = song
+                                        showSongMenu = true
+                                    }
+                                )
+                            }
+                        }
+                        ResultFilter.ARTISTS -> {
                             items(uiState.artistResults) { artist ->
-                                ArtistSearchCard(
+                                ArtistSearchListItem(
                                     artist = artist,
                                     onClick = { onArtistClick(artist.id) }
                                 )
                             }
                         }
-                    }
-                    
-                    item {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-                
-                // Playlist Results (show after artists)
-                if (uiState.query.isNotBlank() && uiState.playlistResults.isNotEmpty()) {
-                    item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        ) {
-                            items(uiState.playlistResults) { playlist ->
-                                PlaylistSearchCard(
-                                    playlist = playlist,
-                                    onClick = { onPlaylistClick(playlist.id) }
-                                )
-                            }
-                        }
-                    }
-                    
-                    item {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-
-                // Album Results
-                if (uiState.query.isNotBlank() && uiState.albumResults.isNotEmpty()) {
-                    item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        ) {
+                        ResultFilter.ALBUMS -> {
                             items(uiState.albumResults) { album ->
-                                AlbumSearchCard(
+                                AlbumSearchListItem(
                                     album = album,
                                     onClick = { onAlbumClick(album) }
                                 )
                             }
                         }
+                        ResultFilter.COMMUNITY_PLAYLISTS, ResultFilter.FEATURED_PLAYLISTS -> {
+                            items(uiState.playlistResults) { playlist ->
+                                PlaylistSearchListItem(
+                                    playlist = playlist,
+                                    onClick = { onPlaylistClick(playlist.id) }
+                                )
+                            }
+                        }
+                        else -> {}
+                    }
+                } else if (uiState.resultFilter == ResultFilter.ALL) {
+                    // Artist Results (show at top)
+                    if (uiState.query.isNotBlank() && uiState.artistResults.isNotEmpty()) {
+                        item {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            ) {
+                                items(uiState.artistResults) { artist ->
+                                    ArtistSearchCard(
+                                        artist = artist,
+                                        onClick = { onArtistClick(artist.id) }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        item {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                     
-                    item {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-                
-                // Search Results
-                if (uiState.query.isNotBlank() && uiState.results.isNotEmpty()) {
-                    itemsIndexed(uiState.results) { index, song ->
-                        SearchResultItem(
-                            song = song,
-                            onClick = {
-                                viewModel.addToRecentSearches(song)
-                                onSongClick(uiState.results, index)
-                            },
-                            onArtistClick = { artistId ->
-                                onArtistClick(artistId)
-                            },
-                            onMoreClick = {
-                                selectedSong = song
-                                showSongMenu = true
+                    // Playlist Results (show after artists)
+                    if (uiState.query.isNotBlank() && uiState.playlistResults.isNotEmpty()) {
+                        item {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            ) {
+                                items(uiState.playlistResults) { playlist ->
+                                    PlaylistSearchCard(
+                                        playlist = playlist,
+                                        onClick = { onPlaylistClick(playlist.id) }
+                                    )
+                                }
                             }
-                        )
+                        }
+                        
+                        item {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+    
+                    // Album Results
+                    if (uiState.query.isNotBlank() && uiState.albumResults.isNotEmpty()) {
+                        item {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            ) {
+                                items(uiState.albumResults) { album ->
+                                    AlbumSearchCard(
+                                        album = album,
+                                        onClick = { onAlbumClick(album) }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        item {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                    
+                    // Search Results
+                    if (uiState.query.isNotBlank() && uiState.results.isNotEmpty()) {
+                        itemsIndexed(uiState.results) { index, song ->
+                            SearchResultItem(
+                                song = song,
+                                onClick = {
+                                    viewModel.addToRecentSearches(song)
+                                    onSongClick(uiState.results, index)
+                                },
+                                onArtistClick = { artistId ->
+                                    onArtistClick(artistId)
+                                },
+                                onMoreClick = {
+                                    selectedSong = song
+                                    showSongMenu = true
+                                }
+                            )
+                        }
                     }
                 }
                 
@@ -608,6 +694,137 @@ fun SearchScreen(
                 },
                 isLoggedIn = true // Assuming logged in if we are here
              )
+        }
+    }
+}
+
+@Composable
+fun ArtistSearchListItem(
+    artist: Artist,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = artist.thumbnailUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentScale = ContentScale.Crop
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column {
+            Text(
+                text = artist.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
+            )
+            
+            if (artist.subscribers != null) {
+                Text(
+                    text = artist.subscribers,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AlbumSearchListItem(
+    album: Album,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = album.thumbnailUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .size(50.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentScale = ContentScale.Crop
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column {
+            Text(
+                text = album.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Text(
+                text = "Album • ${album.artist}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun PlaylistSearchListItem(
+    playlist: Playlist,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = playlist.thumbnailUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .size(50.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentScale = ContentScale.Crop
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column {
+            Text(
+                text = playlist.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Text(
+                text = "Playlist • ${playlist.author}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
