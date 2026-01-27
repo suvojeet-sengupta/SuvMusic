@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HeadsetMic
@@ -110,6 +111,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val floatingPlayerEnabled by viewModel.dynamicIslandEnabled.collectAsState(initial = false)
     val offlineModeEnabled by viewModel.offlineModeEnabled.collectAsState(initial = false)
+    val sponsorBlockEnabled by viewModel.sponsorBlockEnabled.collectAsState(initial = true)
 
     // Background Gradient (Subtle Premium Feel)
     val backgroundBrush = Brush.verticalGradient(
@@ -285,6 +287,18 @@ fun SettingsScreen(
                                 }
                             }
                         )
+
+                        HorizontalDivider()
+
+                        SettingsSwitchItem(
+                            icon = Icons.Default.FastForward,
+                            title = "SponsorBlock",
+                            subtitle = "Skip non-music segments",
+                            checked = sponsorBlockEnabled,
+                            onCheckedChange = {
+                                viewModel.setSponsorBlockEnabled(it)
+                            }
+                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -452,8 +466,8 @@ fun SettingsScreen(
                                     .padding(vertical = 4.dp),
                                 trailingContent = {
                                     Icon(
-                                        Icons.Default.Close, 
-                                        "Remove", 
+                                        Icons.Default.Close,
+                                        "Remove",
                                         modifier = Modifier.clickable { viewModel.removeAccount(account.email) }
                                     )
                                 },
@@ -462,7 +476,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    
+
                     TextButton(
                         onClick = {
                             viewModel.prepareAddAccount()
@@ -481,7 +495,7 @@ fun SettingsScreen(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
-    
+
     // Update Dialogs
     when (val updateState = uiState.updateState) {
         is UpdateState.Checking -> CheckingUpdateDialog()
@@ -609,7 +623,7 @@ private fun SettingsSwitchItem(
     ListItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
         supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
-        leadingContent = icon?.let { 
+        leadingContent = icon?.let {
             { Icon(imageVector = it, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
         },
         trailingContent = {

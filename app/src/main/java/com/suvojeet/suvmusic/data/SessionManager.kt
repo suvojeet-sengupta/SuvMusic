@@ -157,6 +157,9 @@ class SessionManager @Inject constructor(
         // Volume Boost
         private val VOLUME_BOOST_ENABLED_KEY = booleanPreferencesKey("volume_boost_enabled")
         private val VOLUME_BOOST_AMOUNT_KEY = intPreferencesKey("volume_boost_amount")
+
+        // SponsorBlock
+        private val SPONSOR_BLOCK_ENABLED_KEY = booleanPreferencesKey("sponsor_block_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -194,6 +197,19 @@ class SessionManager @Inject constructor(
     
     suspend fun isDynamicIslandEnabled(): Boolean = 
         context.dataStore.data.first()[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
+
+    suspend fun isSponsorBlockEnabled(): Boolean =
+        context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: true // Enabled by default
+
+    val sponsorBlockEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SPONSOR_BLOCK_ENABLED_KEY] ?: true
+    }
+
+    suspend fun setSponsorBlockEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[SPONSOR_BLOCK_ENABLED_KEY] = enabled
+        }
+    }
     
     val dynamicIslandEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
