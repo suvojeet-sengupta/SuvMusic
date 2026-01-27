@@ -38,8 +38,11 @@ enum class SearchTab {
 enum class ResultFilter {
     ALL,
     SONGS,
+    VIDEOS,
+    ALBUMS,
     ARTISTS,
-    ALBUMS
+    COMMUNITY_PLAYLISTS,
+    FEATURED_PLAYLISTS
 }
 
 data class SearchUiState(
@@ -323,36 +326,67 @@ class SearchViewModel @Inject constructor(
                 
                 when (currentTab) {
                     SearchTab.YOUTUBE_MUSIC -> {
-                        // Search songs, artists, and playlists in parallel
                         coroutineScope {
-                            val songsDeferred = async { 
-                                youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS) 
-                            }
-                            val videosDeferred = async {
-                                youTubeRepository.search(query, YouTubeRepository.FILTER_VIDEOS)
-                            }
-                            val artistsDeferred = async { 
-                                youTubeRepository.searchArtists(query) 
-                            }
-                            val playlistsDeferred = async {
-                                youTubeRepository.searchPlaylists(query)
-                            }
+                            val filter = _uiState.value.resultFilter
                             
-                            val songs = songsDeferred.await()
-                            val videos = videosDeferred.await()
-                            val artists = artistsDeferred.await()
-                            val playlists = playlistsDeferred.await()
-                            
-                            // Combine songs and videos, removing duplicates based on id
-                            val combinedResults = (songs + videos).distinctBy { it.id }
-                            
-                            _uiState.update { 
-                                it.copy(
-                                    results = combinedResults,
-                                    artistResults = artists,
-                                    playlistResults = playlists,
-                                    isLoading = false
-                                )
+                            when (filter) {
+                                ResultFilter.ALL -> {
+                                    val songsDeferred = async { youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS) }
+                                    val videosDeferred = async { youTubeRepository.search(query, YouTubeRepository.FILTER_VIDEOS) }
+                                    val artistsDeferred = async { youTubeRepository.searchArtists(query) }
+                                    val playlistsDeferred = async { youTubeRepository.searchPlaylists(query) }
+                                    val albumsDeferred = async { youTubeRepository.searchAlbums(query) }
+                                    
+                                    val songs = songsDeferred.await()
+                                    val videos = videosDeferred.await()
+                                    val artists = artistsDeferred.await()
+                                    val playlists = playlistsDeferred.await()
+                                    val albums = albumsDeferred.await()
+                                    
+                                    val combinedResults = (songs + videos).distinctBy { it.id }
+                                    
+                                    _uiState.update { 
+                                        it.copy(
+                                            results = combinedResults,
+                                            artistResults = artists,
+                                            playlistResults = playlists,
+                                            albumResults = albums,
+                                            isLoading = false
+                                        )
+                                    }
+                                }
+                                ResultFilter.SONGS -> {
+                                    val results = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                                    _uiState.update { it.copy(results = results, isLoading = false) }
+                                }
+                                ResultFilter.VIDEOS -> {
+                                    val results = youTubeRepository.search(query, YouTubeRepository.FILTER_VIDEOS)
+                                    _uiState.update { it.copy(results = results, isLoading = false) }
+                                }
+                                ResultFilter.ALBUMS -> {
+                                    val results = youTubeRepository.searchAlbums(query)
+                                    _uiState.update { it.copy(albumResults = results, isLoading = false) }
+                                }
+                                ResultFilter.ARTISTS -> {
+                                    val results = youTubeRepository.searchArtists(query)
+                                    _uiState.update { it.copy(artistResults = results, isLoading = false) }
+                                }
+                                ResultFilter.COMMUNITY_PLAYLISTS -> {
+                                    val results = youTubeRepository.searchPlaylists(query)
+                                    val filtered = results.filter { 
+                                        !it.author.equals("YouTube Music", ignoreCase = true) && 
+                                        !it.author.equals("YouTube", ignoreCase = true) 
+                                    }
+                                    _uiState.update { it.copy(playlistResults = filtered, isLoading = false) }
+                                }
+                                ResultFilter.FEATURED_PLAYLISTS -> {
+                                    val results = youTubeRepository.searchPlaylists(query)
+                                    val filtered = results.filter { 
+                                        it.author.equals("YouTube Music", ignoreCase = true) || 
+                                        it.author.equals("YouTube", ignoreCase = true) 
+                                    }
+                                    _uiState.update { it.copy(playlistResults = filtered, isLoading = false) }
+                                }
                             }
                         }
                     }

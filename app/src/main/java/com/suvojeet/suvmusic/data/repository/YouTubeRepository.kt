@@ -169,6 +169,11 @@ class YouTubeRepository @Inject constructor(
         return searchService.searchPlaylists(query)
     }
 
+    suspend fun searchAlbums(query: String): List<Album> {
+        if (!networkMonitor.isCurrentlyConnected()) return emptyList()
+        return searchService.searchAlbums(query)
+    }
+
     suspend fun getSearchSuggestions(query: String): List<String> {
         if (!networkMonitor.isCurrentlyConnected()) return emptyList()
         return searchService.getSearchSuggestions(query)
