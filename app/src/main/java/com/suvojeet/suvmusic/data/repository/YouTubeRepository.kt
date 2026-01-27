@@ -58,11 +58,6 @@ class YouTubeRepository @Inject constructor(
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
     
-    // START: Temporary cache for handling API delay
-    // YouTube API is slow to update Liked Music list. We maintain a set of locally unliked songs
-    // to filter them out from API responses until they are truly gone.
-    private val locallyUnlikedSongIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
-    // END: Temporary cache
 
 
     // Comments Pagination State
@@ -505,10 +500,7 @@ class YouTubeRepository @Inject constructor(
                 }
                 
                 if (songs.isNotEmpty()) {
-                    // Filter out songs that we have recently unliked locally but API still returns
-                    val filteredSongs = songs.filter { !locallyUnlikedSongIds.contains(it.id) }
-                    
-                    val distinctSongs = filteredSongs.distinctBy { it.id }
+                    val distinctSongs = songs.distinctBy { it.id }
                     // Cache the liked songs with metadata
                     libraryRepository.savePlaylist(
                         Playlist(
@@ -534,14 +526,7 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun removeFromLikedCache(songId: String) {
-        locallyUnlikedSongIds.add(songId)
         libraryRepository.removeSongFromPlaylist("LM", songId)
-        
-        // Remove from memory after 5 minutes (assuming API consistency by then)
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
-            kotlinx.coroutines.delay(5 * 60 * 1000L)
-            locallyUnlikedSongIds.remove(songId)
-        }
     }
     
     suspend fun getPlaylist(playlistId: String): Playlist = withContext(Dispatchers.IO) {
@@ -894,16 +879,10 @@ class YouTubeRepository @Inject constructor(
     // Mutating Actions (Library Management)
     // ============================================================================================
 
-    suspend fun rateSong(videoId: String, rating: String): Boolean {
-        if (!networkMonitor.isCurrentlyConnected()) return false
-        
-        // If we are liking the song again, remove it from our local blacklist
-        if (rating == "LIKE") {
-            locallyUnlikedSongIds.remove(videoId)
-        }
-        
-        return try {
-            val endpoint = when (rating) {
+    suspend fun rateSong(videoId: String, rating: String): Boolean = withContext(Dispatchers.IO) {
+        // rating: LIKE, DISLIKE, INDIFFERENT
+        try {
+            val endpoint = when(rating) {
                 "LIKE" -> "like/like"
                 "DISLIKE" -> "like/dislike"
                 else -> "like/removelike"
