@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -113,6 +114,15 @@ fun MiscScreen(
                             title = "Pause music when media is muted",
                             checked = uiState.pauseMusicOnMediaMuted,
                             onCheckedChange = { viewModel.setPauseMusicOnMediaMuted(it) }
+                        )
+                        
+                        HorizontalDivider()
+
+                        MiscSwitchItem(
+                            icon = Icons.Default.Smartphone,
+                            title = "Keep screen on when player is expanded",
+                            checked = uiState.keepScreenOn,
+                            onCheckedChange = { viewModel.setKeepScreenOn(it) }
                         )
                         
                         HorizontalDivider()
