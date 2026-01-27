@@ -150,6 +150,10 @@ class SessionManager @Inject constructor(
 
         // Audio Offload
         private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
+
+        // Volume Boost
+        private val VOLUME_BOOST_ENABLED_KEY = booleanPreferencesKey("volume_boost_enabled")
+        private val VOLUME_BOOST_AMOUNT_KEY = intPreferencesKey("volume_boost_amount")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -792,6 +796,37 @@ class SessionManager @Inject constructor(
     suspend fun setAudioOffloadEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[AUDIO_OFFLOAD_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- Volume Boost ---
+
+    suspend fun isVolumeBoostEnabled(): Boolean = 
+        context.dataStore.data.first()[VOLUME_BOOST_ENABLED_KEY] ?: false
+
+    val volumeBoostEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[VOLUME_BOOST_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setVolumeBoostEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[VOLUME_BOOST_ENABLED_KEY] = enabled
+        }
+    }
+
+    /**
+     * Get volume boost amount (0-100).
+     */
+    suspend fun getVolumeBoostAmount(): Int = 
+        context.dataStore.data.first()[VOLUME_BOOST_AMOUNT_KEY] ?: 0
+
+    val volumeBoostAmountFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[VOLUME_BOOST_AMOUNT_KEY] ?: 0
+    }
+
+    suspend fun setVolumeBoostAmount(amount: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[VOLUME_BOOST_AMOUNT_KEY] = amount
         }
     }
 
