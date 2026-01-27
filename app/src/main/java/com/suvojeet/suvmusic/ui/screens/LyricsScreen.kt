@@ -52,6 +52,9 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PictureAsPdf
 import com.suvojeet.suvmusic.ui.utils.LyricsPdfGenerator
 
+import com.suvojeet.suvmusic.data.model.LyricsTextPosition
+import com.suvojeet.suvmusic.data.model.LyricsAnimationType
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LyricsScreen(
@@ -73,6 +76,8 @@ fun LyricsScreen(
     selectedProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
     enabledProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
     onProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
+    lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
+    lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
     modifier: Modifier = Modifier
 ) {
     // Theme-aware colors
@@ -301,7 +306,9 @@ fun LyricsScreen(
                         onSeekTo = onSeekTo,
                         songTitle = songTitle,
                         artistName = artistName,
-                        artworkUrl = artworkUrl
+                        artworkUrl = artworkUrl,
+                        textPosition = lyricsTextPosition,
+                        animationType = lyricsAnimationType
                     )
                 }
             }
@@ -518,7 +525,9 @@ fun LyricsList(
     onSeekTo: (Long) -> Unit = {},
     songTitle: String,
     artistName: String,
-    artworkUrl: String?
+    artworkUrl: String?,
+    textPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
+    animationType: LyricsAnimationType = LyricsAnimationType.WORD
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
@@ -528,6 +537,25 @@ fun LyricsList(
 
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    
+    // Determine layout alignment from settings
+    val alignment = when (textPosition) {
+        LyricsTextPosition.CENTER -> Alignment.Center
+        LyricsTextPosition.LEFT -> Alignment.CenterStart
+        LyricsTextPosition.RIGHT -> Alignment.CenterEnd
+    }
+    
+    val textAlign = when (textPosition) {
+        LyricsTextPosition.CENTER -> TextAlign.Center
+        LyricsTextPosition.LEFT -> TextAlign.Start
+        LyricsTextPosition.RIGHT -> TextAlign.End
+    }
+    
+    val flowArrangement = when (textPosition) {
+        LyricsTextPosition.CENTER -> Arrangement.Center
+        LyricsTextPosition.LEFT -> Arrangement.Start
+        LyricsTextPosition.RIGHT -> Arrangement.End
+    }
     
     // Determine active line index
     var activeLineIndex by remember { mutableStateOf(-1) }
@@ -690,12 +718,13 @@ fun LyricsList(
                             )
                             .padding(horizontal = 32.dp, vertical = 8.dp) // Reduced vertical padding
                     ) {
-                        if (line.words != null && line.words.isNotEmpty() && lyrics.isSynced) {
+                        // Use word-by-word ONLY if enabled and available
+                        if (line.words != null && line.words.isNotEmpty() && lyrics.isSynced && animationType == LyricsAnimationType.WORD) {
                             // Word-by-word rendering
                             OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalArrangement = flowArrangement,
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 line.words.forEach { word ->
@@ -748,7 +777,7 @@ fun LyricsList(
                                     lineHeight = 36.sp
                                 ),
                                 color = textColor.copy(alpha = lineAlpha),
-                                textAlign = TextAlign.Start,
+                                textAlign = textAlign,
                                 modifier = Modifier.fillMaxWidth() // Ensuring full width for text
                             )
                         }

@@ -127,6 +127,8 @@ class SessionManager @Inject constructor(
         private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
         private val ENABLE_KUGOU_KEY = booleanPreferencesKey("enable_kugou")
         private val PREFERRED_LYRICS_PROVIDER_KEY = stringPreferencesKey("preferred_lyrics_provider")
+        private val LYRICS_TEXT_POSITION_KEY = stringPreferencesKey("lyrics_text_position")
+        private val LYRICS_ANIMATION_TYPE_KEY = stringPreferencesKey("lyrics_animation_type")
 
         // Player Cache
         private val PLAYER_CACHE_LIMIT_KEY = androidx.datastore.preferences.core.longPreferencesKey("player_cache_limit")
@@ -416,6 +418,44 @@ class SessionManager @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[PREFERRED_LYRICS_PROVIDER_KEY] = provider
     }
+    }
+    
+    suspend fun getLyricsTextPosition(): com.suvojeet.suvmusic.data.model.LyricsTextPosition {
+        val positionName = context.dataStore.data.first()[LYRICS_TEXT_POSITION_KEY]
+        return positionName?.let {
+            try { com.suvojeet.suvmusic.data.model.LyricsTextPosition.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER }
+        } ?: com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER
+    }
+    
+    val lyricsTextPositionFlow: Flow<com.suvojeet.suvmusic.data.model.LyricsTextPosition> = context.dataStore.data.map { preferences ->
+        preferences[LYRICS_TEXT_POSITION_KEY]?.let {
+            try { com.suvojeet.suvmusic.data.model.LyricsTextPosition.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER }
+        } ?: com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER
+    }
+    
+    suspend fun setLyricsTextPosition(position: com.suvojeet.suvmusic.data.model.LyricsTextPosition) {
+        context.dataStore.edit { preferences ->
+            preferences[LYRICS_TEXT_POSITION_KEY] = position.name
+        }
+    }
+    
+    suspend fun getLyricsAnimationType(): com.suvojeet.suvmusic.data.model.LyricsAnimationType {
+        val typeName = context.dataStore.data.first()[LYRICS_ANIMATION_TYPE_KEY]
+        return typeName?.let {
+            try { com.suvojeet.suvmusic.data.model.LyricsAnimationType.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD }
+        } ?: com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD
+    }
+    
+    val lyricsAnimationTypeFlow: Flow<com.suvojeet.suvmusic.data.model.LyricsAnimationType> = context.dataStore.data.map { preferences ->
+        preferences[LYRICS_ANIMATION_TYPE_KEY]?.let {
+            try { com.suvojeet.suvmusic.data.model.LyricsAnimationType.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD }
+        } ?: com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD
+    }
+    
+    suspend fun setLyricsAnimationType(type: com.suvojeet.suvmusic.data.model.LyricsAnimationType) {
+        context.dataStore.edit { preferences ->
+            preferences[LYRICS_ANIMATION_TYPE_KEY] = type.name
+        }
     }
 
     // --- Player Cache Limit ---

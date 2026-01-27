@@ -184,6 +184,8 @@ fun PlayerScreen(
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
     val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsState(initial = 10)
     val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsState(initial = false)
+    val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER)
+    val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD)
     
     // Keep Screen On Logic
     DisposableEffect(keepScreenOn) {
@@ -816,6 +818,8 @@ fun PlayerScreen(
                     selectedProvider = selectedLyricsProvider,
                     enabledProviders = enabledLyricsProviders,
                     onProviderChange = onLyricsProviderChange,
+                    lyricsTextPosition = lyricsTextPosition,
+                    lyricsAnimationType = lyricsAnimationType,
                     isPlaying = playerState.isPlaying,
                     onPlayPause = onPlayPause,
                     onNext = onNext,
