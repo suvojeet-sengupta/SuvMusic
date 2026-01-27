@@ -57,6 +57,7 @@ data class SettingsUiState(
     // Misc
     val stopMusicOnTaskClear: Boolean = false,
     val pauseMusicOnMediaMuted: Boolean = false,
+    val keepScreenOn: Boolean = false,
     // Appearance
     val pureBlackEnabled: Boolean = false,
     // Lyrics
@@ -191,6 +192,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.keepScreenOnEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(keepScreenOn = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.pureBlackEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(pureBlackEnabled = enabled) }
             }
@@ -254,6 +261,7 @@ class SettingsViewModel @Inject constructor(
             val hapticsIntensity = sessionManager.getHapticsIntensity()
             val stopMusicOnTaskClear = sessionManager.isStopMusicOnTaskClearEnabled()
             val pauseMusicOnMediaMuted = sessionManager.isPauseMusicOnMediaMutedEnabled()
+            val keepScreenOn = sessionManager.isKeepScreenOnEnabled()
             val pureBlackEnabled = sessionManager.isPureBlackEnabled()
 
             _uiState.update { 
@@ -284,6 +292,7 @@ class SettingsViewModel @Inject constructor(
                     hapticsIntensity = hapticsIntensity,
                     stopMusicOnTaskClear = stopMusicOnTaskClear,
                     pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
+                    keepScreenOn = keepScreenOn,
                     pureBlackEnabled = pureBlackEnabled,
                     preferredLyricsProvider = sessionManager.getPreferredLyricsProvider(),
                     audioOffloadEnabled = sessionManager.isAudioOffloadEnabled(),
@@ -612,6 +621,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPauseMusicOnMediaMutedEnabled(enabled)
             _uiState.update { it.copy(pauseMusicOnMediaMuted = enabled) }
+        }
+    }
+
+    fun setKeepScreenOn(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setKeepScreenOnEnabled(enabled)
+            _uiState.update { it.copy(keepScreenOn = enabled) }
         }
     }
 

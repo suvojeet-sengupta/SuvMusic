@@ -141,6 +141,7 @@ class SessionManager @Inject constructor(
         // Misc
         private val STOP_MUSIC_ON_TASK_CLEAR_KEY = booleanPreferencesKey("stop_music_on_task_clear")
         private val PAUSE_MUSIC_ON_MEDIA_MUTED_KEY = booleanPreferencesKey("pause_music_on_media_muted")
+        private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         
         // Appearance
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
@@ -556,6 +557,19 @@ class SessionManager @Inject constructor(
     suspend fun setPauseMusicOnMediaMutedEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PAUSE_MUSIC_ON_MEDIA_MUTED_KEY] = enabled
+        }
+    }
+
+    suspend fun isKeepScreenOnEnabled(): Boolean = 
+        context.dataStore.data.first()[KEEP_SCREEN_ON_KEY] ?: false
+
+    val keepScreenOnEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEEP_SCREEN_ON_KEY] ?: false
+    }
+
+    suspend fun setKeepScreenOnEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEEP_SCREEN_ON_KEY] = enabled
         }
     }
 

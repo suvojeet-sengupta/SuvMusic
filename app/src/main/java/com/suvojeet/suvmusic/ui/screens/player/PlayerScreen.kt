@@ -183,6 +183,22 @@ fun PlayerScreen(
     val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
     val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsState(initial = 10)
+    val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsState(initial = false)
+    
+    // Keep Screen On Logic
+    DisposableEffect(keepScreenOn) {
+        val window = (context as? Activity)?.window
+        if (keepScreenOn) {
+            window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        
+        onDispose {
+            // Always clear flag when leaving player screen (or when setting changes)
+            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
     
     val currentSeekbarStyle = try {
         SeekbarStyle.valueOf(savedSeekbarStyleString)
