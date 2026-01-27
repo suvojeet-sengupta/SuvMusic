@@ -144,8 +144,9 @@ fun AboutScreen(
                 shape = RoundedCornerShape(20.dp),
                 color = primaryColor.copy(alpha = 0.1f)
             ) {
+                val versionName = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME
                 Text(
-                    text = if (isDeveloperMode) "v1.0.4 • Dev Mode" else "Version 1.0.4",
+                    text = if (isDeveloperMode) "v$versionName • Dev Mode" else "Version $versionName",
                     style = MaterialTheme.typography.labelMedium,
                     color = primaryColor,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
