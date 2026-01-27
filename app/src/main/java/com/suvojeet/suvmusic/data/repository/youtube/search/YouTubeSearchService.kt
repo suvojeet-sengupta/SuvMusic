@@ -148,6 +148,8 @@ class YouTubeSearchService @Inject constructor(
             e.printStackTrace()
             emptyList()
         }
+    }
+
     /**
      * Search for albums on YouTube Music.
      */
@@ -165,7 +167,7 @@ class YouTubeSearchService @Inject constructor(
                     if (albumId.isNullOrBlank()) return@mapNotNull null
                     
                     com.suvojeet.suvmusic.data.model.Album(
-                        browseId = albumId,
+                        id = albumId,
                         title = item.name ?: "Unknown Album",
                         artist = item.uploaderName ?: "Unknown Artist",
                         thumbnailUrl = item.thumbnails?.lastOrNull()?.url,
