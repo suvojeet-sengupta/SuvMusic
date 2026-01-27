@@ -30,8 +30,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.FormatAlignLeft
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -65,6 +67,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.data.model.LyricsAnimationType
+import com.suvojeet.suvmusic.data.model.LyricsTextPosition
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -84,6 +88,12 @@ fun AppearanceSettingsScreen(
     
     var showAppThemeSheet by remember { mutableStateOf(false) }
     val appThemeSheetState = rememberModalBottomSheetState()
+    
+    var showLyricsPositionSheet by remember { mutableStateOf(false) }
+    val lyricsPositionSheetState = rememberModalBottomSheetState()
+    
+    var showLyricsAnimationSheet by remember { mutableStateOf(false) }
+    val lyricsAnimationSheetState = rememberModalBottomSheetState()
     
     val scope = rememberCoroutineScope()
     
@@ -194,6 +204,29 @@ fun AppearanceSettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
+
+                // --- Lyrics Section ---
+                item {
+                    SettingsSectionTitle("Lyrics")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        AppearanceNavigationItem(
+                            icon = Icons.Default.FormatAlignLeft,
+                            title = "Lyrics Text Position",
+                            subtitle = uiState.lyricsTextPosition.label,
+                            onClick = { showLyricsPositionSheet = true }
+                        )
+                        
+                        HorizontalDivider()
+                        
+                        AppearanceNavigationItem(
+                            icon = Icons.Default.Animation,
+                            title = "Lyrics Animation Style",
+                            subtitle = uiState.lyricsAnimationType.label,
+                            onClick = { showLyricsAnimationSheet = true }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
         }
     }
@@ -270,6 +303,88 @@ fun AppearanceSettingsScreen(
                                 scope.launch {
                                     appThemeSheetState.hide()
                                     showAppThemeSheet = false
+                                }
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    // Lyrics Position Bottom Sheet
+    if (showLyricsPositionSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showLyricsPositionSheet = false },
+            sheetState = lyricsPositionSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Lyrics Text Position",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                LyricsTextPosition.entries.forEach { position ->
+                    ListItem(
+                        headlineContent = { Text(position.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.lyricsTextPosition == position,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setLyricsTextPosition(position)
+                                scope.launch {
+                                    lyricsPositionSheetState.hide()
+                                    showLyricsPositionSheet = false
+                                }
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    // Lyrics Animation Bottom Sheet
+    if (showLyricsAnimationSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showLyricsAnimationSheet = false },
+            sheetState = lyricsAnimationSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Lyrics Animation Style",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                LyricsAnimationType.entries.forEach { type ->
+                    ListItem(
+                        headlineContent = { Text(type.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.lyricsAnimationType == type,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setLyricsAnimationType(type)
+                                scope.launch {
+                                    lyricsAnimationSheetState.hide()
+                                    showLyricsAnimationSheet = false
                                 }
                             },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)

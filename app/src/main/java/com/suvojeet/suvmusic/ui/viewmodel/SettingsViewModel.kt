@@ -13,6 +13,8 @@ import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
+import com.suvojeet.suvmusic.data.model.LyricsTextPosition
+import com.suvojeet.suvmusic.data.model.LyricsAnimationType
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.UpdateState
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
@@ -62,6 +64,8 @@ data class SettingsUiState(
     val pureBlackEnabled: Boolean = false,
     // Lyrics
     val preferredLyricsProvider: String = "BetterLyrics",
+    val lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
+    val lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
     // Audio Offload
     val audioOffloadEnabled: Boolean = false,
     // Volume Boost
@@ -210,6 +214,18 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.lyricsTextPositionFlow.collect { position ->
+                _uiState.update { it.copy(lyricsTextPosition = position) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.lyricsAnimationTypeFlow.collect { type ->
+                _uiState.update { it.copy(lyricsAnimationType = type) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.audioOffloadEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(audioOffloadEnabled = enabled) }
             }
@@ -295,6 +311,8 @@ class SettingsViewModel @Inject constructor(
                     keepScreenOn = keepScreenOn,
                     pureBlackEnabled = pureBlackEnabled,
                     preferredLyricsProvider = sessionManager.getPreferredLyricsProvider(),
+                    lyricsTextPosition = sessionManager.getLyricsTextPosition(),
+                    lyricsAnimationType = sessionManager.getLyricsAnimationType(),
                     audioOffloadEnabled = sessionManager.isAudioOffloadEnabled(),
                     volumeBoostEnabled = sessionManager.isVolumeBoostEnabled(),
                     volumeBoostAmount = sessionManager.getVolumeBoostAmount()
@@ -642,6 +660,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPreferredLyricsProvider(provider)
             _uiState.update { it.copy(preferredLyricsProvider = provider) }
+        }
+    }
+
+    fun setLyricsTextPosition(position: LyricsTextPosition) {
+        viewModelScope.launch {
+            sessionManager.setLyricsTextPosition(position)
+            _uiState.update { it.copy(lyricsTextPosition = position) }
+        }
+    }
+
+    fun setLyricsAnimationType(type: LyricsAnimationType) {
+        viewModelScope.launch {
+            sessionManager.setLyricsAnimationType(type)
+            _uiState.update { it.copy(lyricsAnimationType = type) }
         }
     }
 
