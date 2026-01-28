@@ -156,8 +156,6 @@ object AppModule {
             sessionManager
         )
     }
-        )
-    }
 
     @Provides
     @Singleton
