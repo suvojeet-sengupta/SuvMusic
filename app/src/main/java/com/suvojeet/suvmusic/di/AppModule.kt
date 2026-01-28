@@ -156,24 +156,4 @@ object AppModule {
             sessionManager
         )
     }
-
-    @Provides
-    @Singleton
-    fun provideLastFmService(): com.suvojeet.suvmusic.data.network.LastFmService {
-        return retrofit2.Retrofit.Builder()
-            .baseUrl("https://ws.audioscrobbler.com/")
-            .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
-            .client(OkHttpClient.Builder().build())
-            .build()
-            .create(com.suvojeet.suvmusic.data.network.LastFmService::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideLastFmRepository(
-        lastFmService: com.suvojeet.suvmusic.data.network.LastFmService,
-        sessionManager: SessionManager
-    ): com.suvojeet.suvmusic.data.repository.LastFmRepository {
-        return com.suvojeet.suvmusic.data.repository.LastFmRepository(lastFmService, sessionManager)
-    }
 }
