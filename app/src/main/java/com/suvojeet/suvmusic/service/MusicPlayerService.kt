@@ -106,6 +106,17 @@ class MusicPlayerService : MediaLibraryService() {
             .build()
 
         player.apply {
+            pauseAtEndOfMediaItems = false
+            if (isOffloadEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setAudioOffloadPreferences(
+                        androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                            .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+                            .setIsGaplessSupportRequired(false)
+                            .build()
+                    )
+                    .build()
+            }
             addListener(object : androidx.media3.common.Player.Listener {
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
                     if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
