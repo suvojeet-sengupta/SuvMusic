@@ -190,8 +190,16 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getSongDetails(videoId: String): Song? = streamingService.getSongDetails(videoId)
 
-    suspend fun getRelatedSongs(videoId: String): List<Song> = 
-        searchService.getRelatedSongs(videoId)
+    suspend fun getRelatedSongs(videoId: String): List<Song> {
+        // Try internal API first (official Up Next/Radio)
+        val internalResults = searchService.getRelatedSongs(videoId)
+        if (internalResults.isNotEmpty()) {
+            return internalResults
+        }
+        
+        // Fallback to extractor related items (NewPipe)
+        return streamingService.getRelatedItems(videoId)
+    }
 
     /**
      * Tries to find the official music video ID for a given song.
