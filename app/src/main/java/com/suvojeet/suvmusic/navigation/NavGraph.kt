@@ -303,7 +303,8 @@ fun NavGraph(
                 onStatsClick = { navController.navigate(Destination.ListeningStats.route) },
                 onSupportClick = { navController.navigate(Destination.Support.route) },
                 onAboutClick = { navController.navigate(Destination.About.route) },
-                onMiscClick = { navController.navigate(Destination.Misc.route) }
+                onMiscClick = { navController.navigate(Destination.Misc.route) },
+                onCreditsClick = { navController.navigate(Destination.Credits.route) }
             )
         }
         
@@ -397,6 +398,12 @@ fun NavGraph(
             MiscScreen(
                 onBack = { navController.popBackStack() },
                 onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders.route) }
+            )
+        }
+
+        composable(Destination.Credits.route) {
+            com.suvojeet.suvmusic.ui.screens.CreditsScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
 

@@ -100,7 +100,8 @@ fun SettingsScreen(
     onStatsClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
     onAboutClick: () -> Unit = {},
-    onMiscClick: () -> Unit = {}
+    onMiscClick: () -> Unit = {},
+    onCreditsClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -374,6 +375,14 @@ fun SettingsScreen(
                             onClick = onSupportClick
                         )
                         
+                        HorizontalDivider()
+
+                         SettingsNavigationItem(
+                            icon = Icons.Default.Person,
+                            title = "Credits",
+                            subtitle = "Developers & Libraries",
+                            onClick = onCreditsClick
+                        )
                         
                         HorizontalDivider()
                         
