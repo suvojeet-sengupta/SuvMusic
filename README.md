@@ -2,6 +2,8 @@
 
 <div align="center">
 
+![SuvMusic Banner](screenshots/suvmusic_banner.png)
+
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=flat-square)](https://github.com/suvojeet-sengupta/SuvMusic/graphs/commit-activity)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Platform](https://img.shields.io/badge/Platform-Android-3DDC84.svg?style=flat-square&logo=android&logoColor=white)](https://developer.android.com)
@@ -76,6 +78,33 @@ A sophisticated lyrics aggregation pipeline designed for precision:
 *   **Glance Widgets**: Modern homescreen widgets built with Jetpack Glance for real-time control.
 
 ---
+
+## 📸 App Showcase
+
+<div align="center">
+  <table>
+    <tr>
+      <td width="33%"><img src="screenshots/Screenshot_20260128-151017.png" width="100%" alt="Screen 1"></td>
+      <td width="33%"><img src="screenshots/Screenshot_20260128-151100.png" width="100%" alt="Screen 2"></td>
+      <td width="33%"><img src="screenshots/Screenshot_20260128-151110.png" width="100%" alt="Screen 3"></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/Screenshot_20260128-151115.png" width="100%" alt="Screen 4"></td>
+      <td><img src="screenshots/Screenshot_20260128-151120.png" width="100%" alt="Screen 5"></td>
+      <td><img src="screenshots/Screenshot_20260128-151123.png" width="100%" alt="Screen 6"></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/Screenshot_20260128-151128.png" width="100%" alt="Screen 7"></td>
+      <td><img src="screenshots/Screenshot_20260128-151158.png" width="100%" alt="Screen 8"></td>
+      <td><img src="screenshots/Screenshot_20260128-151202.png" width="100%" alt="Screen 9"></td>
+    </tr>
+    <tr>
+        <td><img src="screenshots/Screenshot_20260128-151214.png" width="100%" alt="Screen 10"></td>
+        <td><img src="screenshots/Screenshot_20260128-151525.png" width="100%" alt="Screen 11"></td>
+    </tr>
+  </table>
+</div>
+
 
 ## 🛠 Technology Stack
 
