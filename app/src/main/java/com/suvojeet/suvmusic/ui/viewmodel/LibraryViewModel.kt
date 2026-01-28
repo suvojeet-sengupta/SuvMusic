@@ -110,7 +110,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun loadData(forceRefresh: Boolean = false) {
+    fun loadData(forceRefresh: Boolean = false, preloadedLikedSongs: List<Song>? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
@@ -119,7 +119,7 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(localSongs = local) }
 
                 // Load liked songs (cached)
-                val liked = youTubeRepository.getLikedMusic(fetchAll = false)
+                val liked = preloadedLikedSongs ?: youTubeRepository.getLikedMusic(fetchAll = false)
                 _uiState.update { it.copy(likedSongs = liked) }
 
                 if (forceRefresh && sessionManager.isLoggedIn()) {
@@ -137,13 +137,14 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
             try {
+                var syncedSongs: List<Song>? = null
                 if (sessionManager.isLoggedIn()) {
                     // This updates playlists/liked songs in repositories
                     youTubeRepository.getUserEditablePlaylists()
-                    youTubeRepository.getLikedMusic(fetchAll = true)
+                    syncedSongs = youTubeRepository.getLikedMusic(fetchAll = true)
                 }
                 // Reload data from repositories
-                loadData(forceRefresh = false)
+                loadData(forceRefresh = false, preloadedLikedSongs = syncedSongs)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Refresh failed: ${e.message}") }
             } finally {
