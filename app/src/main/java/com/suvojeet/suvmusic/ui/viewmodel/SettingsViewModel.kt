@@ -367,7 +367,16 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lastFmUsername = username) }
                 onSuccess(username)
             }.onFailure { error ->
-                onError("Failed: ${error.message} (${error.javaClass.simpleName})")
+                val errorMessage = if (error is retrofit2.HttpException) {
+                    try {
+                        error.response()?.errorBody()?.string() ?: "HTTP ${error.code()} (${error.message()})"
+                    } catch (e: Exception) {
+                        "HTTP ${error.code()}"
+                    }
+                } else {
+                    error.message ?: "Unknown Error"
+                }
+                onError("Failed: $errorMessage")
             }
         }
     }

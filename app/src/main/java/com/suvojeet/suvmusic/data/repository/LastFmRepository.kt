@@ -23,8 +23,7 @@ class LastFmRepository @Inject constructor(
             val params = sortedMapOf(
                 "method" to "auth.getSession",
                 "token" to token,
-                "api_key" to apiKey,
-                "format" to "json"
+                "api_key" to apiKey
             )
             val signature = generateSignature(params)
             
@@ -54,8 +53,7 @@ class LastFmRepository @Inject constructor(
                 "artist" to artist,
                 "track" to track,
                 "api_key" to apiKey,
-                "sk" to sessionKey,
-                "format" to "json"
+                "sk" to sessionKey
             )
             
             if (!album.isNullOrEmpty()) params["album"] = album
@@ -86,8 +84,7 @@ class LastFmRepository @Inject constructor(
                 "track" to track,
                 "timestamp" to timestamp.toString(),
                 "api_key" to apiKey,
-                "sk" to sessionKey,
-                "format" to "json"
+                "sk" to sessionKey
             )
             
             if (!album.isNullOrEmpty()) params["album"] = album
