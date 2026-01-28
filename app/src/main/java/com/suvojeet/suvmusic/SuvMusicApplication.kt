@@ -17,8 +17,14 @@ import coil.util.DebugLogger
 @HiltAndroidApp
 class SuvMusicApplication : Application(), ImageLoaderFactory {
     
+    companion object {
+        lateinit var instance: SuvMusicApplication
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        instance = this
         // Initialize any app-wide components here
     }
 

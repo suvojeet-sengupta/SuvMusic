@@ -102,7 +102,56 @@ class LibraryViewModel @Inject constructor(
         }
     }
     
-    // ... (other observe methods)
+    private fun observeDownloads() {
+        viewModelScope.launch {
+            downloadRepository.downloadedSongs.collect { songs ->
+                _uiState.update { it.copy(downloadedSongs = songs) }
+            }
+        }
+    }
+
+    fun loadData(forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Load local audio
+                val local = localAudioRepository.getAllLocalSongs()
+                _uiState.update { it.copy(localSongs = local) }
+
+                // Load liked songs (cached)
+                val liked = youTubeRepository.getLikedMusic(fetchAll = false)
+                _uiState.update { it.copy(likedSongs = liked) }
+
+                if (forceRefresh && sessionManager.isLoggedIn()) {
+                    refresh()
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            try {
+                if (sessionManager.isLoggedIn()) {
+                    // This updates playlists/liked songs in repositories
+                    youTubeRepository.getUserEditablePlaylists()
+                    youTubeRepository.getLikedMusic(fetchAll = true)
+                }
+                // Reload data from repositories
+                loadData(forceRefresh = false)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Refresh failed: ${e.message}") }
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
+    }
+
 
     private fun observeLibraryPlaylists() {
         viewModelScope.launch {
@@ -125,7 +174,22 @@ class LibraryViewModel @Inject constructor(
         }
     }
     
-    // ...
+    fun createPlaylist(title: String, description: String, isPrivate: Boolean, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
+                val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
+                if (playlistId != null) {
+                    refresh()
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to create playlist: ${e.message}") }
+            } finally {
+                onComplete()
+            }
+        }
+    }
+
 
     fun importSpotifyPlaylist(url: String) {
         // Start the Foreground Service

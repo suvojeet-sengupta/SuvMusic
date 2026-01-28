@@ -19,8 +19,15 @@ class SpotifyImportHelper @Inject constructor(
      * Extracts song titles and artists from a Spotify playlist URL.
      * Note: This uses Jsoup to scrape the public Spotify playlist page.
      */
-    suspend fun getPlaylistSongs(url: String): List<Pair<String, String>> = withContext(Dispatchers.IO) {
+    /**
+     * Extracts song titles and artists from a Spotify playlist URL.
+     * Note: This uses Jsoup to scrape the public Spotify playlist page.
+     * Returns a Pair of (Playlist Name, List of (Song Title, Artist)).
+     */
+    suspend fun getPlaylistSongs(url: String): Pair<String, List<Pair<String, String>>> = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Pair<String, String>>()
+        var playlistName = "Spotify Import ${System.currentTimeMillis() / 1000}"
+
         try {
             // 1. Try to extract playlist ID and use Embed method (most reliable)
             val playlistId = extractPlaylistId(url)
@@ -37,21 +44,31 @@ class SpotifyImportHelper @Inject constructor(
                         val gson = Gson()
                         val jsonObject = gson.fromJson(json, JsonObject::class.java)
 
-                        // Navigate JSON: props -> pageProps -> state -> data -> entity -> trackList
-                        val trackList = jsonObject.getAsJsonObject("props")
+                        // Navigate JSON: props -> pageProps -> state -> data -> entity
+                        val entity = jsonObject.getAsJsonObject("props")
                             ?.getAsJsonObject("pageProps")
                             ?.getAsJsonObject("state")
                             ?.getAsJsonObject("data")
                             ?.getAsJsonObject("entity")
-                            ?.getAsJsonArray("trackList")
 
-                        if (trackList != null) {
-                            for (element in trackList) {
-                                val trackObj = element.asJsonObject
-                                val title = trackObj.get("title").asString
-                                val subtitle = trackObj.get("subtitle").asString // Artists
-                                if (title.isNotBlank()) {
-                                    songs.add(title to subtitle)
+                        if (entity != null) {
+                            // Extract Name
+                            if (entity.has("name")) {
+                                playlistName = entity.get("name").asString
+                            } else if (entity.has("title")) {
+                                playlistName = entity.get("title").asString
+                            }
+
+                            val trackList = entity.getAsJsonArray("trackList")
+
+                            if (trackList != null) {
+                                for (element in trackList) {
+                                    val trackObj = element.asJsonObject
+                                    val title = trackObj.get("title").asString
+                                    val subtitle = trackObj.get("subtitle").asString // Artists
+                                    if (title.isNotBlank()) {
+                                        songs.add(title to subtitle)
+                                    }
                                 }
                             }
                         }
@@ -61,11 +78,28 @@ class SpotifyImportHelper @Inject constructor(
                 }
             }
 
-            // 2. Fallback to scraping the original URL if embed failed
+            // 2. Fallback to scraping the original URL if embed failed or no songs found
             if (songs.isEmpty()) {
                 val doc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .get()
+                
+                // Try to get title from document
+                val docTitle = doc.title()
+                if (docTitle.contains("Spotify")) {
+                    // "My Playlist - Playlist by User | Spotify" -> "My Playlist"
+                    playlistName = docTitle.split("- Playlist by").firstOrNull()?.trim() 
+                        ?: docTitle.split("|").firstOrNull()?.trim() 
+                        ?: docTitle
+                } else if (docTitle.isNotBlank()) {
+                    playlistName = docTitle
+                }
+
+                // Try h1 for title
+                val h1Title = doc.select("h1").text()
+                if (h1Title.isNotBlank()) {
+                    playlistName = h1Title
+                }
 
                 val trackNames = doc.select("span.track-name, div.track-name, .track-name")
                 val artistNames = doc.select("span.artist-name, div.artist-name, .artist-name")
@@ -95,7 +129,7 @@ class SpotifyImportHelper @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        songs
+        playlistName to songs
     }
 
     private fun extractPlaylistId(url: String): String? {
