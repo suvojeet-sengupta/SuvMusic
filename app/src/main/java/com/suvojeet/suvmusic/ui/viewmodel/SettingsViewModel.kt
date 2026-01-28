@@ -75,7 +75,13 @@ data class SettingsUiState(
     // SponsorBlock
     val sponsorBlockEnabled: Boolean = true,
     // Last.fm
-    val lastFmUsername: String? = null
+    val lastFmUsername: String? = null,
+    val lastFmScrobblingEnabled: Boolean = false,
+    val lastFmUseNowPlaying: Boolean = true,
+    val lastFmSendLikes: Boolean = false,
+    val scrobbleDelayPercent: Float = 0.5f,
+    val scrobbleMinDuration: Int = 30, // seconds
+    val scrobbleDelaySeconds: Int = 180 // seconds
 )
 
 @HiltViewModel
@@ -305,6 +311,12 @@ class SettingsViewModel @Inject constructor(
             val pureBlackEnabled = sessionManager.isPureBlackEnabled()
             val sponsorBlockEnabled = sessionManager.isSponsorBlockEnabled()
             val lastFmUsername = sessionManager.getLastFmUsername()
+            val lastFmScrobblingEnabled = sessionManager.isLastFmScrobblingEnabled()
+            val lastFmUseNowPlaying = sessionManager.isLastFmUseNowPlayingEnabled()
+            val lastFmSendLikes = sessionManager.isLastFmSendLikesEnabled()
+            val scrobbleDelayPercent = sessionManager.getScrobbleDelayPercent()
+            val scrobbleMinDuration = sessionManager.getScrobbleMinDuration()
+            val scrobbleDelaySeconds = sessionManager.getScrobbleDelaySeconds()
 
             _uiState.update { 
                 it.copy(
@@ -343,7 +355,13 @@ class SettingsViewModel @Inject constructor(
                     volumeBoostEnabled = sessionManager.isVolumeBoostEnabled(),
                     volumeBoostAmount = sessionManager.getVolumeBoostAmount(),
                     sponsorBlockEnabled = sponsorBlockEnabled,
-                    lastFmUsername = lastFmUsername
+                    lastFmUsername = lastFmUsername,
+                    lastFmScrobblingEnabled = lastFmScrobblingEnabled,
+                    lastFmUseNowPlaying = lastFmUseNowPlaying,
+                    lastFmSendLikes = lastFmSendLikes,
+                    scrobbleDelayPercent = scrobbleDelayPercent,
+                    scrobbleMinDuration = scrobbleMinDuration,
+                    scrobbleDelaySeconds = scrobbleDelaySeconds
                 )
             }
         }
@@ -378,6 +396,72 @@ class SettingsViewModel @Inject constructor(
                 }
                 onError("Failed: $errorMessage")
             }
+        }
+    }
+
+    fun loginLastFmMobile(username: String, password: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            lastFmRepository.getMobileSession(username, password)
+                .onSuccess { auth ->
+                    // Persist session
+                    sessionManager.setLastFmSession(auth.session.key, auth.session.name)
+                    _uiState.update { it.copy(lastFmUsername = auth.session.name) }
+                    onSuccess(auth.session.name)
+                }
+                .onFailure { error ->
+                     val errorMessage = if (error is retrofit2.HttpException) {
+                        try {
+                            error.response()?.errorBody()?.string() ?: "HTTP ${error.code()} (${error.message()})"
+                        } catch (e: Exception) {
+                            "HTTP ${error.code()}"
+                        }
+                    } else {
+                        error.message ?: "Unknown Error"
+                    }
+                    onError(errorMessage)
+                }
+        }
+    }
+
+    fun setLastFmScrobblingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setLastFmScrobblingEnabled(enabled)
+            _uiState.update { it.copy(lastFmScrobblingEnabled = enabled) }
+        }
+    }
+
+    fun setLastFmUseNowPlaying(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setLastFmUseNowPlaying(enabled)
+            _uiState.update { it.copy(lastFmUseNowPlaying = enabled) }
+        }
+    }
+
+    fun setLastFmSendLikes(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setLastFmSendLikes(enabled)
+            _uiState.update { it.copy(lastFmSendLikes = enabled) }
+        }
+    }
+
+    fun setScrobbleDelayPercent(percent: Float) {
+        viewModelScope.launch {
+            sessionManager.setScrobbleDelayPercent(percent)
+            _uiState.update { it.copy(scrobbleDelayPercent = percent) }
+        }
+    }
+
+    fun setScrobbleMinDuration(seconds: Int) {
+        viewModelScope.launch {
+            sessionManager.setScrobbleMinDuration(seconds)
+            _uiState.update { it.copy(scrobbleMinDuration = seconds) }
+        }
+    }
+
+    fun setScrobbleDelaySeconds(seconds: Int) {
+        viewModelScope.launch {
+            sessionManager.setScrobbleDelaySeconds(seconds)
+            _uiState.update { it.copy(scrobbleDelaySeconds = seconds) }
         }
     }
     
