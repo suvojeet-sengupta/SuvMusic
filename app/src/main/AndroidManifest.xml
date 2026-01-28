@@ -129,6 +129,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="suvmusic" android:host="play" />
             </intent-filter>
+
+            <!-- Last.fm Authentication Callback (suvmusic://lastfm-auth) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="suvmusic" android:host="lastfm-auth" />
+            </intent-filter>
         </activity>
         
         <!-- Music Player Service -->

@@ -288,18 +288,9 @@ fun SettingsScreen(
                                 }
                             }
                         )
-
-                        HorizontalDivider()
-
-                        SettingsSwitchItem(
-                            icon = Icons.Default.FastForward,
-                            title = "SponsorBlock",
-                            subtitle = "Skip non-music segments",
-                            checked = sponsorBlockEnabled,
-                            onCheckedChange = {
-                                viewModel.setSponsorBlockEnabled(it)
-                            }
-                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -322,6 +313,62 @@ fun SettingsScreen(
                             title = "Customization",
                             subtitle = "Player UI, artwork style",
                             onClick = onCustomizationClick
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                
+                // --- Integrations ---
+                item {
+                    SettingsSectionTitle("Integrations")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        // Last.fm
+                        val isConnected = uiState.lastFmUsername != null
+                        ListItem(
+                            headlineContent = { Text("Last.fm", fontWeight = FontWeight.Medium) },
+                            supportingContent = { 
+                                Text(if (isConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music") 
+                            },
+                            leadingContent = {
+                                Icon(
+                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_music_note), // Need generic music icon or lastfm specific if available
+                                    contentDescription = null, 
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingContent = {
+                                if (isConnected) {
+                                  TextButton(onClick = { viewModel.disconnectLastFm() }) {
+                                      Text("Disconnect", color = MaterialTheme.colorScheme.error)
+                                  }
+                                } else {
+                                  androidx.compose.material3.Button(
+                                      onClick = { 
+                                          val url = "http://www.last.fm/api/auth/?api_key=${com.suvojeet.suvmusic.BuildConfig.LAST_FM_API_KEY}&cb=suvmusic://lastfm-auth"
+                                          val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                          context.startActivity(intent)
+                                      },
+                                      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                  ) {
+                                      Text("Connect")
+                                  }
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                        
+                        HorizontalDivider()
+
+                        SettingsSwitchItem(
+                            icon = Icons.Default.FastForward,
+                            title = "SponsorBlock",
+                            subtitle = "Skip non-music segments",
+                            checked = sponsorBlockEnabled,
+                            onCheckedChange = {
+                                viewModel.setSponsorBlockEnabled(it)
+                            }
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))

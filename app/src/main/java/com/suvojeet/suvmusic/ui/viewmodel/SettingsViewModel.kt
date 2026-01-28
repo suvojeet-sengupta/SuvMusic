@@ -72,7 +72,10 @@ data class SettingsUiState(
     val volumeBoostEnabled: Boolean = false,
     val volumeBoostAmount: Int = 0,
     // SponsorBlock
-    val sponsorBlockEnabled: Boolean = true
+    // SponsorBlock
+    val sponsorBlockEnabled: Boolean = true,
+    // Last.fm
+    val lastFmUsername: String? = null
 )
 
 @HiltViewModel
@@ -80,6 +83,7 @@ class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val updateRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository, // Use YouTubeRepository for account info
     private val updateRepo: UpdateRepository, // Renamed to avoid conflict
+    private val lastFmRepository: com.suvojeet.suvmusic.data.repository.LastFmRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -100,6 +104,9 @@ class SettingsViewModel @Inject constructor(
 
     // SponsorBlock enabled state
     val sponsorBlockEnabled = sessionManager.sponsorBlockEnabledFlow
+    
+    // Last.fm
+    val lastFmUsername = sessionManager.lastFmUsernameFlow
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -254,6 +261,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
         
+        viewModelScope.launch {
+            sessionManager.lastFmUsernameFlow.collect { username ->
+                _uiState.update { it.copy(lastFmUsername = username) }
+            }
+        }
+        
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -291,6 +304,7 @@ class SettingsViewModel @Inject constructor(
             val keepScreenOn = sessionManager.isKeepScreenOnEnabled()
             val pureBlackEnabled = sessionManager.isPureBlackEnabled()
             val sponsorBlockEnabled = sessionManager.isSponsorBlockEnabled()
+            val lastFmUsername = sessionManager.getLastFmUsername()
 
             _uiState.update { 
                 it.copy(
@@ -328,9 +342,17 @@ class SettingsViewModel @Inject constructor(
                     audioOffloadEnabled = sessionManager.isAudioOffloadEnabled(),
                     volumeBoostEnabled = sessionManager.isVolumeBoostEnabled(),
                     volumeBoostAmount = sessionManager.getVolumeBoostAmount(),
-                    sponsorBlockEnabled = sponsorBlockEnabled
+                    sponsorBlockEnabled = sponsorBlockEnabled,
+                    lastFmUsername = lastFmUsername
                 )
             }
+        }
+    }
+    
+    fun disconnectLastFm() {
+        viewModelScope.launch {
+            lastFmRepository.logout()
+            _uiState.update { it.copy(lastFmUsername = null) }
         }
     }
     

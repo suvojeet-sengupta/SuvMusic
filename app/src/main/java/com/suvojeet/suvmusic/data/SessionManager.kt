@@ -160,6 +160,10 @@ class SessionManager @Inject constructor(
 
         // SponsorBlock
         private val SPONSOR_BLOCK_ENABLED_KEY = booleanPreferencesKey("sponsor_block_enabled")
+
+        // Last.fm
+        private val LAST_FM_SESSION_KEY = stringPreferencesKey("last_fm_session_key")
+        private val LAST_FM_USERNAME_KEY = stringPreferencesKey("last_fm_username")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -209,6 +213,36 @@ class SessionManager @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[SPONSOR_BLOCK_ENABLED_KEY] = enabled
         }
+    }
+    
+    // --- Last.fm ---
+
+    suspend fun setLastFmSession(sessionKey: String, username: String) {
+        // Save session key in EncryptedPrefs for security
+        encryptedPrefs.edit().putString("last_fm_session", sessionKey).apply()
+        // Save username in DataStore for UI
+        context.dataStore.edit { preferences ->
+            preferences[LAST_FM_USERNAME_KEY] = username
+        }
+    }
+
+    fun getLastFmSessionKey(): String? {
+        return encryptedPrefs.getString("last_fm_session", null)
+    }
+
+    fun getLastFmUsername(): String? = runBlocking {
+         context.dataStore.data.first()[LAST_FM_USERNAME_KEY]
+    }
+    
+    fun clearLastFmSession() {
+        encryptedPrefs.edit().remove("last_fm_session").apply()
+        runBlocking {
+            context.dataStore.edit { it.remove(LAST_FM_USERNAME_KEY) }
+        }
+    }
+    
+    val lastFmUsernameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[LAST_FM_USERNAME_KEY]
     }
     
     val dynamicIslandEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
