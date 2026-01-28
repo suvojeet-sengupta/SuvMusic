@@ -17,6 +17,7 @@ sealed class Destination(val route: String) {
     data object Recents : Destination("recents")
     data object Player : Destination("player")
     data object YouTubeLogin : Destination("youtube_login")
+    data object LastFmLogin : Destination("last_fm_login")
     data object About : Destination("about")
     data object Downloads : Destination("downloads")
     data object Storage : Destination("storage")

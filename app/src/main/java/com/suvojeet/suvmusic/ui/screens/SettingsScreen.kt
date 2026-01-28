@@ -102,7 +102,8 @@ fun SettingsScreen(
     onSupportClick: () -> Unit = {},
     onAboutClick: () -> Unit = {},
     onMiscClick: () -> Unit = {},
-    onCreditsClick: () -> Unit = {}
+    onCreditsClick: () -> Unit = {},
+    onLastFmClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -140,6 +141,14 @@ fun SettingsScreen(
                     .padding(paddingValues),
                 contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 80.dp)
             ) {
+// ... (omitted for brevity, context is maintained by line numbers in tool but since I'm implementing replacing the whole function signature/start and the button logic, I need to be careful)
+// Actually the previous tool calls suggested I can use multi-replace or just replace chunks. 
+// The chunk above is too large and risky. 
+
+// Let's do it in two chunks.
+// 1. Signature update
+// 2. Button update
+
                 item {
                     Text(
                         text = "Settings",
@@ -342,11 +351,7 @@ fun SettingsScreen(
                                   }
                                 } else {
                                   androidx.compose.material3.Button(
-                                      onClick = { 
-                                          val url = "http://www.last.fm/api/auth/?api_key=${com.suvojeet.suvmusic.BuildConfig.LAST_FM_API_KEY}&cb=suvmusic://lastfm-auth"
-                                          val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                          context.startActivity(intent)
-                                      },
+                                      onClick = onLastFmClick,
                                       contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                   ) {
                                       Text("Connect")

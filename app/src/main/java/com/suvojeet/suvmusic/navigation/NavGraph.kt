@@ -304,7 +304,8 @@ fun NavGraph(
                 onSupportClick = { navController.navigate(Destination.Support.route) },
                 onAboutClick = { navController.navigate(Destination.About.route) },
                 onMiscClick = { navController.navigate(Destination.Misc.route) },
-                onCreditsClick = { navController.navigate(Destination.Credits.route) }
+                onCreditsClick = { navController.navigate(Destination.Credits.route) },
+                onLastFmClick = { navController.navigate(Destination.LastFmLogin.route) }
             )
         }
         
@@ -557,6 +558,16 @@ fun NavGraph(
                     }
                 },
                 onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(Destination.LastFmLogin.route) {
+            com.suvojeet.suvmusic.ui.screens.settings.LastFmLoginScreen(
+                onBack = { navController.popBackStack() },
+                onLoginSuccess = { username ->
+                    android.widget.Toast.makeText(navController.context, "Connected as $username", android.widget.Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
                 }
             )

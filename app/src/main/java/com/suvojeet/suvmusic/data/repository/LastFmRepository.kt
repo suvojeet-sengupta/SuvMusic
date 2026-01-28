@@ -108,7 +108,8 @@ class LastFmRepository @Inject constructor(
     }
     
     fun getAuthUrl(): String {
-        return "http://www.last.fm/api/auth/?api_key=$apiKey&cb=suvmusic://lastfm-auth"
+        val callback = java.net.URLEncoder.encode("suvmusic://lastfm-auth", "UTF-8")
+        return "https://www.last.fm/api/auth/?api_key=$apiKey&cb=$callback"
     }
     
     fun logout() {

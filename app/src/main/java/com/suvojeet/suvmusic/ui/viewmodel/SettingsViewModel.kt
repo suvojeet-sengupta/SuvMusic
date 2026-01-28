@@ -349,10 +349,26 @@ class SettingsViewModel @Inject constructor(
         }
     }
     
+    fun getLastFmAuthUrl(): String {
+        return lastFmRepository.getAuthUrl()
+    }
+    
     fun disconnectLastFm() {
         viewModelScope.launch {
             lastFmRepository.logout()
             _uiState.update { it.copy(lastFmUsername = null) }
+        }
+    }
+
+    fun processLastFmToken(token: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = lastFmRepository.fetchSession(token)
+            result.onSuccess { username ->
+                _uiState.update { it.copy(lastFmUsername = username) }
+                onSuccess(username)
+            }.onFailure { error ->
+                onError(error.message ?: "Unknown error during Last.fm authentication")
+            }
         }
     }
     
