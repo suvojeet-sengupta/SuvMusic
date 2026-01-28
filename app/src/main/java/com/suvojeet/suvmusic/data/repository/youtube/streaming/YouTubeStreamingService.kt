@@ -211,4 +211,40 @@ class YouTubeStreamingService @Inject constructor(
             )
         }
     }
+
+    /**
+     * Get related songs from the extractor (NewPipe).
+     * This provides the "Up Next" or related videos logic directly from the video page.
+     */
+    suspend fun getRelatedItems(videoId: String): List<Song> = withContext(Dispatchers.IO) {
+        retryWithBackoff {
+            val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
+                ?: throw IllegalStateException("YouTube service not found")
+
+            val streamExtractor = ytService.getStreamExtractor(streamUrl)
+            streamExtractor.fetchPage()
+
+            streamExtractor.relatedItems?.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()?.mapNotNull { item ->
+                try {
+                    // Extract video ID from URL
+                    val id = item.url?.substringAfter("v=")?.substringBefore("&") 
+                        ?: item.url?.substringAfter("youtu.be/")?.substringBefore("?")
+                    
+                    if (id != null) {
+                        Song.fromYouTube(
+                            videoId = id,
+                            title = item.name ?: "Unknown",
+                            artist = item.uploaderName ?: "Unknown Artist",
+                            album = "",
+                            duration = item.duration * 1000L,
+                            thumbnailUrl = item.thumbnails?.lastOrNull()?.url
+                        )
+                    } else null
+                } catch (e: Exception) {
+                    null
+                }
+            } ?: emptyList()
+        } ?: emptyList()
+    }
 }
