@@ -72,7 +72,6 @@ data class SettingsUiState(
     val volumeBoostEnabled: Boolean = false,
     val volumeBoostAmount: Int = 0,
     // SponsorBlock
-    // SponsorBlock
     val sponsorBlockEnabled: Boolean = true,
     // Last.fm
     val lastFmUsername: String? = null,
@@ -108,9 +107,10 @@ class SettingsViewModel @Inject constructor(
     // Volume Slider enabled state
     val volumeSliderEnabledFlow = sessionManager.volumeSliderEnabledFlow // Renamed to avoid name clash
 
-    // SponsorBlock enabled state
+    // SponsorBlock
     val sponsorBlockEnabled = sessionManager.sponsorBlockEnabledFlow
-    
+    val sponsorBlockCategories = sessionManager.sponsorBlockCategoriesFlow
+
     // Last.fm
     val lastFmUsername = sessionManager.lastFmUsernameFlow
 
@@ -272,7 +272,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lastFmUsername = username) }
             }
         }
-        
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -317,6 +317,7 @@ class SettingsViewModel @Inject constructor(
             val scrobbleDelayPercent = sessionManager.getScrobbleDelayPercent()
             val scrobbleMinDuration = sessionManager.getScrobbleMinDuration()
             val scrobbleDelaySeconds = sessionManager.getScrobbleDelaySeconds()
+
 
             _uiState.update { 
                 it.copy(
@@ -366,11 +367,11 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun getLastFmAuthUrl(): String {
         return lastFmRepository.getAuthUrl()
     }
-    
+
     fun disconnectLastFm() {
         viewModelScope.launch {
             sessionManager.setLastFmSession("", "")
@@ -467,7 +468,7 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(scrobbleDelaySeconds = seconds) }
         }
     }
-    
+
     /**
      * Fetch account info (name, email) and save to history.
      */
@@ -848,6 +849,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setSponsorBlockEnabled(enabled)
             _uiState.update { it.copy(sponsorBlockEnabled = enabled) }
+        }
+    }
+    fun toggleSponsorCategory(categoryKey: String, isEnabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.toggleSponsorCategory(categoryKey, isEnabled)
         }
     }
 }

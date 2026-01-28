@@ -175,6 +175,7 @@ fun PlayerScreen(
     val song = playbackInfo.currentSong
     val context = LocalContext.current
     val playlistUiState by playlistViewModel.uiState.collectAsState()
+    val sponsorSegments by playerViewModel.sponsorSegments.collectAsState(initial = emptyList())
     
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
@@ -570,7 +571,8 @@ fun PlayerScreen(
                                             sessionManager.setSeekbarStyle(style.name)
                                         }
                                     },
-                                    duration = playerState.duration
+                                    duration = playerState.duration,
+                                    sponsorSegments = sponsorSegments
                                 )
 
                                 // Time labels
@@ -751,7 +753,8 @@ fun PlayerScreen(
                                         sessionManager.setSeekbarStyle(style.name)
                                     }
                                 },
-                                duration = playerState.duration
+                                duration = playerState.duration,
+                                sponsorSegments = sponsorSegments
                             )
 
                             // Time labels with quality badge
