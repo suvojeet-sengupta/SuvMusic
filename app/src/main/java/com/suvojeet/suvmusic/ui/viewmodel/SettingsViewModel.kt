@@ -367,7 +367,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lastFmUsername = username) }
                 onSuccess(username)
             }.onFailure { error ->
-                onError(error.message ?: "Unknown error during Last.fm authentication")
+                onError("Failed: ${error.message} (${error.javaClass.simpleName})")
             }
         }
     }
