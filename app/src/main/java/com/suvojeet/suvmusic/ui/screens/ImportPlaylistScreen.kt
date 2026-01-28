@@ -40,6 +40,7 @@ fun ImportPlaylistScreen(
     importState: ImportState,
     onDismiss: () -> Unit,
     onImport: (url: String) -> Unit,
+    onCancel: () -> Unit,
     onReset: () -> Unit
 ) {
     if (!isVisible) return
@@ -92,8 +93,8 @@ fun ImportPlaylistScreen(
                 ) { state ->
                     when (state) {
                         is ImportState.Idle -> InputView(onImport)
-                        is ImportState.Loading -> LoadingView()
-                        is ImportState.Processing -> ProcessingView(state)
+                        is ImportState.Loading -> LoadingView(onCancel)
+                        is ImportState.Processing -> ProcessingView(state, onCancel)
                         is ImportState.Success -> SuccessView(
                             state = state,
                             onDone = {
@@ -216,7 +217,7 @@ private fun InputView(onImport: (String) -> Unit) {
 }
 
 @Composable
-private fun ProcessingView(state: ImportState.Processing) {
+private fun ProcessingView(state: ImportState.Processing, onCancel: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -316,6 +317,17 @@ private fun ProcessingView(state: ImportState.Processing) {
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+
+        TextButton(
+            onClick = onCancel,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            )
+        ) {
+            Text("Cancel Import")
+        }
     }
 }
 
@@ -384,7 +396,7 @@ private fun SuccessView(
 }
 
 @Composable
-private fun LoadingView() {
+private fun LoadingView(onCancel: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(24.dp)
@@ -399,6 +411,15 @@ private fun LoadingView() {
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
+        Spacer(modifier = Modifier.height(24.dp))
+        TextButton(
+            onClick = onCancel,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            )
+        ) {
+            Text("Cancel")
+        }
     }
 }
 

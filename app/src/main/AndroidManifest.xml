@@ -158,6 +158,12 @@
             android:name=".service.DownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Spotify Import Service -->
+        <service
+            android:name=".service.SpotifyImportService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         
         <!-- FileProvider for APK installation -->
         <provider
