@@ -95,6 +95,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var playerCache: Cache
+    
+    @Inject
+    lateinit var lastFmRepository: com.suvojeet.suvmusic.data.repository.LastFmRepository
 
     private lateinit var audioManager: AudioManager
     
@@ -144,6 +147,19 @@ class MainActivity : ComponentActivity() {
         
         // Handle deep link from intent
         val deepLinkUrl = intent?.data?.toString()
+        if (intent?.data?.scheme == "suvmusic" && intent?.data?.host == "lastfm-auth") {
+            val token = intent?.data?.getQueryParameter("token")
+            if (token != null) {
+                lifecycleScope.launch {
+                    val result = lastFmRepository.fetchSession(token)
+                    if (result.isSuccess) {
+                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${result.getOrNull()}", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        android.widget.Toast.makeText(this@MainActivity, "Failed to connect to Last.fm", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
         
         // Handle audio file from external app
         val audioFileUri = extractAudioUri(intent)
@@ -229,6 +245,22 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        
+        // Handle Last.fm Auth
+        if (intent?.data?.scheme == "suvmusic" && intent?.data?.host == "lastfm-auth") {
+            val token = intent?.data?.getQueryParameter("token")
+            if (token != null) {
+                lifecycleScope.launch {
+                    val result = lastFmRepository.fetchSession(token)
+                    if (result.isSuccess) {
+                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${result.getOrNull()}", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        android.widget.Toast.makeText(this@MainActivity, "Failed to connect to Last.fm", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        
         // Deep links are handled in SuvMusicApp composable via LaunchedEffect
         // Don't call recreate() as it wipes all state including HomeScreen data
     }
