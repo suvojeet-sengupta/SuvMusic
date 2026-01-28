@@ -375,26 +375,38 @@ class YouTubeRepository @Inject constructor(
             // 1. Get all moods categories
             val categories = getMoodsAndGenres()
             
-            // 2. Find matching category
-            // We use standard YT Music mood names mapping if needed, but direct match first
-            var category = categories.find { it.title.equals(moodTitle, ignoreCase = true) }
+            // 2. Find matching category with improved mapping
+            // Map our specific chips to potential YouTube Music category titles
+            val moodMap = mapOf(
+                "relax" to listOf("Relax", "Relaxing", "Chill", "Chill out", "Calm"),
+                "sad" to listOf("Sad", "Sadness", "Cry", "Blue", "Melancholy"),
+                "romance" to listOf("Romance", "Romantic", "Love", "Date night"),
+                "party" to listOf("Party", "Partying", "Dance", "Club"),
+                "focus" to listOf("Focus", "Concentration", "Study", "Work"),
+                "sleep" to listOf("Sleep", "Bedtime", "Dream"),
+                "energize" to listOf("Energy", "Energize", "Motivation", "Boost"),
+                "feel good" to listOf("Feel Good", "Happy", "Happiness", "Good vibes", "Mood booster"),
+                "workout" to listOf("Workout", "Gym", "Fitness", "Sport"),
+                "commute" to listOf("Commute", "Driving", "Travel", "On the go")
+            )
+
+            // Get variations for the requested mood
+            val targetVariations = moodMap[moodTitle.lowercase()] ?: listOf(moodTitle)
             
-            // Fallback mappings if direct match fails
-            if (category == null) {
-                val mappedTitle = when(moodTitle.lowercase()) {
-                    "sad" -> "Sad" // Usually exists
-                    "energize" -> "Energy"
-                    "party" -> "Party"
-                    "romance" -> "Romance"
-                    "sleep" -> "Sleep"
-                    "focus" -> "Focus"
-                    "relax" -> "Relax"
-                    "workout" -> "Workout"
-                    "commute" -> "Commute"
-                    "feel good" -> "Feel Good"
-                    else -> moodTitle
+            // Try to find a category that matches any of the variations
+            var category = categories.find { cat -> 
+                targetVariations.any { variation -> 
+                    cat.title.equals(variation, ignoreCase = true) 
                 }
-                 category = categories.find { it.title.equals(mappedTitle, ignoreCase = true) }
+            }
+            
+            // Debug/Fallback: if still null, try partial match for "Sad" (e.g. "Sad songs")
+            if (category == null) {
+                 category = categories.find { cat -> 
+                    targetVariations.any { variation -> 
+                        cat.title.contains(variation, ignoreCase = true)
+                    }
+                }
             }
             
             if (category != null) {
@@ -408,11 +420,31 @@ class YouTubeRepository @Inject constructor(
             }
             
             // 4. Fallback: Search (High accuracy fallback)
+            // Use "Playlist" filter to get collections if direct category fails, often better than songs
+             val playlistResults = searchPlaylists("$moodTitle music").take(10)
+             if (playlistResults.isNotEmpty()) {
+                 return@withContext listOf(
+                     com.suvojeet.suvmusic.data.model.HomeSection(
+                         title = "$moodTitle Playlists",
+                         items = playlistResults.map { com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                             id = it.id,
+                             name = it.title,
+                             url = "https://music.youtube.com/playlist?list=${it.id}",
+                             uploaderName = it.author,
+                             thumbnailUrl = it.thumbnailUrl,
+                             songCount = it.songs.size
+                         )) },
+                         type = com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                     )
+                 )
+             }
+
+             // Last resort: Songs
              val songs = search("$moodTitle music", FILTER_SONGS)
              if (songs.isNotEmpty()) {
                  return@withContext listOf(
                      com.suvojeet.suvmusic.data.model.HomeSection(
-                         title = "$moodTitle Music",
+                         title = "$moodTitle Songs",
                          items = songs.map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) },
                          type = com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
                      )
