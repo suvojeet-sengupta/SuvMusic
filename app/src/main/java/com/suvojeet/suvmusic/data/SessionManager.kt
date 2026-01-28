@@ -34,6 +34,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.suvojeet.suvmusic.data.model.SponsorCategory
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "suvmusic_session")
 
@@ -147,7 +148,7 @@ class SessionManager @Inject constructor(
         private val STOP_MUSIC_ON_TASK_CLEAR_KEY = booleanPreferencesKey("stop_music_on_task_clear")
         private val PAUSE_MUSIC_ON_MEDIA_MUTED_KEY = booleanPreferencesKey("pause_music_on_media_muted")
         private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
-        
+
         // Appearance
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
         
@@ -163,6 +164,7 @@ class SessionManager @Inject constructor(
 
         // SponsorBlock
         private val SPONSOR_BLOCK_ENABLED_KEY = booleanPreferencesKey("sponsor_block_enabled")
+        private val SPONSOR_BLOCK_CATEGORIES_KEY = androidx.datastore.preferences.core.stringSetPreferencesKey("sponsor_block_categories_v2")
 
         // Last.fm
         private val LAST_FM_SESSION_KEY = stringPreferencesKey("last_fm_session_key")
@@ -208,7 +210,40 @@ class SessionManager @Inject constructor(
             preferences.remove(DEV_MODE_KEY)
         }
     }
-    
+
+    /**
+     * Get the set of enabled category keys.
+     * Defaults to all categories if not set.
+     */
+    val sponsorBlockCategoriesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[SPONSOR_BLOCK_CATEGORIES_KEY] ?: SponsorCategory.entries.map { it.key }.toSet()
+    }
+
+    /**
+     * Helper to check if a specific category is enabled synchronously (for service usage).
+     */
+    suspend fun getEnabledSponsorCategories(): Set<String> {
+        return context.dataStore.data.first()[SPONSOR_BLOCK_CATEGORIES_KEY]
+            ?: SponsorCategory.entries.map { it.key }.toSet()
+    }
+
+    /**
+     * Toggle a specific category on or off.
+     */
+    suspend fun toggleSponsorCategory(categoryKey: String, isEnabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            val currentSet = preferences[SPONSOR_BLOCK_CATEGORIES_KEY]
+                ?: SponsorCategory.entries.map { it.key }.toSet()
+
+            val newSet = if (isEnabled) {
+                currentSet + categoryKey
+            } else {
+                currentSet - categoryKey
+            }
+            preferences[SPONSOR_BLOCK_CATEGORIES_KEY] = newSet
+        }
+    }
+
     // --- Floating Player ---
     
     suspend fun isDynamicIslandEnabled(): Boolean = 
@@ -217,6 +252,7 @@ class SessionManager @Inject constructor(
     suspend fun isSponsorBlockEnabled(): Boolean =
         context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: true // Enabled by default
 
+    // SponsorBlock
     val sponsorBlockEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[SPONSOR_BLOCK_ENABLED_KEY] ?: true
     }
@@ -245,14 +281,14 @@ class SessionManager @Inject constructor(
     fun getLastFmUsername(): String? = runBlocking {
          context.dataStore.data.first()[LAST_FM_USERNAME_KEY]
     }
-    
+
     fun clearLastFmSession() {
         encryptedPrefs.edit().remove("last_fm_session").apply()
         runBlocking {
             context.dataStore.edit { it.remove(LAST_FM_USERNAME_KEY) }
         }
     }
-    
+
     val lastFmUsernameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[LAST_FM_USERNAME_KEY]
     }
@@ -324,7 +360,7 @@ class SessionManager @Inject constructor(
             preferences[SCROBBLE_DELAY_SECONDS_KEY] = seconds
         }
     }
-    
+
     val dynamicIslandEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
     }
@@ -549,7 +585,6 @@ class SessionManager @Inject constructor(
             preferences[PREFERRED_LYRICS_PROVIDER_KEY] = provider
         }
     }
-    
     suspend fun getLyricsTextPosition(): LyricsTextPosition {
         return context.dataStore.data.map { preferences ->
             preferences[LYRICS_TEXT_POSITION_KEY]?.let {
@@ -559,17 +594,17 @@ class SessionManager @Inject constructor(
     }
     
     val lyricsTextPositionFlow: Flow<LyricsTextPosition> = context.dataStore.data.map { preferences ->
+
         preferences[LYRICS_TEXT_POSITION_KEY]?.let {
             try { LyricsTextPosition.valueOf(it) } catch (e: Exception) { LyricsTextPosition.CENTER }
         } ?: LyricsTextPosition.CENTER
     }
-    
     suspend fun setLyricsTextPosition(position: LyricsTextPosition) {
+
         context.dataStore.edit { preferences ->
             preferences[LYRICS_TEXT_POSITION_KEY] = position.name
         }
     }
-    
     suspend fun getLyricsAnimationType(): LyricsAnimationType {
         return context.dataStore.data.map { preferences ->
             preferences[LYRICS_ANIMATION_TYPE_KEY]?.let {
@@ -579,12 +614,13 @@ class SessionManager @Inject constructor(
     }
     
     val lyricsAnimationTypeFlow: Flow<LyricsAnimationType> = context.dataStore.data.map { preferences ->
+
         preferences[LYRICS_ANIMATION_TYPE_KEY]?.let {
             try { LyricsAnimationType.valueOf(it) } catch (e: Exception) { LyricsAnimationType.WORD }
         } ?: LyricsAnimationType.WORD
     }
-    
     suspend fun setLyricsAnimationType(type: LyricsAnimationType) {
+
         context.dataStore.edit { preferences ->
             preferences[LYRICS_ANIMATION_TYPE_KEY] = type.name
         }
@@ -732,7 +768,7 @@ class SessionManager @Inject constructor(
         }
     }
 
-    suspend fun isKeepScreenOnEnabled(): Boolean = 
+    suspend fun isKeepScreenOnEnabled(): Boolean =
         context.dataStore.data.first()[KEEP_SCREEN_ON_KEY] ?: false
 
     val keepScreenOnEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
