@@ -66,7 +66,7 @@ class LastFmRepository @Inject constructor(
 
             val signature = generateSignature(params)
 
-            lastFmService.updateNowPlaying(
+            val response = lastFmService.updateNowPlaying(
                 artist = artist,
                 track = track,
                 album = album,
@@ -75,8 +75,14 @@ class LastFmRepository @Inject constructor(
                 apiSig = signature,
                 sessionKey = sessionKey
             )
+            
+            if (response.error != null || response.status == "failed") {
+                android.util.Log.e("LastFmRepository", "updateNowPlaying Failed: Code=${response.error}, Message=${response.message}")
+            } else {
+                android.util.Log.d("LastFmRepository", "updateNowPlaying Success: ${response.status}")
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("LastFmRepository", "updateNowPlaying Exception", e)
         }
     }
 
@@ -97,7 +103,7 @@ class LastFmRepository @Inject constructor(
 
             val signature = generateSignature(params)
 
-            lastFmService.scrobble(
+            val response = lastFmService.scrobble(
                 artist = artist,
                 track = track,
                 album = album,
@@ -107,8 +113,14 @@ class LastFmRepository @Inject constructor(
                 apiSig = signature,
                 sessionKey = sessionKey
             )
+            
+            if (response.error != null || response.status == "failed") {
+                android.util.Log.e("LastFmRepository", "Scrobble Failed: Code=${response.error}, Message=${response.message}")
+            } else {
+                android.util.Log.d("LastFmRepository", "Scrobble Success: ${response.status}")
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("LastFmRepository", "Scrobble Exception", e)
         }
     }
     
