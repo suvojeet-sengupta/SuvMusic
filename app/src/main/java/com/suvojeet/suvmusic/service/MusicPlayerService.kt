@@ -164,7 +164,7 @@ class MusicPlayerService : MediaLibraryService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        mediaLibrarySession = MediaLibrarySession.Builder(this, player).setCallback(object : MediaLibrarySession.Callback {
+        mediaLibrarySession = MediaLibrarySession.Builder(this, player, object : MediaLibrarySession.Callback {
             override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
                 val connectionResult = super.onConnect(session, controller)
                 val sessionCommands = connectionResult.availableSessionCommands.buildUpon()
