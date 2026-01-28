@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -225,26 +226,34 @@ class YouTubeStreamingService @Inject constructor(
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
 
-            streamExtractor.relatedItems?.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()?.mapNotNull { item ->
-                try {
-                    // Extract video ID from URL
-                    val id = item.url?.substringAfter("v=")?.substringBefore("&") 
-                        ?: item.url?.substringAfter("youtu.be/")?.substringBefore("?")
-                    
-                    if (id != null) {
-                        Song.fromYouTube(
-                            videoId = id,
-                            title = item.name ?: "Unknown",
-                            artist = item.uploaderName ?: "Unknown Artist",
-                            album = "",
-                            duration = item.duration * 1000L,
-                            thumbnailUrl = item.thumbnails?.lastOrNull()?.url
-                        )
-                    } else null
-                } catch (e: Exception) {
-                    null
+            val results = mutableListOf<Song>()
+            val items: List<*>? = streamExtractor.relatedItems as? List<*>
+            
+            if (items != null) {
+                for (item in items) {
+                    if (item is StreamInfoItem) {
+                        try {
+                            // Extract video ID from URL
+                            val id = item.url?.substringAfter("v=")?.substringBefore("&") 
+                                ?: item.url?.substringAfter("youtu.be/")?.substringBefore("?")
+                            
+                            if (id != null) {
+                                Song.fromYouTube(
+                                    videoId = id,
+                                    title = item.name ?: "Unknown",
+                                    artist = item.uploaderName ?: "Unknown Artist",
+                                    album = "",
+                                    duration = item.duration * 1000L,
+                                    thumbnailUrl = item.thumbnails?.lastOrNull()?.url
+                                )?.let { results.add(it) }
+                            }
+                        } catch (e: Exception) {
+                            // Ignore error for single item
+                        }
+                    }
                 }
-            } ?: emptyList()
+            }
+            results
         } ?: emptyList()
     }
 }
