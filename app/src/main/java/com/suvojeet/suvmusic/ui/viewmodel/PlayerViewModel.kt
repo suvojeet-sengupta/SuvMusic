@@ -22,6 +22,8 @@ import com.suvojeet.suvmusic.player.SleepTimerManager
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
+import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,6 +39,7 @@ class PlayerViewModel @Inject constructor(
     private val sleepTimerManager: SleepTimerManager,
     private val sessionManager: SessionManager,
     private val recommendationEngine: RecommendationEngine,
+    private val sponsorBlockRepository: SponsorBlockRepository,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     
@@ -85,6 +88,8 @@ class PlayerViewModel @Inject constructor(
     
     private val _commentPostSuccess = kotlinx.coroutines.flow.MutableStateFlow<Boolean?>(null)
     val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
+
+    val sponsorSegments: StateFlow<List<SponsorSegment>> = sponsorBlockRepository.currentSegments
     
     fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
     

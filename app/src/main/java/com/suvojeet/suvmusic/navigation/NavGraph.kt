@@ -39,6 +39,7 @@ import com.suvojeet.suvmusic.ui.screens.LyricsProvidersScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.media3.common.Player
+import com.suvojeet.suvmusic.ui.screens.SponsorBlockSettingsScreen
 
 /**
  * Main navigation graph for the app.
@@ -305,7 +306,8 @@ fun NavGraph(
                 onAboutClick = { navController.navigate(Destination.About.route) },
                 onMiscClick = { navController.navigate(Destination.Misc.route) },
                 onCreditsClick = { navController.navigate(Destination.Credits.route) },
-                onLastFmClick = { navController.navigate(Destination.LastFmLogin.route) }
+                onLastFmClick = { navController.navigate(Destination.LastFmLogin.route) },
+                onSponsorBlockClick = { navController.navigate(Destination.SponsorBlockSettings.route) }
             )
         }
         
@@ -411,6 +413,12 @@ fun NavGraph(
         composable(Destination.LyricsProviders.route) {
             LyricsProvidersScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Destination.SponsorBlockSettings.route) {
+            SponsorBlockSettingsScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -562,7 +570,7 @@ fun NavGraph(
                 }
             )
         }
-        
+
         composable(Destination.LastFmLogin.route) {
             com.suvojeet.suvmusic.ui.screens.settings.LastFmSettingsScreen(
                 onBack = { navController.popBackStack() },
@@ -572,7 +580,7 @@ fun NavGraph(
                 }
             )
         }
-        
+
         composable(
             route = Destination.Playlist.ROUTE,
             arguments = listOf(

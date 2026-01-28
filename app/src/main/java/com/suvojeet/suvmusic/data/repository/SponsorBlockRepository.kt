@@ -2,6 +2,10 @@ package com.suvojeet.suvmusic.data.repository
 
 import android.util.Log
 import com.google.gson.annotations.SerializedName
+import com.suvojeet.suvmusic.data.SessionManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -12,6 +16,7 @@ import retrofit2.http.Query
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlinx.coroutines.runBlocking
 
 data class SponsorSegment(
     @SerializedName("category") val category: String,
@@ -31,10 +36,13 @@ interface SponsorBlockApi {
 }
 
 @Singleton
-class SponsorBlockRepository @Inject constructor() {
+class SponsorBlockRepository @Inject constructor(
+    private val sessionManager: SessionManager
+) {
 
     private val api: SponsorBlockApi
-    private var currentSegments: List<SponsorSegment> = emptyList()
+    private val _currentSegments = MutableStateFlow<List<SponsorSegment>>(emptyList())
+    val currentSegments: StateFlow<List<SponsorSegment>> = _currentSegments.asStateFlow()
     private var lastVideoId: String? = null
     private var lastSkippedSegmentUuid: String? = null
     private var isEnabled: Boolean = true
@@ -51,7 +59,7 @@ class SponsorBlockRepository @Inject constructor() {
     fun setEnabled(enabled: Boolean) {
         isEnabled = enabled
         if (!enabled) {
-            currentSegments = emptyList()
+            _currentSegments.value = emptyList()
             lastVideoId = null
         }
     }
@@ -61,7 +69,7 @@ class SponsorBlockRepository @Inject constructor() {
         if (videoId == lastVideoId) return
 
         lastVideoId = videoId
-        currentSegments = emptyList()
+        _currentSegments.value = emptyList()
         lastSkippedSegmentUuid = null
 
         Log.d("SponsorBlock", "Loading segments for $videoId")
@@ -69,31 +77,43 @@ class SponsorBlockRepository @Inject constructor() {
         api.getSegments(videoId).enqueue(object : Callback<List<SponsorSegment>> {
             override fun onResponse(call: Call<List<SponsorSegment>>, response: Response<List<SponsorSegment>>) {
                 if (response.isSuccessful && response.body() != null) {
-                    currentSegments = response.body()!!
-                    // Log.d("SponsorBlock", "Loaded ${currentSegments.size} segments")
+                    val segments = response.body()!!
+                    _currentSegments.value = segments
+                    Log.d("SponsorBlock", "Loaded ${segments.size} segments")
                 } else {
-                    currentSegments = emptyList()
+                    _currentSegments.value = emptyList()
                 }
             }
 
             override fun onFailure(call: Call<List<SponsorSegment>>, t: Throwable) {
-                // Log.e("SponsorBlock", "Failed to load: ${t.message}")
+                Log.e("SponsorBlock", "Failed to load: ${t.message}")
             }
         })
     }
 
+    /**
+     * Checks if the current position falls within a segment that should be skipped.
+     * Only skips if the category is enabled in settings.
+     */
     fun checkSkip(currentSeconds: Float): Float? {
-        if (!isEnabled || currentSegments.isEmpty()) return null
+        if (!isEnabled) return null
 
-        for (segment in currentSegments) {
-            if (currentSeconds >= segment.start && currentSeconds < segment.end) {
-                if (lastSkippedSegmentUuid == segment.uuid && abs(currentSeconds - segment.start) < 2.0) {
-                    continue
+        val segments = _currentSegments.value
+        if (segments.isEmpty()) return null
+        val enabledCategories = runBlocking { sessionManager.getEnabledSponsorCategories() }
+
+        for (segment in segments) {
+            // Only skip if this specific category is enabled by the user
+            if (enabledCategories.contains(segment.category)) {
+                if (currentSeconds >= segment.start && currentSeconds < segment.end) {
+                    if (lastSkippedSegmentUuid == segment.uuid && abs(currentSeconds - segment.start) < 2.0) {
+                        continue
+                    }
+
+                    Log.i("SponsorBlock", "Skipping ${segment.category}")
+                    lastSkippedSegmentUuid = segment.uuid
+                    return segment.end
                 }
-
-                Log.i("SponsorBlock", "Skipping ${segment.category}")
-                lastSkippedSegmentUuid = segment.uuid
-                return segment.end
             }
         }
         return null

@@ -41,13 +41,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.suvojeet.suvmusic.data.model.SponsorCategory
+import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.ui.components.seekbar.ClassicStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.DotsStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.GradientBarStyle
@@ -81,7 +88,8 @@ fun WaveformSeeker(
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     initialStyle: SeekbarStyle = SeekbarStyle.WAVEFORM,
     onStyleChange: ((SeekbarStyle) -> Unit)? = null,
-    duration: Long = 0L
+    duration: Long = 0L,
+    sponsorSegments: List<SponsorSegment> = emptyList()
 ) {
     // Current seekbar style - uses initial style from settings
     var currentStyle by remember { mutableStateOf(initialStyle) }
@@ -182,7 +190,7 @@ fun WaveformSeeker(
                             isDragging = true
                             dragX = offset.x
                         },
-                        onDragEnd = { 
+                        onDragEnd = {
                             onSeek(currentProgress)
                             isDragging = false
                         },
@@ -195,54 +203,90 @@ fun WaveformSeeker(
                 }
         ) {
             Canvas(modifier = Modifier.matchParentSize()) {
-                when (currentStyle) {
-                    SeekbarStyle.WAVEFORM -> with(WaveformStyle) {
-                        draw(
-                            progress = currentProgress,
-                            isPlaying = isPlaying,
-                            wavePhase = wavePhase,
-                            waveAmplitudes = waveAmplitudes,
-                            activeColor = activeColor,
-                            inactiveColor = inactiveColor,
-                            isDragging = isDragging
-                        )
-                    }
-                    SeekbarStyle.WAVE_LINE -> with(WaveLineStyle) {
-                        draw(
-                            progress = currentProgress,
-                            isPlaying = isPlaying,
-                            wavePhase = wavePhase,
-                            activeColor = activeColor,
-                            inactiveColor = inactiveColor
-                        )
-                    }
-                    SeekbarStyle.CLASSIC -> with(ClassicStyle) {
-                        draw(
-                            progress = currentProgress,
-                            activeColor = activeColor,
-                            inactiveColor = inactiveColor,
-                            isDragging = isDragging
-                        )
-                    }
-                    SeekbarStyle.DOTS -> with(DotsStyle) {
-                        draw(
-                            progress = currentProgress,
-                            isPlaying = isPlaying,
-                            wavePhase = wavePhase,
-                            activeColor = activeColor,
-                            inactiveColor = inactiveColor
-                        )
-                    }
-                    SeekbarStyle.GRADIENT_BAR -> with(GradientBarStyle) {
-                        draw(
-                            progress = currentProgress,
-                            activeColor = activeColor,
-                            inactiveColor = inactiveColor,
-                            isDragging = isDragging
-                        )
-                    }
-                    SeekbarStyle.MATERIAL -> {
-                        // Handled outside canvas via Slider
+                if (size.width > 0f && size.height > 0f) {
+                    drawIntoCanvas { canvas ->
+                        val nativeCanvas = canvas.nativeCanvas
+                        val saveCount = nativeCanvas.saveLayer(0f, 0f, size.width, size.height, null)
+
+                        try {
+                            when (currentStyle) {
+                                SeekbarStyle.WAVEFORM -> with(WaveformStyle) {
+                                    draw(
+                                        progress = currentProgress,
+                                        isPlaying = isPlaying,
+                                        wavePhase = wavePhase,
+                                        waveAmplitudes = waveAmplitudes,
+                                        activeColor = activeColor,
+                                        inactiveColor = inactiveColor,
+                                        isDragging = isDragging
+                                    )
+                                }
+                                SeekbarStyle.WAVE_LINE -> with(WaveLineStyle) {
+                                    draw(
+                                        progress = currentProgress,
+                                        isPlaying = isPlaying,
+                                        wavePhase = wavePhase,
+                                        activeColor = activeColor,
+                                        inactiveColor = inactiveColor
+                                    )
+                                }
+                                SeekbarStyle.CLASSIC -> with(ClassicStyle) {
+                                    draw(
+                                        progress = currentProgress,
+                                        activeColor = activeColor,
+                                        inactiveColor = inactiveColor,
+                                        isDragging = isDragging
+                                    )
+                                }
+                                SeekbarStyle.DOTS -> with(DotsStyle) {
+                                    draw(
+                                        progress = currentProgress,
+                                        isPlaying = isPlaying,
+                                        wavePhase = wavePhase,
+                                        activeColor = activeColor,
+                                        inactiveColor = inactiveColor
+                                    )
+                                }
+                                SeekbarStyle.GRADIENT_BAR -> with(GradientBarStyle) {
+                                    draw(
+                                        progress = currentProgress,
+                                        activeColor = activeColor,
+                                        inactiveColor = inactiveColor,
+                                        isDragging = isDragging
+                                    )
+                                }
+                                SeekbarStyle.MATERIAL -> {
+                                    // Handled outside canvas via Slider
+                                }
+                            }
+
+                            // Draw Sponsor segments overlay (inside the waveform/bar)
+                            if (duration > 0 && sponsorSegments.isNotEmpty()) {
+                                val durationSec = duration / 1000f
+                                sponsorSegments.forEach { segment ->
+                                    val startFraction = (segment.start / durationSec).coerceIn(0f, 1f)
+                                    val endFraction = (segment.end / durationSec).coerceIn(0f, 1f)
+
+                                    val startX = startFraction * size.width
+                                    val endX = endFraction * size.width
+                                    val segWidth = endX - startX
+
+                                    if (segWidth > 0) {
+                                        val categoryColor = SponsorCategory.fromKey(segment.category)?.color ?: Color.Yellow
+
+                                        drawRect(
+                                            color = categoryColor, // Full color
+                                            topLeft = Offset(startX, 0f),
+                                            size = Size(segWidth, size.height),
+                                            blendMode = BlendMode.SrcAtop
+                                        )
+                                    }
+                                }
+                            }
+                        } finally {
+                            // Always restore to the specific count to avoid underflow
+                            nativeCanvas.restoreToCount(saveCount)
+                        }
                     }
                 }
             }
@@ -262,7 +306,7 @@ fun WaveformSeeker(
                 ) {
                     androidx.compose.material3.Slider(
                         value = currentProgress,
-                        onValueChange = { 
+                        onValueChange = {
                             currentProgress = it
                             // Live seeking or wait for drag end depending on preference
                             // Typically Slider updates live

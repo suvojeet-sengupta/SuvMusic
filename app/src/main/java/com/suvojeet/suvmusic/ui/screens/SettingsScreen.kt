@@ -103,6 +103,7 @@ fun SettingsScreen(
     onSupportClick: () -> Unit = {},
     onAboutClick: () -> Unit = {},
     onMiscClick: () -> Unit = {},
+    onSponsorBlockClick: () -> Unit = {},
     onCreditsClick: () -> Unit = {},
     onLastFmClick: () -> Unit = {}
 ) {
@@ -143,8 +144,8 @@ fun SettingsScreen(
                 contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 80.dp)
             ) {
 // ... (omitted for brevity, context is maintained by line numbers in tool but since I'm implementing replacing the whole function signature/start and the button logic, I need to be careful)
-// Actually the previous tool calls suggested I can use multi-replace or just replace chunks. 
-// The chunk above is too large and risky. 
+// Actually the previous tool calls suggested I can use multi-replace or just replace chunks.
+// The chunk above is too large and risky.
 
 // Let's do it in two chunks.
 // 1. Signature update
@@ -337,19 +338,27 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
-                
+
                 // --- Integrations ---
                 item {
                     SettingsSectionTitle("Integrations")
                     GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                         SettingsSwitchItem(
                             icon = Icons.Default.FastForward,
+                            title = "Enable SponsorBlock",
+                            subtitle = "Automatically skip non-music segments",
+                            checked = sponsorBlockEnabled,
+                            onCheckedChange = { scope.launch { viewModel.setSponsorBlockEnabled(it) } }
+                        )
+                        
+                        HorizontalDivider()
+
+                        SettingsNavigationItem(
+
+                            icon = Icons.Default.FastForward,
                             title = "SponsorBlock",
                             subtitle = "Skip non-music segments",
-                            checked = sponsorBlockEnabled,
-                            onCheckedChange = {
-                                viewModel.setSponsorBlockEnabled(it)
-                            }
+                            onClick = onSponsorBlockClick
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -411,7 +420,7 @@ fun SettingsScreen(
                             subtitle = "Developers & Libraries",
                             onClick = onCreditsClick
                         )
-                        
+
                         HorizontalDivider()
                         
                         SettingsNavigationItem(

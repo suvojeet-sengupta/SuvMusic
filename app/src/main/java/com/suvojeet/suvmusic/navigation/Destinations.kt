@@ -27,8 +27,9 @@ sealed class Destination(val route: String) {
     data object Support : Destination("support")
     data object Misc : Destination("misc")
     data object LyricsProviders : Destination("lyrics_providers")
+    data object SponsorBlockSettings : Destination("sponsor_block_settings")
     data object Credits : Destination("credits")
-    
+
     data class Playlist(
         val playlistId: String,
         val name: String? = null,
