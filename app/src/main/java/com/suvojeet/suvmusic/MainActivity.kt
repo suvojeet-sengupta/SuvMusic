@@ -97,7 +97,7 @@ class MainActivity : ComponentActivity() {
     lateinit var playerCache: Cache
     
     @Inject
-    lateinit var lastFmRepository: com.suvojeet.suvmusic.data.repository.LastFmRepository
+    lateinit var lastFmRepository: com.suvojeet.suvmusic.providers.lastfm.LastFmRepository
 
     private lateinit var audioManager: AudioManager
     
@@ -152,9 +152,10 @@ class MainActivity : ComponentActivity() {
             if (token != null) {
                 lifecycleScope.launch {
                     val result = lastFmRepository.fetchSession(token)
-                    if (result.isSuccess) {
-                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${result.getOrNull()}", android.widget.Toast.LENGTH_SHORT).show()
-                    } else {
+                    result.onSuccess { auth ->
+                        sessionManager.setLastFmSession(auth.session.key, auth.session.name)
+                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${auth.session.name}", android.widget.Toast.LENGTH_SHORT).show()
+                    }.onFailure {
                         android.widget.Toast.makeText(this@MainActivity, "Failed to connect to Last.fm", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -252,9 +253,10 @@ class MainActivity : ComponentActivity() {
             if (token != null) {
                 lifecycleScope.launch {
                     val result = lastFmRepository.fetchSession(token)
-                    if (result.isSuccess) {
-                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${result.getOrNull()}", android.widget.Toast.LENGTH_SHORT).show()
-                    } else {
+                    result.onSuccess { auth ->
+                        sessionManager.setLastFmSession(auth.session.key, auth.session.name)
+                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${auth.session.name}", android.widget.Toast.LENGTH_SHORT).show()
+                    }.onFailure {
                         android.widget.Toast.makeText(this@MainActivity, "Failed to connect to Last.fm", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
