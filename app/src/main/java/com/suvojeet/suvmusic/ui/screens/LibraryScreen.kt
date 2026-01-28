@@ -234,6 +234,9 @@ fun LibraryScreen(
             onImport = { url ->
                 viewModel.importSpotifyPlaylist(url)
             },
+            onCancel = {
+                viewModel.cancelImport()
+            },
             onReset = {
                 viewModel.resetImportState()
             }

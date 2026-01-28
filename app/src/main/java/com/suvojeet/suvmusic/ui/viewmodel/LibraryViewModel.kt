@@ -72,7 +72,37 @@ class LibraryViewModel @Inject constructor(
         loadData()
         observeDownloads()
         observeLibraryPlaylists()
+        observeImportService()
     }
+
+    private fun observeImportService() {
+        viewModelScope.launch {
+            com.suvojeet.suvmusic.service.SpotifyImportService.importState.collect { status ->
+                val newState = when (status.state) {
+                    com.suvojeet.suvmusic.service.ImportStatus.State.IDLE -> ImportState.Idle
+                    com.suvojeet.suvmusic.service.ImportStatus.State.PREPARING -> ImportState.Loading
+                    com.suvojeet.suvmusic.service.ImportStatus.State.PROCESSING -> ImportState.Processing(
+                        currentSong = status.currentSong,
+                        currentArtist = status.currentArtist,
+                        thumbnail = status.thumbnail,
+                        currentIndex = status.progress,
+                        totalSongs = status.total,
+                        successCount = status.successCount,
+                        status = "Importing..."
+                    )
+                    com.suvojeet.suvmusic.service.ImportStatus.State.COMPLETED -> {
+                        refresh()
+                        ImportState.Success(status.successCount, status.total)
+                    }
+                    com.suvojeet.suvmusic.service.ImportStatus.State.ERROR -> ImportState.Error(status.error ?: "Unknown Error")
+                    com.suvojeet.suvmusic.service.ImportStatus.State.CANCELLED -> ImportState.Error("Import Cancelled")
+                }
+                _uiState.update { it.copy(importState = newState) }
+            }
+        }
+    }
+    
+    // ... (other observe methods)
 
     private fun observeLibraryPlaylists() {
         viewModelScope.launch {
@@ -95,268 +125,33 @@ class LibraryViewModel @Inject constructor(
         }
     }
     
-    private fun observeDownloads() {
-        viewModelScope.launch {
-            downloadRepository.downloadedSongs.collect { downloads ->
-                _uiState.update { it.copy(downloadedSongs = downloads) }
-            }
-        }
-    }
-    
-    private fun loadData() {
-        viewModelScope.launch {
-            // 1. Load cache immediately
-            val cachedPlaylists = sessionManager.getCachedLibraryPlaylistsSync()
-            val cachedLikedSongs = sessionManager.getCachedLibraryLikedSongsSync()
-            
-            if (cachedPlaylists.isNotEmpty() || cachedLikedSongs.isNotEmpty()) {
-                // Show cached data immediately, then refresh in background
-                _uiState.update { 
-                    it.copy(
-                        playlists = cachedPlaylists,
-                        likedSongs = cachedLikedSongs,
-                        isLoading = false,
-                        isRefreshing = true,
-                        error = null
-                    ) 
-                }
-            } else {
-                _uiState.update { it.copy(isLoading = true, error = null) }
-            }
-            
-            try {
-                // Refresh downloads to scan for new files in Downloads/SuvMusic
-                downloadRepository.refreshDownloads()
-                
-                // Get current source preference
-                val musicSource = sessionManager.getMusicSource()
-                
-                // Fetch fresh data from network
-                val ytPlaylists = try {
-                    youTubeRepository.getUserPlaylists()
-                } catch (e: Exception) {
-                    emptyList()
-                }
-                
-                // Only show JioSaavn playlists if Source is HQ Audio (JioSaavn)
-                val jioPlaylists = if (musicSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
-                    try {
-                        jioSaavnRepository.getFeaturedPlaylists()
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
-                } else {
-                    emptyList()
-                }
-                
-                val allPlaylists = if (ytPlaylists.isEmpty() && jioPlaylists.isEmpty()) {
-                    cachedPlaylists
-                } else {
-                    ytPlaylists + jioPlaylists
-                }
-                val localSongs = localAudioRepository.getAllLocalSongs()
-                
-                // Fetch only first page of liked songs and merge with cache to preserve older songs
-                val likedSongs = try {
-                    val freshSongs = youTubeRepository.getLikedMusic(fetchAll = false)
-                    if (freshSongs.isNotEmpty()) {
-                        (freshSongs + cachedLikedSongs).distinctBy { it.id }
-                    } else {
-                        cachedLikedSongs.ifEmpty { emptyList() }
-                    }
-                } catch (e: Exception) {
-                    cachedLikedSongs.ifEmpty { emptyList() }
-                }
-                
-                // Save to cache
-                if (allPlaylists.isNotEmpty()) {
-                    sessionManager.saveLibraryPlaylistsCache(allPlaylists)
-                }
-                if (likedSongs.isNotEmpty()) {
-                    sessionManager.saveLibraryLikedSongsCache(likedSongs)
-                }
-                
-                // Calculate Artists and Albums from all available songs
-                val downloadedSongs = _uiState.value.downloadedSongs
-                val allSongs = (likedSongs + localSongs + downloadedSongs).distinctBy { it.id }
-                
-                val artists = allSongs.mapNotNull { song ->
-                    if (song.artist.isNotBlank()) {
-                         // We don't have full artist details, so we create a preview
-                         // We might want to group songs by artist to count them
-                         Artist(
-                             id = song.artistId ?: song.artist, // Use name as ID if ID is missing (local songs)
-                             name = song.artist,
-                             thumbnailUrl = null, // We don't have artist thumb easily from here
-                             subscribers = null
-                         )
-                    } else null
-                }.distinctBy { it.name } // Distinct by name to avoid duplicates
-                .sortedBy { it.name }
-
-                val albums = allSongs.mapNotNull { song ->
-                    if (song.album != null && song.album.isNotBlank()) {
-                        Album(
-                            id = song.collectionId ?: song.album,
-                            title = song.album,
-                            thumbnailUrl = song.thumbnailUrl, // Use song thumb as album thumb proxy
-                            year = null,
-                            artist = song.artist
-                        )
-                    } else null
-                }.distinctBy { it.title + it.artist } // Distinct by title+artist
-                .sortedBy { it.title }
-
-                _uiState.update { 
-                    it.copy(
-                        playlists = allPlaylists,
-                        localSongs = localSongs,
-                        likedSongs = likedSongs,
-                        libraryArtists = artists,
-                        libraryAlbums = albums,
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = null
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update { 
-                    it.copy(
-                        error = if (it.playlists.isEmpty() && it.likedSongs.isEmpty()) e.message else null,
-                        isLoading = false,
-                        isRefreshing = false
-                    )
-                }
-            }
-            
-            // Auto-sync all liked songs in background
-            if (sessionManager.isLoggedIn()) {
-                syncLikedSongs()
-            }
-        }
-    }
-    
-    fun syncLikedSongs() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSyncingLikedSongs = true) }
-            try {
-                val songs = youTubeRepository.getLikedMusic(fetchAll = true)
-                if (songs.isNotEmpty()) {
-                    sessionManager.saveLibraryLikedSongsCache(songs)
-                    _uiState.update { 
-                        it.copy(
-                            likedSongs = songs,
-                            isSyncingLikedSongs = false
-                        )
-                    }
-                } else {
-                     _uiState.update { it.copy(isSyncingLikedSongs = false) }
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isSyncingLikedSongs = false) }
-            }
-        }
-    }
-    
-    fun createPlaylist(
-        title: String,
-        description: String,
-        isPrivate: Boolean,
-        onComplete: () -> Unit
-    ) {
-        viewModelScope.launch {
-            val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
-            val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
-            if (playlistId != null) {
-                // Refresh playlists to show the new one
-                val playlists = youTubeRepository.getUserPlaylists()
-                _uiState.update { it.copy(playlists = playlists) }
-            }
-            onComplete()
-        }
-    }
-    
-    fun refresh() {
-        _uiState.update { it.copy(isRefreshing = true) }
-        loadData()
-    }
+    // ...
 
     fun importSpotifyPlaylist(url: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(importState = ImportState.Loading) }
-            try {
-                val spotifySongs = spotifyImportHelper.getPlaylistSongs(url)
-                if (spotifySongs.isEmpty()) {
-                    _uiState.update { it.copy(importState = ImportState.Error("No songs found in the playlist. Make sure it's public.")) }
-                    return@launch
-                }
-
-                // Create a new playlist on YouTube
-                val playlistTitle = "Spotify Import ${System.currentTimeMillis() / 1000}"
-                val playlistId = youTubeRepository.createPlaylist(playlistTitle, "Imported from Spotify via SuvMusic")
-                
-                if (playlistId != null) {
-                    var successCount = 0
-                    val totalToAdd = spotifySongs.size
-                    
-                    spotifySongs.forEachIndexed { index, (title, artist) ->
-                        // State: Searching
-                       _uiState.update { it.copy(importState = ImportState.Processing(
-                            currentSong = title,
-                            currentArtist = artist,
-                            thumbnail = null,
-                            currentIndex = index + 1,
-                            totalSongs = totalToAdd,
-                            successCount = successCount,
-                            status = "Searching..."
-                        )) }
-
-                        val match = spotifyImportHelper.findMatch(title, artist)
-                        
-                        if (match != null) {
-                             // State: Found/Adding
-                            _uiState.update { it.copy(importState = ImportState.Processing(
-                                currentSong = match.title,
-                                currentArtist = match.artist,
-                                thumbnail = match.thumbnailUrl,
-                                currentIndex = index + 1,
-                                totalSongs = totalToAdd,
-                                successCount = successCount,
-                                status = "Adding..."
-                            )) }
-                            
-                            val added = youTubeRepository.addSongToPlaylist(playlistId, match.id)
-                            if (added) successCount++
-                        } else {
-                            // State: Failed (briefly show?)
-                             _uiState.update { it.copy(importState = ImportState.Processing(
-                                currentSong = title,
-                                currentArtist = artist,
-                                thumbnail = null,
-                                currentIndex = index + 1,
-                                totalSongs = totalToAdd,
-                                successCount = successCount,
-                                status = "Not Found"
-                            )) }
-                            // Small delay to let user see "Not Found"
-                             kotlinx.coroutines.delay(500)
-                        }
-                    }
-                    
-                    _uiState.update { 
-                        it.copy(importState = ImportState.Success(successCount, totalToAdd)) 
-                    }
-                    refresh() // Refresh to show new playlist
-                } else {
-                    _uiState.update { it.copy(importState = ImportState.Error("Failed to create playlist on YouTube. Are you logged in?")) }
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(importState = ImportState.Error(e.message ?: "An unknown error occurred")) }
-            }
+        // Start the Foreground Service
+        val context = com.suvojeet.suvmusic.SuvMusicApplication.instance
+        val intent = android.content.Intent(context, com.suvojeet.suvmusic.service.SpotifyImportService::class.java).apply {
+            action = com.suvojeet.suvmusic.service.SpotifyImportService.ACTION_START
+            putExtra(com.suvojeet.suvmusic.service.SpotifyImportService.EXTRA_URL, url)
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+
+    fun cancelImport() {
+        val context = com.suvojeet.suvmusic.SuvMusicApplication.instance
+        val intent = android.content.Intent(context, com.suvojeet.suvmusic.service.SpotifyImportService::class.java).apply {
+            action = com.suvojeet.suvmusic.service.SpotifyImportService.ACTION_CANCEL
+        }
+        context.startService(intent)
     }
 
     fun resetImportState() {
+        // Ideally we should tell service to reset too if it was holding state, but service updates flow to Idle usually
+        cancelImport() // Ensure service is stopped
         _uiState.update { it.copy(importState = ImportState.Idle) }
     }
 
