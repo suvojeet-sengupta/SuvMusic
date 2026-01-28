@@ -630,35 +630,60 @@ fun PlayerScreen(
 
                             // Album Art or Video Player - swipeable
                             if (playerState.isVideoMode && player != null) {
-                                // Video Player
+                                // Video Player with Ambient Mode
                                 Box(
+                                    contentAlignment = Alignment.Center,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .aspectRatio(16f / 9f)
-                                        .shadow(
-                                            elevation = 32.dp,
-                                            shape = RoundedCornerShape(16.dp),
-                                            spotColor = dominantColors.primary.copy(alpha = 0.5f)
-                                        )
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color.Black),
-                                    contentAlignment = Alignment.Center
+                                        .padding(vertical = 12.dp)
                                 ) {
-                                    AndroidView(
-                                        factory = { context ->
-                                            PlayerView(context).apply {
-                                                this.player = player
-                                                useController = false
-                                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                            }
-                                        },
-                                        update = { playerView ->
-                                            playerView.player = player
-                                        },
-                                        modifier = Modifier.fillMaxSize()
+                                    // Ambient Glow Effect
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.95f)
+                                            .aspectRatio(16f / 9f)
+                                            .background(
+                                                brush = Brush.radialGradient(
+                                                    colors = listOf(
+                                                        dominantColors.primary.copy(alpha = 0.5f),
+                                                        dominantColors.primary.copy(alpha = 0.15f),
+                                                        Color.Transparent
+                                                    )
+                                                )
+                                            )
                                     )
+                                    
+                                    // Main Player Box
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(16f / 9f)
+                                            .shadow(
+                                                elevation = 32.dp,
+                                                shape = RoundedCornerShape(16.dp),
+                                                spotColor = dominantColors.primary.copy(alpha = 0.7f),
+                                                ambientColor = dominantColors.primary.copy(alpha = 0.7f)
+                                            )
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(Color.Black),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AndroidView(
+                                            factory = { context ->
+                                                PlayerView(context).apply {
+                                                    this.player = player
+                                                    useController = false
+                                                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                                }
+                                            },
+                                            update = { playerView ->
+                                                playerView.player = player
+                                            },
+                                            modifier = Modifier.fillMaxSize()
+                                        )
 
-                                    LoadingArtworkOverlay(isVisible = playerState.isLoading)
+                                        LoadingArtworkOverlay(isVisible = playerState.isLoading)
+                                    }
                                 }
                             } else {
                                 // Album artwork
