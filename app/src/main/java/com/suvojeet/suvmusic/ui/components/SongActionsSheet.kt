@@ -235,12 +235,7 @@ fun SongActionsSheet(
                     onClick = { onToggleFavorite(); onDismiss() }
                 )
 
-                ActionItem(
-                    icon = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                    title = if (isDisliked) "Remove Dislike" else "Dislike Song",
-                    iconTint = if (isDisliked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                    onClick = { onToggleDislike(); onDismiss() }
-                )
+                // Dislike button removed as per request
                 
                 ActionItem(
                     icon = Icons.Default.RingVolume,

@@ -82,14 +82,20 @@ class SpotifyImportService : Service() {
                 _importState.update { it.copy(state = ImportStatus.State.PREPARING, error = null) }
                 updateNotification("Fetching playlist details...", 0, 0, true)
 
-                val spotifySongs = spotifyImportHelper.getPlaylistSongs(url)
+                val (playlistName, spotifySongs) = spotifyImportHelper.getPlaylistSongs(url)
                 if (spotifySongs.isEmpty()) {
                     _importState.update { it.copy(state = ImportStatus.State.ERROR, error = "No songs found") }
                     stopSelf()
                     return@launch
                 }
 
-                val playlistTitle = "Spotify Import ${System.currentTimeMillis() / 1000}"
+                // Append timestamp to avoid duplicates if importing same playlist multiple times, 
+                // or just use the name if preferred. User asked for "same name".
+                // We'll stick to the exact name as requested, or maybe append "(Imported)" if really needed, 
+                // but user said "same name as Spotify playlist".
+                // To be safe against duplicates, maybe we should check if it exists? 
+                // But the requirement is "same name".
+                val playlistTitle = playlistName 
                 val playlistId = youTubeRepository.createPlaylist(playlistTitle, "Imported from Spotify via SuvMusic")
 
                 if (playlistId == null) {
