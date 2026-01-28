@@ -57,16 +57,21 @@ interface LastFmService {
     ): LastFmBaseResponse
 }
 
+@androidx.annotation.Keep
 data class LastFmSessionResponse(
-    val session: LastFmSession
+    @com.google.gson.annotations.SerializedName("session") val session: LastFmSession?,
+    @com.google.gson.annotations.SerializedName("error") val error: Int? = null,
+    @com.google.gson.annotations.SerializedName("message") val message: String? = null
 )
 
+@androidx.annotation.Keep
 data class LastFmSession(
-    val name: String,
-    val key: String,
-    val subscriber: Int
+    @com.google.gson.annotations.SerializedName("name") val name: String,
+    @com.google.gson.annotations.SerializedName("key") val key: String,
+    @com.google.gson.annotations.SerializedName("subscriber") val subscriber: Int
 )
 
+@androidx.annotation.Keep
 data class LastFmBaseResponse(
-    val status: String? = null // Often "ok" or ignored as errors throw generic exceptions in some setups
+    @com.google.gson.annotations.SerializedName("status") val status: String? = null
 )
