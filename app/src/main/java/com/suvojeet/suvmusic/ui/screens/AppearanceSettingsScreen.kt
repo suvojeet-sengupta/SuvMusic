@@ -67,8 +67,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.AppTheme
-import com.suvojeet.suvmusic.data.model.LyricsAnimationType
-import com.suvojeet.suvmusic.data.model.LyricsTextPosition
+import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
+import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -216,7 +216,8 @@ fun AppearanceSettingsScreen(
                             onClick = { showLyricsPositionSheet = true }
                         )
                         
-                        HorizontalDivider()
+                        // Use Divider instead of HorizontalDivider if not resolved
+                        androidx.compose.material3.HorizontalDivider()
                         
                         AppearanceNavigationItem(
                             icon = Icons.Default.Animation,
@@ -328,7 +329,8 @@ fun AppearanceSettingsScreen(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 
-                LyricsTextPosition.entries.forEach { position ->
+                val positions = LyricsTextPosition.entries
+                positions.forEach { position ->
                     ListItem(
                         headlineContent = { Text(position.label) },
                         leadingContent = {
@@ -369,7 +371,8 @@ fun AppearanceSettingsScreen(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 
-                LyricsAnimationType.entries.forEach { type ->
+                val animationTypes = LyricsAnimationType.entries
+                animationTypes.forEach { type ->
                     ListItem(
                         headlineContent = { Text(type.label) },
                         leadingContent = {

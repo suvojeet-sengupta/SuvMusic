@@ -18,6 +18,9 @@ import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.model.ThemeMode
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
+import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
+import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -544,42 +547,44 @@ class SessionManager @Inject constructor(
     suspend fun setPreferredLyricsProvider(provider: String) {
         context.dataStore.edit { preferences ->
             preferences[PREFERRED_LYRICS_PROVIDER_KEY] = provider
-    }
-    }
-    
-    suspend fun getLyricsTextPosition(): com.suvojeet.suvmusic.data.model.LyricsTextPosition {
-        val positionName = context.dataStore.data.first()[LYRICS_TEXT_POSITION_KEY]
-        return positionName?.let {
-            try { com.suvojeet.suvmusic.data.model.LyricsTextPosition.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER }
-        } ?: com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER
+        }
     }
     
-    val lyricsTextPositionFlow: Flow<com.suvojeet.suvmusic.data.model.LyricsTextPosition> = context.dataStore.data.map { preferences ->
+    suspend fun getLyricsTextPosition(): LyricsTextPosition {
+        return context.dataStore.data.map { preferences ->
+            preferences[LYRICS_TEXT_POSITION_KEY]?.let {
+                try { LyricsTextPosition.valueOf(it) } catch (e: Exception) { LyricsTextPosition.CENTER }
+            } ?: LyricsTextPosition.CENTER
+        }.first()
+    }
+    
+    val lyricsTextPositionFlow: Flow<LyricsTextPosition> = context.dataStore.data.map { preferences ->
         preferences[LYRICS_TEXT_POSITION_KEY]?.let {
-            try { com.suvojeet.suvmusic.data.model.LyricsTextPosition.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER }
-        } ?: com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER
+            try { LyricsTextPosition.valueOf(it) } catch (e: Exception) { LyricsTextPosition.CENTER }
+        } ?: LyricsTextPosition.CENTER
     }
     
-    suspend fun setLyricsTextPosition(position: com.suvojeet.suvmusic.data.model.LyricsTextPosition) {
+    suspend fun setLyricsTextPosition(position: LyricsTextPosition) {
         context.dataStore.edit { preferences ->
             preferences[LYRICS_TEXT_POSITION_KEY] = position.name
         }
     }
     
-    suspend fun getLyricsAnimationType(): com.suvojeet.suvmusic.data.model.LyricsAnimationType {
-        val typeName = context.dataStore.data.first()[LYRICS_ANIMATION_TYPE_KEY]
-        return typeName?.let {
-            try { com.suvojeet.suvmusic.data.model.LyricsAnimationType.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD }
-        } ?: com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD
+    suspend fun getLyricsAnimationType(): LyricsAnimationType {
+        return context.dataStore.data.map { preferences ->
+            preferences[LYRICS_ANIMATION_TYPE_KEY]?.let {
+                try { LyricsAnimationType.valueOf(it) } catch (e: Exception) { LyricsAnimationType.WORD }
+            } ?: LyricsAnimationType.WORD
+        }.first()
     }
     
-    val lyricsAnimationTypeFlow: Flow<com.suvojeet.suvmusic.data.model.LyricsAnimationType> = context.dataStore.data.map { preferences ->
+    val lyricsAnimationTypeFlow: Flow<LyricsAnimationType> = context.dataStore.data.map { preferences ->
         preferences[LYRICS_ANIMATION_TYPE_KEY]?.let {
-            try { com.suvojeet.suvmusic.data.model.LyricsAnimationType.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD }
-        } ?: com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD
+            try { LyricsAnimationType.valueOf(it) } catch (e: Exception) { LyricsAnimationType.WORD }
+        } ?: LyricsAnimationType.WORD
     }
     
-    suspend fun setLyricsAnimationType(type: com.suvojeet.suvmusic.data.model.LyricsAnimationType) {
+    suspend fun setLyricsAnimationType(type: LyricsAnimationType) {
         context.dataStore.edit { preferences ->
             preferences[LYRICS_ANIMATION_TYPE_KEY] = type.name
         }

@@ -77,7 +77,7 @@ import android.content.Intent
 import android.media.AudioManager
 import android.provider.Settings
 import android.widget.Toast
-import com.suvojeet.suvmusic.data.model.Lyrics
+import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.player.SleepTimerOption
@@ -156,9 +156,9 @@ fun PlayerScreen(
     isLoadingMoreComments: Boolean = false,
     onLoadMoreComments: () -> Unit = {},
     // Lyrics Provider
-    selectedLyricsProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
-    enabledLyricsProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
-    onLyricsProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
+    selectedLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
+    enabledLyricsProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
+    onLyricsProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
     // Sleep timer
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
@@ -184,8 +184,8 @@ fun PlayerScreen(
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
     val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsState(initial = 10)
     val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsState(initial = false)
-    val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.LyricsTextPosition.CENTER)
-    val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.LyricsAnimationType.WORD)
+    val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition.CENTER)
+    val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
     
     // Keep Screen On Logic
     DisposableEffect(keepScreenOn) {

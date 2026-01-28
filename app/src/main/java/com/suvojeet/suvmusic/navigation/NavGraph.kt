@@ -70,7 +70,7 @@ fun NavGraph(
     onRefreshDevices: () -> Unit = {},
     onSetPlaybackParameters: (Float, Float) -> Unit = { _, _ -> },
     player: Player? = null,
-    lyrics: com.suvojeet.suvmusic.data.model.Lyrics?,
+    lyrics: com.suvojeet.suvmusic.providers.lyrics.Lyrics?,
     isFetchingLyrics: Boolean,
     comments: List<com.suvojeet.suvmusic.data.model.Comment>?,
     isFetchingComments: Boolean,
@@ -80,9 +80,9 @@ fun NavGraph(
     isLoadingMoreComments: Boolean = false,
     onLoadMoreComments: () -> Unit = {},
     // Lyrics Provider
-    selectedLyricsProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
-    enabledLyricsProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
-    onLyricsProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
+    selectedLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
+    enabledLyricsProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
+    onLyricsProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
     // Sleep timer
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
