@@ -84,7 +84,7 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Playlists", "Artists", "Albums", "Offline")
+    val tabs = listOf("Liked", "Playlists", "Artists", "Albums", "Offline")
     
     // Create playlist dialog state
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
@@ -179,7 +179,13 @@ fun LibraryScreen(
                 // Content based on selected tab
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedTab) {
-                        0 -> PlaylistsTab(
+                        0 -> LikedTab(
+                            songs = uiState.likedSongs,
+                            isSyncing = uiState.isSyncingLikedSongs,
+                            onSongClick = onSongClick,
+                            onSync = { viewModel.refresh() }
+                        )
+                        1 -> PlaylistsTab(
                             playlists = uiState.playlists,
                             onPlaylistClick = onPlaylistClick,
                             onMoreClick = { playlist ->
@@ -189,15 +195,15 @@ fun LibraryScreen(
                             onCreatePlaylistClick = { showCreatePlaylistDialog = true },
                             onImportSpotifyClick = { showImportSpotifyDialog = true }
                         )
-                        1 -> ArtistsTab(
+                        2 -> ArtistsTab(
                             artists = uiState.libraryArtists,
                             onArtistClick = { artist -> onArtistClick(artist.id) }
                         )
-                        2 -> AlbumsTab(
+                        3 -> AlbumsTab(
                             albums = uiState.libraryAlbums,
                             onAlbumClick = onAlbumClick
                         )
-                        3 -> OfflineTab(
+                        4 -> OfflineTab(
                             localSongs = uiState.localSongs,
                             downloadedSongs = uiState.downloadedSongs,
                             onSongClick = onSongClick,
