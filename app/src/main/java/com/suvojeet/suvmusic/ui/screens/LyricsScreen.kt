@@ -44,16 +44,16 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
-import com.suvojeet.suvmusic.data.model.Lyrics
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
+import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
+import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PictureAsPdf
 import com.suvojeet.suvmusic.ui.utils.LyricsPdfGenerator
-
-import com.suvojeet.suvmusic.data.model.LyricsTextPosition
-import com.suvojeet.suvmusic.data.model.LyricsAnimationType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,9 +73,9 @@ fun LyricsScreen(
     onPlayPause: () -> Unit = {},
     onNext: () -> Unit = {},
     onPrevious: () -> Unit = {},
-    selectedProvider: com.suvojeet.suvmusic.data.model.LyricsProviderType = com.suvojeet.suvmusic.data.model.LyricsProviderType.AUTO,
-    enabledProviders: Map<com.suvojeet.suvmusic.data.model.LyricsProviderType, Boolean> = emptyMap(),
-    onProviderChange: (com.suvojeet.suvmusic.data.model.LyricsProviderType) -> Unit = {},
+    selectedProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
+    enabledProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
+    onProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
     lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
     lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
     modifier: Modifier = Modifier
@@ -142,7 +142,7 @@ fun LyricsScreen(
                 title = { Text("Lyrics Source") },
                 text = {
                     Column {
-                        com.suvojeet.suvmusic.data.model.LyricsProviderType.entries.forEach { provider ->
+                        com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.entries.forEach { provider ->
                             val isEnabled = enabledProviders[provider] ?: true
                             Row(
                                 modifier = Modifier
@@ -314,9 +314,10 @@ fun LyricsScreen(
             }
             
             // Footer (Source Credit)
-            if (lyrics?.sourceCredit != null) {
+            val credit = lyrics?.sourceCredit
+            if (credit != null) {
                 Text(
-                    text = lyrics.sourceCredit,
+                    text = credit,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.4f),
                     modifier = Modifier
@@ -543,18 +544,21 @@ fun LyricsList(
         LyricsTextPosition.CENTER -> Alignment.Center
         LyricsTextPosition.LEFT -> Alignment.CenterStart
         LyricsTextPosition.RIGHT -> Alignment.CenterEnd
+        else -> Alignment.Center
     }
     
     val textAlign = when (textPosition) {
         LyricsTextPosition.CENTER -> TextAlign.Center
         LyricsTextPosition.LEFT -> TextAlign.Start
         LyricsTextPosition.RIGHT -> TextAlign.End
+        else -> TextAlign.Center
     }
     
     val flowArrangement = when (textPosition) {
         LyricsTextPosition.CENTER -> Arrangement.Center
         LyricsTextPosition.LEFT -> Arrangement.Start
         LyricsTextPosition.RIGHT -> Arrangement.End
+        else -> Arrangement.Center
     }
     
     // Determine active line index
@@ -719,7 +723,8 @@ fun LyricsList(
                             .padding(horizontal = 32.dp, vertical = 8.dp) // Reduced vertical padding
                     ) {
                         // Use word-by-word ONLY if enabled and available
-                        if (line.words != null && line.words.isNotEmpty() && lyrics.isSynced && animationType == LyricsAnimationType.WORD) {
+                        val words = line.words
+                        if (words != null && words.isNotEmpty() && lyrics.isSynced && animationType == LyricsAnimationType.WORD) {
                             // Word-by-word rendering
                             OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
@@ -727,7 +732,7 @@ fun LyricsList(
                                 horizontalArrangement = flowArrangement,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                line.words.forEach { word ->
+                                words.forEach { word ->
                                     // Word is active if currentTime is within [startTime, endTime]
                                     // OR if it's in the past of the current line but we're still processing this line
                                     val isWordActive = isActive && currentTime >= word.startTimeMs

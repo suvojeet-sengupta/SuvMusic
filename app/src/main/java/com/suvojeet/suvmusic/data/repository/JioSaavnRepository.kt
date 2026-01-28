@@ -309,7 +309,7 @@ class JioSaavnRepository @Inject constructor(
      * Get synced lyrics for a song using LRCLIB API.
      * Falls back to plain JioSaavn lyrics if synced lyrics not found.
      */
-    suspend fun getSyncedLyrics(songId: String, title: String, artist: String, duration: Long): com.suvojeet.suvmusic.data.model.Lyrics? = withContext(Dispatchers.IO) {
+    suspend fun getSyncedLyrics(songId: String, title: String, artist: String, duration: Long): com.suvojeet.suvmusic.providers.lyrics.Lyrics? = withContext(Dispatchers.IO) {
         try {
             // Clean up title and artist for better matching
             val cleanTitle = title.replace(Regex("\\s*\\(.*?\\)"), "") // Remove parentheses content
@@ -345,7 +345,7 @@ class JioSaavnRepository @Inject constructor(
                         val lines = parseLrcLyrics(syncedLyrics)
                         if (lines.isNotEmpty()) {
                             android.util.Log.d("JioSaavnRepo", "Found synced lyrics with ${lines.size} lines")
-                            return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                            return@withContext com.suvojeet.suvmusic.providers.lyrics.Lyrics(
                                 lines = lines,
                                 sourceCredit = "Lyrics from LRCLIB",
                                 isSynced = true
@@ -357,9 +357,9 @@ class JioSaavnRepository @Inject constructor(
                     val plainLyrics = json.get("plainLyrics")?.asString
                     if (!plainLyrics.isNullOrBlank()) {
                         val lines = plainLyrics.split("\n").map { line ->
-                            com.suvojeet.suvmusic.data.model.LyricsLine(text = line.trim())
+                            com.suvojeet.suvmusic.providers.lyrics.LyricsLine(text = line.trim())
                         }
-                        return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                        return@withContext com.suvojeet.suvmusic.providers.lyrics.Lyrics(
                             lines = lines,
                             sourceCredit = "Lyrics from LRCLIB",
                             isSynced = false
@@ -388,7 +388,7 @@ class JioSaavnRepository @Inject constructor(
                             val lines = parseLrcLyrics(syncedLyrics)
                             if (lines.isNotEmpty()) {
                                 android.util.Log.d("JioSaavnRepo", "Found synced lyrics via search")
-                                return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                                return@withContext com.suvojeet.suvmusic.providers.lyrics.Lyrics(
                                     lines = lines,
                                     sourceCredit = "Lyrics from LRCLIB",
                                     isSynced = true
@@ -399,9 +399,9 @@ class JioSaavnRepository @Inject constructor(
                         val plainLyrics = firstResult.get("plainLyrics")?.asString
                         if (!plainLyrics.isNullOrBlank()) {
                             val lines = plainLyrics.split("\n").map { line ->
-                                com.suvojeet.suvmusic.data.model.LyricsLine(text = line.trim())
+                                com.suvojeet.suvmusic.providers.lyrics.LyricsLine(text = line.trim())
                             }
-                            return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                            return@withContext com.suvojeet.suvmusic.providers.lyrics.Lyrics(
                                 lines = lines,
                                 sourceCredit = "Lyrics from LRCLIB",
                                 isSynced = false
@@ -416,9 +416,9 @@ class JioSaavnRepository @Inject constructor(
             val jiosaavnLyrics = getLyricsFromJioSaavn(songId)
             if (!jiosaavnLyrics.isNullOrBlank()) {
                 val lines = jiosaavnLyrics.split("\n").map { line ->
-                    com.suvojeet.suvmusic.data.model.LyricsLine(text = line.trim())
+                    com.suvojeet.suvmusic.providers.lyrics.LyricsLine(text = line.trim())
                 }
-                return@withContext com.suvojeet.suvmusic.data.model.Lyrics(
+                return@withContext com.suvojeet.suvmusic.providers.lyrics.Lyrics(
                     lines = lines,
                     sourceCredit = "Lyrics from JioSaavn",
                     isSynced = false
@@ -436,8 +436,8 @@ class JioSaavnRepository @Inject constructor(
      * Parse LRC format lyrics into LyricsLine objects.
      * LRC format: [mm:ss.xx]lyrics text
      */
-    private fun parseLrcLyrics(lrcContent: String): List<com.suvojeet.suvmusic.data.model.LyricsLine> {
-        val lines = mutableListOf<com.suvojeet.suvmusic.data.model.LyricsLine>()
+    private fun parseLrcLyrics(lrcContent: String): List<com.suvojeet.suvmusic.providers.lyrics.LyricsLine> {
+        val lines = mutableListOf<com.suvojeet.suvmusic.providers.lyrics.LyricsLine>()
         val lrcPattern = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)") // [mm:ss.xx]text
         
         lrcContent.split("\n").forEach { line ->
@@ -457,7 +457,7 @@ class JioSaavnRepository @Inject constructor(
                 
                 if (text.isNotBlank()) {
                     lines.add(
-                        com.suvojeet.suvmusic.data.model.LyricsLine(
+                        com.suvojeet.suvmusic.providers.lyrics.LyricsLine(
                             text = text,
                             startTimeMs = startTimeMs
                         )
