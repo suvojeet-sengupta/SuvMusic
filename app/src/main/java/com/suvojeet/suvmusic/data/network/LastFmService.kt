@@ -73,5 +73,7 @@ data class LastFmSession(
 
 @androidx.annotation.Keep
 data class LastFmBaseResponse(
-    @com.google.gson.annotations.SerializedName("status") val status: String? = null
+    @com.google.gson.annotations.SerializedName("status") val status: String? = null,
+    @com.google.gson.annotations.SerializedName("error") val error: Int? = null,
+    @com.google.gson.annotations.SerializedName("message") val message: String? = null
 )
