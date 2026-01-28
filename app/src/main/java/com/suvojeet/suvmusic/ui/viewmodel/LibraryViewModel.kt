@@ -122,6 +122,18 @@ class LibraryViewModel @Inject constructor(
                 val liked = preloadedLikedSongs ?: youTubeRepository.getLikedMusic(fetchAll = false)
                 _uiState.update { it.copy(likedSongs = liked) }
 
+                // Load library playlists
+                if (sessionManager.isLoggedIn()) {
+                    val playlists = youTubeRepository.getUserPlaylists()
+                    _uiState.update { it.copy(playlists = playlists) }
+
+                    val artists = youTubeRepository.getLibraryArtists()
+                    _uiState.update { it.copy(libraryArtists = artists) }
+
+                    val albums = youTubeRepository.getLibraryAlbums()
+                    _uiState.update { it.copy(libraryAlbums = albums) }
+                }
+
                 if (forceRefresh && sessionManager.isLoggedIn()) {
                     refresh()
                 }
@@ -140,7 +152,9 @@ class LibraryViewModel @Inject constructor(
                 var syncedSongs: List<Song>? = null
                 if (sessionManager.isLoggedIn()) {
                     // This updates playlists/liked songs in repositories
-                    youTubeRepository.getUserEditablePlaylists()
+                    youTubeRepository.getUserPlaylists() // Fetch and cache
+                    youTubeRepository.getLibraryArtists() // Fetch
+                    youTubeRepository.getLibraryAlbums() // Fetch
                     syncedSongs = youTubeRepository.getLikedMusic(fetchAll = true)
                 }
                 // Reload data from repositories
