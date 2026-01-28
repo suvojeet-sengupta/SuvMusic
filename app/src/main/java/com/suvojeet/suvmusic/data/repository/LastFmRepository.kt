@@ -9,6 +9,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.statement.bodyAsText
@@ -38,6 +39,10 @@ class LastFmRepository @Inject constructor(
         install(ContentNegotiation) {
             json(json)
         }
+        defaultRequest { 
+            url("https://ws.audioscrobbler.com/2.0/")
+            userAgent("SuvMusic (https://github.com/suvojeet-sengupta/SuvMusic)") // Updated User-Agent
+        }
         expectSuccess = false
     }
 
@@ -53,7 +58,7 @@ class LastFmRepository @Inject constructor(
         extra: Map<String, String> = emptyMap(),
         sessionKey: String? = null
     ) {
-        url("https://ws.audioscrobbler.com/2.0/")
+        // base URL is set in defaultRequest
         val paramsForSig = mutableMapOf(
             "method" to method,
             "api_key" to apiKey
@@ -92,6 +97,34 @@ class LastFmRepository @Inject constructor(
             sessionManager.setLastFmSession(sessionKey, username)
             
             Result.success(username)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getMobileSession(username: String, password: String): Result<Authentication> = withContext(Dispatchers.IO) {
+        try {
+            val response = client.post {
+                lastfmParams(
+                    method = "auth.getMobileSession",
+                    extra = mapOf("username" to username, "password" to password)
+                )
+            }
+
+            val responseText = response.bodyAsText()
+            if (responseText.contains("\"error\"")) {
+                val error = json.decodeFromString<LastFmError>(responseText)
+                return@withContext Result.failure(Exception(error.message)) // Or custom exception
+            }
+
+            val auth = json.decodeFromString<Authentication>(responseText)
+            // Note: We don't automatically persist here to let ViewModel handle it or we can do it here.
+            // Metrolist persists in UI/ViewModel callback. I'll stick to returning the Auth object
+            // but I will also persist it here for consistency with fetchSession if desired?
+            // Actually, fetchSession returns Result<String> (username). 
+            // I'll stick to returning Result<Authentication> and let ViewModel call sessionManager.
+            
+            Result.success(auth)
         } catch (e: Exception) {
             Result.failure(e)
         }

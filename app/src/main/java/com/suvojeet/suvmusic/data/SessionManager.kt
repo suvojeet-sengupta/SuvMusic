@@ -164,6 +164,15 @@ class SessionManager @Inject constructor(
         // Last.fm
         private val LAST_FM_SESSION_KEY = stringPreferencesKey("last_fm_session_key")
         private val LAST_FM_USERNAME_KEY = stringPreferencesKey("last_fm_username")
+        
+        // Last.fm specific settings matching Metrolist
+        private val LAST_FM_SCROBBLING_ENABLED_KEY = booleanPreferencesKey("last_fm_scrobbling_enabled")
+        private val LAST_FM_USE_NOW_PLAYING_KEY = booleanPreferencesKey("last_fm_use_now_playing")
+        private val LAST_FM_SEND_LIKES_KEY = booleanPreferencesKey("last_fm_send_likes")
+        
+        private val SCROBBLE_DELAY_PERCENT_KEY = androidx.datastore.preferences.core.floatPreferencesKey("scrobble_delay_percent")
+        private val SCROBBLE_MIN_DURATION_KEY = intPreferencesKey("scrobble_min_duration")
+        private val SCROBBLE_DELAY_SECONDS_KEY = intPreferencesKey("scrobble_delay_seconds")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -243,6 +252,74 @@ class SessionManager @Inject constructor(
     
     val lastFmUsernameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[LAST_FM_USERNAME_KEY]
+    }
+
+    // --- Last.fm Settings Accessors ---
+
+    suspend fun isLastFmScrobblingEnabled(): Boolean = 
+        context.dataStore.data.first()[LAST_FM_SCROBBLING_ENABLED_KEY] ?: false
+
+    val lastFmScrobblingEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[LAST_FM_SCROBBLING_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setLastFmScrobblingEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_FM_SCROBBLING_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun isLastFmUseNowPlayingEnabled(): Boolean = 
+        context.dataStore.data.first()[LAST_FM_USE_NOW_PLAYING_KEY] ?: true
+
+    val lastFmUseNowPlayingFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[LAST_FM_USE_NOW_PLAYING_KEY] ?: true
+    }
+
+    suspend fun setLastFmUseNowPlaying(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_FM_USE_NOW_PLAYING_KEY] = enabled
+        }
+    }
+
+    suspend fun isLastFmSendLikesEnabled(): Boolean = 
+        context.dataStore.data.first()[LAST_FM_SEND_LIKES_KEY] ?: false
+        
+    val lastFmSendLikesFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[LAST_FM_SEND_LIKES_KEY] ?: false
+    }
+
+    suspend fun setLastFmSendLikes(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_FM_SEND_LIKES_KEY] = enabled
+        }
+    }
+
+    suspend fun getScrobbleDelayPercent(): Float = 
+        context.dataStore.data.first()[SCROBBLE_DELAY_PERCENT_KEY] ?: 0.5f
+
+    suspend fun setScrobbleDelayPercent(percent: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[SCROBBLE_DELAY_PERCENT_KEY] = percent
+        }
+    }
+
+    suspend fun getScrobbleMinDuration(): Int = 
+        context.dataStore.data.first()[SCROBBLE_MIN_DURATION_KEY] ?: 30
+
+    suspend fun setScrobbleMinDuration(seconds: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[SCROBBLE_MIN_DURATION_KEY] = seconds
+        }
+    }
+
+    suspend fun getScrobbleDelaySeconds(): Int = 
+        context.dataStore.data.first()[SCROBBLE_DELAY_SECONDS_KEY] ?: 180
+
+    suspend fun setScrobbleDelaySeconds(seconds: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[SCROBBLE_DELAY_SECONDS_KEY] = seconds
+        }
     }
     
     val dynamicIslandEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
