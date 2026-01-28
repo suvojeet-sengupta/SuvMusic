@@ -83,21 +83,17 @@ class MusicPlayerService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
         
-        // ... (LoadControl and Player setup remains same) ...
         // Ultra-fast buffer for instant playback
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                5_000, 50_000, 250, 1_000
-            )
+            .setBufferDurationsMs(5_000, 50_000, 250, 1_000)
             .setPrioritizeTimeOverSizeThresholds(true)
-            .setBackBuffer(30_000, true) // Keep 30s back buffer for rewinding/looping
+            .setBackBuffer(30_000, true)
             .build()
             
         val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
+        
         val player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(
-                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
-            )
+            .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory))
             .setLoadControl(loadControl)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -108,47 +104,34 @@ class MusicPlayerService : MediaLibraryService() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
-            .apply {
-                if (isOffloadEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    trackSelectionParameters = trackSelectionParameters.buildUpon()
-                        .setAudioOffloadPreferences(
-                            androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
-                                .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
-                                .setIsGaplessSupportRequired(false) // Allow offload even if gapless isn't hardware-supported for better battery
-                                .build()
-                        )
-                        .build()
+
+        player.apply {
+            addListener(object : androidx.media3.common.Player.Listener {
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        setupAudioNormalization(audioSessionId)
+                    }
                 }
-                pauseAtEndOfMediaItems = false
-                addListener(object : androidx.media3.common.Player.Listener {
-                    override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                        if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
-                            setupAudioNormalization(audioSessionId)
-                        }
-                    }
 
-                    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                        super.onMediaItemTransition(mediaItem, reason)
-                        mediaItem?.mediaId?.let { videoId ->
-                            // Load SponsorBlock segments when song starts
-                            // We assume mediaId is the YouTube Video ID
-                            if (videoId.isNotEmpty()) {
-                                sponsorBlockRepository.loadSegments(videoId)
-                            }
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    super.onMediaItemTransition(mediaItem, reason)
+                    mediaItem?.mediaId?.let { videoId ->
+                        if (videoId.isNotEmpty()) {
+                            sponsorBlockRepository.loadSegments(videoId)
                         }
                     }
+                }
 
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        super.onIsPlayingChanged(isPlaying)
-                        if (isPlaying) {
-                            startSponsorBlockMonitoring()
-                        } else {
-                            sponsorBlockJob?.cancel()
-                        }
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    super.onIsPlayingChanged(isPlaying)
+                    if (isPlaying) {
+                        startSponsorBlockMonitoring()
+                    } else {
+                        sponsorBlockJob?.cancel()
                     }
-                })
-                })
-            }
+                }
+            })
+        }
             
         // Attach Last.fm Manager
         lastFmManager.setPlayer(player)
@@ -170,7 +153,7 @@ class MusicPlayerService : MediaLibraryService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        mediaLibrarySession = MediaLibrarySession.Builder(this, player, object : MediaLibrarySession.Callback {
+        mediaLibrarySession = MediaLibrarySession.Builder(this, player).setCallback(object : MediaLibrarySession.Callback {
             override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
                 val connectionResult = super.onConnect(session, controller)
                 val sessionCommands = connectionResult.availableSessionCommands.buildUpon()
@@ -190,7 +173,6 @@ class MusicPlayerService : MediaLibraryService() {
                              val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
                              
                              if (deviceId == "phone_speaker") {
-                                 // Route to built-in speaker
                                  val speaker = devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
                                  if (speaker != null) {
                                      player.setPreferredAudioDevice(speaker)
@@ -198,7 +180,6 @@ class MusicPlayerService : MediaLibraryService() {
                                      player.setPreferredAudioDevice(null)
                                  }
                              } else {
-                                 // Route to specific device
                                  val targetDevice = devices.find { it.id.toString() == deviceId }
                                  if (targetDevice != null) {
                                      player.setPreferredAudioDevice(targetDevice)
@@ -264,21 +245,17 @@ class MusicPlayerService : MediaLibraryService() {
                                 })
                             }
                             else -> {
-                                // Handle dynamic sections from Home
                                 if (parentId.startsWith("section_")) {
                                     val index = parentId.removePrefix("section_").toIntOrNull()
                                     if (index != null && index in cachedHomeSections.indices) {
                                         val section = cachedHomeSections[index]
                                         section.items.forEach { homeItem ->
-                                             // Map HomeItem to MediaItem
                                              if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.SongItem) {
                                                  children.add(createPlayableMediaItem(homeItem.song))
                                              } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem) {
                                                  children.add(createBrowsableMediaItem("playlist_${homeItem.playlist.id}", homeItem.playlist.name))
                                              } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem) {
                                                  children.add(createBrowsableMediaItem("album_${homeItem.album.id}", homeItem.album.title))
-                                             } else {
-                                                 // Skip Artists/Explore for now to keep simple, or map them similarly
                                              }
                                         }
                                     }
@@ -308,10 +285,6 @@ class MusicPlayerService : MediaLibraryService() {
                 serviceScope.launch {
                     try {
                         val results = youTubeRepository.search(query)
-                        // Signal that search is done. The empty result just confirms receipt.
-                        // The actual results are retrieved via onGetSearchResult.
-                        // We need to cache these results or just fetch again in onGetSearchResult.
-                        // For Media3, we usually notify the session.
                         mediaLibrarySession?.notifySearchResultChanged(browser, query, results.size, params)
                         future.set(LibraryResult.ofVoid(params))
                     } catch (e: Exception) {
@@ -325,7 +298,6 @@ class MusicPlayerService : MediaLibraryService() {
                  val future = com.google.common.util.concurrent.SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
                  serviceScope.launch {
                      try {
-                         // Potentially redundant network call if not cached, but ensures freshness
                          val results = youTubeRepository.search(query)
                          val mediaItems = results.map { createPlayableMediaItem(it) }
                          future.set(LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params))
@@ -338,11 +310,9 @@ class MusicPlayerService : MediaLibraryService() {
 
             override fun onAddMediaItems(mediaSession: MediaSession, controller: MediaSession.ControllerInfo, mediaItems: MutableList<MediaItem>): com.google.common.util.concurrent.ListenableFuture<MutableList<MediaItem>> {
                  val updatedMediaItemsFuture = com.google.common.util.concurrent.SettableFuture.create<MutableList<MediaItem>>()
-
                  serviceScope.launch {
                      val updatedList = mediaItems.map { item ->
                         if (item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
-                            // Needs resolution (likely YouTube song)
                             val videoId = item.mediaId
                             val streamUrl = youTubeRepository.getStreamUrl(videoId)
                             if (streamUrl != null) {
@@ -363,10 +333,8 @@ class MusicPlayerService : MediaLibraryService() {
         .setBitmapLoader(CoilBitmapLoader(this))
         .build()
 
-        // Register Volume Receiver
         registerReceiver(volumeReceiver, android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
 
-        // Sponsorblock
         serviceScope.launch {
             sessionManager.sponsorBlockEnabledFlow.collect { enabled ->
                 sponsorBlockRepository.setEnabled(enabled)

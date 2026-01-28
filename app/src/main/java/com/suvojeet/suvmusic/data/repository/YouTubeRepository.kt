@@ -911,6 +911,89 @@ class YouTubeRepository @Inject constructor(
         return artists
     }
 
+    /**
+     * Get albums from user's library.
+     */
+    suspend fun getLibraryAlbums(): List<Album> = withContext(Dispatchers.IO) {
+        if (!sessionManager.isLoggedIn()) return@withContext emptyList()
+        try {
+            val json = fetchInternalApi("FEmusic_library_corpus_track_albums")
+            parseLibraryAlbumsFromJson(json)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    private fun parseLibraryAlbumsFromJson(json: String): List<Album> {
+        val albums = mutableListOf<Album>()
+        try {
+            val root = JSONObject(json)
+            val contents = root.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+
+            if (contents != null) {
+                for (i in 0 until contents.length()) {
+                    val item = contents.optJSONObject(i)
+                    val gridItems = item?.optJSONObject("gridRenderer")?.optJSONArray("items")
+                        ?: item?.optJSONObject("itemSectionRenderer")?.optJSONArray("contents")
+
+                    if (gridItems != null) {
+                        for (j in 0 until gridItems.length()) {
+                            val gridItem = gridItems.optJSONObject(j)
+                            val musicStatsRenderer = gridItem?.optJSONObject("musicTwoRowItemRenderer")
+                            
+                            if (musicStatsRenderer != null) {
+                                val titleObj = musicStatsRenderer.optJSONObject("title")
+                                val albumName = getRunText(titleObj) ?: continue
+                                
+                                val navEndpoint = musicStatsRenderer.optJSONObject("navigationEndpoint")
+                                val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId") ?: ""
+                                
+                                val thumbnailRenderer = musicStatsRenderer.optJSONObject("thumbnailRenderer")
+                                val thumbnails = thumbnailRenderer?.optJSONObject("musicThumbnailRenderer")
+                                    ?.optJSONObject("thumbnail")?.optJSONArray("thumbnails")
+                                
+                                val thumbnailUrl = thumbnails?.let { 
+                                    it.optJSONObject(it.length() - 1)?.optString("url") 
+                                }
+
+                                val subtitleObj = musicStatsRenderer.optJSONObject("subtitle")
+                                val subtitle = getRunText(subtitleObj) ?: ""
+                                
+                                // Subtitle often contains Artist Name • Year
+                                val parts = subtitle.split("•").map { it.trim() }
+                                val artistName = parts.firstOrNull() ?: ""
+                                val year = parts.getOrNull(1) ?: ""
+
+                                if (browseId.isNotEmpty()) {
+                                    albums.add(Album(
+                                        id = browseId,
+                                        title = albumName,
+                                        artist = artistName,
+                                        thumbnailUrl = thumbnailUrl,
+                                        year = year,
+                                        songs = emptyList() // Details fetched separately
+                                    ))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return albums
+    }
+
+
     private fun fetchInternalApiWithParams(browseId: String, params: String): String =
         apiClient.fetchInternalApiWithParams(browseId, params)
 
