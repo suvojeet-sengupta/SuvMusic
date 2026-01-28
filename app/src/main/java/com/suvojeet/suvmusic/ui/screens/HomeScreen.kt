@@ -530,37 +530,170 @@ private fun Modifier.bounceClick(
 
 @Composable
 private fun AppFooter(modifier: Modifier = Modifier) {
-    // Kept the same animation logic, just ensuring it fits the new vibe
     val infiniteTransition = rememberInfiniteTransition(label = "footer")
+    
     val bounceOffset by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 8f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = androidx.compose.animation.core.EaseInOutSine), RepeatMode.Reverse),
+        initialValue = 0f, targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            tween(1200, easing = androidx.compose.animation.core.EaseInOutSine), 
+            RepeatMode.Reverse
+        ),
         label = "bounce"
     )
+    
     val heartScale by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(tween(600, easing = androidx.compose.animation.core.EaseInOutSine), RepeatMode.Reverse),
+        initialValue = 1f, targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            tween(800, easing = androidx.compose.animation.core.EaseInOutBack), 
+            RepeatMode.Reverse
+        ),
         label = "heartbeat"
     )
 
     Column(
-        modifier = modifier.padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp, bottom = 24.dp)
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("🎵", fontSize = 28.sp, modifier = Modifier.offset(y = (-bounceOffset).dp))
-            Text("🎧", fontSize = 40.sp, modifier = Modifier.graphicsLayer { rotationZ = bounceOffset / 2 })
-            Text("🎶", fontSize = 28.sp, modifier = Modifier.offset(y = bounceOffset.dp))
+        // Decorative Divider
+        Box(
+            modifier = Modifier
+                .width(60.dp)
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Large Musical Icons
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(20.dp), 
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("🎵", fontSize = 32.sp, modifier = Modifier.offset(y = (-bounceOffset).dp))
+            Surface(
+                modifier = Modifier
+                    .size(80.dp)
+                    .graphicsLayer { rotationZ = bounceOffset },
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("🎧", fontSize = 48.sp)
+                }
+            }
+            Text("🎶", fontSize = 32.sp, modifier = Modifier.offset(y = bounceOffset.dp))
         }
-        Text("That's all for now!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f))
-        Text("Keep vibing, new music drops daily ✨", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), textAlign = TextAlign.Center)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Text("Developed with ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-            Icon(Icons.Default.Favorite, "Love", tint = Color(0xFFFF4081), modifier = Modifier.padding(horizontal = 4.dp).size(14.dp).scale(heartScale))
-            Text(" from India 🇮🇳", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "That's all for now!", 
+            style = MaterialTheme.typography.headlineSmall, 
+            fontWeight = FontWeight.ExtraBold, 
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = (-0.5).sp
+        )
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = "Keep vibing, new music drops daily ✨", 
+            style = MaterialTheme.typography.bodyMedium, 
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), 
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // Developer Section - Unique Design
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.0f),
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+                .padding(vertical = 24.dp, horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "CRAFTED WITH",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    letterSpacing = 2.sp
+                )
+                Icon(
+                    imageVector = Icons.Default.Favorite, 
+                    contentDescription = "Love", 
+                    tint = Color(0xFFFF4081), 
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .size(16.dp)
+                        .scale(heartScale)
+                )
+                Text(
+                    text = "FROM INDIA",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    letterSpacing = 2.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Spotlight on Suvojeet Sengupta
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Suvojeet Sengupta",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        )
+                    ),
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "Lead Developer & Designer",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Medium
+            )
         }
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
