@@ -60,6 +60,8 @@ jobs:
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
+        LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
         GRADLE_OPTS: -Dorg.gradle.workers.max=2
 
     - name: Build Release AAB
@@ -69,6 +71,8 @@ jobs:
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
+        LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
         GRADLE_OPTS: -Dorg.gradle.workers.max=2
 
     - name: Extract version name

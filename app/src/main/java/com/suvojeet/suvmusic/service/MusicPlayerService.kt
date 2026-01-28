@@ -56,6 +56,9 @@ class MusicPlayerService : MediaLibraryService() {
     @Inject
     lateinit var sponsorBlockRepository: SponsorBlockRepository
 
+    @Inject
+    lateinit var lastFmManager: com.suvojeet.suvmusic.player.LastFmManager
+
     private var mediaLibrarySession: MediaLibrarySession? = null
     
     // Constants for Android Auto browsing
@@ -144,7 +147,11 @@ class MusicPlayerService : MediaLibraryService() {
                         }
                     }
                 })
+                })
             }
+            
+        // Attach Last.fm Manager
+        lastFmManager.setPlayer(player)
         
         serviceScope.launch {
             kotlinx.coroutines.flow.combine(
