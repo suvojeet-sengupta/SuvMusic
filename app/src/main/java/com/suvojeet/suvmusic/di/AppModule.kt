@@ -160,10 +160,17 @@ object AppModule {
     @Provides
     @Singleton
     fun provideLastFmService(): com.suvojeet.suvmusic.data.network.LastFmService {
+        val logging = okhttp3.logging.HttpLoggingInterceptor().apply {
+            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
+        }
+        val client = OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .build()
+            
         return retrofit2.Retrofit.Builder()
             .baseUrl("https://ws.audioscrobbler.com/")
             .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
-            .client(OkHttpClient.Builder().build())
+            .client(client)
             .build()
             .create(com.suvojeet.suvmusic.data.network.LastFmService::class.java)
     }
