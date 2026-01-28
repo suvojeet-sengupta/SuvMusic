@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.player
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.suvojeet.suvmusic.data.repository.LastFmRepository
+import com.suvojeet.suvmusic.data.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -15,7 +16,8 @@ import javax.inject.Singleton
 
 @Singleton
 class LastFmManager @Inject constructor(
-    private val lastFmRepository: LastFmRepository
+    private val lastFmRepository: LastFmRepository,
+    private val sessionManager: SessionManager
 ) : Player.Listener {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -74,27 +76,32 @@ class LastFmManager @Inject constructor(
         currentAlbum = mediaItem.mediaMetadata.albumTitle?.toString() ?: ""
         currentDuration = 0 // Reset duration, will be updated from player
         
-        // 1. Update "Now Playing"
+        // 1. Update "Now Playing" and Start Monitoring
         if (shouldScrobble(mediaItem)) {
             scope.launch {
-                try {
-                    lastFmRepository.updateNowPlaying(
-                        artist = currentArtist,
-                        track = currentTitle,
-                        album = currentAlbum,
-                        duration = 0 
-                    )
-                } catch (e: Exception) {
-                    android.util.Log.e("LastFmManager", "Failed to update Now Playing", e)
+                if (!lastFmRepository.isConnected()) return@launch
+                if (!sessionManager.isLastFmScrobblingEnabled()) return@launch
+
+                if (sessionManager.isLastFmUseNowPlayingEnabled()) {
+                    try {
+                        lastFmRepository.updateNowPlaying(
+                            artist = currentArtist,
+                            track = currentTitle,
+                            album = currentAlbum,
+                            duration = 0 
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("LastFmManager", "Failed to update Now Playing", e)
+                    }
                 }
+                
+                // 2. Start monitoring
+                monitorPlayback()
             }
-            // 2. Start monitoring
-            monitorPlayback()
         }
     }
     
     private fun shouldScrobble(mediaItem: MediaItem?): Boolean {
-        if (!lastFmRepository.isConnected()) return false
         if (mediaItem == null) return false
         
         // Don't scrobble ads or placeholder clips
@@ -106,6 +113,11 @@ class LastFmManager @Inject constructor(
     private fun monitorPlayback() {
         scrobbleJob?.cancel()
         scrobbleJob = scope.launch {
+            // Read settings
+            val delayPercent = sessionManager.getScrobbleDelayPercent()
+            val minDurationSeconds = sessionManager.getScrobbleMinDuration()
+            val maxDelaySeconds = sessionManager.getScrobbleDelaySeconds()
+            
             while (isActive) {
                 val player = currentPlayer ?: break
                 
@@ -127,10 +139,14 @@ class LastFmManager @Inject constructor(
                         currentDuration = duration
                     }
                     
-                    // Logic: Scrobble after 50% or 4 minutes (240s), whichever is sooner.
-                    // Minimum track length: 30s
-                    if (currentDuration > 30_000) {
-                        val targetMs = kotlin.math.min(currentDuration / 2, 4 * 60 * 1000).toLong()
+                    // Minimum track length from settings
+                    if (currentDuration > minDurationSeconds * 1000) {
+                        // Calculate target time based on percentage and max delay
+                        val targetMsByPercent = (currentDuration * delayPercent).toLong()
+                        val targetMsByMaxDelay = maxDelaySeconds * 1000L
+                        
+                        // Rule: Scrobble after X% OR Y seconds, whichever is sooner
+                        val targetMs = kotlin.math.min(targetMsByPercent, targetMsByMaxDelay)
                         
                         if (currentPos >= targetMs) {
                             scrobbleCurrentTrack()
