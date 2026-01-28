@@ -564,7 +564,7 @@ fun NavGraph(
         }
         
         composable(Destination.LastFmLogin.route) {
-            com.suvojeet.suvmusic.ui.screens.settings.LastFmLoginScreen(
+            com.suvojeet.suvmusic.ui.screens.settings.LastFmSettingsScreen(
                 onBack = { navController.popBackStack() },
                 onLoginSuccess = { username ->
                     android.widget.Toast.makeText(navController.context, "Connected as $username", android.widget.Toast.LENGTH_SHORT).show()

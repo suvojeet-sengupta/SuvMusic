@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HeadsetMic
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Storage
@@ -298,6 +299,17 @@ fun SettingsScreen(
                                 }
                             }
                         )
+                        
+                        HorizontalDivider()
+                        
+                        // Last.fm Integration
+                        val isLastFmConnected = uiState.lastFmUsername != null
+                        SettingsNavigationItem(
+                            icon = Icons.Default.MusicNote,
+                            title = "Last.fm",
+                            subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music hits",
+                            onClick = onLastFmClick
+                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -330,39 +342,6 @@ fun SettingsScreen(
                 item {
                     SettingsSectionTitle("Integrations")
                     GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        // Last.fm
-                        val isConnected = uiState.lastFmUsername != null
-                        ListItem(
-                            headlineContent = { Text("Last.fm", fontWeight = FontWeight.Medium) },
-                            supportingContent = { 
-                                Text(if (isConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music") 
-                            },
-                            leadingContent = {
-                                Icon(
-                                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_music_note), // Need generic music icon or lastfm specific if available
-                                    contentDescription = null, 
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            trailingContent = {
-                                if (isConnected) {
-                                  TextButton(onClick = { viewModel.disconnectLastFm() }) {
-                                      Text("Disconnect", color = MaterialTheme.colorScheme.error)
-                                  }
-                                } else {
-                                  androidx.compose.material3.Button(
-                                      onClick = onLastFmClick,
-                                      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                  ) {
-                                      Text("Connect")
-                                  }
-                                }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                        )
-                        
-                        HorizontalDivider()
-
                         SettingsSwitchItem(
                             icon = Icons.Default.FastForward,
                             title = "SponsorBlock",

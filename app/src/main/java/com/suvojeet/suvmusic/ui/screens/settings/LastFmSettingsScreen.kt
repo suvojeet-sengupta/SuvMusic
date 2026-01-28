@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LastFmLoginScreen(
+fun LastFmSettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onBack: () -> Unit,
     onLoginSuccess: (String) -> Unit
