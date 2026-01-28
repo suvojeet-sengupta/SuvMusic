@@ -20,22 +20,18 @@ class LastFmRepository @Inject constructor(
 
     suspend fun fetchSession(token: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            android.util.Log.d("LastFmRepository", "fetchSession: Start for token=$token")
             val params = sortedMapOf(
                 "method" to "auth.getSession",
                 "token" to token,
                 "api_key" to apiKey
             )
-            android.util.Log.d("LastFmRepository", "fetchSession: Params created")
             val signature = generateSignature(params)
-            android.util.Log.d("LastFmRepository", "fetchSession: Signature generated: $signature")
             
             val response = lastFmService.getSession(
                 token = token,
                 apiKey = apiKey,
                 apiSig = signature
             )
-            android.util.Log.d("LastFmRepository", "fetchSession: Response received: $response")
             
             if (response.session != null) {
                 val sessionKey = response.session.key
@@ -50,7 +46,6 @@ class LastFmRepository @Inject constructor(
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            android.util.Log.e("LastFmRepository", "fetchSession: Exception caught", e)
             Result.failure(e)
         }
     }

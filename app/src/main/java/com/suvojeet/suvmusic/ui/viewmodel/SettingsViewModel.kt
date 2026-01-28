@@ -367,7 +367,6 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lastFmUsername = username) }
                 onSuccess(username)
             }.onFailure { error ->
-                android.util.Log.e("SettingsViewModel", "LastFm Login Error", error) // Added logging
                 val errorMessage = if (error is retrofit2.HttpException) {
                     try {
                         error.response()?.errorBody()?.string() ?: "HTTP ${error.code()} (${error.message()})"
