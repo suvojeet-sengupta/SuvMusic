@@ -3,15 +3,15 @@ package com.suvojeet.suvmusic.data.repository
 import android.content.Context
 import android.util.LruCache
 import com.google.gson.JsonParser
-import com.suvojeet.suvmusic.data.model.Lyrics
-import com.suvojeet.suvmusic.data.model.LyricsLine
+import com.suvojeet.suvmusic.providers.lyrics.Lyrics
+import com.suvojeet.suvmusic.providers.lyrics.LyricsLine
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
-import com.suvojeet.suvmusic.data.repository.lyrics.BetterLyricsProvider
-import com.suvojeet.suvmusic.data.repository.lyrics.LyricsProvider
-import com.suvojeet.suvmusic.data.repository.lyrics.SimpMusicLyricsProvider
-import com.suvojeet.suvmusic.data.repository.lyrics.KuGouLyricsProvider
-import com.suvojeet.suvmusic.data.model.LyricsProviderType
+import com.suvojeet.suvmusic.providers.lyrics.BetterLyricsProvider
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProvider
+import com.suvojeet.suvmusic.providers.lyrics.SimpMusicLyricsProvider
+import com.suvojeet.suvmusic.providers.lyrics.KuGouLyricsProvider
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -45,9 +45,9 @@ class LyricsRepository @Inject constructor(
         val preferred = sessionManager.getPreferredLyricsProvider()
         val providers = mutableListOf<LyricsProvider>()
         
-        if (betterLyricsProvider.isEnabled(context)) providers.add(betterLyricsProvider)
-        if (simpMusicLyricsProvider.isEnabled(context)) providers.add(simpMusicLyricsProvider)
-        if (kuGouLyricsProvider.isEnabled(context)) providers.add(kuGouLyricsProvider)
+        if (sessionManager.doesEnableBetterLyrics()) providers.add(betterLyricsProvider)
+        if (sessionManager.doesEnableSimpMusic()) providers.add(simpMusicLyricsProvider)
+        if (sessionManager.doesEnableKuGou()) providers.add(kuGouLyricsProvider)
         
         // Reorder: put preferred at top
         val preferredProvider = providers.find { 
@@ -142,17 +142,17 @@ class LyricsRepository @Inject constructor(
     private suspend fun fetchFromProvider(song: Song, providerType: LyricsProviderType): Lyrics? {
         return when (providerType) {
             LyricsProviderType.BETTER_LYRICS -> {
-                if (betterLyricsProvider.isEnabled(context)) {
+                if (sessionManager.doesEnableBetterLyrics()) {
                     fetchExternalLyrics(betterLyricsProvider, song, LyricsProviderType.BETTER_LYRICS)
                 } else null
             }
             LyricsProviderType.SIMP_MUSIC -> {
-                if (simpMusicLyricsProvider.isEnabled(context)) {
+                if (sessionManager.doesEnableSimpMusic()) {
                     fetchExternalLyrics(simpMusicLyricsProvider, song, LyricsProviderType.SIMP_MUSIC)
                 } else null
             }
             LyricsProviderType.KUGOU -> {
-                if (kuGouLyricsProvider.isEnabled(context)) {
+                if (sessionManager.doesEnableKuGou()) {
                     fetchExternalLyrics(kuGouLyricsProvider, song, LyricsProviderType.KUGOU)
                 } else null
             }
@@ -409,7 +409,7 @@ class LyricsRepository @Inject constructor(
                 val startTimeMs = (minutes * 60 * 1000) + (seconds * 1000) + millis
                 
                 // Check if NEXT line is word timing metadata
-                var words: List<com.suvojeet.suvmusic.data.model.LyricsWord>? = null
+                var words: List<com.suvojeet.suvmusic.providers.lyrics.LyricsWord>? = null
                 if (i + 1 < rawLines.size) {
                     val nextLine = rawLines[i + 1].trim()
                     val wordMatch = wordTimingPattern.find(nextLine)
@@ -423,7 +423,7 @@ class LyricsRepository @Inject constructor(
                                     val wText = p[0]
                                     val wStart = (p[1].toDoubleOrNull() ?: 0.0) * 1000
                                     val wEnd = (p[2].toDoubleOrNull() ?: 0.0) * 1000
-                                    com.suvojeet.suvmusic.data.model.LyricsWord(
+                                    com.suvojeet.suvmusic.providers.lyrics.LyricsWord(
                                         text = wText,
                                         startTimeMs = wStart.toLong(),
                                         endTimeMs = wEnd.toLong()

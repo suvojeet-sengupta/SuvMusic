@@ -1,10 +1,5 @@
-package com.suvojeet.suvmusic.data.repository
+package com.suvojeet.suvmusic.providers.lastfm
 
-import com.suvojeet.suvmusic.BuildConfig
-import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.lastfm.Authentication
-import com.suvojeet.suvmusic.data.model.lastfm.LastFmError
-import com.suvojeet.suvmusic.data.model.lastfm.TokenResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -20,15 +15,16 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class LastFmRepository @Inject constructor(
-    private val sessionManager: SessionManager
+interface LastFmConfig {
+    val apiKey: String
+    val sharedSecret: String
+    val userAgent: String get() = "SuvMusic (https://github.com/suvojeet-sengupta/SuvMusic)"
+}
+
+class LastFmClient @Inject constructor(
+    private val config: LastFmConfig
 ) {
-
-    private val apiKey = BuildConfig.LAST_FM_API_KEY
-    private val sharedSecret = BuildConfig.LAST_FM_SHARED_SECRET
 
     private val json = Json {
         isLenient = true
@@ -41,7 +37,7 @@ class LastFmRepository @Inject constructor(
         }
         defaultRequest { 
             url("https://ws.audioscrobbler.com/2.0/")
-            userAgent("SuvMusic (https://github.com/suvojeet-sengupta/SuvMusic)") // Updated User-Agent
+            userAgent(config.userAgent)
         }
         expectSuccess = false
     }
@@ -58,15 +54,14 @@ class LastFmRepository @Inject constructor(
         extra: Map<String, String> = emptyMap(),
         sessionKey: String? = null
     ) {
-        // base URL is set in defaultRequest
         val paramsForSig = mutableMapOf(
             "method" to method,
-            "api_key" to apiKey
+            "api_key" to config.apiKey
         ).apply {
             sessionKey?.let { put("sk", it) }
             putAll(extra)
         }
-        val apiSig = paramsForSig.apiSig(sharedSecret)
+        val apiSig = paramsForSig.apiSig(config.sharedSecret)
         setBody(FormDataContent(Parameters.build {
             paramsForSig.forEach { (k, v) -> append(k, v) }
             append("api_sig", apiSig)
@@ -74,8 +69,8 @@ class LastFmRepository @Inject constructor(
         }))
     }
 
-    suspend fun fetchSession(token: String): Result<String> = withContext(Dispatchers.IO) {
-        try {
+    suspend fun fetchSession(token: String): Result<Authentication> = withContext(Dispatchers.IO) {
+        runCatching {
             val response = client.post {
                 lastfmParams(
                     method = "auth.getSession",
@@ -86,24 +81,15 @@ class LastFmRepository @Inject constructor(
             val responseText = response.bodyAsText()
             if (responseText.contains("\"error\"")) {
                 val error = json.decodeFromString<LastFmError>(responseText)
-                return@withContext Result.failure(Exception(error.message))
+                throw Exception(error.message)
             }
             
-            val auth = json.decodeFromString<Authentication>(responseText)
-            val sessionKey = auth.session.key
-            val username = auth.session.name
-            
-            // Persist session
-            sessionManager.setLastFmSession(sessionKey, username)
-            
-            Result.success(username)
-        } catch (e: Exception) {
-            Result.failure(e)
+            json.decodeFromString<Authentication>(responseText)
         }
     }
 
     suspend fun getMobileSession(username: String, password: String): Result<Authentication> = withContext(Dispatchers.IO) {
-        try {
+        runCatching {
             val response = client.post {
                 lastfmParams(
                     method = "auth.getMobileSession",
@@ -114,25 +100,15 @@ class LastFmRepository @Inject constructor(
             val responseText = response.bodyAsText()
             if (responseText.contains("\"error\"")) {
                 val error = json.decodeFromString<LastFmError>(responseText)
-                return@withContext Result.failure(Exception(error.message)) // Or custom exception
+                throw Exception(error.message)
             }
 
-            val auth = json.decodeFromString<Authentication>(responseText)
-            // Note: We don't automatically persist here to let ViewModel handle it or we can do it here.
-            // Metrolist persists in UI/ViewModel callback. I'll stick to returning the Auth object
-            // but I will also persist it here for consistency with fetchSession if desired?
-            // Actually, fetchSession returns Result<String> (username). 
-            // I'll stick to returning Result<Authentication> and let ViewModel call sessionManager.
-            
-            Result.success(auth)
-        } catch (e: Exception) {
-            Result.failure(e)
+            json.decodeFromString<Authentication>(responseText)
         }
     }
 
-    suspend fun updateNowPlaying(artist: String, track: String, album: String?, duration: Long) = withContext(Dispatchers.IO) {
-        val sessionKey = sessionManager.getLastFmSessionKey() ?: return@withContext
-        try {
+    suspend fun updateNowPlaying(sessionKey: String, artist: String, track: String, album: String?, duration: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
             val response = client.post {
                 lastfmParams(
                     method = "track.updateNowPlaying",
@@ -149,18 +125,13 @@ class LastFmRepository @Inject constructor(
             val responseText = response.bodyAsText()
             if (responseText.contains("\"error\"")) {
                 val error = json.decodeFromString<LastFmError>(responseText)
-                android.util.Log.e("LastFmRepository", "updateNowPlaying Failed: ${error.message}")
-            } else {
-                android.util.Log.d("LastFmRepository", "updateNowPlaying Success")
+                throw Exception(error.message)
             }
-        } catch (e: Exception) {
-            android.util.Log.e("LastFmRepository", "updateNowPlaying Exception", e)
         }
     }
 
-    suspend fun scrobble(artist: String, track: String, album: String?, duration: Long, timestamp: Long) = withContext(Dispatchers.IO) {
-        val sessionKey = sessionManager.getLastFmSessionKey() ?: return@withContext
-        try {
+    suspend fun scrobble(sessionKey: String, artist: String, track: String, album: String?, duration: Long, timestamp: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
             val response = client.post {
                 lastfmParams(
                     method = "track.scrobble",
@@ -178,18 +149,13 @@ class LastFmRepository @Inject constructor(
             val responseText = response.bodyAsText()
             if (responseText.contains("\"error\"")) {
                 val error = json.decodeFromString<LastFmError>(responseText)
-                android.util.Log.e("LastFmRepository", "Scrobble Failed: ${error.message}")
-            } else {
-                android.util.Log.d("LastFmRepository", "Scrobble Success")
+                throw Exception(error.message)
             }
-        } catch (e: Exception) {
-            android.util.Log.e("LastFmRepository", "Scrobble Exception", e)
         }
     }
 
-    suspend fun setLoveStatus(artist: String, track: String, love: Boolean) = withContext(Dispatchers.IO) {
-        val sessionKey = sessionManager.getLastFmSessionKey() ?: return@withContext
-        try {
+    suspend fun setLoveStatus(sessionKey: String, artist: String, track: String, love: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
             val method = if (love) "track.love" else "track.unlove"
             val response = client.post {
                 lastfmParams(
@@ -205,29 +171,13 @@ class LastFmRepository @Inject constructor(
             val responseText = response.bodyAsText()
             if (responseText.contains("\"error\"")) {
                 val error = json.decodeFromString<LastFmError>(responseText)
-                android.util.Log.e("LastFmRepository", "setLoveStatus Failed: ${error.message}")
-            } else {
-                android.util.Log.d("LastFmRepository", "setLoveStatus Success")
+                throw Exception(error.message)
             }
-        } catch (e: Exception) {
-            android.util.Log.e("LastFmRepository", "setLoveStatus Exception", e)
         }
     }
     
     fun getAuthUrl(): String {
         val callback = java.net.URLEncoder.encode("suvmusic://lastfm-auth", "UTF-8")
-        return "https://www.last.fm/api/auth/?api_key=$apiKey&cb=$callback"
-    }
-    
-    fun logout() {
-        sessionManager.clearLastFmSession()
-    }
-    
-    fun isConnected(): Boolean {
-        return !sessionManager.getLastFmSessionKey().isNullOrEmpty()
-    }
-    
-    fun getUsername(): String? {
-        return sessionManager.getLastFmUsername()
+        return "https://www.last.fm/api/auth/?api_key=${config.apiKey}&cb=$callback"
     }
 }

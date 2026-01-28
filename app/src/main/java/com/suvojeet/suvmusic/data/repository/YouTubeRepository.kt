@@ -1405,7 +1405,7 @@ class YouTubeRepository @Inject constructor(
      * Fetch lyrics for a song.
      * Tries to find time-synced lyrics, falls back to plain text.
      */
-    suspend fun getLyrics(videoId: String): com.suvojeet.suvmusic.data.model.Lyrics? = withContext(Dispatchers.IO) {
+    suspend fun getLyrics(videoId: String): com.suvojeet.suvmusic.providers.lyrics.Lyrics? = withContext(Dispatchers.IO) {
         try {
             // 1. Get the "Next" response to find the Lyrics browse ID
             val cookies = sessionManager.getCookies()
@@ -1605,7 +1605,7 @@ class YouTubeRepository @Inject constructor(
         return null
     }
     
-    private fun parseLyricsFromBrowse(json: JSONObject): com.suvojeet.suvmusic.data.model.Lyrics? {
+    private fun parseLyricsFromBrowse(json: JSONObject): com.suvojeet.suvmusic.providers.lyrics.Lyrics? {
         val contents = json.optJSONObject("contents")
             ?.optJSONObject("sectionListRenderer")
             ?.optJSONArray("contents")
@@ -1627,14 +1627,14 @@ class YouTubeRepository @Inject constructor(
             if (timedLyrics != null) {
                 val lyricData = timedLyrics.optJSONArray("timedLyricsData")
                 if (lyricData != null) {
-                    val lines = mutableListOf<com.suvojeet.suvmusic.data.model.LyricsLine>()
+                    val lines = mutableListOf<com.suvojeet.suvmusic.providers.lyrics.LyricsLine>()
                     for (i in 0 until lyricData.length()) {
                         val lineObj = lyricData.optJSONObject(i)
                         val text = lineObj?.optString("lyricLine") ?: ""
                         val startTime = lineObj?.optLong("cueRangeStartMillis") ?: 0L
                         
                         if (text.isNotBlank()) {
-                            lines.add(com.suvojeet.suvmusic.data.model.LyricsLine(
+                            lines.add(com.suvojeet.suvmusic.providers.lyrics.LyricsLine(
                                 text = text,
                                 startTimeMs = startTime
                             ))
@@ -1645,7 +1645,7 @@ class YouTubeRepository @Inject constructor(
                         ?: getRunText(descriptionShelf?.optJSONObject("footer"))
                     
                     if (lines.isNotEmpty()) {
-                        return com.suvojeet.suvmusic.data.model.Lyrics(lines, footer, true)
+                        return com.suvojeet.suvmusic.providers.lyrics.Lyrics(lines, footer, true)
                     }
                 }
             }
@@ -1656,8 +1656,8 @@ class YouTubeRepository @Inject constructor(
                 val footer = getRunText(descriptionShelf.optJSONObject("footer"))
                 
                 if (description != null) {
-                    val lines = description.split("\r\n", "\n").map { com.suvojeet.suvmusic.data.model.LyricsLine(it) }
-                    return com.suvojeet.suvmusic.data.model.Lyrics(lines, footer, false)
+                    val lines = description.split("\r\n", "\n").map { com.suvojeet.suvmusic.providers.lyrics.LyricsLine(it) }
+                    return com.suvojeet.suvmusic.providers.lyrics.Lyrics(lines, footer, false)
                 }
             }
         }

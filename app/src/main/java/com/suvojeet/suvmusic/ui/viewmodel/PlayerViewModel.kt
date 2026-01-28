@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.LyricsProviderType
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -48,8 +48,8 @@ class PlayerViewModel @Inject constructor(
         state.copy(currentPosition = 0L, duration = 0L, bufferedPercentage = 0)
     }.distinctUntilChanged()
     
-    private val _lyricsState = kotlinx.coroutines.flow.MutableStateFlow<com.suvojeet.suvmusic.data.model.Lyrics?>(null)
-    val lyricsState: StateFlow<com.suvojeet.suvmusic.data.model.Lyrics?> = _lyricsState.asStateFlow()
+    private val _lyricsState = kotlinx.coroutines.flow.MutableStateFlow<com.suvojeet.suvmusic.providers.lyrics.Lyrics?>(null)
+    val lyricsState: StateFlow<com.suvojeet.suvmusic.providers.lyrics.Lyrics?> = _lyricsState.asStateFlow()
     
     private val _isFetchingLyrics = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isFetchingLyrics: StateFlow<Boolean> = _isFetchingLyrics.asStateFlow()

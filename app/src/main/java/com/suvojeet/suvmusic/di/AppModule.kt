@@ -140,9 +140,9 @@ object AppModule {
         okHttpClient: OkHttpClient,
         youTubeRepository: YouTubeRepository,
         jioSaavnRepository: JioSaavnRepository,
-        betterLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.BetterLyricsProvider,
-        simpMusicLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.SimpMusicLyricsProvider,
-        kuGouLyricsProvider: com.suvojeet.suvmusic.data.repository.lyrics.KuGouLyricsProvider,
+        betterLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.BetterLyricsProvider,
+        simpMusicLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.SimpMusicLyricsProvider,
+        kuGouLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.KuGouLyricsProvider,
         sessionManager: SessionManager
     ): com.suvojeet.suvmusic.data.repository.LyricsRepository {
         return com.suvojeet.suvmusic.data.repository.LyricsRepository(

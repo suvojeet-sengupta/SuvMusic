@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.model
+package com.suvojeet.suvmusic.providers.lyrics
 
 enum class LyricsTextPosition(val label: String) {
     CENTER("Center (Apple Music Style)"),

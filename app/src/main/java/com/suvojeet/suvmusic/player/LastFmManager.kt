@@ -2,7 +2,7 @@ package com.suvojeet.suvmusic.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import com.suvojeet.suvmusic.data.repository.LastFmRepository
+import com.suvojeet.suvmusic.providers.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.data.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,12 +79,13 @@ class LastFmManager @Inject constructor(
         // 1. Update "Now Playing" and Start Monitoring
         if (shouldScrobble(mediaItem)) {
             scope.launch {
-                if (!lastFmRepository.isConnected()) return@launch
+                val sessionKey = sessionManager.getLastFmSessionKey() ?: return@launch
                 if (!sessionManager.isLastFmScrobblingEnabled()) return@launch
 
                 if (sessionManager.isLastFmUseNowPlayingEnabled()) {
                     try {
                         lastFmRepository.updateNowPlaying(
+                            sessionKey = sessionKey,
                             artist = currentArtist,
                             track = currentTitle,
                             album = currentAlbum,
@@ -167,9 +168,12 @@ class LastFmManager @Inject constructor(
         
         if (!shouldScrobble(item)) return
         
+        val sessionKey = sessionManager.getLastFmSessionKey() ?: return
+        
         try {
             android.util.Log.d("LastFmManager", "Scrobbling: $currentTitle by $currentArtist")
             lastFmRepository.scrobble(
+                sessionKey = sessionKey,
                 artist = currentArtist,
                 track = currentTitle,
                 album = currentAlbum,

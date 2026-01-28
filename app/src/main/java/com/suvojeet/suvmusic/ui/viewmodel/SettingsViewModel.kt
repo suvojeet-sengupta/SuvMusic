@@ -13,8 +13,8 @@ import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
-import com.suvojeet.suvmusic.data.model.LyricsTextPosition
-import com.suvojeet.suvmusic.data.model.LyricsAnimationType
+import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.UpdateState
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
@@ -89,7 +89,7 @@ class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val updateRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository, // Use YouTubeRepository for account info
     private val updateRepo: UpdateRepository, // Renamed to avoid conflict
-    private val lastFmRepository: com.suvojeet.suvmusic.data.repository.LastFmRepository,
+    private val lastFmRepository: com.suvojeet.suvmusic.providers.lastfm.LastFmRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -373,7 +373,7 @@ class SettingsViewModel @Inject constructor(
     
     fun disconnectLastFm() {
         viewModelScope.launch {
-            lastFmRepository.logout()
+            sessionManager.setLastFmSession("", "")
             _uiState.update { it.copy(lastFmUsername = null) }
         }
     }
@@ -381,7 +381,10 @@ class SettingsViewModel @Inject constructor(
     fun processLastFmToken(token: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = lastFmRepository.fetchSession(token)
-            result.onSuccess { username ->
+            result.onSuccess { auth ->
+                val username = auth.session.name
+                val sessionKey = auth.session.key
+                sessionManager.setLastFmSession(sessionKey, username)
                 _uiState.update { it.copy(lastFmUsername = username) }
                 onSuccess(username)
             }.onFailure { error ->
