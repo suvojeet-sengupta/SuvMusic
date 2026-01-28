@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import android.content.Intent
+import com.suvojeet.suvmusic.R
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -291,9 +292,7 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
+
 
                 // --- Player & Audio ---
                 item {
@@ -314,8 +313,6 @@ fun SettingsScreen(
                             subtitle = "Player UI, artwork style",
                             onClick = onCustomizationClick
                         )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
