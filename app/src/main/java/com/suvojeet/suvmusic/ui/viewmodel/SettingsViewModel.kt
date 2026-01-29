@@ -82,7 +82,9 @@ data class SettingsUiState(
     val lastFmSendLikes: Boolean = false,
     val scrobbleDelayPercent: Float = 0.5f,
     val scrobbleMinDuration: Int = 30, // seconds
-    val scrobbleDelaySeconds: Int = 180 // seconds
+    val scrobbleDelaySeconds: Int = 180, // seconds
+    // Updates
+    val updateChannel: com.suvojeet.suvmusic.data.model.UpdateChannel = com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE
 )
 
 @HiltViewModel
@@ -364,7 +366,8 @@ class SettingsViewModel @Inject constructor(
                     lastFmSendLikes = lastFmSendLikes,
                     scrobbleDelayPercent = scrobbleDelayPercent,
                     scrobbleMinDuration = scrobbleMinDuration,
-                    scrobbleDelaySeconds = scrobbleDelaySeconds
+                    scrobbleDelaySeconds = scrobbleDelaySeconds,
+                    updateChannel = sessionManager.getUpdateChannel()
                 )
             }
         }
@@ -514,11 +517,16 @@ class SettingsViewModel @Inject constructor(
     /**
      * Check for updates from GitHub Releases.
      */
+    /**
+     * Check for updates from GitHub Releases.
+     */
     fun checkForUpdates() {
         viewModelScope.launch {
             _uiState.update { it.copy(updateState = UpdateState.Checking) }
             
-            updateRepo.checkForUpdate()
+            val channel = sessionManager.getUpdateChannel()
+            
+            updateRepo.checkForUpdate(channel)
                 .onSuccess { update ->
                     if (update != null) {
                         _uiState.update { it.copy(updateState = UpdateState.UpdateAvailable(update)) }
@@ -531,6 +539,13 @@ class SettingsViewModel @Inject constructor(
                         it.copy(updateState = UpdateState.Error(error.message ?: "Unknown error"))
                     }
                 }
+        }
+    }
+    
+    fun setUpdateChannel(channel: com.suvojeet.suvmusic.data.model.UpdateChannel) {
+        viewModelScope.launch {
+            sessionManager.setUpdateChannel(channel)
+            _uiState.update { it.copy(updateChannel = channel) }
         }
     }
     
