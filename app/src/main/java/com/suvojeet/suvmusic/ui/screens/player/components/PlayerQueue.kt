@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.draw.scale
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -147,37 +148,68 @@ fun QueueView(
             }
         }
 
-        // Playback mode chips
-        Row(
+        // Playback Controls & Autoplay
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            PlaybackChip(
-                text = "Shuffle",
-                icon = Icons.Default.Shuffle,
-                isSelected = shuffleEnabled,
-                dominantColors = dominantColors,
-                onClick = onToggleShuffle
-            )
-            PlaybackChip(
-                text = "Repeat",
-                icon = when (repeatMode) {
-                    RepeatMode.ONE -> Icons.Default.RepeatOne
-                    else -> Icons.Default.Repeat
-                },
-                isSelected = repeatMode != RepeatMode.OFF,
-                dominantColors = dominantColors,
-                onClick = onToggleRepeat
-            )
-            PlaybackChip(
-                text = "Autoplay",
-                icon = Icons.Default.PlayArrow,
-                isSelected = isAutoplayEnabled,
-                dominantColors = dominantColors,
-                onClick = onToggleAutoplay
-            )
+            // Main Controls (Shuffle, Repeat)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onToggleShuffle) {
+                        Icon(
+                            imageVector = Icons.Default.Shuffle,
+                            contentDescription = "Shuffle",
+                            tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = onToggleRepeat) {
+                        Icon(
+                            imageVector = when (repeatMode) {
+                                RepeatMode.ONE -> Icons.Default.RepeatOne
+                                else -> Icons.Default.Repeat
+                            },
+                            contentDescription = "Repeat",
+                            tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+                
+                // Infinite Autoplay Switch
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(onClick = onToggleAutoplay)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Infinite Autoplay",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = dominantColors.onBackground,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                    androidx.compose.material3.Switch(
+                        checked = isAutoplayEnabled,
+                        onCheckedChange = { onToggleAutoplay() },
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = dominantColors.accent,
+                            checkedTrackColor = dominantColors.accent.copy(alpha = 0.3f),
+                            uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.6f),
+                            uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.1f)
+                        ),
+                        modifier = Modifier.scale(0.8f) // Make it slightly smaller
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -272,39 +304,7 @@ fun QueueView(
     }
 }
 
-@Composable
-private fun PlaybackChip(
-    text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    dominantColors: DominantColors,
-    onClick: () -> Unit
-) {
-    Surface(
-        color = if (isSelected) dominantColors.onBackground.copy(alpha = 0.2f)
-        else dominantColors.onBackground.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                color = dominantColors.onBackground
-            )
-        }
-    }
-}
+
 
 @Composable
 private fun QueueItem(
