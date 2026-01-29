@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.providers.lastfm
+package com.suvojeet.suvmusic.lastfm
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

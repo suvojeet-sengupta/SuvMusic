@@ -1,7 +1,7 @@
 package com.suvojeet.suvmusic.data.repository
 
 import android.util.LruCache
-import com.suvojeet.suvmusic.data.NewPipeDownloaderImpl
+import com.suvojeet.suvmusic.newpipe.NewPipeDownloaderImpl
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.SessionManager.StoredAccount
 import com.suvojeet.suvmusic.data.YouTubeAuthUtils
@@ -86,7 +86,7 @@ class YouTubeRepository @Inject constructor(
     private fun initializeNewPipe() {
         if (!isInitialized) {
             try {
-                NewPipe.init(NewPipeDownloaderImpl(okHttpClient, sessionManager))
+                NewPipe.init(NewPipeDownloaderImpl(okHttpClient) { sessionManager.getCookies() ?: "" })
                 isInitialized = true
             } catch (e: Exception) {
                 isInitialized = true

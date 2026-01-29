@@ -1,8 +1,8 @@
-package com.suvojeet.suvmusic.providers.di
+package com.suvojeet.suvmusic.lastfm.di
 
-import com.suvojeet.suvmusic.providers.lastfm.LastFmClient
-import com.suvojeet.suvmusic.providers.lastfm.LastFmConfig
-import com.suvojeet.suvmusic.providers.lastfm.LastFmConfigImpl
+import com.suvojeet.suvmusic.lastfm.LastFmClient
+import com.suvojeet.suvmusic.lastfm.LastFmConfig
+import com.suvojeet.suvmusic.lastfm.LastFmConfigImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -12,7 +12,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class ProvidersModule {
+abstract class LastFmModule {
 
     @Binds
     @Singleton

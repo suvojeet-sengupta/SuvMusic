@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.providers.lyrics
+package com.suvojeet.suvmusic.kugou
 
 import kotlinx.serialization.Serializable
 

@@ -188,4 +188,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(project(":providers"))
+    implementation(project(":lastfm"))
+    implementation(project(":simpmusic"))
+    implementation(project(":lrclib"))
+    implementation(project(":kugou"))
+    implementation(project(":newpipe"))
 }

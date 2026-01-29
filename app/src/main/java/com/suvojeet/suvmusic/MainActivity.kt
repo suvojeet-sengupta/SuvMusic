@@ -94,7 +94,7 @@ class MainActivity : ComponentActivity() {
     lateinit var playerCache: Cache
     
     @Inject
-    lateinit var lastFmRepository: com.suvojeet.suvmusic.providers.lastfm.LastFmRepository
+    lateinit var lastFmRepository: com.suvojeet.suvmusic.lastfm.LastFmRepository
 
     private lateinit var audioManager: AudioManager
     

@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.providers.lyrics
+package com.suvojeet.suvmusic.simpmusic
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
