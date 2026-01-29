@@ -34,6 +34,7 @@ import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.data.model.UpdateChannel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -151,6 +152,7 @@ class SessionManager @Inject constructor(
         private val SCROBBLE_DELAY_PERCENT_KEY = floatPreferencesKey("scrobble_delay_percent")
         private val SCROBBLE_MIN_DURATION_KEY = intPreferencesKey("scrobble_min_duration")
         private val SCROBBLE_DELAY_SECONDS_KEY = intPreferencesKey("scrobble_delay_seconds")
+        private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -1451,6 +1453,24 @@ class SessionManager @Inject constructor(
             put("duration", song.duration)
             put("source", song.source.name)
             put("localUri", song.localUri?.toString() ?: "")
+        }
+    }
+    suspend fun getUpdateChannel(): UpdateChannel {
+        val channelName = context.dataStore.data.first()[UPDATE_CHANNEL_KEY]
+        return channelName?.let {
+            try { UpdateChannel.valueOf(it) } catch (e: Exception) { UpdateChannel.STABLE }
+        } ?: UpdateChannel.STABLE
+    }
+
+    val updateChannelFlow: Flow<UpdateChannel> = context.dataStore.data.map { preferences ->
+        preferences[UPDATE_CHANNEL_KEY]?.let {
+            try { UpdateChannel.valueOf(it) } catch (e: Exception) { UpdateChannel.STABLE }
+        } ?: UpdateChannel.STABLE
+    }
+
+    suspend fun setUpdateChannel(channel: UpdateChannel) {
+        context.dataStore.edit { preferences ->
+            preferences[UPDATE_CHANNEL_KEY] = channel.name
         }
     }
 }
