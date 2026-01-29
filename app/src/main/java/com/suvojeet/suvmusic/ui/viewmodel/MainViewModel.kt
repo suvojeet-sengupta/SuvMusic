@@ -7,7 +7,9 @@ import android.os.Build
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.UpdateState
+import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,6 +31,7 @@ data class MainUiState(
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val updateRepository: UpdateRepository,
+    private val sessionManager: SessionManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -53,7 +56,8 @@ class MainViewModel @Inject constructor(
             
             _uiState.update { it.copy(updateState = UpdateState.Checking) }
 
-            updateRepository.checkForUpdate()
+            val channel = sessionManager.getUpdateChannel()
+            updateRepository.checkForUpdate(channel)
                 .onSuccess { update ->
                     if (update != null) {
                         _uiState.update { it.copy(updateState = UpdateState.UpdateAvailable(update)) }

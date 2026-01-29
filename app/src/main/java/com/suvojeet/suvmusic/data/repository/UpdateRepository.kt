@@ -41,10 +41,25 @@ class UpdateRepository @Inject constructor(
      * Check for updates from GitHub Releases.
      * Returns AppUpdate if available, null otherwise.
      */
-    suspend fun checkForUpdate(): Result<AppUpdate?> = withContext(Dispatchers.IO) {
+    /**
+     * Check for updates from GitHub Releases.
+     * Returns AppUpdate if available, null otherwise.
+     */
+    suspend fun checkForUpdate(channel: com.suvojeet.suvmusic.data.model.UpdateChannel): Result<AppUpdate?> = withContext(Dispatchers.IO) {
         try {
+            // Logic:
+            // STABLE -> /releases/latest (GitHub returns latest non-prerelease)
+            // NIGHTLY -> /releases (List, pick first one which is absolute latest)
+            
+            val isStable = channel == com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE
+            val url = if (isStable) {
+                API_URL // .../releases/latest
+            } else {
+                 "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases?per_page=1"
+            }
+
             val request = Request.Builder()
-                .url(API_URL)
+                .url(url)
                 .header("Accept", "application/vnd.github.v3+json")
                 .build()
             
@@ -55,7 +70,14 @@ class UpdateRepository @Inject constructor(
             }
             
             val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
-            val json = gson.fromJson(body, JsonObject::class.java)
+            
+            // For Nightly (/releases), response is an Array. For Stable (/releases/latest), it's an Object.
+            val json = if (!isStable) {
+                val array = gson.fromJson(body, com.google.gson.JsonArray::class.java)
+                if (array.size() > 0) array.get(0).asJsonObject else return@withContext Result.failure(Exception("No releases found"))
+            } else {
+                gson.fromJson(body, JsonObject::class.java)
+            }
             
             // Parse version from tag_name (e.g., "v1.0.3" -> "1.0.3")
             val tagName = json.get("tag_name")?.asString ?: return@withContext Result.failure(Exception("No tag found"))
@@ -105,9 +127,14 @@ class UpdateRepository @Inject constructor(
             val localLastUpdateTime = getLocalLastUpdateTime()
 
             if (remoteVersionCode > currentVersionCode) {
+                 // Newer version code (Standard upgrade)
                 Result.success(update)
-            } else if (remoteVersionCode == currentVersionCode && remotePublishedTime > localLastUpdateTime) {
-                // Same version but newer build/release date
+            } else if (!isStable && remoteVersionCode == currentVersionCode && remotePublishedTime > localLastUpdateTime) {
+                // Same version but newer build (Nightly logic: e.g. updated assets/re-release with same tag or internal build number bump not reflected in tag)
+                // Note: GitHub "published_at" changes when release is published.
+                Result.success(update)
+            } else if (remoteVersionCode == currentVersionCode && remotePublishedTime > localLastUpdateTime && !isStable) {
+                // Redundant check/clarity: For Nightly, checking timestamp is crucial if version numbers match.
                 Result.success(update)
             } else {
                 Result.success(null) // No update available
