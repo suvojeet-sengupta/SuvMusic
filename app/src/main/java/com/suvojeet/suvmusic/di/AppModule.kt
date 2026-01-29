@@ -141,8 +141,9 @@ object AppModule {
         youTubeRepository: YouTubeRepository,
         jioSaavnRepository: JioSaavnRepository,
         betterLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.BetterLyricsProvider,
-        simpMusicLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.SimpMusicLyricsProvider,
-        kuGouLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.KuGouLyricsProvider,
+        simpMusicLyricsProvider: com.suvojeet.suvmusic.simpmusic.SimpMusicLyricsProvider,
+        kuGouLyricsProvider: com.suvojeet.suvmusic.kugou.KuGouLyricsProvider,
+        lrcLibLyricsProvider: com.suvojeet.suvmusic.lrclib.LrcLibLyricsProvider,
         sessionManager: SessionManager
     ): com.suvojeet.suvmusic.data.repository.LyricsRepository {
         return com.suvojeet.suvmusic.data.repository.LyricsRepository(
@@ -153,6 +154,7 @@ object AppModule {
             betterLyricsProvider,
             simpMusicLyricsProvider,
             kuGouLyricsProvider,
+            lrcLibLyricsProvider,
             sessionManager
         )
     }

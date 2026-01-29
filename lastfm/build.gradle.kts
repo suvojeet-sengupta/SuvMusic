@@ -10,13 +10,12 @@ plugins {
 }
 
 android {
-    namespace = "com.suvojeet.suvmusic.providers"
+    namespace = "com.suvojeet.suvmusic.lastfm"
     compileSdk = 36
 
     defaultConfig {
         minSdk = 26
 
-        // Load Last.fm keys from local.properties or environment
         val localProperties = Properties()
         val localFile = rootProject.file("local.properties")
         if (localFile.exists()) {
@@ -63,24 +62,17 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     
-    // Ktor
     implementation("io.ktor:ktor-client-core:2.3.7")
     implementation("io.ktor:ktor-client-cio:2.3.7")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
 
-    // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
-    // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     
-    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    
-    // Jsoup (if needed, e.g. for scraping)
-    implementation(libs.jsoup)
 }

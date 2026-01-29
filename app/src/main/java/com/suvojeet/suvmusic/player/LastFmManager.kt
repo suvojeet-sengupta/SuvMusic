@@ -2,7 +2,7 @@ package com.suvojeet.suvmusic.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import com.suvojeet.suvmusic.providers.lastfm.LastFmRepository
+import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.data.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

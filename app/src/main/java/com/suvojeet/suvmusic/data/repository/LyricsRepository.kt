@@ -9,8 +9,9 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.providers.lyrics.BetterLyricsProvider
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProvider
-import com.suvojeet.suvmusic.providers.lyrics.SimpMusicLyricsProvider
-import com.suvojeet.suvmusic.providers.lyrics.KuGouLyricsProvider
+import com.suvojeet.suvmusic.simpmusic.SimpMusicLyricsProvider
+import com.suvojeet.suvmusic.kugou.KuGouLyricsProvider
+import com.suvojeet.suvmusic.lrclib.LrcLibLyricsProvider
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,6 +35,7 @@ class LyricsRepository @Inject constructor(
     private val betterLyricsProvider: BetterLyricsProvider,
     private val simpMusicLyricsProvider: SimpMusicLyricsProvider,
     private val kuGouLyricsProvider: KuGouLyricsProvider,
+    private val lrcLibLyricsProvider: LrcLibLyricsProvider,
     private val sessionManager: SessionManager
 ) {
     private val cache = LruCache<String, Lyrics>(MAX_CACHE_SIZE)
@@ -115,11 +117,23 @@ class LyricsRepository @Inject constructor(
         }
         
         // 2. Try LRCLIB for synced lyrics
-        val lrcLibLyrics = getSyncedLyricsFromLrcLib(song.title, song.artist, song.duration)
-        if (lrcLibLyrics != null && lrcLibLyrics.isSynced) {
-            cache.put(song.id, lrcLibLyrics)
-            return@withContext lrcLibLyrics
+        val lrcLibLyrics = fetchExternalLyrics(lrcLibLyricsProvider, song, LyricsProviderType.LRCLIB)
+        if (lrcLibLyrics != null) {
+            // Check if it is synced or plain
+             // fetchExternalLyrics assumes synced if parseLrcLyrics succeeds. 
+             // If parseLrcLyrics fails or empty, it returns null.
+             // But lrcLib might return plain text which parseLrcLyrics might treat as empty or single line?
+             // parseLrcLyrics looks for timestamps.
+             
+             // If we got a result from fetchExternalLyrics, it means it parsed as LRC (synced).
+             cache.put(song.id, lrcLibLyrics)
+             return@withContext lrcLibLyrics
         }
+        
+        // If fetchExternalLyrics returned null, maybe it was plain text?
+        // Let's try to get plain text from LRCLIB manually if needed, 
+        // OR modify fetchExternalLyrics to handle plain text.
+        // For now, let's assume if LrcLib returns something, we want it.
         
         // 3. Fallback: Get lyrics from the original source (JioSaavn/YouTube)
         val sourceLyrics = fetchFromSource(song)
@@ -129,11 +143,31 @@ class LyricsRepository @Inject constructor(
             return@withContext sourceLyrics
         }
         
-        // 4. Last resort: Return LRCLIB plain lyrics if we found them earlier
-        if (lrcLibLyrics != null) {
-            cache.put(song.id, lrcLibLyrics)
-            return@withContext lrcLibLyrics
-        }
+        // 4. Last resort: Try LRCLIB plain lyrics
+        // Since step 2 only accepted synced, we can try to fetch again and accept plain?
+        // Actually, fetchExternalLyrics implementation below only accepts parsed LRC.
+        // Let's manually call provider and handle plain text.
+        try {
+            val result = lrcLibLyricsProvider.getLyrics(
+                id = song.id,
+                title = song.title,
+                artist = song.artist,
+                duration = (song.duration / 1000).toInt(),
+                album = song.album
+            )
+            val text = result.getOrNull()
+            if (!text.isNullOrBlank()) {
+                 val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
+                 val lyrics = Lyrics(
+                    lines = lines,
+                    sourceCredit = "Lyrics from LRCLIB",
+                    isSynced = false,
+                    provider = LyricsProviderType.LRCLIB
+                )
+                cache.put(song.id, lyrics)
+                return@withContext lyrics
+            }
+        } catch (e: Exception) { } // Ignore exceptions here, as it's a last resort
         
         null
     }
@@ -157,7 +191,20 @@ class LyricsRepository @Inject constructor(
                 } else null
             }
             LyricsProviderType.LRCLIB -> {
-                getSyncedLyricsFromLrcLib(song.title, song.artist, song.duration)
+                // Try synced first
+                fetchExternalLyrics(lrcLibLyricsProvider, song, LyricsProviderType.LRCLIB) ?: run {
+                    // Fallback to plain if synced failed but text exists
+                    lrcLibLyricsProvider.getLyrics(
+                        id = song.id,
+                        title = song.title,
+                        artist = song.artist,
+                        duration = (song.duration / 1000).toInt(),
+                        album = song.album
+                    ).map { text ->
+                        val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
+                        Lyrics(lines = lines, sourceCredit = "Lyrics from LRCLIB", isSynced = false, provider = LyricsProviderType.LRCLIB)
+                    }.getOrNull()
+                }
             }
             LyricsProviderType.JIOSAAVN -> {
                 jioSaavnRepository.getLyricsFromJioSaavn(song.id)?.let { text ->
@@ -167,9 +214,6 @@ class LyricsRepository @Inject constructor(
             }
             LyricsProviderType.YOUTUBE -> {
                 try {
-                     // Force YouTube fetch even if source is different (search by ID might fail if ID is not YT, handle carefully)
-                     // If song source is NOT YT, we might not have a valid YT ID. 
-                     // But typically this is called with a YT ID for YT/YTMusic songs.
                      if (song.source == SongSource.YOUTUBE || song.source == SongSource.DOWNLOADED) {
                         youTubeRepository.getLyrics(song.id)?.copy(provider = LyricsProviderType.YOUTUBE)
                      } else null
@@ -225,161 +269,6 @@ class LyricsRepository @Inject constructor(
                 }
             }
             else -> null
-        }
-    }
-
-    private suspend fun getSyncedLyricsFromLrcLib(title: String, artist: String, duration: Long): Lyrics? {
-        return try {
-            // Clean up title and artist for better matching
-            val cleanTitle = title.replace(Regex("\\s*\\(.*?\\)"), "") // Remove parentheses content
-                .replace(Regex("\\s*\\[.*?\\]"), "") // Remove brackets content
-                .replace(Regex("\\s*-\\s*.*"), "") // Remove after dash
-                .trim()
-            val cleanArtist = artist.split(",", "&", "feat.", "ft.").firstOrNull()?.trim() ?: artist
-            val durationSeconds = (duration / 1000).toInt()
-            
-            // Try LRCLIB API for synced lyrics
-            val lrcLibUrl = "https://lrclib.net/api/get?" +
-                "track_name=${cleanTitle.encodeUrl()}" +
-                "&artist_name=${cleanArtist.encodeUrl()}" +
-                "&duration=$durationSeconds"
-            
-            android.util.Log.d("LyricsRepo", "Fetching synced lyrics from: $lrcLibUrl")
-            
-            val request = Request.Builder()
-                .url(lrcLibUrl)
-                .addHeader("User-Agent", "SuvMusic/1.0 (https://github.com/suvojeet-sengupta/SuvMusic)")
-                .build()
-            
-            val response = okHttpClient.newCall(request).execute()
-            
-            if (response.isSuccessful) {
-                val responseBody = response.body?.string()
-                if (!responseBody.isNullOrBlank() && responseBody != "null") {
-                    val json = JsonParser.parseString(responseBody).asJsonObject
-                    
-                    // Try to get synced lyrics first
-                    val syncedLyrics = json.get("syncedLyrics")?.asString
-                    if (!syncedLyrics.isNullOrBlank()) {
-                        val lines = parseLrcLyrics(syncedLyrics)
-                        if (lines.isNotEmpty()) {
-                            android.util.Log.d("LyricsRepo", "Found synced lyrics with ${lines.size} lines")
-                            return Lyrics(
-                                lines = lines,
-                                sourceCredit = "Lyrics from LRCLIB",
-                                isSynced = true,
-                                provider = LyricsProviderType.LRCLIB
-                            )
-                        }
-                    }
-                    
-                    // Return plain lyrics as fallback option
-                    val plainLyrics = json.get("plainLyrics")?.asString
-                    if (!plainLyrics.isNullOrBlank()) {
-                         val lines = plainLyrics.split("\n").map { line ->
-                            LyricsLine(text = line.trim())
-                        }
-                        return Lyrics(
-                            lines = lines,
-                            sourceCredit = "Lyrics from LRCLIB",
-                            isSynced = false,
-                            provider = LyricsProviderType.LRCLIB
-                        )
-                    }
-                }
-            }
-            response.close()
-            
-            // Fallback: Search LRCLIB if exact match failed
-            val searchUrl = "https://lrclib.net/api/search?q=${(cleanTitle + " " + cleanArtist).encodeUrl()}"
-            val searchRequest = Request.Builder()
-                .url(searchUrl)
-                .addHeader("User-Agent", "SuvMusic/1.0")
-                .build()
-            
-            val searchResponse = okHttpClient.newCall(searchRequest).execute()
-            if (searchResponse.isSuccessful) {
-                val searchBody = searchResponse.body?.string()
-                if (!searchBody.isNullOrBlank() && searchBody != "[]") {
-                    val results = JsonParser.parseString(searchBody).asJsonArray
-                    
-                    // Iterate through all results and find the best match
-                    var bestMatch: com.google.gson.JsonObject? = null
-                    var bestScore = 0.0
-                    
-                    for (i in 0 until results.size()) {
-                        val result = results[i].asJsonObject
-                        val resultTitle = result.get("trackName")?.asString ?: ""
-                        val resultArtist = result.get("artistName")?.asString ?: ""
-                        val resultDuration = result.get("duration")?.asDouble ?: 0.0
-                        
-                        // Calculate score
-                        val titleScore = calculateSimilarity(cleanTitle, resultTitle)
-                        val artistScore = calculateSimilarity(cleanArtist, resultArtist)
-                        
-                        // critical check: if major mismatch in title or artist, skip
-                        if (titleScore < 0.3 || artistScore < 0.3) continue
-                        
-                        var totalScore = (titleScore * 0.6) + (artistScore * 0.4)
-                        
-                        // Duration penalty
-                        val durationDiff = kotlin.math.abs(durationSeconds - resultDuration)
-                        if (durationDiff < 5) {
-                            totalScore += 0.2 // Bonus for exact duration match
-                        } else if (durationDiff > 20) {
-                            totalScore -= 0.3 // Heavy penalty for large duration mismatch
-                        } else {
-                            // Linear penalty for difference between 5s and 20s
-                            val penalty = (durationDiff - 5) / 15.0 * 0.3
-                            totalScore -= penalty
-                        }
-                        
-                        android.util.Log.d("LyricsRepo", "Match candidate: $resultTitle by $resultArtist, score: $totalScore")
-                        
-                        if (totalScore > bestScore) {
-                            bestScore = totalScore
-                            bestMatch = result
-                        }
-                    }
-                    
-                    // Threshold for accepting a match
-                    if (bestMatch != null && bestScore > 0.65) {
-                         android.util.Log.d("LyricsRepo", "Selected best match with score $bestScore: ${bestMatch.get("trackName")}")
-                         
-                         val syncedLyrics = bestMatch.get("syncedLyrics")?.asString
-                        if (!syncedLyrics.isNullOrBlank()) {
-                            val lines = parseLrcLyrics(syncedLyrics)
-                            if (lines.isNotEmpty()) {
-                                return Lyrics(
-                                    lines = lines,
-                                    sourceCredit = "Lyrics from LRCLIB (Best Match)",
-                                    isSynced = true,
-                                    provider = LyricsProviderType.LRCLIB
-                                )
-                            }
-                        }
-                        
-                         val plainLyrics = bestMatch.get("plainLyrics")?.asString
-                        if (!plainLyrics.isNullOrBlank()) {
-                            val lines = plainLyrics.split("\n").map { line ->
-                                LyricsLine(text = line.trim())
-                            }
-                            return Lyrics(
-                                lines = lines,
-                                sourceCredit = "Lyrics from LRCLIB (Best Match)",
-                                isSynced = false,
-                                provider = LyricsProviderType.LRCLIB
-                            )
-                        }
-                    }
-                }
-            }
-            searchResponse.close()
-            
-            null
-        } catch (e: Exception) {
-            android.util.Log.e("LyricsRepo", "Error fetching synced lyrics", e)
-            null
         }
     }
 
@@ -460,44 +349,6 @@ class LyricsRepository @Inject constructor(
         }
         
         return lines
-    }
-
-    private fun calculateSimilarity(s1: String, s2: String): Double {
-        val n1 = normalizeString(s1)
-        val n2 = normalizeString(s2)
-        
-        if (n1.isEmpty() && n2.isEmpty()) return 1.0
-        if (n1.isEmpty() || n2.isEmpty()) return 0.0
-        if (n1 == n2) return 1.0
-        
-        val distance = levenshteinDistance(n1, n2)
-        val maxLength = kotlin.math.max(n1.length, n2.length)
-        
-        return 1.0 - (distance.toDouble() / maxLength)
-    }
-    
-    private fun normalizeString(s: String): String {
-        return s.lowercase().replace(Regex("[^a-z0-9]"), "")
-    }
-    
-    private fun levenshteinDistance(s1: String, s2: String): Int {
-        val dp = Array(s1.length + 1) { IntArray(s2.length + 1) }
-        
-        for (i in 0..s1.length) dp[i][0] = i
-        for (j in 0..s2.length) dp[0][j] = j
-        
-        for (i in 1..s1.length) {
-            for (j in 1..s2.length) {
-                val cost = if (s1[i - 1] == s2[j - 1]) 0 else 1
-                dp[i][j] = minOf(
-                    dp[i - 1][j] + 1,       // deletion
-                    dp[i][j - 1] + 1,       // insertion
-                    dp[i - 1][j - 1] + cost // substitution
-                )
-            }
-        }
-        
-        return dp[s1.length][s2.length]
     }
     
     companion object {
