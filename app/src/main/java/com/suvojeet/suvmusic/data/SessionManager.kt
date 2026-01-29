@@ -1,40 +1,54 @@
 package com.suvojeet.suvmusic.data
 
 import android.content.Context
+import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.AudioQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
+import com.suvojeet.suvmusic.data.model.HomeItem
+import com.suvojeet.suvmusic.data.model.HomeSection
+import com.suvojeet.suvmusic.data.model.HomeSectionType
+import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
+import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.data.model.SponsorCategory
 import com.suvojeet.suvmusic.data.model.ThemeMode
-import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.suvojeet.suvmusic.data.model.SponsorCategory
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "suvmusic_session")
 
@@ -65,68 +79,43 @@ class SessionManager @Inject constructor(
         private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
-        // Resume playback
+        
         private val LAST_SONG_ID_KEY = stringPreferencesKey("last_song_id")
-        private val LAST_POSITION_KEY = androidx.datastore.preferences.core.longPreferencesKey("last_position")
+        private val LAST_POSITION_KEY = longPreferencesKey("last_position")
         private val LAST_QUEUE_KEY = stringPreferencesKey("last_queue")
         private val LAST_INDEX_KEY = intPreferencesKey("last_index")
-        // Recent searches
+        
         private val RECENT_SEARCHES_KEY = stringPreferencesKey("recent_searches")
         private const val MAX_RECENT_SEARCHES = 20
         
-        // Recently Played
         private val RECENTLY_PLAYED_KEY = stringPreferencesKey("recently_played")
         private const val MAX_RECENTLY_PLAYED = 50
         
-        // Home Cache
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
         private val JIOSAAVN_HOME_CACHE_KEY = stringPreferencesKey("jiosaavn_home_cache")
-        private val LAST_FETCH_TIME_YOUTUBE_KEY = androidx.datastore.preferences.core.longPreferencesKey("last_fetch_time_youtube")
-        private val LAST_FETCH_TIME_JIOSAAVN_KEY = androidx.datastore.preferences.core.longPreferencesKey("last_fetch_time_jiosaavn")
+        private val LAST_FETCH_TIME_YOUTUBE_KEY = longPreferencesKey("last_fetch_time_youtube")
+        private val LAST_FETCH_TIME_JIOSAAVN_KEY = longPreferencesKey("last_fetch_time_jiosaavn")
         
-        // Library Cache
         private val LIBRARY_PLAYLISTS_CACHE_KEY = stringPreferencesKey("library_playlists_cache")
         private val LIBRARY_LIKED_SONGS_CACHE_KEY = stringPreferencesKey("library_liked_songs_cache")
         
-        // Music Source
         private val MUSIC_SOURCE_KEY = stringPreferencesKey("music_source")
-        
-        // Developer Mode (Hidden feature)
         private val DEV_MODE_KEY = stringPreferencesKey("_dx_mode")
-        
-        // Floating Player (overlay when minimized)
         private val DYNAMIC_ISLAND_ENABLED_KEY = booleanPreferencesKey("dynamic_island_enabled")
         
-        // Player Customization
         private val SEEKBAR_STYLE_KEY = stringPreferencesKey("seekbar_style")
         private val ARTWORK_SHAPE_KEY = stringPreferencesKey("artwork_shape")
         private val ARTWORK_SIZE_KEY = stringPreferencesKey("artwork_size")
         
-        // Static Theme
         private val APP_THEME_KEY = stringPreferencesKey("app_theme")
-        
-        // Radio / Endless Queue
         private val ENDLESS_QUEUE_ENABLED_KEY = booleanPreferencesKey("endless_queue_enabled")
-        
-        // Offline Mode
         private val OFFLINE_MODE_ENABLED_KEY = booleanPreferencesKey("offline_mode_enabled")
-        
-        // Volume Slider
         private val VOLUME_SLIDER_ENABLED_KEY = booleanPreferencesKey("volume_slider_enabled")
-
-        // Volume Normalization
         private val VOLUME_NORMALIZATION_ENABLED_KEY = booleanPreferencesKey("volume_normalization_enabled")
-
-        // Mini Player Visibility
-        private val MINI_PLAYER_ALPHA_KEY = androidx.datastore.preferences.core.floatPreferencesKey("mini_player_alpha")
-
-        // Navigation Bar Transparency
-        private val NAV_BAR_ALPHA_KEY = androidx.datastore.preferences.core.floatPreferencesKey("nav_bar_alpha")
-        
-        // Double Tap Seek
+        private val MINI_PLAYER_ALPHA_KEY = floatPreferencesKey("mini_player_alpha")
+        private val NAV_BAR_ALPHA_KEY = floatPreferencesKey("nav_bar_alpha")
         private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
         
-        // Lyrics Providers
         private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
         private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
         private val ENABLE_KUGOU_KEY = booleanPreferencesKey("enable_kugou")
@@ -134,58 +123,38 @@ class SessionManager @Inject constructor(
         private val LYRICS_TEXT_POSITION_KEY = stringPreferencesKey("lyrics_text_position")
         private val LYRICS_ANIMATION_TYPE_KEY = stringPreferencesKey("lyrics_animation_type")
 
-        // Player Cache
-        private val PLAYER_CACHE_LIMIT_KEY = androidx.datastore.preferences.core.longPreferencesKey("player_cache_limit")
+        private val PLAYER_CACHE_LIMIT_KEY = longPreferencesKey("player_cache_limit")
         private val PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY = intPreferencesKey("player_cache_auto_clear_interval")
-        private val PLAYER_CACHE_LAST_CLEARED_TIMESTAMP_KEY = androidx.datastore.preferences.core.longPreferencesKey("player_cache_last_cleared_timestamp")
+        private val PLAYER_CACHE_LAST_CLEARED_TIMESTAMP_KEY = longPreferencesKey("player_cache_last_cleared_timestamp")
         
-        // Music Haptics
         private val MUSIC_HAPTICS_ENABLED_KEY = booleanPreferencesKey("music_haptics_enabled")
         private val HAPTICS_MODE_KEY = stringPreferencesKey("haptics_mode")
         private val HAPTICS_INTENSITY_KEY = stringPreferencesKey("haptics_intensity")
 
-        // Misc
         private val STOP_MUSIC_ON_TASK_CLEAR_KEY = booleanPreferencesKey("stop_music_on_task_clear")
         private val PAUSE_MUSIC_ON_MEDIA_MUTED_KEY = booleanPreferencesKey("pause_music_on_media_muted")
         private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
-
-        // Appearance
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
-        
-        // Mini Player Style
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
-
-        // Audio Offload
         private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
-
-        // Volume Boost
         private val VOLUME_BOOST_ENABLED_KEY = booleanPreferencesKey("volume_boost_enabled")
         private val VOLUME_BOOST_AMOUNT_KEY = intPreferencesKey("volume_boost_amount")
-
-        // SponsorBlock
         private val SPONSOR_BLOCK_ENABLED_KEY = booleanPreferencesKey("sponsor_block_enabled")
-        private val SPONSOR_BLOCK_CATEGORIES_KEY = androidx.datastore.preferences.core.stringSetPreferencesKey("sponsor_block_categories_v2")
+        private val SPONSOR_BLOCK_CATEGORIES_KEY = stringSetPreferencesKey("sponsor_block_categories_v2")
 
-        // Last.fm
         private val LAST_FM_SESSION_KEY = stringPreferencesKey("last_fm_session_key")
         private val LAST_FM_USERNAME_KEY = stringPreferencesKey("last_fm_username")
-        
-        // Last.fm specific settings matching Metrolist
         private val LAST_FM_SCROBBLING_ENABLED_KEY = booleanPreferencesKey("last_fm_scrobbling_enabled")
         private val LAST_FM_USE_NOW_PLAYING_KEY = booleanPreferencesKey("last_fm_use_now_playing")
         private val LAST_FM_SEND_LIKES_KEY = booleanPreferencesKey("last_fm_send_likes")
         
-        private val SCROBBLE_DELAY_PERCENT_KEY = androidx.datastore.preferences.core.floatPreferencesKey("scrobble_delay_percent")
+        private val SCROBBLE_DELAY_PERCENT_KEY = floatPreferencesKey("scrobble_delay_percent")
         private val SCROBBLE_MIN_DURATION_KEY = intPreferencesKey("scrobble_min_duration")
         private val SCROBBLE_DELAY_SECONDS_KEY = intPreferencesKey("scrobble_delay_seconds")
     }
     
     // --- Developer Mode (Hidden) ---
     
-    /**
-     * Check if developer mode is enabled.
-     * When enabled, JioSaavn option becomes visible.
-     */
     suspend fun isDeveloperMode(): Boolean = 
         context.dataStore.data.first()[DEV_MODE_KEY] == "unlocked"
     
@@ -193,43 +162,27 @@ class SessionManager @Inject constructor(
         preferences[DEV_MODE_KEY] == "unlocked"
     }
     
-    /**
-     * Enable developer mode (unlocks JioSaavn).
-     */
     suspend fun enableDeveloperMode() {
         context.dataStore.edit { preferences ->
             preferences[DEV_MODE_KEY] = "unlocked"
         }
     }
     
-    /**
-     * Disable developer mode (hides JioSaavn).
-     */
     suspend fun disableDeveloperMode() {
         context.dataStore.edit { preferences ->
             preferences.remove(DEV_MODE_KEY)
         }
     }
 
-    /**
-     * Get the set of enabled category keys.
-     * Defaults to all categories if not set.
-     */
     val sponsorBlockCategoriesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
         preferences[SPONSOR_BLOCK_CATEGORIES_KEY] ?: SponsorCategory.entries.map { it.key }.toSet()
     }
 
-    /**
-     * Helper to check if a specific category is enabled synchronously (for service usage).
-     */
     suspend fun getEnabledSponsorCategories(): Set<String> {
         return context.dataStore.data.first()[SPONSOR_BLOCK_CATEGORIES_KEY]
             ?: SponsorCategory.entries.map { it.key }.toSet()
     }
 
-    /**
-     * Toggle a specific category on or off.
-     */
     suspend fun toggleSponsorCategory(categoryKey: String, isEnabled: Boolean) {
         context.dataStore.edit { preferences ->
             val currentSet = preferences[SPONSOR_BLOCK_CATEGORIES_KEY]
@@ -250,9 +203,8 @@ class SessionManager @Inject constructor(
         context.dataStore.data.first()[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
 
     suspend fun isSponsorBlockEnabled(): Boolean =
-        context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: true // Enabled by default
+        context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: true
 
-    // SponsorBlock
     val sponsorBlockEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[SPONSOR_BLOCK_ENABLED_KEY] ?: true
     }
@@ -266,9 +218,7 @@ class SessionManager @Inject constructor(
     // --- Last.fm ---
 
     suspend fun setLastFmSession(sessionKey: String, username: String) {
-        // Save session key in EncryptedPrefs for security
         encryptedPrefs.edit().putString("last_fm_session", sessionKey).apply()
-        // Save username in DataStore for UI
         context.dataStore.edit { preferences ->
             preferences[LAST_FM_USERNAME_KEY] = username
         }
@@ -292,8 +242,6 @@ class SessionManager @Inject constructor(
     val lastFmUsernameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[LAST_FM_USERNAME_KEY]
     }
-
-    // --- Last.fm Settings Accessors ---
 
     suspend fun isLastFmScrobblingEnabled(): Boolean = 
         context.dataStore.data.first()[LAST_FM_SCROBBLING_ENABLED_KEY] ?: false
@@ -371,11 +319,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Player Customization ---
-    
-    /**
-     * Get saved seekbar style (defaults to WAVEFORM)
-     */
     suspend fun getSeekbarStyle(): String = 
         context.dataStore.data.first()[SEEKBAR_STYLE_KEY] ?: "WAVEFORM"
     
@@ -389,9 +332,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    /**
-     * Get saved artwork shape (defaults to ROUNDED_SQUARE)
-     */
     suspend fun getArtworkShape(): String = 
         context.dataStore.data.first()[ARTWORK_SHAPE_KEY] ?: "ROUNDED_SQUARE"
     
@@ -405,9 +345,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    /**
-     * Get saved artwork size (defaults to LARGE)
-     */
     suspend fun getArtworkSize(): String = 
         context.dataStore.data.first()[ARTWORK_SIZE_KEY] ?: "LARGE"
     
@@ -421,10 +358,8 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Endless Queue / Radio Mode ---
-    
     suspend fun isEndlessQueueEnabled(): Boolean = 
-        context.dataStore.data.first()[ENDLESS_QUEUE_ENABLED_KEY] ?: true // Enabled by default
+        context.dataStore.data.first()[ENDLESS_QUEUE_ENABLED_KEY] ?: true
     
     val endlessQueueFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[ENDLESS_QUEUE_ENABLED_KEY] ?: true
@@ -435,8 +370,6 @@ class SessionManager @Inject constructor(
             preferences[ENDLESS_QUEUE_ENABLED_KEY] = enabled
         }
     }
-    
-    // --- Offline Mode ---
     
     suspend fun isOfflineModeEnabled(): Boolean = 
         context.dataStore.data.first()[OFFLINE_MODE_ENABLED_KEY] ?: false
@@ -451,8 +384,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Volume Slider ---
-    
     suspend fun isVolumeSliderEnabled(): Boolean = 
         context.dataStore.data.first()[VOLUME_SLIDER_ENABLED_KEY] ?: true
     
@@ -465,8 +396,6 @@ class SessionManager @Inject constructor(
             preferences[VOLUME_SLIDER_ENABLED_KEY] = enabled
         }
     }
-
-    // --- Mini Player Transparency ---
 
     suspend fun getMiniPlayerAlpha(): Float = 
         context.dataStore.data.first()[MINI_PLAYER_ALPHA_KEY] ?: 1f
@@ -481,8 +410,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-    // --- Navigation Bar Transparency ---
-
     suspend fun getNavBarAlpha(): Float = 
         context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 0.9f
 
@@ -496,28 +423,24 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Mini Player Style ---
-    
-    suspend fun getMiniPlayerStyle(): com.suvojeet.suvmusic.data.model.MiniPlayerStyle {
+    suspend fun getMiniPlayerStyle(): MiniPlayerStyle {
         val styleName = context.dataStore.data.first()[MINI_PLAYER_STYLE_KEY]
         return styleName?.let {
-            try { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD }
-        } ?: com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD
+            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.STANDARD }
+        } ?: MiniPlayerStyle.STANDARD
     }
     
-    val miniPlayerStyleFlow: Flow<com.suvojeet.suvmusic.data.model.MiniPlayerStyle> = context.dataStore.data.map { preferences ->
+    val miniPlayerStyleFlow: Flow<MiniPlayerStyle> = context.dataStore.data.map { preferences ->
         preferences[MINI_PLAYER_STYLE_KEY]?.let {
-            try { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD }
-        } ?: com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD
+            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.STANDARD }
+        } ?: MiniPlayerStyle.STANDARD
     }
     
-    suspend fun setMiniPlayerStyle(style: com.suvojeet.suvmusic.data.model.MiniPlayerStyle) {
+    suspend fun setMiniPlayerStyle(style: MiniPlayerStyle) {
         context.dataStore.edit { preferences ->
             preferences[MINI_PLAYER_STYLE_KEY] = style.name
         }
     }
-    
-    // --- Double Tap Seek ---
     
     suspend fun getDoubleTapSeekSeconds(): Int = 
         context.dataStore.data.first()[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
@@ -531,8 +454,6 @@ class SessionManager @Inject constructor(
             preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] = seconds
         }
     }
-    
-    // --- Lyrics Providers ---
     
     suspend fun doesEnableBetterLyrics(): Boolean = 
             context.dataStore.data.first()[ENABLE_BETTER_LYRICS_KEY] ?: true
@@ -594,13 +515,11 @@ class SessionManager @Inject constructor(
     }
     
     val lyricsTextPositionFlow: Flow<LyricsTextPosition> = context.dataStore.data.map { preferences ->
-
         preferences[LYRICS_TEXT_POSITION_KEY]?.let {
             try { LyricsTextPosition.valueOf(it) } catch (e: Exception) { LyricsTextPosition.CENTER }
         } ?: LyricsTextPosition.CENTER
     }
     suspend fun setLyricsTextPosition(position: LyricsTextPosition) {
-
         context.dataStore.edit { preferences ->
             preferences[LYRICS_TEXT_POSITION_KEY] = position.name
         }
@@ -614,24 +533,16 @@ class SessionManager @Inject constructor(
     }
     
     val lyricsAnimationTypeFlow: Flow<LyricsAnimationType> = context.dataStore.data.map { preferences ->
-
         preferences[LYRICS_ANIMATION_TYPE_KEY]?.let {
             try { LyricsAnimationType.valueOf(it) } catch (e: Exception) { LyricsAnimationType.WORD }
         } ?: LyricsAnimationType.WORD
     }
     suspend fun setLyricsAnimationType(type: LyricsAnimationType) {
-
         context.dataStore.edit { preferences ->
             preferences[LYRICS_ANIMATION_TYPE_KEY] = type.name
         }
     }
 
-    // --- Player Cache Limit ---
-
-    /**
-     * Get player cache limit in bytes.
-     * Returns -1L for Unlimited (Default).
-     */
     suspend fun getPlayerCacheLimit(): Long = 
         context.dataStore.data.first()[PLAYER_CACHE_LIMIT_KEY] ?: -1L
 
@@ -645,13 +556,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Player Cache Auto Clear ---
-
-    /**
-     * Get auto clear interval in days.
-     * Default: 5 days.
-     * 0 means disabled.
-     */
     suspend fun getPlayerCacheAutoClearInterval(): Int = 
         context.dataStore.data.first()[PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY] ?: 5
 
@@ -665,9 +569,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-    /**
-     * Get the timestamp of the last cache clearing.
-     */
     suspend fun getLastCacheClearedTimestamp(): Long = 
         context.dataStore.data.first()[PLAYER_CACHE_LAST_CLEARED_TIMESTAMP_KEY] ?: 0L
 
@@ -677,12 +578,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Music Haptics ---
-    
-    /**
-     * Check if Music Haptics is enabled.
-     * Provides synchronized vibrations with music playback.
-     */
     suspend fun isMusicHapticsEnabled(): Boolean = 
         context.dataStore.data.first()[MUSIC_HAPTICS_ENABLED_KEY] ?: false
     
@@ -696,9 +591,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    /**
-     * Get the current haptics mode.
-     */
     suspend fun getHapticsMode(): HapticsMode {
         val modeName = context.dataStore.data.first()[HAPTICS_MODE_KEY]
         return modeName?.let {
@@ -718,9 +610,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    /**
-     * Get the haptics intensity level.
-     */
     suspend fun getHapticsIntensity(): HapticsIntensity {
         val intensityName = context.dataStore.data.first()[HAPTICS_INTENSITY_KEY]
         return intensityName?.let {
@@ -739,8 +628,6 @@ class SessionManager @Inject constructor(
             preferences[HAPTICS_INTENSITY_KEY] = intensity.name
         }
     }
-
-    // --- Misc Settings ---
 
     suspend fun isStopMusicOnTaskClearEnabled(): Boolean = 
         context.dataStore.data.first()[STOP_MUSIC_ON_TASK_CLEAR_KEY] ?: false
@@ -780,8 +667,6 @@ class SessionManager @Inject constructor(
             preferences[KEEP_SCREEN_ON_KEY] = enabled
         }
     }
-
-    // --- Appearance Settings ---
 
     suspend fun isPureBlackEnabled(): Boolean = 
         context.dataStore.data.first()[PURE_BLACK_KEY] ?: false
@@ -843,28 +728,16 @@ class SessionManager @Inject constructor(
         val newAccount = StoredAccount(name, email, avatarUrl, currentCookies)
         
         val accounts = getStoredAccounts().toMutableList()
-        // Remove if exists (update)
-        accounts.removeAll { it.email == email } // Identify by email
-        accounts.add(0, newAccount) // Add to top
+        accounts.removeAll { it.email == email }
+        accounts.add(0, newAccount)
         
         saveStoredAccounts(accounts)
-        
-        // Update current avatar in DataStore just in case
         saveUserAvatar(avatarUrl)
     }
     
     suspend fun switchAccount(account: StoredAccount) {
-        // Save current session if valid before switching? 
-        // Ideally the UI should prompt or we save automatically if we have info.
-        // For now, we assume the user just wants to switch TO this account.
-        
-        // 1. Set cookies
         encryptedPrefs.edit().putString("cookies", account.cookies).apply()
-        
-        // 2. Set Avatar
         saveUserAvatar(account.avatarUrl)
-        
-        // 3. Ensure this account is at the top of the list (recently used)
         saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
     }
     
@@ -874,13 +747,10 @@ class SessionManager @Inject constructor(
         saveStoredAccounts(accounts)
     }
     
-    // --- Cookies ---
-    
-    private val coroutineScope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+    private val migrationScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
-        // Migrate cookies asynchronously to avoid blocking main thread
-        coroutineScope.launch {
+        migrationScope.launch {
             migrateCookies()
         }
     }
@@ -893,15 +763,12 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Cookies ---
-    
     fun getCookies(): String? {
         return encryptedPrefs.getString("cookies", null)
     }
     
     suspend fun saveCookies(cookies: String) {
         encryptedPrefs.edit().putString("cookies", cookies).apply()
-        // Also ensure cleared from DataStore
         context.dataStore.edit { it.remove(COOKIES_KEY) }
     }
     
@@ -913,8 +780,6 @@ class SessionManager @Inject constructor(
     }
     
     fun isLoggedIn(): Boolean = !getCookies().isNullOrBlank()
-    
-    // --- User Avatar ---
     
     suspend fun getUserAvatar(): String? = 
         context.dataStore.data.first()[USER_AVATAR_KEY]
@@ -928,8 +793,6 @@ class SessionManager @Inject constructor(
     val userAvatarFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[USER_AVATAR_KEY]
     }
-    
-    // --- Audio Quality ---
     
     suspend fun getAudioQuality(): AudioQuality {
         val qualityName = context.dataStore.data.first()[AUDIO_QUALITY_KEY]
@@ -950,8 +813,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Playback Settings ---
-    
     suspend fun isGaplessPlaybackEnabled(): Boolean = 
         context.dataStore.data.first()[GAPLESS_PLAYBACK_KEY] ?: true
     
@@ -970,8 +831,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-    // --- Volume Normalization ---
-
     suspend fun isVolumeNormalizationEnabled(): Boolean = 
         context.dataStore.data.first()[VOLUME_NORMALIZATION_ENABLED_KEY] ?: false
 
@@ -984,8 +843,6 @@ class SessionManager @Inject constructor(
             preferences[VOLUME_NORMALIZATION_ENABLED_KEY] = enabled
         }
     }
-    
-    // --- Download Quality ---
     
     suspend fun getDownloadQuality(): DownloadQuality {
         val qualityName = context.dataStore.data.first()[DOWNLOAD_QUALITY_KEY]
@@ -1006,8 +863,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-    // --- Audio Offload ---
-
     suspend fun isAudioOffloadEnabled(): Boolean = 
         context.dataStore.data.first()[AUDIO_OFFLOAD_ENABLED_KEY] ?: false
 
@@ -1020,8 +875,6 @@ class SessionManager @Inject constructor(
             preferences[AUDIO_OFFLOAD_ENABLED_KEY] = enabled
         }
     }
-
-    // --- Volume Boost ---
 
     suspend fun isVolumeBoostEnabled(): Boolean = 
         context.dataStore.data.first()[VOLUME_BOOST_ENABLED_KEY] ?: false
@@ -1036,9 +889,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-    /**
-     * Get volume boost amount (0-100).
-     */
     suspend fun getVolumeBoostAmount(): Int = 
         context.dataStore.data.first()[VOLUME_BOOST_AMOUNT_KEY] ?: 0
 
@@ -1052,8 +902,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-    // --- Onboarding ---
-
     suspend fun isOnboardingCompleted(): Boolean = 
         context.dataStore.data.first()[ONBOARDING_COMPLETED_KEY] ?: false
         
@@ -1066,8 +914,6 @@ class SessionManager @Inject constructor(
             preferences[ONBOARDING_COMPLETED_KEY] = completed
         }
     }
-    
-    // --- Theme Mode ---
     
     suspend fun getThemeMode(): ThemeMode {
         val modeName = context.dataStore.data.first()[THEME_MODE_KEY]
@@ -1088,8 +934,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-    // --- App Theme (Static Colors) ---
-
     suspend fun getAppTheme(): AppTheme {
         val themeName = context.dataStore.data.first()[APP_THEME_KEY]
         return themeName?.let {
@@ -1109,8 +953,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Dynamic Color ---
-    
     suspend fun isDynamicColorEnabled(): Boolean = 
         context.dataStore.data.first()[DYNAMIC_COLOR_KEY] ?: true
     
@@ -1123,8 +965,6 @@ class SessionManager @Inject constructor(
             preferences[DYNAMIC_COLOR_KEY] = enabled
         }
     }
-    
-    // --- Music Source ---
     
     suspend fun getMusicSource(): MusicSource {
         val sourceName = context.dataStore.data.first()[MUSIC_SOURCE_KEY]
@@ -1145,11 +985,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Resume Playback ---
-    
-    /**
-     * Save last playback state for resume functionality.
-     */
     suspend fun savePlaybackState(songId: String, position: Long, queueJson: String, index: Int) {
         context.dataStore.edit { preferences ->
             preferences[LAST_SONG_ID_KEY] = songId
@@ -1159,10 +994,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    /**
-     * Get last saved playback state.
-     * @return Quadruple of (songId, position, queueJson, index) or null if not saved.
-     */
     suspend fun getLastPlaybackState(): LastPlaybackState? = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
         val songId = prefs[LAST_SONG_ID_KEY]
@@ -1175,9 +1006,6 @@ class SessionManager @Inject constructor(
         } else null
     }
     
-    /**
-     * Clear saved playback state.
-     */
     suspend fun clearPlaybackState() {
         context.dataStore.edit { preferences ->
             preferences.remove(LAST_SONG_ID_KEY)
@@ -1187,14 +1015,6 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Recent Searches ---
-    
-    /**
-     * Get recent searches list.
-     */
-    /**
-     * Get recent searches list.
-     */
     suspend fun getRecentSearches(): List<Song> = withContext(Dispatchers.IO) {
         val json = context.dataStore.data.first()[RECENT_SEARCHES_KEY] ?: return@withContext emptyList()
         withContext(Dispatchers.Default) {
@@ -1235,22 +1055,12 @@ class SessionManager @Inject constructor(
         }
     }
     
-    /**
-     * Add a song to recent searches.
-     */
     suspend fun addRecentSearch(song: Song) {
         val currentSearches = getRecentSearches().toMutableList()
-        
-        // Remove if already exists (to move to top)
         currentSearches.removeAll { it.id == song.id }
-        
-        // Add to beginning
         currentSearches.add(0, song)
-        
-        // Keep only max items
         val trimmed = currentSearches.take(MAX_RECENT_SEARCHES)
         
-        // Save
         val jsonArray = JSONArray()
         trimmed.forEach { s ->
             jsonArray.put(JSONObject().apply {
@@ -1269,55 +1079,33 @@ class SessionManager @Inject constructor(
         }
     }
     
-    /**
-     * Clear all recent searches.
-     */
     suspend fun clearRecentSearches() {
         context.dataStore.edit { preferences ->
             preferences.remove(RECENT_SEARCHES_KEY)
         }
     }
     
-    // --- Recently Played ---
-    
-    /**
-     * Get recently played songs as a Flow.
-     */
-    val recentlyPlayedFlow: Flow<List<com.suvojeet.suvmusic.data.model.RecentlyPlayed>> = context.dataStore.data.map { preferences ->
+    val recentlyPlayedFlow: Flow<List<RecentlyPlayed>> = context.dataStore.data.map { preferences ->
         parseRecentlyPlayed(preferences[RECENTLY_PLAYED_KEY])
     }
     
-    /**
-     * Add a song to recently played.
-     */
     suspend fun addToRecentlyPlayed(song: Song) {
         context.dataStore.edit { preferences ->
             val existing = parseRecentlyPlayed(preferences[RECENTLY_PLAYED_KEY]).toMutableList()
-            
-            // Remove if already exists (will re-add at top)
             existing.removeAll { it.song.id == song.id }
-            
-            // Add at beginning
-            existing.add(0, com.suvojeet.suvmusic.data.model.RecentlyPlayed(song, System.currentTimeMillis()))
-            
-            // Limit size
+            existing.add(0, RecentlyPlayed(song, System.currentTimeMillis()))
             val limited = existing.take(MAX_RECENTLY_PLAYED)
-            
-            // Serialize
             preferences[RECENTLY_PLAYED_KEY] = serializeRecentlyPlayed(limited)
         }
     }
     
-    /**
-     * Clear recently played history.
-     */
     suspend fun clearRecentlyPlayed() {
         context.dataStore.edit { preferences ->
             preferences.remove(RECENTLY_PLAYED_KEY)
         }
     }
     
-    private fun parseRecentlyPlayed(json: String?): List<com.suvojeet.suvmusic.data.model.RecentlyPlayed> {
+    private fun parseRecentlyPlayed(json: String?): List<RecentlyPlayed> {
         if (json.isNullOrBlank()) return emptyList()
         return try {
             val array = JSONArray(json)
@@ -1327,14 +1115,14 @@ class SessionManager @Inject constructor(
                 val playedAt = obj.optLong("playedAt", System.currentTimeMillis())
                 
                 val song = jsonToSong(songObj) ?: return@mapNotNull null
-                com.suvojeet.suvmusic.data.model.RecentlyPlayed(song, playedAt)
+                RecentlyPlayed(song, playedAt)
             }
         } catch (e: Exception) {
             emptyList()
         }
     }
     
-    private fun serializeRecentlyPlayed(list: List<com.suvojeet.suvmusic.data.model.RecentlyPlayed>): String {
+    private fun serializeRecentlyPlayed(list: List<RecentlyPlayed>): String {
         val array = JSONArray()
         list.forEach { recent ->
             val songObj = songToJson(recent.song)
@@ -1347,9 +1135,7 @@ class SessionManager @Inject constructor(
         return array.toString()
     }
     
-    // --- Home Cache ---
-    
-    suspend fun saveHomeCache(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>) {
+    suspend fun saveHomeCache(sections: List<HomeSection>) {
         val json = withContext(Dispatchers.Default) {
             serializeHomeSections(sections)
         }
@@ -1358,7 +1144,7 @@ class SessionManager @Inject constructor(
         }
     }
     
-    fun getCachedHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data
+    fun getCachedHomeSections(): Flow<List<HomeSection>> = context.dataStore.data
         .map { preferences -> preferences[HOME_CACHE_KEY] }
         .flowOn(Dispatchers.IO)
         .map { json -> 
@@ -1367,7 +1153,7 @@ class SessionManager @Inject constructor(
             }
         }
     
-    suspend fun getCachedHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+    suspend fun getCachedHomeSectionsSync(): List<HomeSection> = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
         val json = prefs[HOME_CACHE_KEY]
         withContext(Dispatchers.Default) {
@@ -1375,7 +1161,7 @@ class SessionManager @Inject constructor(
         }
     }
     
-    suspend fun saveJioSaavnHomeCache(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>) {
+    suspend fun saveJioSaavnHomeCache(sections: List<HomeSection>) {
         val json = withContext(Dispatchers.Default) {
             serializeHomeSections(sections)
         }
@@ -1384,7 +1170,7 @@ class SessionManager @Inject constructor(
         }
     }
     
-    fun getCachedJioSaavnHomeSections(): Flow<List<com.suvojeet.suvmusic.data.model.HomeSection>> = context.dataStore.data
+    fun getCachedJioSaavnHomeSections(): Flow<List<HomeSection>> = context.dataStore.data
         .map { preferences -> preferences[JIOSAAVN_HOME_CACHE_KEY] }
         .flowOn(Dispatchers.IO)
         .map { json ->
@@ -1393,7 +1179,7 @@ class SessionManager @Inject constructor(
             }
         }
     
-    suspend fun getCachedJioSaavnHomeSectionsSync(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+    suspend fun getCachedJioSaavnHomeSectionsSync(): List<HomeSection> = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
         val json = prefs[JIOSAAVN_HOME_CACHE_KEY]
         withContext(Dispatchers.Default) {
@@ -1401,23 +1187,19 @@ class SessionManager @Inject constructor(
         }
     }
 
-    // --- Home Refresh Timestamp ---
-
-    suspend fun getLastHomeFetchTime(source: com.suvojeet.suvmusic.data.MusicSource): Long {
-        val key = if (source == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
+    suspend fun getLastHomeFetchTime(source: MusicSource): Long {
+        val key = if (source == MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
         return context.dataStore.data.first()[key] ?: 0L
     }
 
-    suspend fun updateLastHomeFetchTime(source: com.suvojeet.suvmusic.data.MusicSource) {
-        val key = if (source == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
+    suspend fun updateLastHomeFetchTime(source: MusicSource) {
+        val key = if (source == MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
         context.dataStore.edit { preferences ->
             preferences[key] = System.currentTimeMillis()
         }
     }
     
-    // --- Library Cache ---
-    
-    suspend fun saveLibraryPlaylistsCache(playlists: List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem>) {
+    suspend fun saveLibraryPlaylistsCache(playlists: List<PlaylistDisplayItem>) {
         val json = withContext(Dispatchers.Default) {
              val array = JSONArray()
              playlists.forEach { playlist ->
@@ -1437,7 +1219,7 @@ class SessionManager @Inject constructor(
         }
     }
     
-    suspend fun getCachedLibraryPlaylistsSync(): List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+    suspend fun getCachedLibraryPlaylistsSync(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
         val json = prefs[LIBRARY_PLAYLISTS_CACHE_KEY] ?: return@withContext emptyList()
         withContext(Dispatchers.Default) {
@@ -1445,7 +1227,7 @@ class SessionManager @Inject constructor(
                 val array = JSONArray(json)
                 (0 until array.length()).mapNotNull { i ->
                     val obj = array.optJSONObject(i) ?: return@mapNotNull null
-                    com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                    PlaylistDisplayItem(
                         id = obj.optString("id"),
                         name = obj.optString("name"),
                         url = obj.optString("url"),
@@ -1486,9 +1268,7 @@ class SessionManager @Inject constructor(
         }
     }
     
-    // --- Helpers ---
-
-    private fun parseHomeSections(json: String?): List<com.suvojeet.suvmusic.data.model.HomeSection> {
+    private fun parseHomeSections(json: String?): List<HomeSection> {
         if (json.isNullOrBlank()) return emptyList()
         return try {
             val array = JSONArray(json)
@@ -1497,26 +1277,25 @@ class SessionManager @Inject constructor(
                 val title = obj.optString("title")
                 val typeStr = obj.optString("type")
                 val type = try {
-                    if (typeStr.isNotEmpty()) com.suvojeet.suvmusic.data.model.HomeSectionType.valueOf(typeStr)
-                    else com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                    if (typeStr.isNotEmpty()) HomeSectionType.valueOf(typeStr)
+                    else HomeSectionType.HorizontalCarousel
                 } catch (e: Exception) {
-                    com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                    HomeSectionType.HorizontalCarousel
                 }
                 
                 val itemsArray = obj.optJSONArray("items") ?: JSONArray()
-                
                 val items = (0 until itemsArray.length()).mapNotNull { j ->
                     parseHomeItem(itemsArray.optJSONObject(j))
                 }
                 
-                com.suvojeet.suvmusic.data.model.HomeSection(title, items, type)
+                HomeSection(title, items, type)
             }
         } catch (e: Exception) {
             emptyList()
         }
     }
     
-    private fun serializeHomeSections(sections: List<com.suvojeet.suvmusic.data.model.HomeSection>): String {
+    private fun serializeHomeSections(sections: List<HomeSection>): String {
         val array = JSONArray()
         sections.forEach { section ->
             val obj = JSONObject().apply {
@@ -1533,7 +1312,7 @@ class SessionManager @Inject constructor(
         return array.toString()
     }
     
-    private fun parseHomeItem(obj: JSONObject?): com.suvojeet.suvmusic.data.model.HomeItem? {
+    private fun parseHomeItem(obj: JSONObject?): HomeItem? {
         if (obj == null) return null
         val type = obj.optString("type")
         val data = obj.optJSONObject("data") ?: return null
@@ -1541,10 +1320,10 @@ class SessionManager @Inject constructor(
         return when (type) {
             "song" -> {
                 val song = jsonToSong(data) ?: return null
-                com.suvojeet.suvmusic.data.model.HomeItem.SongItem(song)
+                HomeItem.SongItem(song)
             }
             "playlist" -> {
-                val playlist = com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                val playlist = PlaylistDisplayItem(
                     id = data.optString("id"),
                     name = data.optString("name"),
                     url = data.optString("url"),
@@ -1552,10 +1331,10 @@ class SessionManager @Inject constructor(
                     thumbnailUrl = data.optString("thumbnailUrl").takeIf { it.isNotBlank() },
                     songCount = data.optInt("songCount", 0)
                 )
-                com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(playlist)
+                HomeItem.PlaylistItem(playlist)
             }
             "album" -> {
-                val album = com.suvojeet.suvmusic.data.model.Album(
+                val album = Album(
                     id = data.optString("id"),
                     title = data.optString("title"),
                     artist = data.optString("artist"),
@@ -1563,20 +1342,20 @@ class SessionManager @Inject constructor(
                     thumbnailUrl = data.optString("thumbnailUrl").takeIf { it.isNotBlank() },
                     description = data.optString("description").takeIf { it.isNotBlank() }
                 )
-                com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(album)
+                HomeItem.AlbumItem(album)
             }
             "artist" -> {
-                val artist = com.suvojeet.suvmusic.data.model.Artist(
+                val artist = Artist(
                     id = data.optString("id"),
                     name = data.optString("name"),
                     thumbnailUrl = data.optString("thumbnailUrl").takeIf { it.isNotBlank() },
                     description = data.optString("description").takeIf { it.isNotBlank() },
                     subscribers = data.optString("subscribers").takeIf { it.isNotBlank() }
                 )
-                com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(artist)
+                HomeItem.ArtistItem(artist)
             }
             "explore" -> {
-                com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem(
+                HomeItem.ExploreItem(
                     title = data.optString("title"),
                     iconRes = data.optInt("iconRes"),
                     browseId = data.optString("browseId", "")
@@ -1586,14 +1365,14 @@ class SessionManager @Inject constructor(
         }
     }
     
-    private fun serializeHomeItem(item: com.suvojeet.suvmusic.data.model.HomeItem): JSONObject {
+    private fun serializeHomeItem(item: HomeItem): JSONObject {
         val obj = JSONObject()
         when (item) {
-            is com.suvojeet.suvmusic.data.model.HomeItem.SongItem -> {
+            is HomeItem.SongItem -> {
                 obj.put("type", "song")
                 obj.put("data", songToJson(item.song))
             }
-            is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem -> {
+            is HomeItem.PlaylistItem -> {
                 obj.put("type", "playlist")
                 val data = JSONObject().apply {
                     put("id", item.playlist.id)
@@ -1605,7 +1384,7 @@ class SessionManager @Inject constructor(
                 }
                 obj.put("data", data)
             }
-            is com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem -> {
+            is HomeItem.AlbumItem -> {
                 obj.put("type", "album")
                 val data = JSONObject().apply {
                     put("id", item.album.id)
@@ -1617,7 +1396,7 @@ class SessionManager @Inject constructor(
                 }
                 obj.put("data", data)
             }
-            is com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem -> {
+            is HomeItem.ArtistItem -> {
                 obj.put("type", "artist")
                 val data = JSONObject().apply {
                     put("id", item.artist.id)
@@ -1628,7 +1407,7 @@ class SessionManager @Inject constructor(
                 }
                 obj.put("data", data)
             }
-            is com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem -> {
+            is HomeItem.ExploreItem -> {
                 obj.put("type", "explore")
                 val data = JSONObject().apply {
                     put("title", item.title)
@@ -1655,7 +1434,7 @@ class SessionManager @Inject constructor(
                 } catch (e: Exception) { 
                     SongSource.YOUTUBE 
                 },
-                localUri = songObj.optString("localUri").takeIf { it.isNotBlank() }?.let { android.net.Uri.parse(it) }
+                localUri = songObj.optString("localUri").takeIf { it.isNotBlank() }?.let { Uri.parse(it) }
             )
         } catch (e: Exception) {
             null
@@ -1694,4 +1473,3 @@ enum class MusicSource {
     JIOSAAVN,
     BOTH
 }
-

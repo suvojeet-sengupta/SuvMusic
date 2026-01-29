@@ -1,32 +1,46 @@
 package com.suvojeet.suvmusic.ui.viewmodel
 
+import android.content.Context
+import android.content.Intent
+import android.media.MediaMetadataRetriever
+import android.provider.OpenableColumns
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.model.Comment
 import com.suvojeet.suvmusic.data.model.DownloadState
+import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
+import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
-import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
-import com.suvojeet.suvmusic.player.MusicPlayer
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import com.suvojeet.suvmusic.player.SleepTimerManager
-import com.suvojeet.suvmusic.player.SleepTimerOption
-import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
+import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.player.SleepTimerManager
+import com.suvojeet.suvmusic.player.SleepTimerOption
+import com.suvojeet.suvmusic.providers.lyrics.Lyrics
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
+import com.suvojeet.suvmusic.service.DownloadService
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import javax.inject.Inject
 
 @HiltViewModel
@@ -40,7 +54,7 @@ class PlayerViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val recommendationEngine: RecommendationEngine,
     private val sponsorBlockRepository: SponsorBlockRepository,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
@@ -51,18 +65,18 @@ class PlayerViewModel @Inject constructor(
         state.copy(currentPosition = 0L, duration = 0L, bufferedPercentage = 0)
     }.distinctUntilChanged()
     
-    private val _lyricsState = kotlinx.coroutines.flow.MutableStateFlow<com.suvojeet.suvmusic.providers.lyrics.Lyrics?>(null)
-    val lyricsState: StateFlow<com.suvojeet.suvmusic.providers.lyrics.Lyrics?> = _lyricsState.asStateFlow()
+    private val _lyricsState = MutableStateFlow<Lyrics?>(null)
+    val lyricsState: StateFlow<Lyrics?> = _lyricsState.asStateFlow()
     
-    private val _isFetchingLyrics = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _isFetchingLyrics = MutableStateFlow(false)
     val isFetchingLyrics: StateFlow<Boolean> = _isFetchingLyrics.asStateFlow()
     
     // Lyrics Provider Selection
-    private val _selectedLyricsProvider = kotlinx.coroutines.flow.MutableStateFlow(LyricsProviderType.AUTO)
+    private val _selectedLyricsProvider = MutableStateFlow(LyricsProviderType.AUTO)
     val selectedLyricsProvider: StateFlow<LyricsProviderType> = _selectedLyricsProvider.asStateFlow()
 
     // Dynamic Lyrics Providers State
-    private val _enabledLyricsProviders = kotlinx.coroutines.flow.MutableStateFlow<Map<LyricsProviderType, Boolean>>(
+    private val _enabledLyricsProviders = MutableStateFlow<Map<LyricsProviderType, Boolean>>(
         mapOf(
             LyricsProviderType.AUTO to true,
             LyricsProviderType.BETTER_LYRICS to true,
@@ -74,19 +88,19 @@ class PlayerViewModel @Inject constructor(
     )
     val enabledLyricsProviders: StateFlow<Map<LyricsProviderType, Boolean>> = _enabledLyricsProviders.asStateFlow()
 
-    private val _commentsState = kotlinx.coroutines.flow.MutableStateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?>(null)
-    val commentsState: StateFlow<List<com.suvojeet.suvmusic.data.model.Comment>?> = _commentsState.asStateFlow()
+    private val _commentsState = MutableStateFlow<List<Comment>?>(null)
+    val commentsState: StateFlow<List<Comment>?> = _commentsState.asStateFlow()
 
-    private val _isFetchingComments = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _isFetchingComments = MutableStateFlow(false)
     val isFetchingComments: StateFlow<Boolean> = _isFetchingComments.asStateFlow()
 
-    private val _isLoadingMoreComments = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _isLoadingMoreComments = MutableStateFlow(false)
     val isLoadingMoreComments: StateFlow<Boolean> = _isLoadingMoreComments.asStateFlow()
     
-    private val _isPostingComment = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _isPostingComment = MutableStateFlow(false)
     val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
     
-    private val _commentPostSuccess = kotlinx.coroutines.flow.MutableStateFlow<Boolean?>(null)
+    private val _commentPostSuccess = MutableStateFlow<Boolean?>(null)
     val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
 
     val sponsorSegments: StateFlow<List<SponsorSegment>> = sponsorBlockRepository.currentSegments
@@ -102,14 +116,14 @@ class PlayerViewModel @Inject constructor(
     }
     
     // Radio Mode State
-    private val _isRadioMode = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _isRadioMode = MutableStateFlow(false)
     val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
     
-    private val _isLoadingMoreSongs = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _isLoadingMoreSongs = MutableStateFlow(false)
     val isLoadingMoreSongs: StateFlow<Boolean> = _isLoadingMoreSongs.asStateFlow()
     
     // MiniPlayer Visibility State
-    private val _isMiniPlayerDismissed = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _isMiniPlayerDismissed = MutableStateFlow(false)
     val isMiniPlayerDismissed: StateFlow<Boolean> = _isMiniPlayerDismissed.asStateFlow()
     
     private var radioBaseSongId: String? = null
@@ -138,7 +152,7 @@ class PlayerViewModel @Inject constructor(
     
     private fun observeLyricsProviderSettings() {
         viewModelScope.launch {
-            kotlinx.coroutines.flow.combine(
+            combine(
                 sessionManager.enableBetterLyricsFlow,
                 sessionManager.enableSimpMusicFlow,
                 sessionManager.developerModeFlow
@@ -158,7 +172,7 @@ class PlayerViewModel @Inject constructor(
                 // If currently selected provider was disabled, switch to AUTO
                 val currentSelection = _selectedLyricsProvider.value
                 if (currentSelection != LyricsProviderType.AUTO && newMap[currentSelection] == false) {
-                    android.util.Log.d("PlayerViewModel", "Current provider $currentSelection disabled, switching to AUTO")
+                    Log.d("PlayerViewModel", "Current provider $currentSelection disabled, switching to AUTO")
                     switchLyricsProvider(LyricsProviderType.AUTO)
                 }
             }
@@ -190,7 +204,7 @@ class PlayerViewModel @Inject constructor(
     private fun observeDownloads() {
         viewModelScope.launch {
             // Wait a bit for downloads to be loaded, then check initial state
-            kotlinx.coroutines.delay(500)
+            delay(500)
             val currentSong = playerState.value.currentSong
             if (currentSong != null) {
                 checkDownloadStatus(currentSong)
@@ -303,7 +317,7 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.dismissVideoError()
     }
 
-    fun switchOutputDevice(device: com.suvojeet.suvmusic.data.model.OutputDevice) {
+    fun switchOutputDevice(device: OutputDevice) {
         musicPlayer.switchOutputDevice(device)
     }
     
@@ -353,7 +367,7 @@ class PlayerViewModel @Inject constructor(
                     musicPlayer.playSong(song, radioSongs, 0)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("PlayerViewModel", "Error starting radio", e)
+                Log.e("PlayerViewModel", "Error starting radio", e)
                 // Fallback: just play the song
                 musicPlayer.playSong(song)
             }
@@ -415,7 +429,7 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("PlayerViewModel", "Error loading more radio songs", e)
+                Log.e("PlayerViewModel", "Error loading more radio songs", e)
             } finally {
                 _isLoadingMoreSongs.value = false
             }
@@ -462,7 +476,7 @@ class PlayerViewModel @Inject constructor(
      * Play an audio file from a local URI (opened from external file manager).
      * Extracts metadata using MediaMetadataRetriever and creates a local Song.
      */
-    fun playFromLocalUri(context: android.content.Context, uri: android.net.Uri) {
+    fun playFromLocalUri(context: Context, uri: android.net.Uri) {
         viewModelScope.launch {
             try {
                 // Take persistent permission if it's a content URI
@@ -470,31 +484,31 @@ class PlayerViewModel @Inject constructor(
                     try {
                         context.contentResolver.takePersistableUriPermission(
                             uri,
-                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
                         )
                     } catch (e: SecurityException) {
                         // Permission might not be grantable, continue anyway
-                        android.util.Log.w("PlayerViewModel", "Could not take persistent permission: ${e.message}")
+                        Log.w("PlayerViewModel", "Could not take persistent permission: ${e.message}")
                     }
                 }
                 
                 // Extract metadata from the audio file
-                val retriever = android.media.MediaMetadataRetriever()
+                val retriever = MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(context, uri)
                     
-                    val title = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE)
+                    val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
                         ?: getFileNameFromUri(context, uri)
                         ?: "Unknown Title"
                     
-                    val artist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                        ?: retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)
+                    val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                        ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)
                         ?: "Unknown Artist"
                     
-                    val album = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ALBUM)
+                    val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
                         ?: ""
                     
-                    val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                     val duration = durationStr?.toLongOrNull() ?: 0L
                     
                     // Try to get album art
@@ -528,7 +542,7 @@ class PlayerViewModel @Inject constructor(
                 }
                 
             } catch (e: Exception) {
-                android.util.Log.e("PlayerViewModel", "Error playing local file", e)
+                Log.e("PlayerViewModel", "Error playing local file", e)
                 e.printStackTrace()
             }
         }
@@ -537,13 +551,13 @@ class PlayerViewModel @Inject constructor(
     /**
      * Extract filename from a content URI.
      */
-    private fun getFileNameFromUri(context: android.content.Context, uri: android.net.Uri): String? {
+    private fun getFileNameFromUri(context: Context, uri: android.net.Uri): String? {
         var fileName: String? = null
         
         if (uri.scheme == "content") {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
-                    val displayNameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     if (displayNameIndex != -1) {
                         fileName = cursor.getString(displayNameIndex)
                     }
@@ -566,7 +580,7 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
         
         // Start foreground service for background download with notification
-        com.suvojeet.suvmusic.service.DownloadService.startDownload(context, song)
+        DownloadService.startDownload(context, song)
     }
 
     fun deleteDownload(songId: String) {
@@ -599,7 +613,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val success = downloadRepository.downloadSongProgressive(song) { tempUri ->
                 // First chunk ready - start playing from temp file
-                android.util.Log.d("PlayerViewModel", "Progressive download ready, playing from: $tempUri")
+                Log.d("PlayerViewModel", "Progressive download ready, playing from: $tempUri")
                 // The song is already playing (streaming), we just continue
                 // The file will be saved when download completes
             }
@@ -652,7 +666,7 @@ class PlayerViewModel @Inject constructor(
                     val lyrics = lyricsRepository.getLyrics(currentSong, provider)
                     _lyricsState.value = lyrics
                 } catch (e: Exception) {
-                    android.util.Log.e("PlayerViewModel", "Error fetching lyrics", e)
+                    Log.e("PlayerViewModel", "Error fetching lyrics", e)
                 }
             }
             
@@ -715,7 +729,7 @@ class PlayerViewModel @Inject constructor(
                 // Optimistically add comment
                 val userAvatar = sessionManager.getUserAvatar()
                 
-                val newComment = com.suvojeet.suvmusic.data.model.Comment(
+                val newComment = Comment(
                     id = "temp_${System.currentTimeMillis()}",
                     authorName = "You", 
                     authorThumbnailUrl = userAvatar,
@@ -732,7 +746,7 @@ class PlayerViewModel @Inject constructor(
             _isPostingComment.value = false
             
             // Clear the success state after a delay
-            kotlinx.coroutines.delay(2000)
+            delay(2000)
             _commentPostSuccess.value = null
         }
     }
@@ -790,7 +804,7 @@ class PlayerViewModel @Inject constructor(
         
         try {
             val (queue, index) = withContext(Dispatchers.Default) {
-                val jsonArray = org.json.JSONArray(lastState.queueJson)
+                val jsonArray = JSONArray(lastState.queueJson)
                 val queueList = mutableListOf<Song>()
                 
                 for (i in 0 until jsonArray.length()) {
@@ -820,7 +834,7 @@ class PlayerViewModel @Inject constructor(
                 musicPlayer.playSong(song, queue, index, autoPlay = false)
                 
                 // Seek to saved position after a delay (allow media to load)
-                kotlinx.coroutines.delay(1000)
+                delay(1000)
                 musicPlayer.seekTo(lastState.position)
             }
         } catch (e: Exception) {

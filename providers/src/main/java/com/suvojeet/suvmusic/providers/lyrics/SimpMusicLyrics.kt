@@ -12,6 +12,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlin.math.abs
 
 /**
@@ -21,6 +22,7 @@ import kotlin.math.abs
 object SimpMusicLyrics {
     private const val BASE_URL = "https://api-lyrics.simpmusic.org/v1/"
 
+    @OptIn(ExperimentalSerializationApi::class)
     private val client by lazy {
         HttpClient(CIO) {
             install(ContentNegotiation) {
