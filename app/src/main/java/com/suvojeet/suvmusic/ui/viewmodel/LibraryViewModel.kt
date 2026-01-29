@@ -1,17 +1,24 @@
 package com.suvojeet.suvmusic.ui.viewmodel
 
+import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.SuvMusicApplication
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
-import com.suvojeet.suvmusic.data.model.ImportResult
-import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.service.ImportStatus
+import com.suvojeet.suvmusic.service.SpotifyImportService
+import com.suvojeet.suvmusic.util.SpotifyImportHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,19 +54,19 @@ sealed class ImportState {
         val successCount: Int,
         val status: String // "Searching...", "Adding...", "Failed"
     ) : ImportState()
-    data class Success(val successCount: Int, val totalCount: Int) : ImportState() // Removed results list as we don't track it anymore for minimal UI
+    data class Success(val successCount: Int, val totalCount: Int) : ImportState()
     data class Error(val message: String) : ImportState()
 }
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
     private val localAudioRepository: LocalAudioRepository,
     private val downloadRepository: DownloadRepository,
-    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
-    private val spotifyImportHelper: com.suvojeet.suvmusic.util.SpotifyImportHelper,
-    private val libraryRepository: com.suvojeet.suvmusic.data.repository.LibraryRepository,
+    private val sessionManager: SessionManager,
+    private val spotifyImportHelper: SpotifyImportHelper,
+    private val libraryRepository: LibraryRepository,
     private val musicPlayer: MusicPlayer
 ) : ViewModel() {
     
@@ -67,7 +74,6 @@ class LibraryViewModel @Inject constructor(
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     
     init {
-        // Set initial login state
         _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
         loadData()
         observeDownloads()
@@ -77,11 +83,11 @@ class LibraryViewModel @Inject constructor(
 
     private fun observeImportService() {
         viewModelScope.launch {
-            com.suvojeet.suvmusic.service.SpotifyImportService.importState.collect { status ->
+            SpotifyImportService.importState.collect { status ->
                 val newState = when (status.state) {
-                    com.suvojeet.suvmusic.service.ImportStatus.State.IDLE -> ImportState.Idle
-                    com.suvojeet.suvmusic.service.ImportStatus.State.PREPARING -> ImportState.Loading
-                    com.suvojeet.suvmusic.service.ImportStatus.State.PROCESSING -> ImportState.Processing(
+                    ImportStatus.State.IDLE -> ImportState.Idle
+                    ImportStatus.State.PREPARING -> ImportState.Loading
+                    ImportStatus.State.PROCESSING -> ImportState.Processing(
                         currentSong = status.currentSong,
                         currentArtist = status.currentArtist,
                         thumbnail = status.thumbnail,
@@ -90,12 +96,12 @@ class LibraryViewModel @Inject constructor(
                         successCount = status.successCount,
                         status = "Importing..."
                     )
-                    com.suvojeet.suvmusic.service.ImportStatus.State.COMPLETED -> {
+                    ImportStatus.State.COMPLETED -> {
                         refresh()
                         ImportState.Success(status.successCount, status.total)
                     }
-                    com.suvojeet.suvmusic.service.ImportStatus.State.ERROR -> ImportState.Error(status.error ?: "Unknown Error")
-                    com.suvojeet.suvmusic.service.ImportStatus.State.CANCELLED -> ImportState.Error("Import Cancelled")
+                    ImportStatus.State.ERROR -> ImportState.Error(status.error ?: "Unknown Error")
+                    ImportStatus.State.CANCELLED -> ImportState.Error("Import Cancelled")
                 }
                 _uiState.update { it.copy(importState = newState) }
             }
@@ -151,13 +157,11 @@ class LibraryViewModel @Inject constructor(
             try {
                 var syncedSongs: List<Song>? = null
                 if (sessionManager.isLoggedIn()) {
-                    // This updates playlists/liked songs in repositories
-                    youTubeRepository.getUserPlaylists() // Fetch and cache
-                    youTubeRepository.getLibraryArtists() // Fetch
-                    youTubeRepository.getLibraryAlbums() // Fetch
+                    youTubeRepository.getUserPlaylists()
+                    youTubeRepository.getLibraryArtists()
+                    youTubeRepository.getLibraryAlbums()
                     syncedSongs = youTubeRepository.getLikedMusic(fetchAll = true)
                 }
-                // Reload data from repositories
                 loadData(forceRefresh = false, preloadedLikedSongs = syncedSongs)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Refresh failed: ${e.message}") }
@@ -178,7 +182,7 @@ class LibraryViewModel @Inject constructor(
                         url = "https://music.youtube.com/playlist?list=${entity.id}",
                         uploaderName = entity.subtitle ?: "",
                         thumbnailUrl = entity.thumbnailUrl,
-                        songCount = 0 // We don't have count in entity yet, but it's fine
+                        songCount = 0
                     )
                 }
                 _uiState.update { state ->
@@ -207,13 +211,12 @@ class LibraryViewModel @Inject constructor(
 
 
     fun importSpotifyPlaylist(url: String) {
-        // Start the Foreground Service
-        val context = com.suvojeet.suvmusic.SuvMusicApplication.instance
-        val intent = android.content.Intent(context, com.suvojeet.suvmusic.service.SpotifyImportService::class.java).apply {
-            action = com.suvojeet.suvmusic.service.SpotifyImportService.ACTION_START
-            putExtra(com.suvojeet.suvmusic.service.SpotifyImportService.EXTRA_URL, url)
+        val context = SuvMusicApplication.instance
+        val intent = Intent(context, SpotifyImportService::class.java).apply {
+            action = SpotifyImportService.ACTION_START
+            putExtra(SpotifyImportService.EXTRA_URL, url)
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
         } else {
             context.startService(intent)
@@ -221,20 +224,17 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun cancelImport() {
-        val context = com.suvojeet.suvmusic.SuvMusicApplication.instance
-        val intent = android.content.Intent(context, com.suvojeet.suvmusic.service.SpotifyImportService::class.java).apply {
-            action = com.suvojeet.suvmusic.service.SpotifyImportService.ACTION_CANCEL
+        val context = SuvMusicApplication.instance
+        val intent = Intent(context, SpotifyImportService::class.java).apply {
+            action = SpotifyImportService.ACTION_CANCEL
         }
         context.startService(intent)
     }
 
     fun resetImportState() {
-        // Ideally we should tell service to reset too if it was holding state, but service updates flow to Idle usually
-        cancelImport() // Ensure service is stopped
+        cancelImport()
         _uiState.update { it.copy(importState = ImportState.Idle) }
     }
-
-    // --- Playlist Management ---
 
     fun downloadPlaylist(playlistItem: PlaylistDisplayItem) {
         viewModelScope.launch {

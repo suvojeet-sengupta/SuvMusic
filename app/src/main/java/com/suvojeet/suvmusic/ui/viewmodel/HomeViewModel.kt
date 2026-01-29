@@ -2,8 +2,10 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.model.HomeSection
+import com.suvojeet.suvmusic.data.model.HomeItem
+import com.suvojeet.suvmusic.data.model.HomeSectionType
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
@@ -18,7 +20,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
-    val homeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList(),
+    val homeSections: List<HomeSection> = emptyList(),
     val recommendations: List<Song> = emptyList(),
     val userAvatarUrl: String? = null,
     val isLoading: Boolean = false,
@@ -88,10 +90,10 @@ class HomeViewModel @Inject constructor(
                      // Simple fallback for JioSaavn
                      val songs = jioSaavnRepository.search(mood)
                      listOf(
-                         com.suvojeet.suvmusic.data.model.HomeSection(
+                         HomeSection(
                              title = "$mood Music",
-                             items = songs.map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) },
-                             type = com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                             items = songs.map { HomeItem.SongItem(it) },
+                             type = HomeSectionType.VerticalList
                          )
                      )
                 } else {

@@ -1,18 +1,31 @@
 package com.suvojeet.suvmusic.data.repository
 
+import android.util.LruCache
 import com.suvojeet.suvmusic.data.NewPipeDownloaderImpl
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.SessionManager.StoredAccount
 import com.suvojeet.suvmusic.data.YouTubeAuthUtils
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.ArtistPreview
+import com.suvojeet.suvmusic.data.model.BrowseCategory
+import com.suvojeet.suvmusic.data.model.Comment
+import com.suvojeet.suvmusic.data.model.HomeItem
+import com.suvojeet.suvmusic.data.model.HomeSection
+import com.suvojeet.suvmusic.data.model.HomeSectionType
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
+import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
+import com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService
+import com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
+import com.suvojeet.suvmusic.utils.NetworkMonitor
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -20,12 +33,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
-import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.comments.CommentsInfoItem
+import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-import android.util.LruCache
 
 /**
  * Repository for fetching data from YouTube Music.
@@ -34,11 +46,11 @@ import android.util.LruCache
 @Singleton
 class YouTubeRepository @Inject constructor(
     private val sessionManager: SessionManager,
-    private val jsonParser: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser,
-    private val apiClient: com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient,
-    private val streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService,
-    private val searchService: com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService,
-    private val networkMonitor: com.suvojeet.suvmusic.utils.NetworkMonitor,
+    private val jsonParser: YouTubeJsonParser,
+    private val apiClient: YouTubeApiClient,
+    private val streamingService: YouTubeStreamingService,
+    private val searchService: YouTubeSearchService,
+    private val networkMonitor: NetworkMonitor,
     private val libraryRepository: LibraryRepository
 ) {
     companion object {
@@ -66,8 +78,7 @@ class YouTubeRepository @Inject constructor(
     private var currentVideoIdForComments: String? = null
 
     init {
-        // Fix: Potential Main Thread Network Blocking -> Move init to background
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             initializeNewPipe()
         }
     }
@@ -86,7 +97,7 @@ class YouTubeRepository @Inject constructor(
     /**
      * Fetch user account info (Name, Email, Avatar) from account menu.
      */
-    suspend fun fetchAccountInfo(): com.suvojeet.suvmusic.data.SessionManager.StoredAccount? = withContext(Dispatchers.IO) {
+    suspend fun fetchAccountInfo(): StoredAccount? = withContext(Dispatchers.IO) {
         if (!networkMonitor.isCurrentlyConnected()) return@withContext null
         try {
             if (!sessionManager.isLoggedIn()) return@withContext null
@@ -111,7 +122,7 @@ class YouTubeRepository @Inject constructor(
                     it.optJSONObject(it.length() - 1)?.optString("url") 
                 } ?: ""
                 
-                return@withContext com.suvojeet.suvmusic.data.SessionManager.StoredAccount(
+                return@withContext StoredAccount(
                     name = name,
                     email = email,
                     avatarUrl = avatarUrl,
@@ -253,11 +264,11 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-    suspend fun getHomeSections(): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+    suspend fun getHomeSections(): List<HomeSection> = withContext(Dispatchers.IO) {
         if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
         if (!sessionManager.isLoggedIn()) {
             // Try to fetch public YouTube Music content without auth
-            val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+            val sections = mutableListOf<HomeSection>()
             
             // 1. Try fetching public trending/charts (works without auth)
             try {
@@ -302,16 +313,16 @@ class YouTubeRepository @Inject constructor(
             for ((title, query) in sectionQueries) {
                 try {
                     val songs = search(query, FILTER_SONGS).take(10)
-                        .map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+                        .map { HomeItem.SongItem(it) }
                     if (songs.isNotEmpty()) {
                         val type = when {
-                            title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
-                            title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                            title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
-                            title.contains("Trending", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
-                             else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                            title.contains("Quick picks", ignoreCase = true) -> HomeSectionType.VerticalList
+                            title.contains("Fresh finds", ignoreCase = true) -> HomeSectionType.Grid
+                            title.contains("Community", ignoreCase = true) -> HomeSectionType.LargeCardWithList
+                            title.contains("Trending", ignoreCase = true) -> HomeSectionType.HorizontalCarousel
+                             else -> HomeSectionType.HorizontalCarousel
                         }
-                        sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, songs, type))
+                        sections.add(HomeSection(title, songs, type))
                     }
                 } catch (e: Exception) {
                     // Skip failed section
@@ -322,7 +333,7 @@ class YouTubeRepository @Inject constructor(
         }
 
         try {
-            val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+            val sections = mutableListOf<HomeSection>()
             
             // 1. Fetch Trending/Charts first to put at top
             try {
@@ -369,7 +380,7 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-    suspend fun getHomeSectionsForMood(moodTitle: String): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+    suspend fun getHomeSectionsForMood(moodTitle: String): List<HomeSection> = withContext(Dispatchers.IO) {
         if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
         try {
             // 1. Get all moods categories
@@ -424,9 +435,9 @@ class YouTubeRepository @Inject constructor(
              val playlistResults = searchPlaylists("$moodTitle music").take(10)
              if (playlistResults.isNotEmpty()) {
                  return@withContext listOf(
-                     com.suvojeet.suvmusic.data.model.HomeSection(
+                     HomeSection(
                          title = "$moodTitle Playlists",
-                         items = playlistResults.map { com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                         items = playlistResults.map { HomeItem.PlaylistItem(PlaylistDisplayItem(
                              id = it.id,
                              name = it.title,
                              url = "https://music.youtube.com/playlist?list=${it.id}",
@@ -434,7 +445,7 @@ class YouTubeRepository @Inject constructor(
                              thumbnailUrl = it.thumbnailUrl,
                              songCount = it.songs.size
                          )) },
-                         type = com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                         type = HomeSectionType.HorizontalCarousel
                      )
                  )
              }
@@ -443,10 +454,10 @@ class YouTubeRepository @Inject constructor(
              val songs = search("$moodTitle music", FILTER_SONGS)
              if (songs.isNotEmpty()) {
                  return@withContext listOf(
-                     com.suvojeet.suvmusic.data.model.HomeSection(
+                     HomeSection(
                          title = "$moodTitle Songs",
-                         items = songs.map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) },
-                         type = com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                         items = songs.map { HomeItem.SongItem(it) },
+                         type = HomeSectionType.VerticalList
                      )
                  )
              }
@@ -462,8 +473,8 @@ class YouTubeRepository @Inject constructor(
     private fun fetchInternalApiWithContinuation(continuationToken: String): String =
         apiClient.fetchInternalApiWithContinuation(continuationToken)
 
-    private fun parseChartsSectionsFromJson(json: String): List<com.suvojeet.suvmusic.data.model.HomeSection> {
-        val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+    private fun parseChartsSectionsFromJson(json: String): List<HomeSection> {
+        val sections = mutableListOf<HomeSection>()
         try {
             val root = JSONObject(json)
             val contents = root.optJSONObject("contents")
@@ -487,7 +498,7 @@ class YouTubeRepository @Inject constructor(
                         // We only want "Trending" or "Top songs" for songs
                         if (title.contains("Trending", ignoreCase = true) || title.contains("Top songs", ignoreCase = true)) {
                             val itemsArray = carouselShelf.optJSONArray("contents")
-                            val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+                            val items = mutableListOf<HomeItem>()
 
                             if (itemsArray != null) {
                                 for (j in 0 until itemsArray.length()) {
@@ -498,12 +509,12 @@ class YouTubeRepository @Inject constructor(
 
                             if (items.isNotEmpty()) {
                                 val type = when {
-                                    title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
-                                    title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                                    title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
-                                    else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                                    title.contains("Quick picks", ignoreCase = true) -> HomeSectionType.VerticalList
+                                    title.contains("Fresh finds", ignoreCase = true) -> HomeSectionType.Grid
+                                    title.contains("Community", ignoreCase = true) -> HomeSectionType.LargeCardWithList
+                                    else -> HomeSectionType.HorizontalCarousel
                                 }
-                                sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
+                                sections.add(HomeSection(title, items, type))
                             }
                         }
                     }
@@ -515,7 +526,7 @@ class YouTubeRepository @Inject constructor(
         return sections
     }
 
-    suspend fun getBrowseSections(browseId: String): List<com.suvojeet.suvmusic.data.model.HomeSection> = withContext(Dispatchers.IO) {
+    suspend fun getBrowseSections(browseId: String): List<HomeSection> = withContext(Dispatchers.IO) {
         try {
             val jsonResponse = fetchInternalApi(browseId)
             parseHomeSectionsFromInternalJson(jsonResponse)
@@ -811,7 +822,7 @@ class YouTubeRepository @Inject constructor(
      * Get moods and genres (browse categories) from YouTube Music.
      * Used for the Apple Music-style search browse grid.
      */
-    suspend fun getMoodsAndGenres(): List<com.suvojeet.suvmusic.data.model.BrowseCategory> = withContext(Dispatchers.IO) {
+    suspend fun getMoodsAndGenres(): List<BrowseCategory> = withContext(Dispatchers.IO) {
         try {
             val json = fetchInternalApi("FEmusic_moods_and_genres")
             parseMoodsAndGenresFromJson(json)
@@ -1493,7 +1504,7 @@ class YouTubeRepository @Inject constructor(
             currentCommentsPage = currentCommentsExtractor?.initialPage
             
             currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
-                com.suvojeet.suvmusic.data.model.Comment(
+                Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
                     authorThumbnailUrl = item.uploaderAvatars?.firstOrNull()?.url,
@@ -1521,7 +1532,7 @@ class YouTubeRepository @Inject constructor(
             currentCommentsPage = currentCommentsExtractor!!.getPage(currentCommentsPage!!.nextPage)
             
             currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
-                com.suvojeet.suvmusic.data.model.Comment(
+                Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
                     authorThumbnailUrl = item.uploaderAvatars?.firstOrNull()?.url,

@@ -18,6 +18,8 @@ import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.UpdateState
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
+import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.providers.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.data.MusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -86,9 +88,9 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
-    private val updateRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository, // Use YouTubeRepository for account info
-    private val updateRepo: UpdateRepository, // Renamed to avoid conflict
-    private val lastFmRepository: com.suvojeet.suvmusic.providers.lastfm.LastFmRepository,
+    private val youtubeRepository: YouTubeRepository,
+    private val updateRepo: UpdateRepository,
+    private val lastFmRepository: LastFmRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -389,16 +391,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lastFmUsername = username) }
                 onSuccess(username)
             }.onFailure { error ->
-                val errorMessage = if (error is retrofit2.HttpException) {
-                    try {
-                        error.response()?.errorBody()?.string() ?: "HTTP ${error.code()} (${error.message()})"
-                    } catch (e: Exception) {
-                        "HTTP ${error.code()}"
-                    }
-                } else {
-                    error.message ?: "Unknown Error"
-                }
-                onError("Failed: $errorMessage")
+                onError("Failed: ${error.message ?: "Unknown Error"}")
             }
         }
     }
@@ -407,22 +400,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             lastFmRepository.getMobileSession(username, password)
                 .onSuccess { auth ->
-                    // Persist session
                     sessionManager.setLastFmSession(auth.session.key, auth.session.name)
                     _uiState.update { it.copy(lastFmUsername = auth.session.name) }
                     onSuccess(auth.session.name)
                 }
                 .onFailure { error ->
-                     val errorMessage = if (error is retrofit2.HttpException) {
-                        try {
-                            error.response()?.errorBody()?.string() ?: "HTTP ${error.code()} (${error.message()})"
-                        } catch (e: Exception) {
-                            "HTTP ${error.code()}"
-                        }
-                    } else {
-                        error.message ?: "Unknown Error"
-                    }
-                    onError(errorMessage)
+                    onError(error.message ?: "Login failed")
                 }
         }
     }
@@ -474,7 +457,7 @@ class SettingsViewModel @Inject constructor(
      */
     fun fetchAndSaveAccountInfo() {
         viewModelScope.launch {
-            val account = updateRepository.fetchAccountInfo()
+            val account = youtubeRepository.fetchAccountInfo()
             if (account != null) {
                 sessionManager.saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
                 _uiState.update { 
@@ -492,11 +475,7 @@ class SettingsViewModel @Inject constructor(
      */
     fun switchAccount(account: SessionManager.StoredAccount) {
         viewModelScope.launch {
-            // Save current before switching (if we have info)
-            // Ideally we should have info if fetchAndSaveAccountInfo ran
-            
             sessionManager.switchAccount(account)
-            
             _uiState.update { 
                 it.copy(
                     isLoggedIn = true,
@@ -504,8 +483,6 @@ class SettingsViewModel @Inject constructor(
                     storedAccounts = sessionManager.getStoredAccounts()
                 )
             }
-            
-            // Refresh info to be sure (cookies might be old?)
             fetchAndSaveAccountInfo()
         }
     }
@@ -515,10 +492,6 @@ class SettingsViewModel @Inject constructor(
      */
     fun prepareAddAccount() {
         viewModelScope.launch {
-            // Current is already saved via fetchAndSaveAccountInfo if it was successful.
-            // But let's try to ensure it's saved if possible, though we might not have name/email if offline.
-            // Assuming it was saved when loaded.
-            
             sessionManager.clearCookies()
             _uiState.update { 
                 it.copy(
@@ -577,7 +550,6 @@ class SettingsViewModel @Inject constructor(
             ).onSuccess { file ->
                 downloadedApkFile = file
                 _uiState.update { it.copy(updateState = UpdateState.Downloaded) }
-                // Auto-trigger install
                 installUpdate()
             }.onFailure { error ->
                 _uiState.update { 
