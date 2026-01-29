@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -80,8 +81,10 @@ fun PlaybackSettingsScreen(
     var showDoubleTapSeekSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val downloadSheetState = rememberModalBottomSheetState()
+
     val musicSourceSheetState = rememberModalBottomSheetState()
     val doubleTapSeekSheetState = rememberModalBottomSheetState()
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var showHapticsModeSheet by remember { mutableStateOf(false) }
     var showHapticsIntensitySheet by remember { mutableStateOf(false) }
     val hapticsModeSheetState = rememberModalBottomSheetState()
@@ -162,6 +165,28 @@ fun PlaybackSettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable { showMusicSourceSheet = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            // Content Preferences
+            SectionTitle("Content Preferences")
+
+            ListItem(
+                headlineContent = { Text("Music Languages") },
+                supportingContent = {
+                    val languages = uiState.preferredLanguages
+                    Text(
+                        if (languages.isEmpty()) "All languages"
+                        else languages.joinToString(", ")
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { showLanguageDialog = true },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
@@ -754,6 +779,17 @@ fun PlaybackSettingsScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
+    }
+
+    if (showLanguageDialog) {
+        com.suvojeet.suvmusic.ui.components.LanguageSelectionDialog(
+            initialSelection = uiState.preferredLanguages,
+            onDismiss = { showLanguageDialog = false },
+            onSave = { languages ->
+                viewModel.setPreferredLanguages(languages)
+                showLanguageDialog = false
+            }
+        )
     }
 }
 

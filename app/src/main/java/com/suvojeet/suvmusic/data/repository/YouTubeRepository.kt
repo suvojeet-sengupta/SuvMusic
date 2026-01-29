@@ -297,18 +297,36 @@ class YouTubeRepository @Inject constructor(
             }
             
             // 4. Fallback: Rich content via search for non-logged in users
-            val sectionQueries = listOf(
-                "Trending Now" to "trending music 2024",
-                "Top Hits" to "top hits 2024",
-                "Bollywood Hits" to "bollywood hits latest",
-                "Pop Hits" to "pop hits 2024",
-                "Hip Hop & Rap" to "hip hop hits 2026",
-                "Chill Vibes" to "chill lofi beats",
-                "Punjabi Hits" to "punjabi hits latest",
-                "90s Nostalgia" to "90s bollywood hits",
-                "Workout Energy" to "workout music energy",
-                "Romance" to "romantic songs love"
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            
+            // Define all available sections with their associated languages
+            val allSections = listOf(
+                Triple("Trending Now", "trending music 2024", setOf("English")),
+                Triple("Top Hits", "top hits 2024", setOf("English")),
+                Triple("Bollywood Hits", "bollywood hits latest", setOf("Hindi")),
+                Triple("Bengali Hits", "latest bengali hits", setOf("Bengali")),
+                Triple("Pop Hits", "pop hits 2024", setOf("English")),
+                Triple("Hip Hop & Rap", "hip hop hits 2026", setOf("English")),
+                Triple("Chill Vibes", "chill lofi beats", setOf("English", "Hindi", "Punjabi", "Spanish")), // Universal
+                Triple("Punjabi Hits", "punjabi hits latest", setOf("Punjabi")),
+                Triple("90s Nostalgia", "90s bollywood hits", setOf("Hindi")),
+                Triple("Tamil Hits", "latest tamil hits", setOf("Tamil")),
+                Triple("Telugu Hits", "latest telugu hits", setOf("Telugu")),
+                Triple("Malayalam Hits", "latest malayalam hits", setOf("Malayalam")),
+                Triple("Workout Energy", "workout music energy", setOf("English", "Hindi", "Punjabi", "Spanish")),
+                Triple("Romance", "romantic songs love", setOf("English", "Hindi", "Punjabi", "Spanish"))
             )
+            
+            // Filter sections based on preference
+            val sectionQueries = if (preferredLanguages.isEmpty()) {
+                // Default mix if no preference
+                allSections.take(10).map { it.first to it.second }
+            } else {
+                allSections.filter { (_, _, languages) ->
+                    // Include if section matches ANY of the preferred languages
+                    languages.any { it in preferredLanguages } || languages.size > 2 // Keep universal sections
+                }.map { it.first to it.second }
+            }
             
             for ((title, query) in sectionQueries) {
                 try {
