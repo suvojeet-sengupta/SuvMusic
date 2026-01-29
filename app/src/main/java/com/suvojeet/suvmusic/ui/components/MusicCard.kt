@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -175,6 +176,21 @@ fun MusicCard(
                             contentDescription = "Playing",
                             modifier = Modifier.size(28.dp),
                             tint = Color.White
+                        )
+                    }
+                } else if (song.isMembersOnly) {
+                    // Members Only Badge
+                     Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.BottomEnd
+                    ) {
+                        Icon(
+                             imageVector = Icons.Default.Lock,
+                             contentDescription = "Members Only",
+                             modifier = Modifier.size(16.dp).padding(2.dp),
+                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }

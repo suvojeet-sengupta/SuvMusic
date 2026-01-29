@@ -22,7 +22,8 @@ data class Song(
     val isVideo: Boolean = false, // Whether this item is a video (vs official song)
     val customFolderPath: String? = null, // Subfolder path for downloads (e.g. "My Playlist")
     val collectionId: String? = null, // ID of the collection (album/playlist) this download belongs to
-    val collectionName: String? = null // Name of the collection
+    val collectionName: String? = null, // Name of the collection
+    val isMembersOnly: Boolean = false // Whether this song is exclusive to channel members
 ) {
     companion object {
         /**
@@ -37,7 +38,8 @@ data class Song(
             thumbnailUrl: String?,
             setVideoId: String? = null,
             artistId: String? = null,
-            isVideo: Boolean = false
+            isVideo: Boolean = false,
+            isMembersOnly: Boolean = false
         ): Song? {
             if (videoId.isBlank()) return null
             return Song(
@@ -50,7 +52,8 @@ data class Song(
                 source = SongSource.YOUTUBE,
                 setVideoId = setVideoId,
                 artistId = artistId,
-                isVideo = isVideo
+                isVideo = isVideo,
+                isMembersOnly = isMembersOnly
             )
         }
         

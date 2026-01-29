@@ -764,7 +764,8 @@ class YouTubeRepository @Inject constructor(
                         artist = item.uploaderName ?: "Unknown Artist",
                         album = playlistName ?: "",
                         duration = item.duration * 1000L,
-                        thumbnailUrl = itemThumbnail
+                        thumbnailUrl = itemThumbnail,
+                        isMembersOnly = false // Default to false
                     )
                 }
             
