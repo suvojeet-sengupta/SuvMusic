@@ -1,7 +1,8 @@
-package com.suvojeet.suvmusic.data
+package com.suvojeet.suvmusic.newpipe
 
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request as ExtractorRequest
 import org.schabi.newpipe.extractor.downloader.Response
@@ -14,7 +15,7 @@ import java.io.IOException
  */
 class NewPipeDownloaderImpl(
     private val client: OkHttpClient,
-    private val sessionManager: SessionManager? = null
+    private val cookieProvider: (() -> String)? = null
 ) : Downloader() {
 
     override fun execute(request: ExtractorRequest): Response {
@@ -26,9 +27,9 @@ class NewPipeDownloaderImpl(
         val requestBuilder = Request.Builder()
             .url(url)
             .method(httpMethod, if (dataToSend != null) {
-                okhttp3.RequestBody.create(null, dataToSend)
+                dataToSend.toRequestBody(null)
             } else if (httpMethod == "POST" || httpMethod == "PUT") {
-                okhttp3.RequestBody.create(null, ByteArray(0))
+                ByteArray(0).toRequestBody(null)
             } else {
                 null
             })
@@ -40,8 +41,8 @@ class NewPipeDownloaderImpl(
             }
         }
 
-        // Add cookies from SessionManager if available
-        sessionManager?.getCookies()?.let { cookies ->
+        // Add cookies from provider if available
+        cookieProvider?.invoke()?.let { cookies ->
             if (cookies.isNotEmpty()) {
                 requestBuilder.addHeader("Cookie", cookies)
             }

@@ -17,3 +17,8 @@ dependencyResolutionManagement {
 rootProject.name = "SuvMusic"
 include(":app")
 include(":providers")
+include(":lastfm")
+include(":simpmusic")
+include(":lrclib")
+include(":kugou")
+include(":newpipe")

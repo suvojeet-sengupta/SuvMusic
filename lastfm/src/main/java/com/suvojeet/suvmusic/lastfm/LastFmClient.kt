@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.providers.lastfm
+package com.suvojeet.suvmusic.lastfm
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body

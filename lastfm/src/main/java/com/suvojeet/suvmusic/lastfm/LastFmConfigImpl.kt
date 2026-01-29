@@ -1,8 +1,8 @@
-package com.suvojeet.suvmusic.providers.lastfm
+package com.suvojeet.suvmusic.lastfm
 
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.suvojeet.suvmusic.providers.BuildConfig
+import com.suvojeet.suvmusic.lastfm.BuildConfig
 
 /**
  * Implementation of LastFmConfig using BuildConfig values from the providers module.
