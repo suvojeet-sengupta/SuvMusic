@@ -48,7 +48,7 @@ data class SettingsUiState(
     val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = "",
     val doubleTapSeekSeconds: Int = 10,
-    val volumeNormalizationEnabled: Boolean = false,
+    val volumeNormalizationEnabled: Boolean = true,
     val betterLyricsEnabled: Boolean = true,
     val simpMusicEnabled: Boolean = true,
     val kuGouEnabled: Boolean = true,

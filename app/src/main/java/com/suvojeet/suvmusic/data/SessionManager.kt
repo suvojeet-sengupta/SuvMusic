@@ -832,10 +832,10 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun isVolumeNormalizationEnabled(): Boolean = 
-        context.dataStore.data.first()[VOLUME_NORMALIZATION_ENABLED_KEY] ?: false
+        context.dataStore.data.first()[VOLUME_NORMALIZATION_ENABLED_KEY] ?: true
 
     val volumeNormalizationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[VOLUME_NORMALIZATION_ENABLED_KEY] ?: false
+        preferences[VOLUME_NORMALIZATION_ENABLED_KEY] ?: true
     }
 
     suspend fun setVolumeNormalizationEnabled(enabled: Boolean) {
