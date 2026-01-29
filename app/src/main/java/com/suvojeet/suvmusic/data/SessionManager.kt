@@ -153,6 +153,7 @@ class SessionManager @Inject constructor(
         private val SCROBBLE_MIN_DURATION_KEY = intPreferencesKey("scrobble_min_duration")
         private val SCROBBLE_DELAY_SECONDS_KEY = intPreferencesKey("scrobble_delay_seconds")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
+        private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -680,6 +681,21 @@ class SessionManager @Inject constructor(
     suspend fun setPureBlackEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PURE_BLACK_KEY] = enabled
+        }
+    }
+
+    // --- Content Preferences ---
+
+    suspend fun getPreferredLanguages(): Set<String> =
+        context.dataStore.data.first()[PREFERRED_LANGUAGES_KEY] ?: emptySet()
+
+    val preferredLanguagesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[PREFERRED_LANGUAGES_KEY] ?: emptySet()
+    }
+
+    suspend fun setPreferredLanguages(languages: Set<String>) {
+        context.dataStore.edit { preferences ->
+            preferences[PREFERRED_LANGUAGES_KEY] = languages
         }
     }
     
