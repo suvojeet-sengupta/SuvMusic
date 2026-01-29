@@ -1,5 +1,6 @@
-package com.suvojeet.suvmusic.providers.lyrics
+package com.suvojeet.suvmusic.simpmusic
 
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProvider
 import javax.inject.Inject
 
 /**
