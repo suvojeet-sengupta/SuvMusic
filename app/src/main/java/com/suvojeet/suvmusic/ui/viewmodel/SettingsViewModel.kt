@@ -84,7 +84,9 @@ data class SettingsUiState(
     val scrobbleMinDuration: Int = 30, // seconds
     val scrobbleDelaySeconds: Int = 180, // seconds
     // Updates
-    val updateChannel: com.suvojeet.suvmusic.data.model.UpdateChannel = com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE
+    val updateChannel: com.suvojeet.suvmusic.data.model.UpdateChannel = com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE,
+    // Content Preferences
+    val preferredLanguages: Set<String> = emptySet()
 )
 
 @HiltViewModel
@@ -276,6 +278,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lastFmUsername = username) }
             }
         }
+        
+        viewModelScope.launch {
+            sessionManager.preferredLanguagesFlow.collect { languages ->
+                _uiState.update { it.copy(preferredLanguages = languages) }
+            }
+        }
 
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -321,6 +329,7 @@ class SettingsViewModel @Inject constructor(
             val scrobbleDelayPercent = sessionManager.getScrobbleDelayPercent()
             val scrobbleMinDuration = sessionManager.getScrobbleMinDuration()
             val scrobbleDelaySeconds = sessionManager.getScrobbleDelaySeconds()
+            val preferredLanguages = sessionManager.getPreferredLanguages()
 
 
             _uiState.update { 
@@ -367,7 +376,9 @@ class SettingsViewModel @Inject constructor(
                     scrobbleDelayPercent = scrobbleDelayPercent,
                     scrobbleMinDuration = scrobbleMinDuration,
                     scrobbleDelaySeconds = scrobbleDelaySeconds,
-                    updateChannel = sessionManager.getUpdateChannel()
+
+                    updateChannel = sessionManager.getUpdateChannel(),
+                    preferredLanguages = preferredLanguages
                 )
             }
         }
@@ -788,6 +799,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPureBlackEnabled(enabled)
             _uiState.update { it.copy(pureBlackEnabled = enabled) }
+        }
+    }
+
+    fun setPreferredLanguages(languages: Set<String>) {
+        viewModelScope.launch {
+            sessionManager.setPreferredLanguages(languages)
+            _uiState.update { it.copy(preferredLanguages = languages) }
         }
     }
 
