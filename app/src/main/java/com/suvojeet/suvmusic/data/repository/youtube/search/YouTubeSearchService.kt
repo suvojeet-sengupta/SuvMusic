@@ -67,7 +67,8 @@ class YouTubeSearchService @Inject constructor(
                         duration = item.duration * 1000L,
                         thumbnailUrl = item.thumbnails?.maxByOrNull { it.width * it.height }?.url,
                         artistId = artistId,
-                        isVideo = filter == FILTER_VIDEOS
+                        isVideo = filter == FILTER_VIDEOS,
+                        isMembersOnly = false // Default to false until we verify the field name
                     )
                 } catch (e: Exception) {
                     null
@@ -315,7 +316,8 @@ class YouTubeSearchService @Inject constructor(
                             album = album,
                             duration = duration,
                             thumbnailUrl = thumbnail,
-                            setVideoId = setVideoId
+                            setVideoId = setVideoId,
+                            isMembersOnly = false
                         )?.let { songs.add(it) }
                     }
                 }
