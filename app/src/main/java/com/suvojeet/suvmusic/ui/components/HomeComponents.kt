@@ -161,18 +161,38 @@ fun MediumSongCard(
             .width(160.dp)
             .bounceClick(onClick = onClick)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(highResThumbnail)
-                .crossfade(true)
-                .size(544)  // Request high-res
-                .build(),
-            contentDescription = song.title,
-            modifier = Modifier
-                .size(160.dp)
-                .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Box(
+            modifier = Modifier.size(160.dp)
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(highResThumbnail)
+                    .crossfade(true)
+                    .size(544)  // Request high-res
+                    .build(),
+                contentDescription = song.title,
+                modifier = Modifier
+                    .size(160.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop
+            )
+            
+            // Members Only Badge
+            if (song.isMembersOnly) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 16.dp),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = "Members Only",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = song.title,
