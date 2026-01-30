@@ -242,6 +242,15 @@ fun NavGraph(
                             thumbnailUrl = null
                         ).route
                     )
+                },
+                onAlbumClick = { album ->
+                    navController.navigate(
+                        Destination.Album(
+                            albumId = album.id,
+                            name = album.title,
+                            thumbnailUrl = album.thumbnailUrl
+                        ).route
+                    )
                 }
             )
         }
