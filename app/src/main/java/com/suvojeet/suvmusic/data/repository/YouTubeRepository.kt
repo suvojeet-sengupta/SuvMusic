@@ -1961,7 +1961,15 @@ class YouTubeRepository @Inject constructor(
 
             items.forEach { item ->
                 try {
-                    val videoId = extractValueFromRuns(item, "videoId") ?: item.optString("videoId").takeIf { it.isNotEmpty() }
+                    // Try to get videoId from standard runs/endpoints first
+                    var videoId = extractValueFromRuns(item, "videoId") 
+                        ?: item.optString("videoId").takeIf { it.isNotEmpty() }
+                    
+                    // Fallback to playlistItemData (common in playlists)
+                    if (videoId == null) {
+                        videoId = item.optJSONObject("playlistItemData")?.optString("videoId")
+                    }
+                    
                     if (videoId != null) {
                         val title = extractTitle(item)
                         val artist = extractArtist(item)
