@@ -91,15 +91,17 @@ class ListenTogetherManager @Inject constructor(
         
         private fun sendPlayState(playWhenReady: Boolean) {
             val position = player?.currentPosition ?: 0
-            val trackId = player?.currentMediaItem?.mediaId
+            val mediaItem = player?.currentMediaItem
+            val trackId = mediaItem?.mediaId
+            val trackInfo = mediaItem?.let { getTrackInfo(it) }
             
             if (playWhenReady) {
                 Log.d(TAG, "Host sending PLAY at position $position for $trackId")
-                client.sendPlaybackAction(PlaybackActions.PLAY, position = position, trackId = trackId)
+                client.sendPlaybackAction(PlaybackActions.PLAY, position = position, trackId = trackId, trackInfo = trackInfo)
                 lastSyncedIsPlaying = true
             } else if (!playWhenReady && (lastSyncedIsPlaying == true)) {
                 Log.d(TAG, "Host sending PAUSE at position $position for $trackId")
-                client.sendPlaybackAction(PlaybackActions.PAUSE, position = position, trackId = trackId)
+                client.sendPlaybackAction(PlaybackActions.PAUSE, position = position, trackId = trackId, trackInfo = trackInfo)
                 lastSyncedIsPlaying = false
             }
         }
@@ -336,6 +338,9 @@ class ListenTogetherManager @Inject constructor(
             } ?: run {
                 // If trackInfo missing but we have ID, we might need a fallback or request full sync
                 Log.w(TAG, "Track mismatch but trackInfo missing in action")
+                if (action.trackId != null) {
+                    client.requestSync()
+                }
             }
             return
         }
@@ -554,8 +559,14 @@ class ListenTogetherManager @Inject constructor(
     fun sendTrackChange(mediaItem: MediaItem) {
         if (!isHost || isSyncing) return
         
+        val trackInfo = getTrackInfo(mediaItem)
+        
+        client.sendPlaybackAction(PlaybackActions.CHANGE_TRACK, trackInfo = trackInfo)
+    }
+    
+    private fun getTrackInfo(mediaItem: MediaItem): TrackInfo {
         val metadata = mediaItem.mediaMetadata
-        val trackInfo = TrackInfo(
+        return TrackInfo(
             id = mediaItem.mediaId,
             title = metadata.title?.toString() ?: "Unknown",
             artist = metadata.artist?.toString() ?: "Unknown",
@@ -563,8 +574,6 @@ class ListenTogetherManager @Inject constructor(
             duration = 180000L, // Approximation or fetch real duration if available
             thumbnail = metadata.artworkUri?.toString()
         )
-        
-        client.sendPlaybackAction(PlaybackActions.CHANGE_TRACK, trackInfo = trackInfo)
     }
     
     fun sendChat(message: String) = client.sendChat(message)
