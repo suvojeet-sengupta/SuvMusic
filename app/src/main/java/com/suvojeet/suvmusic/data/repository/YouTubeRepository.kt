@@ -829,11 +829,31 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getAlbum(browseId: String): Album? = withContext(Dispatchers.IO) {
         try {
-            val json = fetchInternalApi(browseId)
-            parseAlbumFromInternalJson(json, browseId)
+            // Album IDs from search are in OLAK format (e.g., OLAK5uy...), which needs VL prefix
+            // Album IDs from home/browse are in MPRE format (e.g., MPREb...)
+            val effectiveBrowseId = when {
+                browseId.startsWith("OLAK") -> "VL$browseId"
+                browseId.startsWith("MPRE") -> browseId
+                browseId.startsWith("VL") -> browseId
+                else -> browseId
+            }
+            
+            val json = fetchInternalApi(effectiveBrowseId)
+            val album = parseAlbumFromInternalJson(json, browseId)
+            
+            // If parsing returned empty songs and we used VL prefix, album might work differently
+            // Return the album regardless - UI will show empty state if needed
+            album
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            // Fallback: try with original ID if the modified one failed
+            try {
+                val json = fetchInternalApi(browseId)
+                parseAlbumFromInternalJson(json, browseId)
+            } catch (e2: Exception) {
+                e2.printStackTrace()
+                null
+            }
         }
     }
 
