@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MusicNote
@@ -146,7 +147,8 @@ fun ListenTogetherSheet(
                         onCopyCode = { code ->
                             clipboardManager.setText(AnnotatedString(code))
                         },
-                        onSync = { viewModel.requestSync() }
+                        onSync = { viewModel.requestSync() },
+                        viewModel = viewModel
                     )
                 } else {
                     SetupContent(
@@ -250,15 +252,39 @@ fun RoomContent(
     uiState: com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherUiState,
     onLeaveRoom: () -> Unit,
     onCopyCode: (String) -> Unit,
-    onSync: () -> Unit
+    onSync: () -> Unit,
+    viewModel: com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel // Pass ViewModel to access actions
 ) {
     val room = uiState.roomState ?: return
-    val clipboardManager = LocalClipboardManager.current
+    val pendingRequests by viewModel.pendingJoinRequests.collectAsState()
     
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)
     ) {
+        // Pending Requests (Host Only)
+        if (uiState.role == RoomRole.HOST && pendingRequests.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Join Requests (${pendingRequests.size})",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
+            
+            items(pendingRequests) { request ->
+                RequestItem(
+                    request = request,
+                    onApprove = { viewModel.approveJoin(it) },
+                    onReject = { viewModel.rejectJoin(it) }
+                )
+            }
+            
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            }
+        }
+
         // Room Info Card
         item {
             Card(
@@ -519,6 +545,74 @@ fun RoomContent(
                     Icon(Icons.Default.Logout, null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Leave Room")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RequestItem(
+    request: com.suvojeet.suvmusic.listentogether.JoinRequestPayload,
+    onApprove: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.tertiaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = request.username.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = request.username,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Row {
+                IconButton(
+                    onClick = { onReject(request.userId) },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Reject",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+                IconButton(
+                    onClick = { onApprove(request.userId) },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = "Approve",
+                        tint = Color(0xFF4CAF50)
+                    )
                 }
             }
         }
