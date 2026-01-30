@@ -258,65 +258,9 @@ fun SearchScreen(
                 }
             }
             
-            // Tabs (YouTube Music / JioSaavn / Your Library) - visible when searching
-            AnimatedVisibility(visible = uiState.query.isNotBlank()) {
-                // Get developer mode state from viewModel
-                val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
-                
-                // Determine tab order based on primary source and developer mode
-                val orderedTabs = if (isDeveloperMode) {
-                    // Developer mode - show all tabs
-                    if (uiState.currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
-                        listOf(SearchTab.JIOSAAVN, SearchTab.YOUTUBE_MUSIC, SearchTab.YOUR_LIBRARY)
-                    } else {
-                        listOf(SearchTab.YOUTUBE_MUSIC, SearchTab.JIOSAAVN, SearchTab.YOUR_LIBRARY)
-                    }
-                } else {
-                    // Normal mode - hide JioSaavn
-                    listOf(SearchTab.YOUTUBE_MUSIC, SearchTab.YOUR_LIBRARY)
-                }
-                
-                val selectedTabIndex = orderedTabs.indexOf(uiState.selectedTab).let { if (it == -1) 0 else it }
-                
-                TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    containerColor = Color.Transparent,
-                    contentColor = accentColor,
-                    indicator = { tabPositions ->
-                        if (selectedTabIndex < tabPositions.size) {
-                            TabRowDefaults.SecondaryIndicator(
-                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                                color = accentColor
-                            )
-                        }
-                    },
-                    divider = {}
-                ) {
-                    orderedTabs.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { viewModel.onTabChange(tab) },
-                            text = {
-                                Text(
-                                    text = when (tab) {
-                                        SearchTab.YOUTUBE_MUSIC -> "YT MUSIC"
-                                        SearchTab.JIOSAAVN -> "HQ AUDIO"
-                                        SearchTab.YOUR_LIBRARY -> "LIBRARY"
-                                    },
-                                    fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 11.sp
-                                )
-                            },
-                            selectedContentColor = accentColor,
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
             // Category Chips (Only for YouTube Music tab)
             AnimatedVisibility(
-                visible = uiState.query.isNotBlank() && uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
+                visible = uiState.query.isNotBlank(),
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
