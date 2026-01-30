@@ -41,7 +41,7 @@ data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val appTheme: AppTheme = AppTheme.DEFAULT,
     val dynamicColorEnabled: Boolean = true,
-    val gaplessPlaybackEnabled: Boolean = true,
+    val gaplessPlaybackEnabled: Boolean = false,
     val automixEnabled: Boolean = true,
     val volumeSliderEnabled: Boolean = true,
     val musicSource: MusicSource = MusicSource.YOUTUBE,

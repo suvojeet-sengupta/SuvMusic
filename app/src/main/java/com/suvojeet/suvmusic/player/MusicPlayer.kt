@@ -656,6 +656,17 @@ class MusicPlayer @Inject constructor(
                     // Check if we need to preload next song for gapless playback
                     if (sessionManager.isGaplessPlaybackEnabled()) {
                         checkPreloadNextSong(currentPos, duration)
+                        
+                        // Early transition: If we're in the last 1.5 seconds and next song is preloaded,
+                        // trigger transition to prevent any audible gap during the final silence/fade-out
+                        if (duration > 0 && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
+                            val state = _playerState.value
+                            val nextIndex = state.currentIndex + 1
+                            if (nextIndex < state.queue.size && state.queue.getOrNull(nextIndex)?.id == preloadedNextSongId) {
+                                // Transition to next song immediately
+                                controller.seekToNextMediaItem()
+                            }
+                        }
                     }
                     
                     // Music Haptics - simulate amplitude based on progress
