@@ -91,14 +91,15 @@ class ListenTogetherManager @Inject constructor(
         
         private fun sendPlayState(playWhenReady: Boolean) {
             val position = player?.currentPosition ?: 0
+            val trackId = player?.currentMediaItem?.mediaId
             
             if (playWhenReady) {
-                Log.d(TAG, "Host sending PLAY at position $position")
-                client.sendPlaybackAction(PlaybackActions.PLAY, position = position)
+                Log.d(TAG, "Host sending PLAY at position $position for $trackId")
+                client.sendPlaybackAction(PlaybackActions.PLAY, position = position, trackId = trackId)
                 lastSyncedIsPlaying = true
             } else if (!playWhenReady && (lastSyncedIsPlaying == true)) {
-                Log.d(TAG, "Host sending PAUSE at position $position")
-                client.sendPlaybackAction(PlaybackActions.PAUSE, position = position)
+                Log.d(TAG, "Host sending PAUSE at position $position for $trackId")
+                client.sendPlaybackAction(PlaybackActions.PAUSE, position = position, trackId = trackId)
                 lastSyncedIsPlaying = false
             }
         }
@@ -119,10 +120,9 @@ class ListenTogetherManager @Inject constructor(
             
             val isPlaying = player?.playWhenReady == true
             if (isPlaying) {
-                Log.d(TAG, "Host is playing during track change, sending PLAY")
                 lastSyncedIsPlaying = true
                 val position = player?.currentPosition ?: 0
-                client.sendPlaybackAction(PlaybackActions.PLAY, position = position)
+                client.sendPlaybackAction(PlaybackActions.PLAY, position = position, trackId = trackId)
             }
         }
         
@@ -134,8 +134,9 @@ class ListenTogetherManager @Inject constructor(
             if (isSyncing || !isHost || !isInRoom) return
             
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-                Log.d(TAG, "Host sending SEEK to ${newPosition.positionMs}")
-                client.sendPlaybackAction(PlaybackActions.SEEK, position = newPosition.positionMs)
+                val trackId = player?.currentMediaItem?.mediaId
+                Log.d(TAG, "Host sending SEEK to ${newPosition.positionMs} for $trackId")
+                client.sendPlaybackAction(PlaybackActions.SEEK, position = newPosition.positionMs, trackId = trackId)
             }
         }
     }
@@ -211,7 +212,7 @@ class ListenTogetherManager @Inject constructor(
                         sendTrackChange(item)
                         if (p.playWhenReady) {
                             lastSyncedIsPlaying = true
-                            client.sendPlaybackAction(PlaybackActions.PLAY, position = p.currentPosition)
+                            client.sendPlaybackAction(PlaybackActions.PLAY, position = p.currentPosition, trackId = p.currentMediaItem?.mediaId)
                         }
                     }
                 }
@@ -237,7 +238,7 @@ class ListenTogetherManager @Inject constructor(
                         sendTrackChange(item)
                         if (player?.playWhenReady == true) {
                             val pos = player?.currentPosition ?: 0
-                            client.sendPlaybackAction(PlaybackActions.PLAY, position = pos)
+                            client.sendPlaybackAction(PlaybackActions.PLAY, position = pos, trackId = item.mediaId)
                         }
                     }
                 }
@@ -323,6 +324,22 @@ class ListenTogetherManager @Inject constructor(
 
     private fun handlePlaybackSync(action: PlaybackActionPayload) {
         val p = player ?: return
+        
+        // Track checking: If action has a trackId, ensure we are on it
+        val targetTrackId = action.trackId
+        val currentTrackId = p.currentMediaItem?.mediaId
+        
+        if (targetTrackId != null && targetTrackId != currentTrackId) {
+            Log.d(TAG, "Guest track mismatch: current=$currentTrackId, target=$targetTrackId. Switching...")
+            action.trackInfo?.let { track ->
+                syncToTrack(track, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
+            } ?: run {
+                // If trackInfo missing but we have ID, we might need a fallback or request full sync
+                Log.w(TAG, "Track mismatch but trackInfo missing in action")
+            }
+            return
+        }
+
         isSyncing = true
         
         try {
