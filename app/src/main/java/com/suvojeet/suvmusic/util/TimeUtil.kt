@@ -37,7 +37,7 @@ object TimeUtil {
         val count = songs.size
         if (count == 0) return "0 songs"
         
-        val totalDuration = songs.sumOf { it.duration }
+        val totalDuration = songs.fold(0L) { acc, song -> acc + song.duration }
         val durationString = formatDurationVerbose(totalDuration)
         
         val songString = if (count == 1) "song" else "songs"

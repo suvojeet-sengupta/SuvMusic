@@ -2,10 +2,12 @@ package com.suvojeet.suvmusic.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -26,7 +28,10 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
@@ -212,9 +217,9 @@ fun SetupContent(
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = roomCode,
-                onValueChange = { if (it.length <= 6) roomCode = it.uppercase() },
+                onValueChange = { if (it.length <= 8) roomCode = it.uppercase() },
                 label = { Text("Room Code") },
-                placeholder = { Text("ABC12") },
+                placeholder = { Text("QSVF5H5P") },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
@@ -238,97 +243,291 @@ fun RoomContent(
     onSync: () -> Unit
 ) {
     val room = uiState.roomState ?: return
+    val clipboardManager = LocalClipboardManager.current
     
-    Column {
-        // Room Code Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+    LazyColumn(
+        modifier = Modifier.fillMaxHeight(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)
+    ) {
+        // Room Info Card
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                ),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
             ) {
-                Text(
-                    text = "ROOM CODE",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.clickable { onCopyCode(room.roomCode) }
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = room.roomCode,
-                        style = MaterialTheme.typography.displayMedium.copy(letterSpacing = 4.sp),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        text = "ROOM CODE",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                        letterSpacing = 2.sp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        Icons.Default.ContentCopy, 
-                        "Copy", 
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { 
+                                onCopyCode(room.roomCode) 
+                                // Optional: Show toast or haptic
+                            }
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = room.roomCode,
+                            style = MaterialTheme.typography.displaySmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 4.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(
+                            Icons.Default.ContentCopy, 
+                            "Copy", 
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Host Info
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(4.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val hostUser = room.users.find { it.userId == room.hostId }
+                        Text(
+                            text = "Hosted by ${hostUser?.username ?: "Unknown"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                val roleText = if (uiState.role == RoomRole.HOST) "You are the Host" else "You are a Guest"
-                Text(
-                    text = roleText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
             }
         }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Connected Users
-        Text(
-            text = "Connected Users (${room.users.size})",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            items(room.users) { user ->
-                UserItem(user)
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Actions
-        Row(modifier = Modifier.fillMaxWidth()) {
-            if (uiState.role != RoomRole.HOST) {
-                Button(
-                    onClick = onSync,
-                    modifier = Modifier.weight(1f)
+
+        // Now Playing Status
+        item {
+            val track = room.currentTrack
+            if (track != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp)
                 ) {
-                    Icon(Icons.Default.Refresh, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sync Playback")
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Using a placeholder icon if coil AsyncImage isn't available in this context easily without url
+                        // But we have thumbnail url string
+                        if (track.thumbnail != null) {
+                            coil.compose.AsyncImage(
+                                model = track.thumbnail,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (room.isPlaying) {
+                                    Icon(
+                                        Icons.Filled.PlayArrow, 
+                                        null, 
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Now Playing",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Filled.Pause, 
+                                        null, 
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Paused",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = track.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = track.artist,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-            }
-            
-            Button(
-                onClick = onLeaveRoom,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(Icons.Default.Logout, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Leave Room")
+            } else {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Waiting for music...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
+
+        // Users Header
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Connected Users",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+                Container(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = "${room.users.size}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // User List
+        items(room.users) { user ->
+            UserItem(user)
+        }
+
+        // Buttons
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (uiState.role != RoomRole.HOST) {
+                    FilledTonalButton(
+                        onClick = onSync,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                    ) {
+                        Icon(Icons.Default.Refresh, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Force Sync")
+                    }
+                }
+                
+                Button(
+                    onClick = onLeaveRoom,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                ) {
+                    Icon(Icons.Default.Logout, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Leave Room")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Container(
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    shape: androidx.compose.ui.graphics.Shape = androidx.compose.ui.graphics.RectangleShape,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .background(color, shape)
+            .clip(shape)
+    ) {
+        content()
     }
 }
 
@@ -340,50 +539,67 @@ fun UserItem(user: com.suvojeet.suvmusic.listentogether.UserInfo) {
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Avatar
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                .background(
+                    if (user.isHost) MaterialTheme.colorScheme.primaryContainer 
+                    else MaterialTheme.colorScheme.secondaryContainer
+                ),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = user.username.take(1).uppercase(),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                fontWeight = FontWeight.Bold,
+                color = if (user.isHost) MaterialTheme.colorScheme.onPrimaryContainer 
+                       else MaterialTheme.colorScheme.onSecondaryContainer
             )
-        }
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = user.username,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            if (user.isHost) {
-                Text(
-                    text = "Host",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
+            
+            // Online Status Dot
+            if (user.isConnected) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .align(Alignment.BottomEnd)
+                        .background(Color(0xFF4CAF50), CircleShape)
+                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
                 )
             }
         }
         
-        if (user.isConnected) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(Color.Green)
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(Color.Gray)
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = user.username,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                if (user.isHost) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Container(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "HOST",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            
+            Text(
+                text = if (user.isConnected) "Online" else "Disconnected",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (user.isConnected) MaterialTheme.colorScheme.onSurfaceVariant 
+                       else MaterialTheme.colorScheme.error
             )
         }
     }

@@ -1184,7 +1184,7 @@ class DownloadRepository @Inject constructor(
      */
     fun getDownloadInfo(): Pair<Int, Long> {
         val songs = _downloadedSongs.value
-        val totalDuration = songs.sumOf { it.duration }
+        val totalDuration = songs.fold(0L) { acc, song -> acc + song.duration }
         return Pair(songs.size, totalDuration)
     }
     
