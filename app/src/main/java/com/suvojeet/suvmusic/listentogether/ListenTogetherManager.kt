@@ -558,6 +558,9 @@ class ListenTogetherManager @Inject constructor(
     fun forceReconnect() = client.forceReconnect()
     fun getPersistedRoomCode() = client.getPersistedRoomCode()
     fun getSessionAge() = client.getSessionAge()
+    
+    suspend fun getSavedUsername() = client.getSavedUsername()
+    suspend fun saveUsername(username: String) = client.saveUsername(username)
 
     private var heartbeatJob: Job? = null
     private fun startHeartbeat() {

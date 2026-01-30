@@ -27,6 +27,22 @@ class ListenTogetherViewModel @Inject constructor(
     val logs = manager.logs
     val events = manager.events
     
+    private val _savedUsername = kotlinx.coroutines.flow.MutableStateFlow("")
+    val savedUsername: StateFlow<String> = _savedUsername
+    
+    init {
+        viewModelScope.launch {
+            _savedUsername.value = manager.getSavedUsername()
+        }
+    }
+    
+    fun updateSavedUsername(name: String) {
+        _savedUsername.value = name
+        viewModelScope.launch {
+            manager.saveUsername(name)
+        }
+    }
+    
     // UI State for the sheet
     val uiState = combine(connectionState, roomState, role) { connection, room, role ->
         ListenTogetherUiState(
