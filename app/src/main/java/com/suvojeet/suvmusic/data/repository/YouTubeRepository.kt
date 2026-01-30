@@ -2152,26 +2152,61 @@ class YouTubeRepository @Inject constructor(
 
     private fun parseAlbumFromInternalJson(json: String, albumId: String): Album {
          val root = JSONObject(json)
-         // Header
+         
+         // Header extraction - similar to playlist parsing to cover all cases
          val header = root.optJSONObject("header")?.optJSONObject("musicDetailHeaderRenderer")
              ?: root.optJSONObject("header")?.optJSONObject("musicResponsiveHeaderRenderer")
+             ?: root.optJSONObject("header")?.optJSONObject("musicEditablePlaylistDetailHeaderRenderer")
+                ?.optJSONObject("header")?.optJSONObject("musicDetailHeaderRenderer")
+             ?: root.optJSONObject("header")?.optJSONObject("musicEditablePlaylistDetailHeaderRenderer")
+                ?.optJSONObject("header")?.optJSONObject("musicResponsiveHeaderRenderer")
          
-         val title = getRunText(header?.optJSONObject("title")) ?: "Unknown Album"
-         val subtitle = getRunText(header?.optJSONObject("subtitle")) 
-             ?: getRunText(header?.optJSONObject("straplineTextOne")) // Artist • Year • ...
+         // Title
+         val title = getRunText(header?.optJSONObject("title")) 
+             ?: header?.optJSONObject("title")?.optString("simpleText")
+             ?: "Unknown Album"
              
+         // Subtitle (Artist • Year)
+         val subtitle = getRunText(header?.optJSONObject("subtitle")) 
+             ?: getRunText(header?.optJSONObject("straplineTextOne"))
+             
+         // Description
          val description = getRunText(header?.optJSONObject("description"))
+             ?: getRunText(header?.optJSONObject("descriptionText"))
              ?: getRunText(header?.optJSONObject("secondSubtitle"))
              
-         val thumbnailUrl = extractHeaderThumbnail(header)
+         // Thumbnail
+         var thumbnailUrl = extractHeaderThumbnail(header)
+         
+         // Fallback thumbnail extraction
+         if (thumbnailUrl == null) {
+             thumbnailUrl = header?.optJSONObject("thumbnail")
+                 ?.optJSONObject("croppedSquareThumbnailRenderer")
+                 ?.optJSONObject("thumbnail")
+                 ?.optJSONArray("thumbnails")
+                 ?.let { arr -> arr.optJSONObject(arr.length() - 1)?.optString("url") }
+         }
          
          val songs = parseSongsFromInternalJson(json)
          
+         // Use first song's thumbnail if album art is missing
+         if (thumbnailUrl == null && songs.isNotEmpty()) {
+             thumbnailUrl = songs.first().thumbnailUrl
+         }
+         
+         // Artist extraction
+         val artist = subtitle?.split("•")?.firstOrNull()?.trim() 
+             ?: songs.firstOrNull()?.artist 
+             ?: "Unknown Artist"
+             
+         // Year extraction
+         val year = subtitle?.split("•")?.find { it.trim().matches(Regex("\\d{4}")) } ?: subtitle
+
          return Album(
              id = albumId,
              title = title,
-             artist = subtitle?.split("•")?.firstOrNull()?.trim() ?: "Unknown",
-             year = subtitle,
+             artist = artist,
+             year = year,
              thumbnailUrl = thumbnailUrl,
              description = description,
              songs = songs
