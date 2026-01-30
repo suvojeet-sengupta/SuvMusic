@@ -330,7 +330,14 @@ class ListenTogetherManager @Inject constructor(
                 PlaybackActions.PLAY -> {
                     val pos = action.position ?: 0L
                     if (kotlin.math.abs(p.currentPosition - pos) > 100) p.seekTo(pos)
-                    if (bufferingTrackId == null) p.play()
+                    
+                    // FORCE PLAY even if buffering was "active" logic-wise
+                    // We trust the host's command. If we aren't actually ready, ExoPlayer will buffer anyway.
+                    p.play()
+                    
+                    // Clear buffering state so we don't get stuck
+                    bufferingTrackId = null
+                    pendingSyncState = null
                 }
                 PlaybackActions.PAUSE -> {
                     val pos = action.position ?: 0L
@@ -360,16 +367,18 @@ class ListenTogetherManager @Inject constructor(
                     val track = action.trackInfo
                     if (track != null) {
                         scope.launch(Dispatchers.IO) {
-                            val streamUrl = youTubeRepository.getStreamUrl(track.id)
-                            val mediaItem = createMediaItem(track, streamUrl)
-                            launch(Dispatchers.Main) {
-                                isSyncing = true // Prevent echo
-                                if (action.insertNext == true) {
-                                    p.addMediaItem(p.currentMediaItemIndex + 1, mediaItem)
-                                } else {
-                                    p.addMediaItem(mediaItem)
+                            val streamUrl = youTubeRepository.getStreamUrlForDownload(track.id)
+                            if (streamUrl != null) {
+                                val mediaItem = createMediaItem(track, streamUrl)
+                                launch(Dispatchers.Main) {
+                                    isSyncing = true // Prevent echo
+                                    if (action.insertNext == true) {
+                                        p.addMediaItem(p.currentMediaItemIndex + 1, mediaItem)
+                                    } else {
+                                        p.addMediaItem(mediaItem)
+                                    }
+                                    isSyncing = false
                                 }
-                                isSyncing = false
                             }
                         }
                     }
@@ -388,33 +397,7 @@ class ListenTogetherManager @Inject constructor(
                 }
                 PlaybackActions.QUEUE_CLEAR -> p.clearMediaItems()
                 PlaybackActions.SYNC_QUEUE -> {
-                    action.queue?.let { q ->
-                        scope.launch(Dispatchers.Main) {
-                             // Rebuild queue
-                             // Fetch URLs for all? Might be slow.
-                             // Better: create MediaItems without URLs if possible, but ExoPlayer needs them for playback.
-                             // Optimization: Only fetch current + next few.
-                             // For now, let's fetch valid items or use IDs if we can lazy load.
-                             // Since we don't have a custom source factory easily accessible here, we must fetch URLs.
-                             // Wait, if we use setMediaItems, we replace everything.
-                             // Let's assume queue isn't huge or we do it carefully.
-                             
-                             // Actually, for a quick prototype, we might skip full queue sync if it's heavy.
-                             // But let's try mapping.
-                             
-                             // Note: In a real implementation, we should use a ResolvingDataSource.
-                             // For now, we'll try to sync just the current track if queue sync is complex, 
-                             // but Protocol sends SYNC_QUEUE.
-                             // Let's iterate and create items.
-                             
-                             // To avoid blocking, maybe we just sync the current track and add others as "placeholders" 
-                             // and update them when they play? 
-                             // SuvMusic might have a mechanism for this.
-                             
-                             // Simplified: just sync current track from handlePlaybackSync(CHANGE_TRACK).
-                             // If SYNC_QUEUE is sent, we update the playlist.
-                        }
-                    }
+                    // Logic remains same or implemented later
                 }
             }
         } finally {
@@ -445,13 +428,7 @@ class ListenTogetherManager @Inject constructor(
         scope.launch(Dispatchers.Main) {
             isSyncing = true
             try {
-                // For simplicity in this implementation, we will primarily sync the current track
-                // and maybe next/prev if provided in queue, but we'll focus on the current track to ensure playback works.
-                // Resolving URLs for a whole queue of 50 songs would take too long here.
-                
-                // Fetch URL for current track
                 syncToTrack(currentTrack, isPlaying, position, bypassBuffer)
-
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -467,7 +444,18 @@ class ListenTogetherManager @Inject constructor(
         
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
-                val streamUrl = youTubeRepository.getStreamUrl(track.id)
+                // Use getStreamUrlForDownload for better reliability or getStreamUrl
+                val streamUrl = youTubeRepository.getStreamUrl(track.id) ?: youTubeRepository.getStreamUrlForDownload(track.id)
+                
+                if (streamUrl == null) {
+                    Log.e(TAG, "Failed to resolve stream URL for ${track.id}")
+                    // Optionally notify user
+                    launch(Dispatchers.Main) {
+                        isSyncing = false
+                    }
+                    return@launch
+                }
+
                 val mediaItem = createMediaItem(track, streamUrl)
                 
                 launch(Dispatchers.Main) {
@@ -482,14 +470,26 @@ class ListenTogetherManager @Inject constructor(
                         if (shouldPlay) p.play() else p.pause()
                         bufferingTrackId = null
                     } else {
+                        // Standard sync: pause, send ready
                         p.pause()
+                        
                         pendingSyncState = SyncStatePayload(
                             currentTrack = track,
                             isPlaying = shouldPlay,
                             position = position,
                             lastUpdate = System.currentTimeMillis()
                         )
+                        
                         client.sendBufferReady(track.id)
+                        
+                        // Add a timeout fallback for buffering
+                        scope.launch {
+                            delay(5000) // 5 seconds timeout
+                            if (bufferingTrackId == track.id && pendingSyncState != null) {
+                                Log.w(TAG, "Buffer timeout for ${track.id}, forcing play")
+                                applyPendingSyncIfReady()
+                            }
+                        }
                     }
                     
                     delay(100)
@@ -497,7 +497,7 @@ class ListenTogetherManager @Inject constructor(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                isSyncing = false
+                launch(Dispatchers.Main) { isSyncing = false }
             }
         }
     }
