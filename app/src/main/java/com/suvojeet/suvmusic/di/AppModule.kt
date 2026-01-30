@@ -158,4 +158,23 @@ object AppModule {
             sessionManager
         )
     }
+
+    @Provides
+    @Singleton
+    fun provideListenTogetherClient(
+        @ApplicationContext context: Context
+    ): com.suvojeet.suvmusic.listentogether.ListenTogetherClient {
+        return com.suvojeet.suvmusic.listentogether.ListenTogetherClient(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideListenTogetherManager(
+        client: com.suvojeet.suvmusic.listentogether.ListenTogetherClient,
+        youTubeRepository: YouTubeRepository
+    ): com.suvojeet.suvmusic.listentogether.ListenTogetherManager {
+        val manager = com.suvojeet.suvmusic.listentogether.ListenTogetherManager(client, youTubeRepository)
+        manager.initialize()
+        return manager
+    }
 }

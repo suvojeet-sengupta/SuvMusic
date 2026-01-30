@@ -83,6 +83,7 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
+import com.suvojeet.suvmusic.ui.components.ListenTogetherSheet
 import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
 import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
@@ -284,6 +285,7 @@ fun PlayerScreen(
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showOutputDeviceSheet by remember { mutableStateOf(false) }
     var showPlaybackSpeedSheet by remember { mutableStateOf(false) }
+    var showListenTogetherSheet by remember { mutableStateOf(false) }
 
     // Ringtone states
     var showRingtoneProgress by remember { mutableStateOf(false) }
@@ -927,6 +929,10 @@ fun PlayerScreen(
                     showActionsSheet = false
                     onStartRadio()
                 },
+                onListenTogether = {
+                    showActionsSheet = false
+                    showListenTogetherSheet = true
+                },
                 onPlaybackSpeed = {
                     showActionsSheet = false
                     showPlaybackSpeedSheet = true
@@ -1056,6 +1062,12 @@ fun PlayerScreen(
                 onApply = { speed, pitch ->
                     onSetPlaybackParameters(speed, pitch)
                 }
+            )
+            
+            // Listen Together Sheet
+            ListenTogetherSheet(
+                isVisible = showListenTogetherSheet,
+                onDismiss = { showListenTogetherSheet = false }
             )
             
             // Video Error Dialog

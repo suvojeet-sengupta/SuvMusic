@@ -42,4 +42,6 @@
     <string name="error_generic_title">Something Went Wrong</string>
     <string name="error_generic_message">An unknown error occurred while loading the artist page.</string>
     <string name="error_loading">Loading...</string>
+
+    <string name="listen_together">Listen Together</string>
 </resources>

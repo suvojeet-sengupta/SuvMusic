@@ -59,6 +59,9 @@ class MusicPlayerService : MediaLibraryService() {
     @Inject
     lateinit var lastFmManager: com.suvojeet.suvmusic.player.LastFmManager
 
+    @Inject
+    lateinit var listenTogetherManager: com.suvojeet.suvmusic.listentogether.ListenTogetherManager
+
     private var mediaLibrarySession: MediaLibrarySession? = null
     
     // Constants for Android Auto browsing
@@ -146,6 +149,9 @@ class MusicPlayerService : MediaLibraryService() {
             
         // Attach Last.fm Manager
         lastFmManager.setPlayer(player)
+        
+        // Attach Listen Together Manager
+        listenTogetherManager.setPlayer(player)
         
         serviceScope.launch {
             kotlinx.coroutines.flow.combine(
@@ -571,6 +577,8 @@ class MusicPlayerService : MediaLibraryService() {
             // Ignore if not registered
         }
         releaseAudioEffects()
+        
+        listenTogetherManager.setPlayer(null)
 
         mediaLibrarySession?.run {
             player.release()
