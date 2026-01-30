@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -70,6 +71,7 @@ fun SongActionsSheet(
     isDisliked: Boolean = false,
     onSetRingtone: () -> Unit = {},
     onStartRadio: () -> Unit = {},
+    onListenTogether: () -> Unit = {},
     onPlaybackSpeed: () -> Unit = {},
     currentSpeed: Float = 1.0f
 ) {
@@ -193,6 +195,13 @@ fun SongActionsSheet(
                     title = "Start a Radio",
                     iconTint = MaterialTheme.colorScheme.primary,
                     onClick = { onStartRadio(); onDismiss() }
+                )
+
+                ActionItem(
+                    icon = Icons.Filled.Group,
+                    title = "Listen With Together",
+                    iconTint = MaterialTheme.colorScheme.secondary,
+                    onClick = { onListenTogether(); onDismiss() }
                 )
                 
                 ActionItem(
