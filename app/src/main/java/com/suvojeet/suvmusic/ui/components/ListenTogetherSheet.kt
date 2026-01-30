@@ -90,16 +90,22 @@ fun ListenTogetherSheet(
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     
-    // Persist username
-    var username by remember { 
-        mutableStateOf(runBlocking { context.dataStore.data.map { it[ListenTogetherUsernameKey] ?: "" }.first() }) 
+    val savedUsername by viewModel.savedUsername.collectAsState()
+    
+    // Local state for username input to avoid stutter, sync with saved on init
+    var username by remember { mutableStateOf("") }
+    
+    // Sync when saved username loads
+    androidx.compose.runtime.LaunchedEffect(savedUsername) {
+        if (username.isEmpty() && savedUsername.isNotEmpty()) {
+            username = savedUsername
+        }
     }
     
     // Save username when changed
     val saveUsername: (String) -> Unit = { newName ->
         username = newName
-        // Note: Ideally save to DataStore in ViewModel, but quick inline here
-        // We'll update the viewModel to handle persistence if we had time, for now user input drives it.
+        viewModel.updateSavedUsername(newName)
     }
 
     if (isVisible) {
@@ -226,10 +232,14 @@ fun SetupContent(
             Spacer(modifier = Modifier.width(12.dp))
             FilledTonalButton(
                 onClick = { onJoinRoom(roomCode) },
-                enabled = username.isNotBlank() && roomCode.length >= 4,
+                enabled = username.isNotBlank() && roomCode.length >= 4 && connectionState != ConnectionState.CONNECTING,
                 modifier = Modifier.height(56.dp)
             ) {
-                Icon(Icons.Default.Login, null)
+                if (connectionState == ConnectionState.CONNECTING) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onSecondaryContainer)
+                } else {
+                    Icon(Icons.Default.Login, null)
+                }
             }
         }
     }
