@@ -31,9 +31,13 @@ class ListenTogetherViewModel @Inject constructor(
     private val _savedUsername = kotlinx.coroutines.flow.MutableStateFlow("")
     val savedUsername: StateFlow<String> = _savedUsername
     
+    private val _serverUrl = kotlinx.coroutines.flow.MutableStateFlow("")
+    val serverUrl: StateFlow<String> = _serverUrl
+
     init {
         viewModelScope.launch {
             _savedUsername.value = manager.getSavedUsername()
+            _serverUrl.value = manager.getServerUrl()
         }
     }
     
@@ -41,6 +45,13 @@ class ListenTogetherViewModel @Inject constructor(
         _savedUsername.value = name
         viewModelScope.launch {
             manager.saveUsername(name)
+        }
+    }
+
+    fun updateServerUrl(url: String) {
+        _serverUrl.value = url
+        viewModelScope.launch {
+            manager.setServerUrl(url)
         }
     }
     
