@@ -21,13 +21,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -91,7 +94,21 @@ fun AlbumScreen(
     
     // Dialog/Menu states
     var showMenu by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showSongMenu by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var selectedSong: Song? by remember { androidx.compose.runtime.mutableStateOf(null) }
+    
     val context = androidx.compose.ui.platform.LocalContext.current
+    
+    val shareAlbum: (Album) -> Unit = { albumToShare ->
+        val shareText = "Check out this album: ${albumToShare.title} by ${albumToShare.artist}\n\nhttps://music.youtube.com/playlist?list=${albumToShare.id}"
+        val sendIntent = android.content.Intent().apply {
+            action = android.content.Intent.ACTION_SEND
+            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+            type = "text/plain"
+        }
+        val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Album")
+        androidx.core.content.ContextCompat.startActivity(context, shareIntent, null)
+    }
 
     Box(
         modifier = Modifier
@@ -163,6 +180,8 @@ fun AlbumScreen(
                             onPlayAll = { onPlayAll(album.songs) },
                             onShufflePlay = { onShufflePlay(album.songs) },
                             onToggleSave = { viewModel.toggleSaveToLibrary() },
+                            onDownload = { viewModel.downloadAlbum(album) },
+                            onShare = { shareAlbum(album) },
                             onMoreClick = { showMenu = true },
                             contentColor = contentColor,
                             secondaryContentColor = secondaryContentColor,
@@ -176,6 +195,10 @@ fun AlbumScreen(
                             song = song,
                             trackNumber = index + 1,
                             onClick = { onSongClick(album.songs, index) },
+                            onMoreClick = { 
+                                selectedSong = song
+                                showSongMenu = true 
+                            },
                             contentColor = contentColor,
                             secondaryContentColor = secondaryContentColor
                         )
@@ -191,7 +214,7 @@ fun AlbumScreen(
                     contentColor = contentColor
                 )
                 
-                // Menu Bottom Sheet
+                // Media Menu Bottom Sheet
                 if (showMenu) {
                     com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet(
                         isVisible = showMenu,
@@ -205,16 +228,22 @@ fun AlbumScreen(
                         onAddToQueue = { viewModel.addToQueue(album.songs) },
                         onAddToPlaylist = { /* TODO: Show add to playlist dialog */ },
                         onDownload = { viewModel.downloadAlbum(album) },
-                        onShare = { 
-                            val shareText = "Check out this album: ${album.title} by ${album.artist}\n\nhttps://music.youtube.com/playlist?list=${album.id}"
-                            val sendIntent = android.content.Intent().apply {
-                                action = android.content.Intent.ACTION_SEND
-                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                                type = "text/plain"
-                            }
-                            val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Album")
-                            androidx.core.content.ContextCompat.startActivity(context, shareIntent, null)
-                        }
+                        onShare = { shareAlbum(album) }
+                    )
+                }
+                
+                // Song Menu Bottom Sheet
+                if (showSongMenu && selectedSong != null) {
+                    val song = selectedSong!!
+                    com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet(
+                        isVisible = showSongMenu,
+                        onDismiss = { showSongMenu = false },
+                        song = song,
+                        onPlayNext = { viewModel.playNext(listOf(song)) },
+                        onAddToQueue = { viewModel.addToQueue(listOf(song)) },
+                        onAddToPlaylist = { /* TODO */ },
+                        onDownload = { viewModel.downloadAlbum(album) }, // Using album download for now as context is album
+                        onShare = { /* TODO share song */ }
                     )
                 }
             }
@@ -270,8 +299,6 @@ private fun AlbumTopBar(
         if (!isScrolled) {
             Spacer(modifier = Modifier.weight(1f))
         }
-        
-        // No Actions in Top Bar anymore, moved to header area
     }
 }
 
@@ -283,6 +310,8 @@ private fun AlbumHeader(
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
     onToggleSave: () -> Unit,
+    onDownload: () -> Unit,
+    onShare: () -> Unit,
     onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color,
@@ -389,37 +418,54 @@ private fun AlbumHeader(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // Actions Row (Heart, Play, More)
+        // Actions Row (Download, Save, Play, Share, More)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Favorite Button
+            // Download Button
+            IconButton(
+                onClick = onDownload,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = "Download Album",
+                    tint = contentColor
+                )
+            }
+
+            // Save Button (Heart)
             IconButton(
                 onClick = onToggleSave,
                 modifier = Modifier
                     .size(48.dp)
                     .background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = CircleShape
                     )
             ) {
                 Icon(
-                    imageVector = if (isSaved) androidx.compose.material.icons.Icons.Default.Favorite else androidx.compose.material.icons.Icons.Default.FavoriteBorder, 
-                    contentDescription = if (isSaved) "Remove from Library" else "Add to Library",
-                    tint = if (isSaved) Color(0xFFFF4081) else contentColor
+                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
+                    tint = if (isSaved) MaterialTheme.colorScheme.primary else contentColor
                 )
             }
             
-            Spacer(modifier = Modifier.width(24.dp))
-            
-            // Play Button (Big)
+            // Play Button (Large Central)
             androidx.compose.material3.FilledIconButton(
                 onClick = onPlayAll,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier
+                    .size(72.dp)
+                    .shadow(elevation = 12.dp, shape = androidx.compose.foundation.shape.CircleShape, spotColor = MaterialTheme.colorScheme.primary),
                 colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -428,11 +474,26 @@ private fun AlbumHeader(
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
             
-            Spacer(modifier = Modifier.width(24.dp))
+            // Share Button
+            IconButton(
+                onClick = onShare,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share",
+                    tint = contentColor
+                )
+            }
             
             // More Button
             IconButton(
@@ -441,7 +502,7 @@ private fun AlbumHeader(
                     .size(48.dp)
                     .background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = CircleShape
                     )
             ) {
                 Icon(
@@ -452,7 +513,7 @@ private fun AlbumHeader(
             }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -461,6 +522,7 @@ private fun AlbumSongItem(
     song: Song,
     trackNumber: Int,
     onClick: () -> Unit,
+    onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color
 ) {
@@ -513,7 +575,7 @@ private fun AlbumSongItem(
         }
         
         // More Options
-        IconButton(onClick = { }) {
+        IconButton(onClick = onMoreClick) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",
