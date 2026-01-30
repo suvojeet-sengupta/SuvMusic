@@ -579,6 +579,9 @@ class ListenTogetherManager @Inject constructor(
     suspend fun getSavedUsername() = client.getSavedUsername()
     suspend fun saveUsername(username: String) = client.saveUsername(username)
 
+    suspend fun getServerUrl() = client.getServerUrl()
+    suspend fun setServerUrl(url: String) = client.setServerUrl(url)
+
     private var heartbeatJob: Job? = null
     private fun startHeartbeat() {
         if (heartbeatJob?.isActive == true) return

@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -62,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -92,6 +95,7 @@ fun ListenTogetherSheet(
     val clipboardManager = LocalClipboardManager.current
     
     val savedUsername by viewModel.savedUsername.collectAsState()
+    val serverUrl by viewModel.serverUrl.collectAsState()
     
     // Local state for username input to avoid stutter, sync with saved on init
     var username by remember { mutableStateOf("") }
@@ -156,7 +160,9 @@ fun ListenTogetherSheet(
                         onUsernameChange = saveUsername,
                         onCreateRoom = { viewModel.createRoom(username) },
                         onJoinRoom = { code -> viewModel.joinRoom(code, username) },
-                        connectionState = uiState.connectionState
+                        connectionState = uiState.connectionState,
+                        serverUrl = serverUrl,
+                        onServerUrlChange = { viewModel.updateServerUrl(it) }
                     )
                 }
             }
@@ -170,11 +176,22 @@ fun SetupContent(
     onUsernameChange: (String) -> Unit,
     onCreateRoom: () -> Unit,
     onJoinRoom: (String) -> Unit,
-    connectionState: ConnectionState
+    connectionState: ConnectionState,
+    serverUrl: String,
+    onServerUrlChange: (String) -> Unit
 ) {
     var roomCode by remember { mutableStateOf("") }
+    var showSettings by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
     
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    // Default server check for credits
+    val showCredits = serverUrl.contains("metroserver", ignoreCase = true) || 
+                      serverUrl.contains("meowery.eu", ignoreCase = true)
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(bottom = 16.dp)
+    ) {
         Text(
             text = "Listen to music with friends in real-time.",
             style = MaterialTheme.typography.bodyLarge,
@@ -241,6 +258,81 @@ fun SetupContent(
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onSecondaryContainer)
                 } else {
                     Icon(Icons.Default.Login, null)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Server Settings
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showSettings = !showSettings }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.Settings, 
+                contentDescription = null, 
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Server Settings",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        AnimatedVisibility(visible = showSettings) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Server URL",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = serverUrl,
+                    onValueChange = onServerUrlChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    singleLine = true
+                )
+                
+                if (showCredits) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { uriHandler.openUri("https://nyx.meowery.eu/") }
+                            .padding(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Server provided by metroserver (nyx.meowery.eu)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
