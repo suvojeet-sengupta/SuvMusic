@@ -298,6 +298,17 @@ class ListenTogetherClient @Inject constructor(
         return cappedDelay + jitter
     }
 
+    suspend fun getSavedUsername(): String {
+        val prefs = context.dataStore.data.first()
+        return prefs[ListenTogetherUsernameKey] ?: ""
+    }
+
+    suspend fun saveUsername(username: String) {
+        context.dataStore.edit { preferences ->
+            preferences[ListenTogetherUsernameKey] = username
+        }
+    }
+
     private fun log(level: LogLevel, message: String, details: String? = null) {
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
         val entry = LogEntry(timestamp, level, message, details)
