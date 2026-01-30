@@ -466,8 +466,17 @@ class ListenTogetherManager @Inject constructor(
         
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
-                // Use getStreamUrlForDownload for better reliability or getStreamUrl
-                val streamUrl = youTubeRepository.getStreamUrl(track.id) ?: youTubeRepository.getStreamUrlForDownload(track.id)
+                // 1. Fetch full song details to get "normal app" metadata (high-res art, source info)
+                val songDetails = youTubeRepository.getSongDetails(track.id)
+                
+                // 2. Resolve stream URL (prioritizing details if available)
+                val streamUrl = if (songDetails != null) {
+                    // Use standard repository resolution if we have song details
+                    youTubeRepository.getStreamUrl(songDetails.id)
+                } else {
+                    // Fallback to direct fetch
+                    youTubeRepository.getStreamUrl(track.id) ?: youTubeRepository.getStreamUrlForDownload(track.id)
+                }
                 
                 if (streamUrl == null) {
                     Log.e(TAG, "Failed to resolve stream URL for ${track.id}")
@@ -478,7 +487,13 @@ class ListenTogetherManager @Inject constructor(
                     return@launch
                 }
 
-                val mediaItem = createMediaItem(track, streamUrl)
+                // 3. Create MediaItem using the best available metadata
+                // If songDetails is available, use it (better metadata), otherwise fallback to track info
+                val mediaItem = if (songDetails != null) {
+                    createMediaItemFromSong(songDetails, streamUrl)
+                } else {
+                    createMediaItem(track, streamUrl)
+                }
                 
                 launch(Dispatchers.Main) {
                     val p = player ?: return@launch
@@ -522,6 +537,24 @@ class ListenTogetherManager @Inject constructor(
                 launch(Dispatchers.Main) { isSyncing = false }
             }
         }
+    }
+
+    private fun createMediaItemFromSong(song: Song, streamUrl: String): MediaItem {
+        val uri = Uri.parse(streamUrl)
+        val metadata = MediaMetadata.Builder()
+            .setTitle(song.title)
+            .setArtist(song.artist)
+            .setAlbumTitle(song.album)
+            .setArtworkUri(if (song.thumbnailUrl != null) Uri.parse(song.thumbnailUrl) else null)
+            .build()
+            
+        return MediaItem.Builder()
+            .setMediaId(song.id)
+            .setUri(uri)
+            .setMediaMetadata(metadata)
+            // Set custom cache key to match MusicPlayer's logic for consistent caching
+            .setCustomCacheKey(song.id)
+            .build()
     }
 
     private fun createMediaItem(track: TrackInfo, streamUrl: String?): MediaItem {
