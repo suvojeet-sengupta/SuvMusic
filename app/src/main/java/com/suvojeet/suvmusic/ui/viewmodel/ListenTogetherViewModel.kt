@@ -26,6 +26,7 @@ class ListenTogetherViewModel @Inject constructor(
     val userId: StateFlow<String?> = manager.userId
     val logs = manager.logs
     val events = manager.events
+    val pendingJoinRequests = manager.pendingJoinRequests
     
     private val _savedUsername = kotlinx.coroutines.flow.MutableStateFlow("")
     val savedUsername: StateFlow<String> = _savedUsername
@@ -81,6 +82,14 @@ class ListenTogetherViewModel @Inject constructor(
     
     fun kickUser(userId: String) {
         manager.kickUser(userId)
+    }
+    
+    fun approveJoin(userId: String) {
+        manager.approveJoin(userId)
+    }
+
+    fun rejectJoin(userId: String) {
+        manager.rejectJoin(userId)
     }
     
     fun requestSync() {
