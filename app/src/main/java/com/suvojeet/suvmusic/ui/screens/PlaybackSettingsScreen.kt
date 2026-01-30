@@ -92,7 +92,8 @@ fun PlaybackSettingsScreen(
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    var showOffloadInfo by remember { mutableStateOf(false) }
+     var showOffloadInfo by remember { mutableStateOf(false) }
+    var showGaplessInfo by remember { mutableStateOf(false) }
 
     if (showOffloadInfo) {
         AlertDialog(
@@ -115,6 +116,35 @@ fun PlaybackSettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showOffloadInfo = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
+    
+    if (showGaplessInfo) {
+        AlertDialog(
+            onDismissRequest = { showGaplessInfo = false },
+            title = { 
+                Text(
+                    "What is Gapless Playback?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = {
+                Text(
+                    "Gapless playback eliminates the brief pause between songs. When enabled, the app detects when a track is about to end and seamlessly switches to the next song.\n\n" +
+                    "This is especially useful for:\n" +
+                    "• Live albums or concerts where songs flow together\n" +
+                    "• Classical music with continuous movements\n" +
+                    "• DJ mixes and playlists designed for uninterrupted listening\n\n" +
+                    "Note: This feature uses additional battery and data to preload the next song in advance.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showGaplessInfo = false }) {
                     Text("Got it")
                 }
             }
@@ -227,9 +257,25 @@ fun PlaybackSettingsScreen(
             SectionTitle("Track transitions")
             
             ListItem(
-                headlineContent = { Text("Gapless playback") },
+                headlineContent = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Gapless playback")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { showGaplessInfo = true },
+                            modifier = Modifier.height(24.dp).width(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.height(16.dp).width(16.dp)
+                            )
+                        }
+                    }
+                },
                 supportingContent = { 
-                    Text("Removes any gaps or pauses that may occur in between tracks.") 
+                    Text("Seamlessly transitions between songs without any pause.") 
                 },
                 leadingContent = {
                     Icon(
