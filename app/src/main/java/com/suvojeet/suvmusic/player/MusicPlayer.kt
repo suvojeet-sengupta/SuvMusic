@@ -314,7 +314,21 @@ class MusicPlayer @Inject constructor(
             mediaItem?.let { item ->
                 val controller = mediaController ?: return@let
                 val index = controller.currentMediaItemIndex
-                val song = _playerState.value.queue.getOrNull(index)
+                var song = _playerState.value.queue.getOrNull(index)
+                
+                // Fallback: If song is null (e.g. Listen Together or external source), create from metadata
+                if (song == null && item.mediaMetadata.title != null) {
+                    val duration = if (controller.duration != androidx.media3.common.C.TIME_UNSET) controller.duration else 0L
+                    song = Song(
+                        id = item.mediaId,
+                        title = item.mediaMetadata.title.toString(),
+                        artist = item.mediaMetadata.artist.toString(),
+                        album = item.mediaMetadata.albumTitle?.toString() ?: "",
+                        duration = duration,
+                        thumbnailUrl = item.mediaMetadata.artworkUri?.toString(),
+                        source = SongSource.YOUTUBE // Assume YouTube as default for external
+                    )
+                }
                 
                 _playerState.update { 
                     it.copy(

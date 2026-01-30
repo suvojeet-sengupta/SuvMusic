@@ -1065,10 +1065,16 @@ fun PlayerScreen(
             )
             
             // Listen Together Sheet
-            ListenTogetherSheet(
-                isVisible = showListenTogetherSheet,
-                onDismiss = { showListenTogetherSheet = false }
-            )
+            AnimatedVisibility(
+                visible = showListenTogetherSheet,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it }
+            ) {
+                ListenTogetherSheet(
+                    onDismiss = { showListenTogetherSheet = false },
+                    dominantColors = dominantColors
+                )
+            }
             
             // Video Error Dialog
             if (playerState.videoNotFound) {
