@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -53,6 +55,12 @@ import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.FormatAlignLeft
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import com.suvojeet.suvmusic.ui.utils.LyricsPdfGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,10 +94,19 @@ fun LyricsScreen(
     val overlayColor = if (isDarkTheme) Color.Black else Color.White
     
     val context = LocalContext.current
-    var showProviderDialog by remember { mutableStateOf(false) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
+    
+    // Lyrics Settings State
+    var fontSize by remember { mutableStateOf(26f) }
+    var syncOffset by remember { mutableStateOf(0L) }
+    // We keep local state for these to allow immediate UI updates, 
+    // but ideally they should be persisted or passed back up.
+    // For now, we'll use the passed parameters as initial values.
+    var currentTextPosition by remember { mutableStateOf(lyricsTextPosition) }
+    var currentAnimationType by remember { mutableStateOf(lyricsAnimationType) }
     
     // Formatting helper for seek bar
     fun formatTime(ms: Long): String {
@@ -136,57 +153,6 @@ fun LyricsScreen(
                 )
         )
 
-        if (showProviderDialog) {
-            AlertDialog(
-                onDismissRequest = { showProviderDialog = false },
-                title = { Text("Lyrics Source") },
-                text = {
-                    Column {
-                        com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.entries.forEach { provider ->
-                            val isEnabled = enabledProviders[provider] ?: true
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(enabled = isEnabled) {
-                                        onProviderChange(provider)
-                                        showProviderDialog = false
-                                    }
-                                    .padding(vertical = 12.dp)
-                                    .alpha(if (isEnabled) 1f else 0.5f),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = provider == selectedProvider,
-                                    onClick = null, // Handled by Row click
-                                    enabled = isEnabled
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        text = provider.displayName,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface 
-                                    )
-                                    if (!isEnabled) {
-                                        Text(
-                                            text = "Disabled in settings",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.error 
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showProviderDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -200,33 +166,33 @@ fun LyricsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Provider Switch Button (Top Left)
+                // Settings Button (Top Left)
                 IconButton(
-                    onClick = { showProviderDialog = true },
+                    onClick = { showSettingsSheet = true },
                     modifier = Modifier
-                        .size(32.dp)
-                        .background(textColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                        .size(42.dp)
+                        .background(textColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle, // Use a more appropriate icon like 'Tune' or 'Settings' if available, but CheckCircle works for now
-                        contentDescription = "Switch Provider",
+                        imageVector = Icons.Filled.Tune,
+                        contentDescription = "Settings",
                         tint = textColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
-                // Share Button (Middle Left)
+                // Share Button (Middle)
                 IconButton(
                     onClick = { showShareSheet = true },
                     modifier = Modifier
-                        .size(32.dp)
-                        .background(textColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                        .size(42.dp)
+                        .background(textColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = "Share Lyrics",
                         tint = textColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -234,16 +200,45 @@ fun LyricsScreen(
                 IconButton(
                     onClick = onClose,
                     modifier = Modifier
-                        .size(32.dp)
-                        .background(textColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                        .size(42.dp)
+                        .background(textColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
                         tint = textColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
+            }
+            
+            // Song Info Header
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = songTitle,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    ),
+                    color = textColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+                )
+                Text(
+                    text = artistName,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 16.sp
+                    ),
+                    color = textColor.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
 
             // Content
@@ -274,6 +269,11 @@ fun LyricsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(32.dp)
                     ) {
+                        CircularProgressIndicator(
+                            color = textColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
                         Text(
                             text = currentMessage,
                             style = MaterialTheme.typography.bodyLarge,
@@ -299,16 +299,20 @@ fun LyricsScreen(
                         )
                     }
                 } else {
+                    // Effective time provider with sync offset
+                    val effectiveTimeProvider = { currentTimeProvider() + syncOffset }
+                    
                     LyricsList(
                         lyrics = lyrics,
-                        currentTimeProvider = currentTimeProvider,
+                        currentTimeProvider = effectiveTimeProvider,
                         isDarkTheme = isDarkTheme,
-                        onSeekTo = onSeekTo,
+                        onSeekTo = { pos -> onSeekTo(pos - syncOffset) }, // Adjust seek back
                         songTitle = songTitle,
                         artistName = artistName,
                         artworkUrl = artworkUrl,
-                        textPosition = lyricsTextPosition,
-                        animationType = lyricsAnimationType
+                        textPosition = currentTextPosition,
+                        animationType = currentAnimationType,
+                        fontSize = fontSize
                     )
                 }
             }
@@ -321,12 +325,10 @@ fun LyricsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.4f),
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(bottom = 8.dp)
                         .align(Alignment.CenterHorizontally),
                     textAlign = TextAlign.Center
                 )
-            } else {
-                Spacer(modifier = Modifier.height(16.dp))
             }
             
             // Bottom Seek Bar
@@ -419,6 +421,223 @@ fun LyricsScreen(
                 }
             } else {
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+        
+        // Settings Sheet
+        if (showSettingsSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSettingsSheet = false },
+                sheetState = sheetState,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                dragHandle = { BottomSheetDefaults.DragHandle() },
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 32.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = "Lyrics Settings",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+                    
+                    // 1. Appearance Section
+                    Text(
+                        text = "Appearance",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    // Font Size
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FormatSize,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Text Size", style = MaterialTheme.typography.bodyMedium)
+                            Slider(
+                                value = fontSize,
+                                onValueChange = { fontSize = it },
+                                valueRange = 16f..40f,
+                                steps = 0,
+                                modifier = Modifier.height(30.dp)
+                            )
+                        }
+                    }
+                    
+                    // Alignment
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FormatAlignLeft,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text("Alignment", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        
+                        SingleChoiceSegmentedButtonRow {
+                             SegmentedButton(
+                                selected = currentTextPosition == LyricsTextPosition.LEFT,
+                                onClick = { currentTextPosition = LyricsTextPosition.LEFT },
+                                shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                            ) { Text("Left") }
+                            SegmentedButton(
+                                selected = currentTextPosition == LyricsTextPosition.CENTER,
+                                onClick = { currentTextPosition = LyricsTextPosition.CENTER },
+                                shape = RoundedCornerShape(0.dp)
+                            ) { Text("Center") }
+                            SegmentedButton(
+                                selected = currentTextPosition == LyricsTextPosition.RIGHT,
+                                onClick = { currentTextPosition = LyricsTextPosition.RIGHT },
+                                shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                            ) { Text("Right") }
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(bottom = 24.dp))
+
+                    // 2. Sync Section
+                    Text(
+                        text = "Sync Correction",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Delay Button
+                        FilledTonalButton(
+                            onClick = { syncOffset -= 500L }
+                        ) {
+                            Text("-0.5s")
+                        }
+                        
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "${if (syncOffset > 0) "+" else ""}${syncOffset}ms",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (syncOffset != 0L) {
+                                TextButton(onClick = { syncOffset = 0L }, modifier = Modifier.height(30.dp)) {
+                                    Text("Reset", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                        
+                        // Advance Button
+                        FilledTonalButton(
+                            onClick = { syncOffset += 500L }
+                        ) {
+                            Text("+0.5s")
+                        }
+                    }
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+                    // 3. Source Section
+                    Text(
+                        text = "Lyrics Source",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    var expandedProvider by remember { mutableStateOf(false) }
+                    
+                    OutlinedCard(
+                        onClick = { expandedProvider = !expandedProvider },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.LibraryMusic,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Current Provider",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                    Text(
+                                        text = selectedProvider.displayName,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                                Icon(
+                                    imageVector = if(expandedProvider) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = null
+                                )
+                            }
+                            
+                            if (expandedProvider) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.entries.forEach { provider ->
+                                    val isEnabled = enabledProviders[provider] ?: true
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(enabled = isEnabled) {
+                                                onProviderChange(provider)
+                                                expandedProvider = false
+                                            }
+                                            .padding(vertical = 12.dp)
+                                            .alpha(if (isEnabled) 1f else 0.5f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = provider == selectedProvider,
+                                            onClick = null, 
+                                            enabled = isEnabled
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = provider.displayName,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            if (!isEnabled) {
+                                                Text(
+                                                    text = "Disabled",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         
@@ -517,7 +736,7 @@ fun LyricsScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun LyricsList(
     lyrics: Lyrics,
@@ -528,7 +747,8 @@ fun LyricsList(
     artistName: String,
     artworkUrl: String?,
     textPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
-    animationType: LyricsAnimationType = LyricsAnimationType.WORD
+    animationType: LyricsAnimationType = LyricsAnimationType.WORD,
+    fontSize: Float = 24f
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
@@ -683,9 +903,9 @@ fun LyricsList(
                         Text(
                             text = line.text,
                             style = MaterialTheme.typography.headlineMedium.copy(
-                                fontSize = 24.sp,
+                                fontSize = fontSize.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 36.sp
+                                lineHeight = (fontSize * 1.5).sp
                             ),
                             color = textColor.copy(alpha = alpha),
                             textAlign = TextAlign.Start,
@@ -726,7 +946,6 @@ fun LyricsList(
                         val words = line.words
                         if (words != null && words.isNotEmpty() && lyrics.isSynced && animationType == LyricsAnimationType.WORD) {
                             // Word-by-word rendering
-                            OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = flowArrangement,
@@ -757,9 +976,9 @@ fun LyricsList(
                                     Text(
                                         text = word.text,
                                         style = MaterialTheme.typography.headlineMedium.copy(
-                                            fontSize = 26.sp, // Slightly larger
+                                            fontSize = fontSize.sp, 
                                             fontWeight = FontWeight.Bold,
-                                            lineHeight = 40.sp
+                                            lineHeight = (fontSize * 1.5).sp
                                         ),
                                         color = wordColor.copy(alpha = wordAlpha),
                                         modifier = Modifier.padding(vertical = 2.dp)
@@ -777,9 +996,9 @@ fun LyricsList(
                             Text(
                                 text = line.text,
                                 style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontSize = 24.sp,
+                                    fontSize = fontSize.sp,
                                     fontWeight = FontWeight.Bold,
-                                    lineHeight = 36.sp
+                                    lineHeight = (fontSize * 1.5).sp
                                 ),
                                 color = textColor.copy(alpha = lineAlpha),
                                 textAlign = textAlign,
