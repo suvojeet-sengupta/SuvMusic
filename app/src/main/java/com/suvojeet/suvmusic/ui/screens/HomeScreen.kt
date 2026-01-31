@@ -111,6 +111,24 @@ fun HomeScreen(
                             )
                         }
 
+                        // Recommended Artists (Last.fm)
+                        if (uiState.recommendedArtists.isNotEmpty()) {
+                            item {
+                                RecommendedArtistsSection(
+                                    artists = uiState.recommendedArtists
+                                )
+                            }
+                        }
+
+                        // Recommended Tracks (Last.fm)
+                        if (uiState.recommendedTracks.isNotEmpty()) {
+                            item {
+                                RecommendedTracksSection(
+                                    tracks = uiState.recommendedTracks
+                                )
+                            }
+                        }
+
                         // Top "Quick Access" Grid (2x3) - Spotify Style
                         if (uiState.recommendations.isNotEmpty()) {
                             item {
@@ -697,3 +715,132 @@ private fun AppFooter(modifier: Modifier = Modifier) {
         }
     }
 }
+
+@Composable
+fun RecommendedArtistsSection(
+    artists: List<com.suvojeet.suvmusic.lastfm.RecommendedArtist>,
+    onArtistClick: (String) -> Unit = {}
+) {
+    if (artists.isEmpty()) return
+
+    Column(modifier = Modifier.padding(vertical = 16.dp)) {
+        HomeSectionHeader(title = "Recommended Artists")
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(artists) { artist ->
+                ArtistCard(artist = artist, onClick = { onArtistClick(artist.name) })
+            }
+        }
+    }
+}
+
+@Composable
+fun RecommendedTracksSection(
+    tracks: List<com.suvojeet.suvmusic.lastfm.RecommendedTrack>,
+    onTrackClick: (com.suvojeet.suvmusic.lastfm.RecommendedTrack) -> Unit = {}
+) {
+    if (tracks.isEmpty()) return
+
+    Column(modifier = Modifier.padding(vertical = 16.dp)) {
+        HomeSectionHeader(title = "Recommended Tracks")
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(tracks) { track ->
+                TrackCard(track = track, onClick = { onTrackClick(track) })
+            }
+        }
+    }
+}
+
+@Composable
+fun ArtistCard(
+    artist: com.suvojeet.suvmusic.lastfm.RecommendedArtist,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    // Get the largest image
+    val imageUrl = artist.image.lastOrNull()?.url ?: ""
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(100.dp)
+            .bounceClick(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(imageUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = artist.name,
+            modifier = Modifier
+                .size(100.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = artist.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+fun TrackCard(
+    track: com.suvojeet.suvmusic.lastfm.RecommendedTrack,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val imageUrl = track.image.lastOrNull()?.url ?: ""
+
+    Column(
+        modifier = Modifier
+            .width(140.dp)
+            .bounceClick(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(imageUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = track.name,
+            modifier = Modifier
+                .size(140.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = track.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = track.artist.name,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+

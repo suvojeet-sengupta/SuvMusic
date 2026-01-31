@@ -78,6 +78,7 @@ data class SettingsUiState(
     // Last.fm
     val lastFmUsername: String? = null,
     val lastFmScrobblingEnabled: Boolean = false,
+    val lastFmRecommendationsEnabled: Boolean = true,
     val lastFmUseNowPlaying: Boolean = true,
     val lastFmSendLikes: Boolean = false,
     val scrobbleDelayPercent: Float = 0.5f,
@@ -324,6 +325,7 @@ class SettingsViewModel @Inject constructor(
             val sponsorBlockEnabled = sessionManager.isSponsorBlockEnabled()
             val lastFmUsername = sessionManager.getLastFmUsername()
             val lastFmScrobblingEnabled = sessionManager.isLastFmScrobblingEnabled()
+            val lastFmRecommendationsEnabled = sessionManager.isLastFmRecommendationsEnabled()
             val lastFmUseNowPlaying = sessionManager.isLastFmUseNowPlayingEnabled()
             val lastFmSendLikes = sessionManager.isLastFmSendLikesEnabled()
             val scrobbleDelayPercent = sessionManager.getScrobbleDelayPercent()
@@ -371,6 +373,7 @@ class SettingsViewModel @Inject constructor(
                     sponsorBlockEnabled = sponsorBlockEnabled,
                     lastFmUsername = lastFmUsername,
                     lastFmScrobblingEnabled = lastFmScrobblingEnabled,
+                    lastFmRecommendationsEnabled = lastFmRecommendationsEnabled,
                     lastFmUseNowPlaying = lastFmUseNowPlaying,
                     lastFmSendLikes = lastFmSendLikes,
                     scrobbleDelayPercent = scrobbleDelayPercent,
@@ -428,6 +431,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setLastFmScrobblingEnabled(enabled)
             _uiState.update { it.copy(lastFmScrobblingEnabled = enabled) }
+        }
+    }
+
+    fun setLastFmRecommendationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setLastFmRecommendationsEnabled(enabled)
+            _uiState.update { it.copy(lastFmRecommendationsEnabled = enabled) }
         }
     }
 

@@ -124,6 +124,16 @@ fun LastFmSettingsScreen(
                             )
                             
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                            LastFmSwitchItem(
+                                icon = Icons.Default.Favorite, // Or another icon like Star or Recommend
+                                title = "Enable Recommendations",
+                                subtitle = "Show recommended artists and songs on Home",
+                                checked = uiState.lastFmRecommendationsEnabled,
+                                onCheckedChange = { viewModel.setLastFmRecommendationsEnabled(it) }
+                            )
+                            
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                             
                             LastFmSwitchItem(
                                 icon = Icons.Default.PlayArrow,

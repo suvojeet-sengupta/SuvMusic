@@ -175,6 +175,52 @@ class LastFmClient @Inject constructor(
             }
         }
     }
+
+    suspend fun getRecommendedArtists(sessionKey: String, limit: Int = 20, page: Int = 1): Result<RecommendedArtistsResponse> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = client.post {
+                lastfmParams(
+                    method = "user.getRecommendedArtists",
+                    sessionKey = sessionKey,
+                    extra = mapOf(
+                        "limit" to limit.toString(),
+                        "page" to page.toString()
+                    )
+                )
+            }
+
+            val responseText = response.bodyAsText()
+            if (responseText.contains("\"error\"")) {
+                val error = json.decodeFromString<LastFmError>(responseText)
+                throw Exception(error.message)
+            }
+
+            json.decodeFromString<RecommendedArtistsResponse>(responseText)
+        }
+    }
+
+    suspend fun getRecommendedTracks(sessionKey: String, limit: Int = 20, page: Int = 1): Result<RecommendedTracksResponse> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = client.post {
+                lastfmParams(
+                    method = "user.getRecommendedTracks",
+                    sessionKey = sessionKey,
+                    extra = mapOf(
+                        "limit" to limit.toString(),
+                        "page" to page.toString()
+                    )
+                )
+            }
+
+            val responseText = response.bodyAsText()
+            if (responseText.contains("\"error\"")) {
+                val error = json.decodeFromString<LastFmError>(responseText)
+                throw Exception(error.message)
+            }
+
+            json.decodeFromString<RecommendedTracksResponse>(responseText)
+        }
+    }
     
     fun getAuthUrl(): String {
         val callback = java.net.URLEncoder.encode("suvmusic://lastfm-auth", "UTF-8")
