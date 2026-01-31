@@ -106,6 +106,8 @@ class ListenTogetherViewModel @Inject constructor(
     fun requestSync() {
         manager.requestSync()
     }
+
+    fun getSessionDuration(): Long = manager.getSessionAge()
 }
 
 data class ListenTogetherUiState(
