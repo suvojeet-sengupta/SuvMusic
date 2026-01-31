@@ -33,7 +33,7 @@
 
   <!-- CTA Buttons -->
   <a href="https://github.com/suvojeet-sengupta/SuvMusic/releases/latest">
-    <img src="https://img.shields.io/badge/Download_APK-v1.0.4-FA2D48?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" />
+    <img src="https://img.shields.io/github/v/release/suvojeet-sengupta/SuvMusic?style=for-the-badge&color=FA2D48&label=DOWNLOAD%20APK&logo=android" alt="Download APK" />
   </a>
   <a href="https://t.me/TechToli">
     <img src="https://img.shields.io/badge/Join_Telegram-Community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram" />
@@ -56,7 +56,7 @@
 
 | **Synced Lyrics** | **Smart Downloads** |
 |:---:|:---:|
-| <img src="https://img.shields.io/badge/Providers-LRCLIB_|_Kugou-orange?style=flat-square" /> | <img src="https://img.shields.io/badge/Storage-Smart_Cache-purple?style=flat-square" /> |
+| <img src="https://img.shields.io/badge/Providers-LRCLIB_%7C_Kugou-orange?style=flat-square" /> | <img src="https://img.shields.io/badge/Storage-Smart_Cache-purple?style=flat-square" /> |
 | Word-by-word synchronized lyrics from **LRCLIB**, **Better Lyrics**, **Simp Music**, and **Kugou**. | Batch download albums and playlists with background service support. |
 
 ### Advanced Functionality
@@ -114,7 +114,7 @@ The project leverages modern Android development standards.
 ## Installation
 
 1.  Navigate to the **[Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases)** page.
-2.  Download the latest `SuvMusic-v1.0.4.apk`.
+2.  Download the latest APK file.
 3.  Install the APK on your Android device (ensure "Unknown Sources" is enabled).
 
 > [!TIP]
