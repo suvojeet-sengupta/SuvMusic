@@ -2561,10 +2561,12 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn()) return@withContext
 
             val payload = """
-                "videoId": "$videoId",
-                "playbackContext": {
-                    "contentPlaybackContext": {
-                        "signatureTimestamp": ${System.currentTimeMillis() / 1000}
+                {
+                    "videoId": "$videoId",
+                    "playbackContext": {
+                        "contentPlaybackContext": {
+                            "signatureTimestamp": ${System.currentTimeMillis() / 1000}
+                        }
                     }
                 }
             """.trimIndent()
