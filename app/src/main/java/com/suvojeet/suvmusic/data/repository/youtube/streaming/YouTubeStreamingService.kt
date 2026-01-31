@@ -115,6 +115,9 @@ class YouTubeStreamingService @Inject constructor(
         }
         
         retryWithBackoff {
+            val videoQuality = sessionManager.getVideoQuality()
+            android.util.Log.d("YouTubeStreaming", "Fetching video stream for $videoId. Quality: $videoQuality (Max: ${videoQuality.maxResolution}p)")
+
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: throw IllegalStateException("YouTube service not found")
@@ -122,20 +125,25 @@ class YouTubeStreamingService @Inject constructor(
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
-            // Get video streams (these include audio in the stream)
+            // Get video streams (these include audio in the stream in MPEG-DASH usually, but NewPipe extracts separate streams too)
+            // We want streams that have BOTH audio and video, or handle muxing (ExoPlayer handles DASH automatically if manifest provided, 
+            // but here we are likely getting direct progressive streams or DASH streams).
+            // NewPipe `videoStreams` usually refers to actual video-only or muxed streams.
+            // For simplicity in this codebase, we assume we are getting a playable stream URL.
             val videoStreams = streamExtractor.videoStreams
             
-            // Filter for streams with resolution <= 720p to reduce bandwidth
-            // and sort by resolution to get best quality
+            val targetResolution = videoQuality.maxResolution
+            
+            // Filter and find best match
             val bestVideoStream = videoStreams
                 .filter { 
                     val height = it.resolution?.replace("p", "")?.toIntOrNull() ?: 0
-                    height <= 720 && height > 0
+                    height <= targetResolution && height > 0
                 }
                 .maxByOrNull { 
                     it.resolution?.replace("p", "")?.toIntOrNull() ?: 0 
                 }
-                ?: videoStreams.firstOrNull() // Fallback to any available stream
+                ?: videoStreams.maxByOrNull { it.resolution?.replace("p", "")?.toIntOrNull() ?: 0 } // Fallback to highest if no match
             
             android.util.Log.d("YouTubeStreaming", "Video stream: ${bestVideoStream?.resolution}")
             
