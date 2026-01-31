@@ -192,6 +192,13 @@ class YouTubeApiClient @Inject constructor(
         val url = "https://music.youtube.com/youtubei/v1/$endpoint"
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: return false
 
+        val cleanedBody = innerBody.trim()
+        val processedBody = if (cleanedBody.startsWith("{") && cleanedBody.endsWith("}")) {
+            cleanedBody.substring(1, cleanedBody.length - 1)
+        } else {
+            cleanedBody
+        }
+
         val fullBody = """
             {
                 "context": {
@@ -202,7 +209,7 @@ class YouTubeApiClient @Inject constructor(
                         "gl": "US"
                     }
                 },
-                ${innerBody.removePrefix("{").removeSuffix("}")}
+                $processedBody
             }
         """.trimIndent()
 
