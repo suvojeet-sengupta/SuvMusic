@@ -543,7 +543,7 @@ class ListenTogetherManager @Inject constructor(
         scope.launch(Dispatchers.Main) {
             isSyncing = true
             try {
-                syncToTrack(currentTrack, isPlaying, position, bypassBuffer)
+                syncToTrack(currentTrack, isPlaying, position, bypassBuffer, queue)
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -553,7 +553,13 @@ class ListenTogetherManager @Inject constructor(
         }
     }
 
-    private fun syncToTrack(track: TrackInfo, shouldPlay: Boolean, position: Long, bypassBuffer: Boolean = false) {
+    private fun syncToTrack(
+        track: TrackInfo, 
+        shouldPlay: Boolean, 
+        position: Long, 
+        bypassBuffer: Boolean = false,
+        queue: List<TrackInfo>? = null
+    ) {
         bufferingTrackId = track.id
         activeSyncJob?.cancel()
         
@@ -582,7 +588,7 @@ class ListenTogetherManager @Inject constructor(
 
                 // 3. Create MediaItem using the best available metadata
                 // If songDetails is available, use it (better metadata), otherwise fallback to track info
-                val mediaItem = if (songDetails != null) {
+                val currentMediaItem = if (songDetails != null) {
                     createMediaItemFromSong(songDetails, streamUrl)
                 } else {
                     createMediaItem(track, streamUrl)
@@ -592,11 +598,30 @@ class ListenTogetherManager @Inject constructor(
                     val p = player ?: return@launch
                     isSyncing = true
                     
-                    p.setMediaItem(mediaItem)
-                    p.prepare()
+                    if (queue != null && queue.isNotEmpty()) {
+                        // Queue Sync Logic
+                        val mediaItems = queue.map { qTrack ->
+                            if (qTrack.id == track.id) {
+                                currentMediaItem
+                            } else {
+                                // Create placeholder for other tracks
+                                createMediaItem(qTrack, null)
+                            }
+                        }
+                        
+                        val startIndex = queue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+                        
+                        p.setMediaItems(mediaItems, startIndex, position)
+                        p.prepare() // Prepare is needed after setMediaItems
+                    } else {
+                        // Single Track Logic
+                        p.setMediaItem(currentMediaItem)
+                        p.prepare()
+                        p.seekTo(position)
+                    }
                     
                     if (bypassBuffer) {
-                        p.seekTo(position)
+                        if (queue == null) p.seekTo(position) // Already set in setMediaItems if queue present
                         if (shouldPlay) p.play() else p.pause()
                         bufferingTrackId = null
                     } else {

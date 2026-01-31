@@ -883,7 +883,7 @@ class SessionManager @Inject constructor(
     }
     
     suspend fun isGaplessPlaybackEnabled(): Boolean = 
-        context.dataStore.data.first()[GAPLESS_PLAYBACK_KEY] ?: false
+        context.dataStore.data.first()[GAPLESS_PLAYBACK_KEY] ?: true
     
     suspend fun setGaplessPlayback(enabled: Boolean) {
         context.dataStore.edit { preferences ->
