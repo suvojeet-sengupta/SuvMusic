@@ -518,6 +518,103 @@ fun RoomContent(
             }
         }
 
+        // Session Info Card
+        item {
+            var sessionDuration by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+            
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                while (true) {
+                    sessionDuration = viewModel.getSessionDuration()
+                    kotlinx.coroutines.delay(1000)
+                }
+            }
+            
+            val durationString = remember(sessionDuration) {
+                val seconds = sessionDuration / 1000
+                val h = seconds / 3600
+                val m = (seconds % 3600) / 60
+                val s = seconds % 60
+                if (h > 0) String.format("%02d:%02d:%02d", h, m, s)
+                else String.format("%02d:%02d", m, s)
+            }
+            
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = dominantColors.onBackground.copy(alpha = 0.05f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Session Time
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "ACTIVE TIME",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = durationString,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = dominantColors.onBackground
+                        )
+                    }
+                    
+                    // Role
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "ROLE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Container(
+                            color = if (uiState.role == RoomRole.HOST) dominantColors.accent.copy(alpha = 0.2f) else dominantColors.onBackground.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = if (uiState.role == RoomRole.HOST) "HOST" else "GUEST",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (uiState.role == RoomRole.HOST) dominantColors.accent else dominantColors.onBackground,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    
+                    // Connection
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "STATUS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color(0xFF4CAF50), CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Live",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = dominantColors.onBackground
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Now Playing Status
         item {
             val track = room.currentTrack
