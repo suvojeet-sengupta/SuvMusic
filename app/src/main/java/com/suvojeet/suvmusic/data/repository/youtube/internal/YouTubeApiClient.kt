@@ -218,8 +218,14 @@ class YouTubeApiClient @Inject constructor(
 
         return try {
             val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
+            if (!response.isSuccessful) {
+                val errorBody = response.body?.string()
+                android.util.Log.e("YouTubeApiClient", "Action failed: $endpoint. Code: ${response.code}, Body: $errorBody")
+                return false
+            }
+            true
         } catch (e: Exception) {
+            android.util.Log.e("YouTubeApiClient", "Action error: $endpoint", e)
             false
         }
     }
