@@ -932,6 +932,7 @@ fun PlayerScreen(
                     showActionsSheet = false
                     selectedSongForMenu = null
                 },
+                dominantColors = dominantColors,
                 isDownloaded = if (menuSong.id == song?.id) playerState.downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED else playerViewModel.isDownloaded(menuSong.id),
                 onToggleFavorite = {
                     if (menuSong.id == song?.id) onToggleLike()
