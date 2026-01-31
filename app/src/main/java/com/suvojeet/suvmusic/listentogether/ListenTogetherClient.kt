@@ -140,6 +140,11 @@ class ListenTogetherClient @Inject constructor(
         fun setInstance(client: ListenTogetherClient) {
             instance = client
         }
+        
+        fun isMetroServer(url: String): Boolean {
+            return url.contains("metroserver", ignoreCase = true) || 
+                   url.contains("meowery.eu", ignoreCase = true)
+        }
     }
     
     init {

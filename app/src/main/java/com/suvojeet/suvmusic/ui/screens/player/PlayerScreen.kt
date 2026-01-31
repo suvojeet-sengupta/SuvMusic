@@ -83,7 +83,7 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
-import com.suvojeet.suvmusic.ui.components.ListenTogetherSheet
+import com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen
 import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
 import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
@@ -1070,7 +1070,7 @@ fun PlayerScreen(
                 enter = slideInVertically { it },
                 exit = slideOutVertically { it }
             ) {
-                ListenTogetherSheet(
+                ListenTogetherScreen(
                     onDismiss = { showListenTogetherSheet = false },
                     dominantColors = dominantColors
                 )
