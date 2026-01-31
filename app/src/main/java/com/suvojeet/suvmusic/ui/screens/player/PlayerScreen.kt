@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -92,6 +93,7 @@ import com.suvojeet.suvmusic.ui.components.SongActionsSheet
 import com.suvojeet.suvmusic.ui.components.SongCreditsSheet
 import com.suvojeet.suvmusic.ui.components.PlaybackSpeedSheet
 import com.suvojeet.suvmusic.ui.components.WaveformSeeker
+import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.screens.LyricsScreen
 import com.suvojeet.suvmusic.ui.screens.player.components.AlbumArtwork
@@ -177,9 +179,14 @@ fun PlayerScreen(
     val context = LocalContext.current
     val playlistUiState by playlistViewModel.uiState.collectAsState()
     val sponsorSegments by playerViewModel.sponsorSegments.collectAsState(initial = emptyList())
+    val lyricsState by playerViewModel.lyricsState.collectAsState()
+    val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
+    val isFullScreen by playerViewModel.isFullScreen.collectAsState()
     
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
+    // Create a local dominantColors variable to hold the extracted colors
+    var dominantColors by remember { mutableStateOf<DominantColors>(DominantColors()) }
     val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
     val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
     val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
@@ -244,10 +251,15 @@ fun PlayerScreen(
     val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     // Dynamic colors from album art
-    val dominantColors = rememberDominantColors(
+    val extractedColors = rememberDominantColors(
         imageUrl = song?.thumbnailUrl,
         isDarkTheme = isAppInDarkTheme
     )
+    
+    // Update the mutable dominantColors variable
+    LaunchedEffect(extractedColors) {
+        dominantColors = extractedColors
+    }
     
     DisposableEffect(Unit) {
         val window = (view.context as Activity).window
@@ -661,19 +673,14 @@ fun PlayerScreen(
                                             )
                                     )
                                     
-                                    // Main Player Box
+                                    // Main Player Box with AndroidView
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .aspectRatio(16f / 9f)
-                                            .shadow(
-                                                elevation = 32.dp,
-                                                shape = RoundedCornerShape(16.dp),
-                                                spotColor = dominantColors.primary.copy(alpha = 0.7f),
-                                                ambientColor = dominantColors.primary.copy(alpha = 0.7f)
-                                            )
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(Color.Black),
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color.Black)
+                                            .clickable { playerViewModel.setFullScreen(true) },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         AndroidView(
@@ -1134,5 +1141,14 @@ fun PlayerScreen(
                 )
             }
         }
+    }
+    
+    // Fullscreen Video Overlay
+    if (isFullScreen) {
+        FullScreenVideoPlayer(
+            viewModel = playerViewModel,
+            dominantColors = dominantColors,
+            onDismiss = { playerViewModel.setFullScreen(false) }
+        )
     }
 }

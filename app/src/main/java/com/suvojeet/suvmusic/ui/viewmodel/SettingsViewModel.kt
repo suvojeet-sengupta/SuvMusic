@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.AudioQuality
+import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
@@ -37,6 +38,7 @@ data class SettingsUiState(
     val userAvatarUrl: String? = null,
     val storedAccounts: List<SessionManager.StoredAccount> = emptyList(),
     val audioQuality: AudioQuality = AudioQuality.HIGH,
+    val videoQuality: VideoQuality = VideoQuality.MEDIUM,
     val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val appTheme: AppTheme = AppTheme.DEFAULT,
@@ -146,6 +148,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.audioQualityFlow.collect { quality ->
                 _uiState.update { it.copy(audioQuality = quality) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.videoQualityFlow.collect { quality ->
+                _uiState.update { it.copy(videoQuality = quality) }
             }
         }
         
@@ -307,6 +315,7 @@ class SettingsViewModel @Inject constructor(
             val userAvatar = sessionManager.getUserAvatar()
             val storedAccounts = sessionManager.getStoredAccounts()
             val audioQuality = sessionManager.getAudioQuality()
+            val videoQuality = sessionManager.getVideoQuality()
             val downloadQuality = sessionManager.getDownloadQuality()
             val themeMode = sessionManager.getThemeMode()
             val appTheme = sessionManager.getAppTheme()
@@ -347,6 +356,7 @@ class SettingsViewModel @Inject constructor(
                     userAvatarUrl = userAvatar,
                     storedAccounts = storedAccounts,
                     audioQuality = audioQuality,
+                    videoQuality = videoQuality,
                     downloadQuality = downloadQuality,
                     themeMode = themeMode,
                     appTheme = appTheme,
@@ -660,6 +670,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAudioQuality(quality)
             _uiState.update { it.copy(audioQuality = quality) }
+        }
+    }
+
+    fun setVideoQuality(quality: VideoQuality) {
+        viewModelScope.launch {
+            sessionManager.setVideoQuality(quality)
+            _uiState.update { it.copy(videoQuality = quality) }
         }
     }
     

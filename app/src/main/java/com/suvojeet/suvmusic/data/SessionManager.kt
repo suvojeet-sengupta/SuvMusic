@@ -18,6 +18,7 @@ import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.AudioQuality
+import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
@@ -77,6 +78,7 @@ class SessionManager @Inject constructor(
         private val GAPLESS_PLAYBACK_KEY = booleanPreferencesKey("gapless_playback")
         private val AUTOMIX_KEY = booleanPreferencesKey("automix")
         private val DOWNLOAD_QUALITY_KEY = stringPreferencesKey("download_quality")
+        private val VIDEO_QUALITY_KEY = stringPreferencesKey("video_quality")
         private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
@@ -470,6 +472,25 @@ class SessionManager @Inject constructor(
     suspend fun setDoubleTapSeekSeconds(seconds: Int) {
         context.dataStore.edit { preferences ->
             preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] = seconds
+        }
+    }
+
+    suspend fun getVideoQuality(): VideoQuality {
+        val qualityName = context.dataStore.data.first()[VIDEO_QUALITY_KEY]
+        return qualityName?.let {
+            try { VideoQuality.valueOf(it) } catch (e: Exception) { VideoQuality.MEDIUM }
+        } ?: VideoQuality.MEDIUM
+    }
+
+    val videoQualityFlow: Flow<VideoQuality> = context.dataStore.data.map { preferences ->
+        preferences[VIDEO_QUALITY_KEY]?.let {
+            try { VideoQuality.valueOf(it) } catch (e: Exception) { VideoQuality.MEDIUM }
+        } ?: VideoQuality.MEDIUM
+    }
+
+    suspend fun setVideoQuality(quality: VideoQuality) {
+        context.dataStore.edit { preferences ->
+            preferences[VIDEO_QUALITY_KEY] = quality.name
         }
     }
     
