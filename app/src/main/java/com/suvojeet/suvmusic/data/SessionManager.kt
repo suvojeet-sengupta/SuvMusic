@@ -155,6 +155,7 @@ class SessionManager @Inject constructor(
         private val SCROBBLE_DELAY_SECONDS_KEY = intPreferencesKey("scrobble_delay_seconds")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
+        private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -710,6 +711,21 @@ class SessionManager @Inject constructor(
     suspend fun setPreferredLanguages(languages: Set<String>) {
         context.dataStore.edit { preferences ->
             preferences[PREFERRED_LANGUAGES_KEY] = languages
+        }
+    }
+    
+    // --- History Sync ---
+
+    suspend fun isYouTubeHistorySyncEnabled(): Boolean = 
+        context.dataStore.data.first()[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] ?: false
+
+    val youtubeHistorySyncEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setYouTubeHistorySyncEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] = enabled
         }
     }
     

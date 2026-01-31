@@ -127,6 +127,12 @@ class PlayerViewModel @Inject constructor(
     val isMiniPlayerDismissed: StateFlow<Boolean> = _isMiniPlayerDismissed.asStateFlow()
     
     private var radioBaseSongId: String? = null
+
+    // History Sync State
+    private var lastSyncedVideoId: String? = null
+    private var currentSongPlayTime: Long = 0
+    private var isHistorySyncEnabled = false
+    private val HISTORY_SYNC_THRESHOLD_MS = 30000L // 30 seconds
     
     init {
         observeCurrentSong()
@@ -134,6 +140,36 @@ class PlayerViewModel @Inject constructor(
         observeDownloadStateConsistency()
         observeQueuePositionForAutoplay()
         observeLyricsProviderSettings()
+        
+        // Observe history sync setting
+        viewModelScope.launch {
+            sessionManager.youtubeHistorySyncEnabledFlow.collect { enabled ->
+                isHistorySyncEnabled = enabled
+            }
+        }
+
+        // Track playback time for history sync
+        viewModelScope.launch {
+            musicPlayer.playerState.collect { state ->
+                 if (state.isPlaying) {
+                    currentSongPlayTime += 1000 // Approximate using update interval (assuming 1s updates or close enough for this)
+                    // We need a more reliable ticker, but adhering to the loop is fine. 
+                    // Actually, the playerState updates might not be frequent enough if they are only on state change.
+                    // Instead, let's use a ticker if playing.
+                 }
+            }
+        }
+        
+        // Better approach: Ticker loop
+        viewModelScope.launch {
+            while(true) {
+                delay(1000)
+                if (playerState.value.isPlaying) {
+                    currentSongPlayTime += 1000
+                    checkAndSyncHistory()
+                }
+            }
+        }
     }
     
     private fun observeDownloadStateConsistency() {
@@ -188,6 +224,19 @@ class PlayerViewModel @Inject constructor(
                         _isMiniPlayerDismissed.value = false // Show mini player when a new song starts
                         checkLikeStatus(song)
                         checkDownloadStatus(song)
+                        checkLikeStatus(song)
+                        checkDownloadStatus(song)
+                        
+                        // Reset sync state for new song
+                        if (song.id != lastSyncedVideoId) {
+                            currentSongPlayTime = 0
+                            // Allow re-sync if it's a new song ID. 
+                            // If it's the same song ID (repeat), we might not want to spam sync.
+                            // But usually repeat implies a new listen. 
+                            // For safety, let's reset lastSyncedVideoId if the song CHANGED.
+                             lastSyncedVideoId = null 
+                        }
+
                         // Reset provider to AUTO on song change unless user specifically locked a provider?
                         // For now, let's keep it persistent or reset. Resetting is safer for "Best Match".
                         _selectedLyricsProvider.value = LyricsProviderType.AUTO
@@ -506,6 +555,26 @@ class PlayerViewModel @Inject constructor(
             } catch (e: Exception) {
                 // Handle error - could show a toast or error state
                 e.printStackTrace()
+            }
+        }
+    }
+
+    private fun checkAndSyncHistory() {
+        if (!isHistorySyncEnabled) return
+        val currentSong = playerState.value.currentSong ?: return
+        
+        // Only sync YouTube songs
+        if (currentSong.source != SongSource.YOUTUBE) return
+        
+        // Avoid duplicate syncs for the same session of the same song
+        if (lastSyncedVideoId == currentSong.id) return
+        
+        // Sync if played enough
+        if (currentSongPlayTime >= HISTORY_SYNC_THRESHOLD_MS) {
+            lastSyncedVideoId = currentSong.id
+            viewModelScope.launch {
+                Log.d("PlayerViewModel", "Triggering history sync for ${currentSong.title}")
+                youTubeRepository.markAsWatched(currentSong.id)
             }
         }
     }
