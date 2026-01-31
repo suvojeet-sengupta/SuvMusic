@@ -78,10 +78,16 @@ fun SongActionsSheet(
     currentSpeed: Float = 1.0f,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
-    onRemoveFromQueue: (() -> Unit)? = null
+    onRemoveFromQueue: (() -> Unit)? = null,
+    dominantColors: DominantColors? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
+    
+    // Determine colors
+    val backgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
+    val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val variantColor = dominantColors?.onBackground?.copy(alpha = 0.7f) ?: MaterialTheme.colorScheme.onSurfaceVariant
     
     // Share function
     val shareSong: () -> Unit = {
@@ -120,7 +126,7 @@ fun SongActionsSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = backgroundColor
         ) {
             Column(
                 modifier = Modifier
@@ -149,13 +155,14 @@ fun SongActionsSheet(
                         Text(
                             text = song.title,
                             style = MaterialTheme.typography.titleMedium,
+                            color = contentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = song.artist,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = variantColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -163,7 +170,7 @@ fun SongActionsSheet(
                             Text(
                                 text = song.album,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                color = variantColor.copy(alpha = 0.7f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -171,7 +178,10 @@ fun SongActionsSheet(
                     }
                 }
                 
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = contentColor.copy(alpha = 0.2f)
+                )
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
@@ -179,12 +189,16 @@ fun SongActionsSheet(
                     ActionItem(
                         icon = Icons.Default.Delete,
                         title = "Delete from downloads",
+                        iconTint = contentColor,
+                        textColor = contentColor,
                         onClick = { onDeleteDownload(); onDismiss() }
                     )
                 } else {
                     ActionItem(
                         icon = Icons.Default.Download,
                         title = "Download",
+                        iconTint = contentColor,
+                        textColor = contentColor,
                         onClick = { onDownload(); onDismiss() }
                     )
                 }
@@ -192,38 +206,48 @@ fun SongActionsSheet(
                 ActionItem(
                     icon = Icons.Default.PlaylistAdd,
                     title = "Add to a Playlist...",
+                    iconTint = contentColor,
+                    textColor = contentColor,
                     onClick = { onAddToPlaylist(); onDismiss() }
                 )
                 
                 ActionItem(
                     icon = Icons.Default.Radio,
                     title = "Start a Radio",
-                    iconTint = MaterialTheme.colorScheme.primary,
+                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.primary,
+                    textColor = contentColor,
                     onClick = { onStartRadio(); onDismiss() }
                 )
 
                 ActionItem(
                     icon = Icons.Filled.Group,
                     title = "Listen With Together",
-                    iconTint = MaterialTheme.colorScheme.secondary,
+                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
+                    textColor = contentColor,
                     onClick = { onListenTogether(); onDismiss() }
                 )
                 
                 ActionItem(
                     icon = Icons.Default.Share,
                     title = "Share Song",
+                    iconTint = contentColor,
+                    textColor = contentColor,
                     onClick = { shareSong(); onDismiss() }
                 )
                 
                 ActionItem(
                     icon = Icons.Default.Info,
                     title = "View Credits",
+                    iconTint = contentColor,
+                    textColor = contentColor,
                     onClick = { onViewCredits(); onDismiss() }
                 )
                 
                 ActionItem(
                     icon = Icons.Default.Comment,
                     title = "View Comments",
+                    iconTint = contentColor,
+                    textColor = contentColor,
                     onClick = { onViewComments(); onDismiss() }
                 )
                 
@@ -231,21 +255,24 @@ fun SongActionsSheet(
                 ActionItem(
                     icon = Icons.Default.Speed,
                     title = "Speed & Tempo $speedLabel",
-                    iconTint = MaterialTheme.colorScheme.secondary,
+                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
+                    textColor = contentColor,
                     onClick = { onPlaybackSpeed(); onDismiss() }
                 )
 
                 ActionItem(
                     icon = Icons.Default.Nightlight,
                     title = "Sleep Timer",
-                    iconTint = MaterialTheme.colorScheme.tertiary,
+                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.tertiary,
+                    textColor = contentColor,
                     onClick = { onSleepTimer(); onDismiss() }
                 )
                 
                 ActionItem(
                     icon = if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
                     title = if (isFavorite) "Remove from Favourites" else "Add to Favourites",
-                    iconTint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    iconTint = if (isFavorite) (if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.primary) else contentColor,
+                    textColor = contentColor,
                     onClick = { onToggleFavorite(); onDismiss() }
                 )
 
@@ -254,17 +281,23 @@ fun SongActionsSheet(
                 ActionItem(
                     icon = Icons.Default.RingVolume,
                     title = "Set as Ringtone",
-                    iconTint = MaterialTheme.colorScheme.secondary,
+                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
+                    textColor = contentColor,
                     onClick = { onSetRingtone(); onDismiss() }
                 )
 
                 if (onMoveUp != null || onMoveDown != null || onRemoveFromQueue != null) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                        color = contentColor.copy(alpha = 0.2f)
+                    )
                     
                     if (onMoveUp != null) {
                         ActionItem(
                             icon = Icons.Default.ArrowUpward,
                             title = "Move Up in Queue",
+                            iconTint = contentColor,
+                            textColor = contentColor,
                             onClick = { onMoveUp(); onDismiss() }
                         )
                     }
@@ -273,6 +306,8 @@ fun SongActionsSheet(
                         ActionItem(
                             icon = Icons.Default.ArrowDownward,
                             title = "Move Down in Queue",
+                            iconTint = contentColor,
+                            textColor = contentColor,
                             onClick = { onMoveDown(); onDismiss() }
                         )
                     }
@@ -282,6 +317,7 @@ fun SongActionsSheet(
                             icon = Icons.Default.Delete,
                             title = "Remove from Queue",
                             iconTint = MaterialTheme.colorScheme.error,
+                            textColor = contentColor,
                             onClick = { onRemoveFromQueue(); onDismiss() }
                         )
                     }
@@ -296,6 +332,7 @@ private fun ActionItem(
     icon: ImageVector,
     title: String,
     iconTint: Color = MaterialTheme.colorScheme.onSurface,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
     Row(
@@ -316,7 +353,8 @@ private fun ActionItem(
         
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            color = textColor
         )
     }
 }
