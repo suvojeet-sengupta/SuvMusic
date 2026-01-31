@@ -51,13 +51,13 @@
 
 | **High-Fidelity Audio** | **Listen Together** |
 |:---:|:---:|
-| <img src="https://img.shields.io/badge/Quality-320kbps-blue?style=flat-square" /> | <img src="https://img.shields.io/badge/Sync-Realtime-green?style=flat-square" /> |
-| Stream AAC/OPUS with loudness normalization and dual-source resolution. | Host rooms to listen with friends in perfect sync, regardless of network conditions. |
+| <img src="https://img.shields.io/badge/Quality-Opus_256kbps-blue?style=flat-square" /> | <img src="https://img.shields.io/badge/Sync-Realtime-green?style=flat-square" /> |
+| Stream high-quality Opus audio up to **256kbps** with loudness normalization and dual-source resolution. | Host rooms to listen with friends in perfect sync, regardless of network conditions. |
 
 | **Synced Lyrics** | **Smart Downloads** |
 |:---:|:---:|
-| <img src="https://img.shields.io/badge/Provider-LRCLIB_&_Genius-orange?style=flat-square" /> | <img src="https://img.shields.io/badge/Storage-Smart_Cache-purple?style=flat-square" /> |
-| Word-by-word synchronized lyrics with millisecond precision. | Batch download albums and playlists with background service support. |
+| <img src="https://img.shields.io/badge/Providers-LRCLIB_|_Kugou-orange?style=flat-square" /> | <img src="https://img.shields.io/badge/Storage-Smart_Cache-purple?style=flat-square" /> |
+| Word-by-word synchronized lyrics from **LRCLIB**, **Better Lyrics**, **Simp Music**, and **Kugou**. | Batch download albums and playlists with background service support. |
 
 ### Advanced Functionality
 
