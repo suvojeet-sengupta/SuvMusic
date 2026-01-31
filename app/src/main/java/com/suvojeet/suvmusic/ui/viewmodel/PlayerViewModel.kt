@@ -125,6 +125,10 @@ class PlayerViewModel @Inject constructor(
     // MiniPlayer Visibility State
     private val _isMiniPlayerDismissed = MutableStateFlow(false)
     val isMiniPlayerDismissed: StateFlow<Boolean> = _isMiniPlayerDismissed.asStateFlow()
+
+    // Fullscreen State
+    private val _isFullScreen = MutableStateFlow(false)
+    val isFullScreen: StateFlow<Boolean> = _isFullScreen.asStateFlow()
     
     private var radioBaseSongId: String? = null
 
@@ -386,6 +390,14 @@ class PlayerViewModel @Inject constructor(
     
     fun toggleVideoMode() {
         musicPlayer.toggleVideoMode()
+    }
+    
+    fun toggleFullScreen() {
+        _isFullScreen.value = !_isFullScreen.value
+    }
+    
+    fun setFullScreen(isFullScreen: Boolean) {
+        _isFullScreen.value = isFullScreen
     }
 
     fun dismissVideoError() {

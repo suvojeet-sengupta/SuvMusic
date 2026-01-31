@@ -1,12 +1,14 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +28,7 @@ import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.AudioQuality
+import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
@@ -76,12 +80,14 @@ fun PlaybackSettingsScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showQualitySheet by remember { mutableStateOf(false) }
+    var showAudioQualitySheet by remember { mutableStateOf(false) }
+    var showVideoQualitySheet by remember { mutableStateOf(false) }
     var showDownloadQualitySheet by remember { mutableStateOf(false) }
     var showMusicSourceSheet by remember { mutableStateOf(false) }
     var showDoubleTapSeekSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val downloadSheetState = rememberModalBottomSheetState()
+    val videoSheetState = rememberModalBottomSheetState()
 
     val musicSourceSheetState = rememberModalBottomSheetState()
     val doubleTapSeekSheetState = rememberModalBottomSheetState()
@@ -299,7 +305,22 @@ fun PlaybackSettingsScreen(
                         contentDescription = null
                     )
                 },
-                modifier = Modifier.clickable { showQualitySheet = true },
+                modifier = Modifier.clickable { showAudioQualitySheet = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
+                headlineContent = { Text("Video Quality") },
+                supportingContent = {
+                    Text(uiState.videoQuality.label)
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.HighQuality,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { showVideoQualitySheet = true },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
@@ -585,10 +606,10 @@ fun PlaybackSettingsScreen(
         }
     }
     
-    // Streaming Quality Bottom Sheet
-    if (showQualitySheet) {
+    // Audio Quality Bottom Sheet
+    if (showAudioQualitySheet) {
         ModalBottomSheet(
-            onDismissRequest = { showQualitySheet = false },
+            onDismissRequest = { showAudioQualitySheet = false },
             sheetState = sheetState
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -606,7 +627,7 @@ fun PlaybackSettingsScreen(
                                 viewModel.setAudioQuality(quality)
                                 scope.launch {
                                     sheetState.hide()
-                                    showQualitySheet = false
+                                    showAudioQualitySheet = false
                                 }
                             }
                             .padding(vertical = 12.dp),
@@ -627,6 +648,60 @@ fun PlaybackSettingsScreen(
     }
     
     // Download Quality Bottom Sheet
+    if (showVideoQualitySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showVideoQualitySheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 0.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            ) {
+                Text(
+                    text = "Video Quality",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+
+                VideoQuality.entries.forEach { quality ->
+                    val isSelected = uiState.videoQuality == quality
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setVideoQuality(quality)
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    showVideoQualitySheet = false
+                                }
+                            }
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = quality.label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.navigationBarsPadding())
+            }
+        }
+    }
+
     if (showDownloadQualitySheet) {
         ModalBottomSheet(
             onDismissRequest = { showDownloadQualitySheet = false },
