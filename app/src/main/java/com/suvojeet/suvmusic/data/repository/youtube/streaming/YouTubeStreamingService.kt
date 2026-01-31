@@ -67,6 +67,10 @@ class YouTubeStreamingService @Inject constructor(
         }
         
         retryWithBackoff {
+            val startTime = System.currentTimeMillis()
+            val audioQuality = sessionManager.getAudioQuality()
+            android.util.Log.d("YouTubeStreaming", "Fetching audio stream for $videoId. Target Quality: $audioQuality")
+
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: throw IllegalStateException("YouTube service not found")
@@ -75,7 +79,7 @@ class YouTubeStreamingService @Inject constructor(
             streamExtractor.fetchPage()
             
             val audioStreams = streamExtractor.audioStreams
-            val targetBitrate = when (sessionManager.getAudioQuality()) {
+            val targetBitrate = when (audioQuality) {
                 com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 64
                 com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 128
                 com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 256
@@ -86,6 +90,9 @@ class YouTubeStreamingService @Inject constructor(
                 .maxByOrNull { it.averageBitrate }
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
             
+            val latency = System.currentTimeMillis() - startTime
+            android.util.Log.d("YouTubeStreaming", "Audio stream fetched in ${latency}ms. Selected bitrate: ${bestAudioStream?.averageBitrate}kbps (Target: $targetBitrate)")
+
             bestAudioStream?.content?.also { url ->
                 // Cache the result
                 streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
@@ -146,6 +153,10 @@ class YouTubeStreamingService @Inject constructor(
      * Get stream URL for downloading with the user's download quality preference.
      * Prioritizes cached playback URL if available (to ensure download success if song is playing).
      */
+    /**
+     * Get stream URL for downloading with the user's download quality preference.
+     * Prioritizes cached playback URL if available (to ensure download success if song is playing).
+     */
     suspend fun getStreamUrlForDownload(videoId: String): String? = withContext(Dispatchers.IO) {
         // 1. Check cache first (audio_ cache from playback)
         // If the user is listening to it, we know this URL works.
@@ -158,6 +169,10 @@ class YouTubeStreamingService @Inject constructor(
         }
         
         retryWithBackoff {
+            val startTime = System.currentTimeMillis()
+            val downloadQuality = sessionManager.getDownloadQuality()
+            android.util.Log.d("YouTubeStreaming", "Fetching download stream for $videoId. Quality: $downloadQuality (Max Bitrate: ${downloadQuality.maxBitrate})")
+            
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: throw IllegalStateException("YouTube service not found")
@@ -166,13 +181,16 @@ class YouTubeStreamingService @Inject constructor(
             streamExtractor.fetchPage()
             
             val audioStreams = streamExtractor.audioStreams
-            val targetBitrate = sessionManager.getDownloadQuality().maxBitrate
+            val targetBitrate = downloadQuality.maxBitrate
             
             val bestAudioStream = audioStreams
                 .filter { it.averageBitrate <= targetBitrate }
                 .maxByOrNull { it.averageBitrate }
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
             
+            val latency = System.currentTimeMillis() - startTime
+            android.util.Log.d("YouTubeStreaming", "Download stream fetched in ${latency}ms. Selected bitrate: ${bestAudioStream?.averageBitrate}kbps")
+
             // Cache this result too, so subsequent playback uses it
             bestAudioStream?.content?.also { url ->
                 streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))

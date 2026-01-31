@@ -87,7 +87,8 @@ data class SettingsUiState(
     // Updates
     val updateChannel: com.suvojeet.suvmusic.data.model.UpdateChannel = com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE,
     // Content Preferences
-    val preferredLanguages: Set<String> = emptySet()
+    val preferredLanguages: Set<String> = emptySet(),
+    val youtubeHistorySyncEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -280,11 +281,17 @@ class SettingsViewModel @Inject constructor(
             }
         }
         
-        viewModelScope.launch {
-            sessionManager.preferredLanguagesFlow.collect { languages ->
-                _uiState.update { it.copy(preferredLanguages = languages) }
+            viewModelScope.launch {
+                sessionManager.preferredLanguagesFlow.collect { languages ->
+                    _uiState.update { it.copy(preferredLanguages = languages) }
+                }
             }
-        }
+
+            viewModelScope.launch {
+                sessionManager.youtubeHistorySyncEnabledFlow.collect { enabled ->
+                    _uiState.update { it.copy(youtubeHistorySyncEnabled = enabled) }
+                }
+            }
 
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -381,7 +388,8 @@ class SettingsViewModel @Inject constructor(
                     scrobbleDelaySeconds = scrobbleDelaySeconds,
 
                     updateChannel = sessionManager.getUpdateChannel(),
-                    preferredLanguages = preferredLanguages
+                    preferredLanguages = preferredLanguages,
+                    youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled()
                 )
             }
         }
@@ -473,6 +481,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setScrobbleDelaySeconds(seconds)
             _uiState.update { it.copy(scrobbleDelaySeconds = seconds) }
+        }
+    }
+
+    fun setYouTubeHistorySyncEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setYouTubeHistorySyncEnabled(enabled)
+            _uiState.update { it.copy(youtubeHistorySyncEnabled = enabled) }
         }
     }
 
