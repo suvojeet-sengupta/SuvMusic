@@ -308,6 +308,44 @@ class PlayerViewModel @Inject constructor(
     fun toggleAutoplay() {
         musicPlayer.toggleAutoplay()
     }
+
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        musicPlayer.moveInQueue(fromIndex, toIndex)
+    }
+
+    fun removeQueueItems(indices: List<Int>) {
+        musicPlayer.removeFromQueue(indices)
+    }
+
+    fun clearQueue() {
+        musicPlayer.clearQueue()
+    }
+
+    fun saveQueueAsPlaylist(title: String, description: String, isPrivate: Boolean, onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val songs = playerState.value.queue
+                if (songs.isEmpty()) {
+                    onComplete(false)
+                    return@launch
+                }
+
+                val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
+                val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
+                
+                if (playlistId != null) {
+                    val videoIds = songs.map { it.id }
+                    val success = youTubeRepository.addSongsToPlaylist(playlistId, videoIds)
+                    onComplete(success)
+                } else {
+                    onComplete(false)
+                }
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Error saving queue as playlist", e)
+                onComplete(false)
+            }
+        }
+    }
     
     fun toggleVideoMode() {
         musicPlayer.toggleVideoMode()
@@ -753,30 +791,34 @@ class PlayerViewModel @Inject constructor(
     
     fun likeCurrentSong() {
         val song = playerState.value.currentSong ?: return
-        val currentLikeState = playerState.value.isLiked
-        
-        // Optimistic update
-        musicPlayer.updateLikeStatus(!currentLikeState)
+        likeSong(song)
+    }
+
+    fun likeSong(song: Song) {
+        val isCurrent = song.id == playerState.value.currentSong?.id
+        val currentLikeState = if (isCurrent) playerState.value.isLiked else false // We don't track like state for all queue items in PlayerState
         
         viewModelScope.launch {
             val rating = if (!currentLikeState) "LIKE" else "INDIFFERENT"
             val success = youTubeRepository.rateSong(song.id, rating)
-            if (!success) {
-                // Revert on failure
-                musicPlayer.updateLikeStatus(currentLikeState)
-            } else {
-                // If we liked it, we should ensure library cache is eventually updated
+            if (success) {
+                if (isCurrent) {
+                    musicPlayer.updateLikeStatus(!currentLikeState)
+                }
+                
                 if (rating == "LIKE") {
-                    // Update local library cache if online
                     if (youTubeRepository.isOnline()) {
                         youTubeRepository.getLikedMusic(fetchAll = false)
                     }
                 } else {
-                    // If we unliked it (INDIFFERENT), remove from local cache immediately
                     youTubeRepository.removeFromLikedCache(song.id)
                 }
             }
         }
+    }
+
+    fun isDownloaded(songId: String): Boolean {
+        return downloadRepository.isDownloaded(songId)
     }
 
     fun dislikeCurrentSong() {
