@@ -148,19 +148,7 @@ class PlayerViewModel @Inject constructor(
             }
         }
 
-        // Track playback time for history sync
-        viewModelScope.launch {
-            musicPlayer.playerState.collect { state ->
-                 if (state.isPlaying) {
-                    currentSongPlayTime += 1000 // Approximate using update interval (assuming 1s updates or close enough for this)
-                    // We need a more reliable ticker, but adhering to the loop is fine. 
-                    // Actually, the playerState updates might not be frequent enough if they are only on state change.
-                    // Instead, let's use a ticker if playing.
-                 }
-            }
-        }
-        
-        // Better approach: Ticker loop
+        // Ticker loop for tracking playback time
         viewModelScope.launch {
             while(true) {
                 delay(1000)
