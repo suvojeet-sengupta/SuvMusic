@@ -1,7 +1,8 @@
-package com.suvojeet.suvmusic.ui.components
+package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,11 +71,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.listentogether.ConnectionState
+import com.suvojeet.suvmusic.listentogether.ListenTogetherClient
 import com.suvojeet.suvmusic.listentogether.RoomRole
+import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel
 
 @Composable
-fun ListenTogetherSheet(
+fun ListenTogetherScreen(
     onDismiss: () -> Unit,
     dominantColors: DominantColors,
     viewModel: ListenTogetherViewModel = hiltViewModel()
@@ -195,8 +198,7 @@ fun SetupContent(
     val uriHandler = LocalUriHandler.current
     
     // Default server check for credits
-    val showCredits = serverUrl.contains("metroserver", ignoreCase = true) || 
-                      serverUrl.contains("meowery.eu", ignoreCase = true)
+    val showCredits = ListenTogetherClient.isMetroServer(serverUrl)
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -844,5 +846,21 @@ fun UserItem(user: com.suvojeet.suvmusic.listentogether.UserInfo, dominantColors
                        else MaterialTheme.colorScheme.error
             )
         }
+    }
+}
+
+@Composable
+fun Container(
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    shape: androidx.compose.ui.graphics.Shape = androidx.compose.ui.graphics.RectangleShape,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .background(color, shape)
+            .clip(shape)
+    ) {
+        content()
     }
 }
