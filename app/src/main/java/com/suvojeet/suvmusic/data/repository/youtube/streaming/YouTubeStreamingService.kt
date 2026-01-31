@@ -136,14 +136,20 @@ class YouTubeStreamingService @Inject constructor(
             
             // Filter and find best match
             val bestVideoStream = videoStreams
-                .filter { 
-                    val height = it.resolution?.replace("p", "")?.toIntOrNull() ?: 0
+                .filter { stream ->
+                    val resolutionString = stream.resolution ?: return@filter false
+                    // Extract numeric height (e.g. "1080p60" -> 1080, "720p" -> 720)
+                    val height = resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
                     height <= targetResolution && height > 0
                 }
-                .maxByOrNull { 
-                    it.resolution?.replace("p", "")?.toIntOrNull() ?: 0 
+                .maxByOrNull { stream ->
+                    val resolutionString = stream.resolution ?: "0"
+                    resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
                 }
-                ?: videoStreams.maxByOrNull { it.resolution?.replace("p", "")?.toIntOrNull() ?: 0 } // Fallback to highest if no match
+                ?: videoStreams.maxByOrNull { stream ->
+                    val resolutionString = stream.resolution ?: "0"
+                    resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                }
             
             android.util.Log.d("YouTubeStreaming", "Video stream: ${bestVideoStream?.resolution}")
             
