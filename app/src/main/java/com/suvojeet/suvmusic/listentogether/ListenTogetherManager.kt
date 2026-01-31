@@ -336,9 +336,17 @@ class ListenTogetherManager @Inject constructor(
             action.trackInfo?.let { track ->
                 syncToTrack(track, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
             } ?: run {
-                // If trackInfo missing but we have ID, we might need a fallback or request full sync
-                Log.w(TAG, "Track mismatch but trackInfo missing in action")
+                // If trackInfo missing but we have ID, try to resolve it
                 if (action.trackId != null) {
+                    Log.d(TAG, "Track info missing, resolving from ID: ${action.trackId}")
+                    val placeholderTrack = TrackInfo(
+                        id = action.trackId,
+                        title = "Loading...",
+                        artist = "Please wait...",
+                        duration = 0L
+                    )
+                    syncToTrack(placeholderTrack, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
+                } else {
                     client.requestSync()
                 }
             }
