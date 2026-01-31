@@ -1199,6 +1199,64 @@ class MusicPlayer @Inject constructor(
     }
 
     /**
+     * Move an item within the queue.
+     */
+    fun moveInQueue(fromIndex: Int, toIndex: Int) {
+        if (fromIndex == toIndex) return
+        val queue = _playerState.value.queue.toMutableList()
+        if (fromIndex !in queue.indices || toIndex !in queue.indices) return
+        
+        val item = queue.removeAt(fromIndex)
+        queue.add(toIndex, item)
+        
+        _playerState.update { it.copy(queue = queue) }
+        
+        mediaController?.moveMediaItem(fromIndex, toIndex)
+    }
+
+    /**
+     * Remove items from the queue.
+     */
+    fun removeFromQueue(indices: List<Int>) {
+        if (indices.isEmpty()) return
+        val sortedIndices = indices.sortedDescending()
+        val queue = _playerState.value.queue.toMutableList()
+        
+        mediaController?.let { controller ->
+            sortedIndices.forEach { index ->
+                if (index in queue.indices) {
+                    queue.removeAt(index)
+                    controller.removeMediaItem(index)
+                }
+            }
+            
+            _playerState.update { 
+                it.copy(
+                    queue = queue,
+                    currentIndex = controller.currentMediaItemIndex,
+                    currentSong = if (controller.currentMediaItemIndex in queue.indices) queue[controller.currentMediaItemIndex] else null
+                ) 
+            }
+        }
+    }
+
+    /**
+     * Clear the current queue.
+     */
+    fun clearQueue() {
+        mediaController?.clearMediaItems()
+        _playerState.update { 
+            it.copy(
+                queue = emptyList(),
+                currentIndex = -1,
+                currentSong = null,
+                isPlaying = false,
+                currentPosition = 0
+            ) 
+        }
+    }
+
+    /**
      * Add songs to be played next (immediately after current song).
      */
     fun playNext(songs: List<Song>) {
