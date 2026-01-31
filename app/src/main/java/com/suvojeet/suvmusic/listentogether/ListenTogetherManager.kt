@@ -53,6 +53,11 @@ class ListenTogetherManager @Inject constructor(
     // Track active sync job to cancel it if a better update arrives
     private var activeSyncJob: Job? = null
 
+    // Drift Correction
+    private var anchorTime: Long = 0
+    private var anchorPosition: Long = 0
+    private var driftCorrectionJob: Job? = null
+
     // Pending sync to apply after buffering completes for guest
     private var pendingSyncState: SyncStatePayload? = null
 
@@ -182,6 +187,7 @@ class ListenTogetherManager @Inject constructor(
                 if (newRole == RoomRole.HOST && !wasHost && player != null) {
                     Log.d(TAG, "Role changed to HOST, starting sync services")
                     startHeartbeat()
+                    stopDriftCorrection()
                     if (!playerListenerRegistered) {
                         player!!.addListener(playerListener)
                         playerListenerRegistered = true
@@ -293,11 +299,58 @@ class ListenTogetherManager @Inject constructor(
             playerListenerRegistered = false
         }
         stopHeartbeat()
+        stopDriftCorrection()
         lastSyncedIsPlaying = null
         lastSyncedTrackId = null
         bufferingTrackId = null
         isSyncing = false
         bufferCompleteReceivedForTrack = null
+    }
+
+    private fun startDriftCorrectionJob() {
+        driftCorrectionJob?.cancel()
+        driftCorrectionJob = scope.launch {
+            while (true) {
+                delay(500) // Check every 500ms
+                val p = player ?: continue
+                if (!p.isPlaying) continue
+                
+                val expectedPosition = anchorPosition + (System.currentTimeMillis() - anchorTime)
+                val currentPosition = p.currentPosition
+                val drift = currentPosition - expectedPosition
+                
+                // Drift thresholds
+                when {
+                    kotlin.math.abs(drift) > 2000 -> {
+                        // Major drift (> 2s): Hard seek
+                        Log.d(TAG, "Major drift ($drift ms), seeking to $expectedPosition")
+                        p.seekTo(expectedPosition)
+                        anchorPosition = expectedPosition
+                        anchorTime = System.currentTimeMillis()
+                    }
+                    drift < -40 -> {
+                        // Behind by > 40ms: Speed up slightly (1.05x)
+                         p.playbackParameters = androidx.media3.common.PlaybackParameters(1.05f)
+                    }
+                    drift > 40 -> {
+                         // Ahead by > 40ms: Slow down slightly (0.95x)
+                         p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f)
+                    }
+                    kotlin.math.abs(drift) < 20 -> {
+                        // Within 20ms: Sync is good, reset to normal speed
+                         if (p.playbackParameters.speed != 1.0f) {
+                             p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f)
+                         }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun stopDriftCorrection() {
+        driftCorrectionJob?.cancel()
+        driftCorrectionJob = null
+        player?.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f)
     }
 
     private fun applyPendingSyncIfReady() {
@@ -310,10 +363,22 @@ class ListenTogetherManager @Inject constructor(
 
         isSyncing = true
         val targetPos = pending.position
+        
+        // Initialize anchors for drift correction upon starting playback
+        anchorPosition = targetPos
+        anchorTime = System.currentTimeMillis()
+
         if (kotlin.math.abs(p.currentPosition - targetPos) > 100) {
             p.seekTo(targetPos)
         }
-        if (pending.isPlaying) p.play() else p.pause()
+        
+        if (pending.isPlaying) {
+            p.play()
+            startDriftCorrectionJob()
+        } else {
+            p.pause()
+            stopDriftCorrection()
+        }
 
         scope.launch {
             delay(200)
@@ -358,12 +423,21 @@ class ListenTogetherManager @Inject constructor(
         try {
             when (action.action) {
                 PlaybackActions.PLAY -> {
-                    val pos = action.position ?: 0L
-                    if (kotlin.math.abs(p.currentPosition - pos) > 100) p.seekTo(pos)
+                    // Latency compensation: Add ~100ms to target position to account for network time
+                    val latencyComp = 100L
+                    val rawPos = action.position ?: 0L
+                    val targetPos = rawPos + latencyComp
+                    
+                    // Update anchors
+                    anchorPosition = targetPos
+                    anchorTime = System.currentTimeMillis()
+
+                    if (kotlin.math.abs(p.currentPosition - targetPos) > 100) p.seekTo(targetPos)
                     
                     // FORCE PLAY even if buffering was "active" logic-wise
                     // We trust the host's command. If we aren't actually ready, ExoPlayer will buffer anyway.
                     p.play()
+                    startDriftCorrectionJob()
                     
                     // Clear buffering state so we don't get stuck
                     bufferingTrackId = null
@@ -372,10 +446,21 @@ class ListenTogetherManager @Inject constructor(
                 PlaybackActions.PAUSE -> {
                     val pos = action.position ?: 0L
                     p.pause()
+                    stopDriftCorrection()
+                    
                     if (kotlin.math.abs(p.currentPosition - pos) > 100) p.seekTo(pos)
                 }
-                PlaybackActions.SEEK -> p.seekTo(action.position ?: 0L)
+                PlaybackActions.SEEK -> {
+                    val pos = action.position ?: 0L
+                    // Update anchors for seek too, assuming we will continue playing
+                    if (p.isPlaying) {
+                        anchorPosition = pos
+                        anchorTime = System.currentTimeMillis()
+                    }
+                    p.seekTo(pos)
+                }
                 PlaybackActions.CHANGE_TRACK -> {
+                    stopDriftCorrection()
                     action.trackInfo?.let { track ->
                          if (action.queue != null && action.queue.isNotEmpty()) {
                             applyPlaybackState(
