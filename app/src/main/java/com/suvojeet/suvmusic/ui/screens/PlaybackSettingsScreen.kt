@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -94,6 +95,34 @@ fun PlaybackSettingsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
      var showOffloadInfo by remember { mutableStateOf(false) }
     var showGaplessInfo by remember { mutableStateOf(false) }
+    var showHistorySyncInfo by remember { mutableStateOf(false) }
+
+    if (showHistorySyncInfo) {
+        AlertDialog(
+            onDismissRequest = { showHistorySyncInfo = false },
+            title = { 
+                Text(
+                    "Sync with YouTube History",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = {
+                Text(
+                    "Enabling this will add songs you play here to your official YouTube Music history.\n\n" +
+                    "• Recommendations: Your YouTube Music recommendations will improve based on what you listen to here.\n" +
+                    "• Resume Watching: Songs may appear in your 'Resume Playing' lists on other YouTube apps.\n\n" +
+                    "Note: This is an experimental feature.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showHistorySyncInfo = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
 
     if (showOffloadInfo) {
         AlertDialog(
@@ -217,6 +246,42 @@ fun PlaybackSettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable { showLanguageDialog = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            ListItem(
+                headlineContent = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Sync with YouTube History")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { showHistorySyncInfo = true },
+                            modifier = Modifier.height(24.dp).width(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.height(16.dp).width(16.dp)
+                            )
+                        }
+                    }
+                },
+                supportingContent = { 
+                    Text("Add played songs to your YouTube watch history") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.youtubeHistorySyncEnabled,
+                        onCheckedChange = { viewModel.setYouTubeHistorySyncEnabled(it) }
+                    )
+                },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             

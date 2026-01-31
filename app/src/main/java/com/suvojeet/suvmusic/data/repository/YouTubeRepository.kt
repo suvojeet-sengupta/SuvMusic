@@ -2550,4 +2550,33 @@ class YouTubeRepository @Inject constructor(
             null
         }
     }
+
+    /**
+     * Mark a song as watched in YouTube Music history.
+     * This uses the internal player endpoint to simulate a playback event.
+     */
+    suspend fun markAsWatched(videoId: String) = withContext(Dispatchers.IO) {
+        try {
+            // Check if logged in first
+            if (!sessionManager.isLoggedIn()) return@withContext
+
+            val payload = """
+                "videoId": "$videoId",
+                "playbackContext": {
+                    "contentPlaybackContext": {
+                        "signatureTimestamp": ${System.currentTimeMillis() / 1000}
+                    }
+                }
+            """.trimIndent()
+
+            val success = apiClient.performAuthenticatedAction("player", payload)
+            if (success) {
+                android.util.Log.d("YouTubeRepository", "Marked as watched: $videoId")
+            } else {
+                android.util.Log.w("YouTubeRepository", "Failed to mark as watched: $videoId")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("YouTubeRepository", "Error marking as watched", e)
+        }
+    }
 }
