@@ -11,6 +11,9 @@ import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import com.suvojeet.suvmusic.data.MusicSource
+import com.suvojeet.suvmusic.lastfm.LastFmRepository
+import com.suvojeet.suvmusic.lastfm.RecommendedArtist
+import com.suvojeet.suvmusic.lastfm.RecommendedTrack
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +25,8 @@ import javax.inject.Inject
 data class HomeUiState(
     val homeSections: List<HomeSection> = emptyList(),
     val recommendations: List<Song> = emptyList(),
+    val recommendedArtists: List<RecommendedArtist> = emptyList(),
+    val recommendedTracks: List<RecommendedTrack> = emptyList(),
     val userAvatarUrl: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -35,7 +40,8 @@ class HomeViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,
-    private val recommendationEngine: RecommendationEngine
+    private val recommendationEngine: RecommendationEngine,
+    private val lastFmRepository: LastFmRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -46,6 +52,7 @@ class HomeViewModel @Inject constructor(
         observeSession()
         observeMusicSource()
         loadRecommendations()
+        loadLastFmRecommendations()
     }
     
     private fun observeSession() {
@@ -215,6 +222,7 @@ class HomeViewModel @Inject constructor(
     fun refresh() {
         loadData(forceRefresh = true)
         loadRecommendations()
+        loadLastFmRecommendations()
     }
     
     private fun loadRecommendations() {
@@ -226,6 +234,42 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 // Silently fail - recommendations are optional
                 _uiState.update { it.copy(recommendations = emptyList()) }
+            }
+        }
+    }
+
+    private fun loadLastFmRecommendations() {
+        viewModelScope.launch {
+            if (!sessionManager.isLastFmRecommendationsEnabled()) {
+                _uiState.update { it.copy(recommendedArtists = emptyList(), recommendedTracks = emptyList()) }
+                return@launch
+            }
+            
+            val sessionKey = sessionManager.getLastFmSessionKey()
+            if (sessionKey != null) {
+                // Fetch Artists
+                launch {
+                    lastFmRepository.getRecommendedArtists(sessionKey)
+                        .onSuccess { response ->
+                            _uiState.update { it.copy(recommendedArtists = response.recommendations.artist) }
+                        }
+                        .onFailure {
+                            _uiState.update { it.copy(recommendedArtists = emptyList()) }
+                        }
+                }
+                
+                // Fetch Tracks
+                launch {
+                    lastFmRepository.getRecommendedTracks(sessionKey)
+                        .onSuccess { response ->
+                            _uiState.update { it.copy(recommendedTracks = response.tracks.track) }
+                        }
+                        .onFailure {
+                             _uiState.update { it.copy(recommendedTracks = emptyList()) }
+                        }
+                }
+            } else {
+                _uiState.update { it.copy(recommendedArtists = emptyList(), recommendedTracks = emptyList()) }
             }
         }
     }

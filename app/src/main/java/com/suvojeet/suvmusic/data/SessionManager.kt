@@ -146,6 +146,7 @@ class SessionManager @Inject constructor(
         private val LAST_FM_SESSION_KEY = stringPreferencesKey("last_fm_session_key")
         private val LAST_FM_USERNAME_KEY = stringPreferencesKey("last_fm_username")
         private val LAST_FM_SCROBBLING_ENABLED_KEY = booleanPreferencesKey("last_fm_scrobbling_enabled")
+        private val LAST_FM_RECOMMENDATIONS_ENABLED_KEY = booleanPreferencesKey("last_fm_recommendations_enabled")
         private val LAST_FM_USE_NOW_PLAYING_KEY = booleanPreferencesKey("last_fm_use_now_playing")
         private val LAST_FM_SEND_LIKES_KEY = booleanPreferencesKey("last_fm_send_likes")
         
@@ -256,6 +257,19 @@ class SessionManager @Inject constructor(
     suspend fun setLastFmScrobblingEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[LAST_FM_SCROBBLING_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun isLastFmRecommendationsEnabled(): Boolean = 
+        context.dataStore.data.first()[LAST_FM_RECOMMENDATIONS_ENABLED_KEY] ?: true
+
+    val lastFmRecommendationsEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[LAST_FM_RECOMMENDATIONS_ENABLED_KEY] ?: true
+    }
+
+    suspend fun setLastFmRecommendationsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_FM_RECOMMENDATIONS_ENABLED_KEY] = enabled
         }
     }
 

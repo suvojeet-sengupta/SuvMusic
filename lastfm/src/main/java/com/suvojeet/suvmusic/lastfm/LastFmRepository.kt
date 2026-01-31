@@ -29,6 +29,14 @@ class LastFmRepository @Inject constructor(
     suspend fun setLoveStatus(sessionKey: String, artist: String, track: String, love: Boolean) = withContext(Dispatchers.IO) {
         lastFmClient.setLoveStatus(sessionKey, artist, track, love)
     }
+
+    suspend fun getRecommendedArtists(sessionKey: String, limit: Int = 20, page: Int = 1) = withContext(Dispatchers.IO) {
+        lastFmClient.getRecommendedArtists(sessionKey, limit, page)
+    }
+
+    suspend fun getRecommendedTracks(sessionKey: String, limit: Int = 20, page: Int = 1) = withContext(Dispatchers.IO) {
+        lastFmClient.getRecommendedTracks(sessionKey, limit, page)
+    }
     
     fun getAuthUrl(): String = lastFmClient.getAuthUrl()
 }
