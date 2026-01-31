@@ -316,6 +316,14 @@ class MusicPlayer @Inject constructor(
                 val index = controller.currentMediaItemIndex
                 var song = _playerState.value.queue.getOrNull(index)
                 
+                // Listen Together Fix:
+                // If the mediaItem ID differs from the queue song ID, it means the player 
+                // was updated externally (e.g. by ListenTogetherManager). 
+                // We should rely on the mediaItem's metadata in this case.
+                if (song != null && song.id != item.mediaId) {
+                     song = null
+                }
+                
                 // Fallback: If song is null (e.g. Listen Together or external source), create from metadata
                 if (song == null && item.mediaMetadata.title != null) {
                     val duration = if (controller.duration != androidx.media3.common.C.TIME_UNSET) controller.duration else 0L
