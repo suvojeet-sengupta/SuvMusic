@@ -116,7 +116,7 @@ class YouTubeRepository @Inject constructor(
                 val name = getRunText(accountHeader.optJSONObject("accountName")) ?: "User"
                 val email = getRunText(accountHeader.optJSONObject("email")) ?: ""
                 
-                val thumbnails = accountHeader.optJSONObject("avatar")
+                val thumbnails = accountHeader.optJSONObject("accountPhoto")
                     ?.optJSONArray("thumbnails")
                 val avatarUrl = thumbnails?.let { 
                     it.optJSONObject(it.length() - 1)?.optString("url") 
