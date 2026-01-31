@@ -28,7 +28,7 @@
   <br />
 
   <p align="center">
-    <strong>SuvMusic</strong> is a premium, open-source music player that bridges the gap between YouTube Music's vast catalog and high-fidelity audio. Experience ad-free streaming, real-time lyrics, and collaborative listening in a beautifully designed Material 3 interface.
+    <strong>SuvMusic</strong> is a premium, open-source music player launched in January 2026. It bridges the gap between YouTube Music's vast catalog and high-fidelity audio. Experience ad-free streaming, real-time lyrics, and collaborative listening in a beautifully designed Material 3 interface.
   </p>
 
   <!-- CTA Buttons -->
@@ -155,7 +155,7 @@ The project leverages modern Android development standards.
 
 ## License
 
-Copyright © 2024-2026 Suvojeet Sengupta.
+Copyright © 2026 Suvojeet Sengupta.
 <br />
 This project is licensed under the **[MIT License](LICENSE)**.
 
