@@ -281,6 +281,7 @@ fun PlayerScreen(
     var showLyrics by remember { mutableStateOf(false) }
     var showCommentsSheet by remember { mutableStateOf(false) }
     var showActionsSheet by remember { mutableStateOf(false) }
+    var selectedSongForMenu by remember { mutableStateOf<com.suvojeet.suvmusic.data.model.Song?>(null) }
     var showCreditsSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showOutputDeviceSheet by remember { mutableStateOf(false) }
@@ -548,7 +549,10 @@ fun PlayerScreen(
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
                                     onDownloadClick = onDownload,
-                                    onMoreClick = { showActionsSheet = true },
+                                    onMoreClick = { 
+                                        selectedSongForMenu = song
+                                        showActionsSheet = true 
+                                    },
                                     onArtistClick = onArtistClick,
                                     onAlbumClick = onAlbumClick,
                                     dominantColors = dominantColors
@@ -726,7 +730,10 @@ fun PlayerScreen(
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
                                     onDownloadClick = onDownload,
-                                    onMoreClick = { showActionsSheet = true },
+                                    onMoreClick = { 
+                                        selectedSongForMenu = song
+                                        showActionsSheet = true 
+                                    },
                                     onArtistClick = onArtistClick,
                                     onAlbumClick = onAlbumClick,
                                     dominantColors = dominantColors
@@ -822,8 +829,22 @@ fun PlayerScreen(
                     onToggleRepeat = onRepeatToggle,
                     onToggleAutoplay = onToggleAutoplay,
                     onToggleLike = onToggleLike,
-                    onMoreClick = { showActionsSheet = true },
+                    onMoreClick = { targetSong -> 
+                        selectedSongForMenu = targetSong
+                        showActionsSheet = true 
+                    },
                     onLoadMore = onLoadMoreRadioSongs,
+                    onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
+                    onRemoveItems = { indices -> playerViewModel.removeQueueItems(indices) },
+                    onSaveAsPlaylist = { title, desc, isPrivate ->
+                        playerViewModel.saveQueueAsPlaylist(title, desc, isPrivate) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Queue saved as playlist", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to save queue", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
                     dominantColors = dominantColors
                 )
             }
@@ -895,19 +916,35 @@ fun PlayerScreen(
         }
 
         // Song Actions Bottom Sheet
-        if (song != null) {
+        val menuSong = selectedSongForMenu ?: song
+        if (menuSong != null) {
             SongActionsSheet(
-                song = song,
+                song = menuSong,
                 isVisible = showActionsSheet,
-                onDismiss = { showActionsSheet = false },
-                isDownloaded = playerState.downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED,
-                onToggleFavorite = onToggleLike,
-                onToggleDislike = onToggleDislike,
-                isFavorite = playerState.isLiked,
-                isDisliked = playerState.isDisliked,
-                onDownload = onDownload,
+                onDismiss = { 
+                    showActionsSheet = false
+                    selectedSongForMenu = null
+                },
+                isDownloaded = if (menuSong.id == song?.id) playerState.downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED else playerViewModel.isDownloaded(menuSong.id),
+                onToggleFavorite = {
+                    if (menuSong.id == song?.id) onToggleLike()
+                    else playerViewModel.likeSong(menuSong)
+                },
+                onToggleDislike = {
+                    if (menuSong.id == song?.id) onToggleDislike()
+                    else playerViewModel.dislikeCurrentSong() // Assuming dislike only for current for now
+                },
+                isFavorite = if (menuSong.id == song?.id) playerState.isLiked else false,
+                isDisliked = if (menuSong.id == song?.id) playerState.isDisliked else false,
+                onDownload = {
+                    if (menuSong.id == song?.id) onDownload()
+                    else {
+                        // Handle download for non-current song
+                        com.suvojeet.suvmusic.service.DownloadService.startDownload(context, menuSong)
+                    }
+                },
                 onDeleteDownload = {
-                    playerViewModel.deleteDownload(song.id)
+                    playerViewModel.deleteDownload(menuSong.id)
                 },
                 onViewCredits = {
                     showActionsSheet = false
@@ -915,7 +952,7 @@ fun PlayerScreen(
                 },
                 onAddToPlaylist = {
                     showActionsSheet = false
-                    playlistViewModel.showAddToPlaylistSheet(song)
+                    playlistViewModel.showAddToPlaylistSheet(menuSong)
                 },
                 onViewComments = {
                     showActionsSheet = false
@@ -927,7 +964,7 @@ fun PlayerScreen(
                 },
                 onStartRadio = {
                     showActionsSheet = false
-                    onStartRadio()
+                    playerViewModel.startRadio(menuSong)
                 },
                 onListenTogether = {
                     showActionsSheet = false
@@ -938,10 +975,17 @@ fun PlayerScreen(
                     showPlaybackSpeedSheet = true
                 },
                 currentSpeed = playerState.playbackSpeed,
+                onMoveUp = if (showQueue && playerState.queue.indexOf(menuSong) > 0) {
+                    { playerViewModel.moveQueueItem(playerState.queue.indexOf(menuSong), playerState.queue.indexOf(menuSong) - 1) }
+                } else null,
+                onMoveDown = if (showQueue && playerState.queue.indexOf(menuSong) < playerState.queue.size - 1 && playerState.queue.indexOf(menuSong) != -1) {
+                    { playerViewModel.moveQueueItem(playerState.queue.indexOf(menuSong), playerState.queue.indexOf(menuSong) + 1) }
+                } else null,
+                onRemoveFromQueue = if (showQueue) {
+                    { playerViewModel.removeQueueItems(listOf(playerState.queue.indexOf(menuSong))) }
+                } else null,
                 onSetRingtone = {
                     showActionsSheet = false
-
-                    if (song.id == null) return@SongActionsSheet
 
                     // Check for WRITE_SETTINGS permission
                     if (!ringtoneViewModel.ringtoneHelper.hasWriteSettingsPermission(context)) {
@@ -967,7 +1011,7 @@ fun PlayerScreen(
 
                         ringtoneViewModel.ringtoneHelper.downloadAndSetAsRingtone(
                             context = context,
-                            song = song,
+                            song = menuSong,
                             onProgress = { progress, message ->
                                 ringtoneProgress = progress
                                 ringtoneStatusMessage = message
@@ -993,12 +1037,14 @@ fun PlayerScreen(
             )
 
             // Song Credits Sheet
-            SongCreditsSheet(
-                song = song,
-                isVisible = showCreditsSheet,
-                onDismiss = { showCreditsSheet = false },
-                audioFormatDisplay = playerState.audioFormatDisplay
-            )
+            if (song != null) {
+                SongCreditsSheet(
+                    song = song,
+                    isVisible = showCreditsSheet,
+                    onDismiss = { showCreditsSheet = false },
+                    audioFormatDisplay = playerState.audioFormatDisplay
+                )
+            }
 
             // Add to Playlist Sheet
             if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -73,7 +75,10 @@ fun SongActionsSheet(
     onStartRadio: () -> Unit = {},
     onListenTogether: () -> Unit = {},
     onPlaybackSpeed: () -> Unit = {},
-    currentSpeed: Float = 1.0f
+    currentSpeed: Float = 1.0f,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
+    onRemoveFromQueue: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
@@ -252,6 +257,35 @@ fun SongActionsSheet(
                     iconTint = MaterialTheme.colorScheme.secondary,
                     onClick = { onSetRingtone(); onDismiss() }
                 )
+
+                if (onMoveUp != null || onMoveDown != null || onRemoveFromQueue != null) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    
+                    if (onMoveUp != null) {
+                        ActionItem(
+                            icon = Icons.Default.ArrowUpward,
+                            title = "Move Up in Queue",
+                            onClick = { onMoveUp(); onDismiss() }
+                        )
+                    }
+                    
+                    if (onMoveDown != null) {
+                        ActionItem(
+                            icon = Icons.Default.ArrowDownward,
+                            title = "Move Down in Queue",
+                            onClick = { onMoveDown(); onDismiss() }
+                        )
+                    }
+                    
+                    if (onRemoveFromQueue != null) {
+                        ActionItem(
+                            icon = Icons.Default.Delete,
+                            title = "Remove from Queue",
+                            iconTint = MaterialTheme.colorScheme.error,
+                            onClick = { onRemoveFromQueue(); onDismiss() }
+                        )
+                    }
+                }
             }
         }
     }
