@@ -441,6 +441,28 @@ fun PlaybackSettingsScreen(
             )
 
             ListItem(
+                headlineContent = { Text("Play during calls") },
+                supportingContent = { 
+                    Text("Keep music playing during Google Meet or phone calls") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.ignoreAudioFocusDuringCalls,
+                        onCheckedChange = { 
+                            viewModel.setIgnoreAudioFocusDuringCalls(it)
+                        }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
                 headlineContent = { Text("Volume Boost") },
                 supportingContent = { 
                     Text("Boost volume beyond 100%. Use with caution.") 
