@@ -566,6 +566,17 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Clear only WebView cookies to allow signing into a new account.
+     * Does NOT clear the current app session, so previous account remains active if login is cancelled.
+     */
+    fun clearWebViewCookies() {
+        viewModelScope.launch {
+            android.webkit.CookieManager.getInstance().removeAllCookies(null)
+            android.webkit.CookieManager.getInstance().flush()
+        }
+    }
     
     fun removeAccount(email: String) {
         viewModelScope.launch {
