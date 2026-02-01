@@ -20,15 +20,17 @@ class DiscordManager @Inject constructor(
     private var discordRPC: DiscordRPC? = null
     private var token: String? = null
     private var isEnabled: Boolean = false
+    private var useDetails: Boolean = false
     
     private val scope = CoroutineScope(Dispatchers.IO)
     
     private val _connectionStatus = MutableStateFlow("Disconnected")
     val connectionStatus: StateFlow<String> = _connectionStatus.asStateFlow()
 
-    fun initialize(userToken: String, enabled: Boolean) {
+    fun initialize(userToken: String, enabled: Boolean, details: Boolean) {
         token = userToken
         isEnabled = enabled
+        useDetails = details
         
         if (isEnabled && !userToken.isBlank()) {
             connect()
@@ -37,10 +39,11 @@ class DiscordManager @Inject constructor(
         }
     }
     
-    fun updateSettings(userToken: String, enabled: Boolean) {
+    fun updateSettings(userToken: String, enabled: Boolean, details: Boolean) {
         val wasConnected = discordRPC != null && discordRPC!!.isWebSocketConnected()
         token = userToken
         isEnabled = enabled
+        useDetails = details
         
         if (isEnabled && !userToken.isBlank()) {
             if (!wasConnected || discordRPC == null) {
@@ -91,10 +94,16 @@ class DiscordManager @Inject constructor(
              val startTime = System.currentTimeMillis() - currentPosition
              // val endTime = startTime + duration // Optional, creates a countdown
             
+            val (finalDetails, finalState) = if (useDetails) {
+                 title to artist
+            } else {
+                 artist to title
+            }
+
             discordRPC?.updateActivity(
                 name = "SuvMusic",
-                state = artist,
-                details = title,
+                state = finalState,
+                details = finalDetails,
                 imageUrl = "https:$imageUrl", // Ensure https prefix if needed, mostly cover art utils handle this.
                 largeText = "Listening to $title",
                 startTime = startTime,
@@ -103,10 +112,17 @@ class DiscordManager @Inject constructor(
         } else {
              // Clear activity or show paused?
              // Usually showing "Paused" or just clearing relative timestamps is enough.
+             
+            val (finalDetails, finalState) = if (useDetails) {
+                 "$title (Paused)" to artist
+            } else {
+                 artist to "$title (Paused)"
+            }
+
              discordRPC?.updateActivity(
                 name = "SuvMusic",
-                state = artist,
-                details = "$title (Paused)",
+                state = finalState,
+                details = finalDetails,
                 imageUrl = "https:$imageUrl",
                 largeText = "Paused: $title"
             )
