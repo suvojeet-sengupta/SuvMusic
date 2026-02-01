@@ -290,7 +290,7 @@ class PlayerViewModel @Inject constructor(
             discordManager.updatePresence(
                 title = song.title,
                 artist = song.artist,
-                imageUrl = song.albumArtUrl ?: "",
+                imageUrl = song.thumbnailUrl ?: "",
                 isPlaying = isPlaying,
                 duration = song.duration * 1000, 
                 currentPosition = position
