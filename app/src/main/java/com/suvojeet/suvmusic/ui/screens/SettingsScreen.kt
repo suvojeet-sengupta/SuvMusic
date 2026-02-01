@@ -323,6 +323,31 @@ fun SettingsScreen(
                 }
 
 
+                // --- Bluetooth Section ---
+                item {
+                    SettingsSectionTitle("Bluetooth")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        SettingsSwitchItem(
+                            icon = Icons.Default.HeadsetMic,
+                            title = "Bluetooth Autoplay",
+                            subtitle = "Resume when connecting to devices",
+                            checked = uiState.bluetoothAutoplayEnabled,
+                            onCheckedChange = { scope.launch { viewModel.setBluetoothAutoplayEnabled(it) } }
+                        )
+
+                        HorizontalDivider()
+
+                        SettingsSwitchItem(
+                            icon = Icons.Default.Lyrics,
+                            title = "Announce Songs",
+                            subtitle = "Speak title when song changes (TTS)",
+                            checked = uiState.speakSongDetailsEnabled,
+                            onCheckedChange = { scope.launch { viewModel.setSpeakSongDetailsEnabled(it) } }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
                 // --- Player & Audio ---
                 item {
                     SettingsSectionTitle("Player & Audio")
