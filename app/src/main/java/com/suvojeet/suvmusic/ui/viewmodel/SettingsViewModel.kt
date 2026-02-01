@@ -94,7 +94,11 @@ data class SettingsUiState(
     val ignoreAudioFocusDuringCalls: Boolean = false,
     // Bluetooth
     val bluetoothAutoplayEnabled: Boolean = false,
-    val speakSongDetailsEnabled: Boolean = false
+    val bluetoothAutoplayEnabled: Boolean = false,
+    val speakSongDetailsEnabled: Boolean = false,
+    // Discord RPC
+    val discordRpcEnabled: Boolean = false,
+    val discordToken: String = "" // Empty means not set
 )
 
 @HiltViewModel
@@ -127,6 +131,9 @@ class SettingsViewModel @Inject constructor(
 
     // Last.fm
     val lastFmUsername = sessionManager.lastFmUsernameFlow
+    
+    // Discord RPC
+    val discordRpcEnabled = sessionManager.discordRpcEnabledFlow
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -323,6 +330,18 @@ class SettingsViewModel @Inject constructor(
                 }
             }
 
+            viewModelScope.launch {
+                sessionManager.discordRpcEnabledFlow.collect { enabled ->
+                    _uiState.update { it.copy(discordRpcEnabled = enabled) }
+                }
+            }
+            
+            viewModelScope.launch {
+                sessionManager.discordTokenFlow.collect { token ->
+                    _uiState.update { it.copy(discordToken = token) }
+                }
+            }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -372,7 +391,10 @@ class SettingsViewModel @Inject constructor(
             val preferredLanguages = sessionManager.getPreferredLanguages()
             val ignoreAudioFocusDuringCalls = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
             val bluetoothAutoplayEnabled = sessionManager.isBluetoothAutoplayEnabled()
+            val bluetoothAutoplayEnabled = sessionManager.isBluetoothAutoplayEnabled()
             val speakSongDetailsEnabled = sessionManager.isSpeakSongDetailsEnabled()
+            val discordRpcEnabled = sessionManager.isDiscordRpcEnabled()
+            val discordToken = sessionManager.getDiscordToken()
 
 
             _uiState.update { 
@@ -427,7 +449,9 @@ class SettingsViewModel @Inject constructor(
                     youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled(),
                     ignoreAudioFocusDuringCalls = ignoreAudioFocusDuringCalls,
                     bluetoothAutoplayEnabled = bluetoothAutoplayEnabled,
-                    speakSongDetailsEnabled = speakSongDetailsEnabled
+                    speakSongDetailsEnabled = speakSongDetailsEnabled,
+                    discordRpcEnabled = discordRpcEnabled,
+                    discordToken = discordToken
                 )
             }
         }
@@ -547,6 +571,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setSpeakSongDetailsEnabled(enabled)
             _uiState.update { it.copy(speakSongDetailsEnabled = enabled) }
+        }
+    }
+    
+    fun setDiscordRpcEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setDiscordRpcEnabled(enabled)
+            _uiState.update { it.copy(discordRpcEnabled = enabled) }
+        }
+    }
+    
+    fun setDiscordToken(token: String) {
+        viewModelScope.launch {
+            sessionManager.setDiscordToken(token)
+            _uiState.update { it.copy(discordToken = token) }
         }
     }
 

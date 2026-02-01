@@ -162,6 +162,9 @@ class SessionManager @Inject constructor(
         
         private val BLUETOOTH_AUTOPLAY_ENABLED_KEY = booleanPreferencesKey("bluetooth_autoplay_enabled")
         private val SPEAK_SONG_DETAILS_ENABLED_KEY = booleanPreferencesKey("speak_song_details_enabled")
+        
+        private val DISCORD_RPC_ENABLED_KEY = booleanPreferencesKey("discord_rpc_enabled")
+        private val DISCORD_TOKEN_KEY = stringPreferencesKey("discord_token")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -792,6 +795,36 @@ class SessionManager @Inject constructor(
     suspend fun setSpeakSongDetailsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[SPEAK_SONG_DETAILS_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- Discord RPC ---
+
+    suspend fun isDiscordRpcEnabled(): Boolean =
+        context.dataStore.data.first()[DISCORD_RPC_ENABLED_KEY] ?: false
+
+    val discordRpcEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DISCORD_RPC_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setDiscordRpcEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[DISCORD_RPC_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun getDiscordToken(): String =
+        encryptedPrefs.getString("discord_token_enc", null) ?: ""
+
+    val discordTokenFlow: Flow<String> = context.dataStore.data.map { 
+        getDiscordToken() // This might not be reactive for encrypted prefs change, but usually fine
+    }
+
+    suspend fun setDiscordToken(token: String) {
+        encryptedPrefs.edit().putString("discord_token_enc", token).apply()
+        // We trigger a datastore update to notify listeners, even if we store in encrypted prefs
+        context.dataStore.edit { preferences ->
+            preferences[DISCORD_TOKEN_KEY] = "stored" 
         }
     }
     
