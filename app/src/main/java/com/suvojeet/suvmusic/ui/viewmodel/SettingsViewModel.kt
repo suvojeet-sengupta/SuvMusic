@@ -97,7 +97,8 @@ data class SettingsUiState(
     val speakSongDetailsEnabled: Boolean = false,
     // Discord RPC
     val discordRpcEnabled: Boolean = false,
-    val discordToken: String = "" // Empty means not set
+    val discordToken: String = "", // Empty means not set
+    val discordUseDetails: Boolean = false
 )
 
 @HiltViewModel
@@ -340,6 +341,12 @@ class SettingsViewModel @Inject constructor(
                     _uiState.update { it.copy(discordToken = token) }
                 }
             }
+            
+            viewModelScope.launch {
+                sessionManager.discordUseDetailsFlow.collect { enabled ->
+                    _uiState.update { it.copy(discordUseDetails = enabled) }
+                }
+            }
 
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -393,6 +400,7 @@ class SettingsViewModel @Inject constructor(
             val speakSongDetailsEnabled = sessionManager.isSpeakSongDetailsEnabled()
             val discordRpcEnabled = sessionManager.isDiscordRpcEnabled()
             val discordToken = sessionManager.getDiscordToken()
+            val discordUseDetails = sessionManager.isDiscordUseDetailsEnabled()
 
 
             _uiState.update { 
@@ -449,7 +457,8 @@ class SettingsViewModel @Inject constructor(
                     bluetoothAutoplayEnabled = bluetoothAutoplayEnabled,
                     speakSongDetailsEnabled = speakSongDetailsEnabled,
                     discordRpcEnabled = discordRpcEnabled,
-                    discordToken = discordToken
+                    discordToken = discordToken,
+                    discordUseDetails = discordUseDetails
                 )
             }
         }
@@ -583,6 +592,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setDiscordToken(token)
             _uiState.update { it.copy(discordToken = token) }
+        }
+    }
+    
+    fun setDiscordUseDetails(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setDiscordUseDetails(enabled)
+            _uiState.update { it.copy(discordUseDetails = enabled) }
         }
     }
 

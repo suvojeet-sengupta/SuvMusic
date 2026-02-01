@@ -316,7 +316,8 @@ fun NavGraph(
                 onMiscClick = { navController.navigate(Destination.Misc.route) },
                 onCreditsClick = { navController.navigate(Destination.Credits.route) },
                 onLastFmClick = { navController.navigate(Destination.LastFmLogin.route) },
-                onSponsorBlockClick = { navController.navigate(Destination.SponsorBlockSettings.route) }
+                onSponsorBlockClick = { navController.navigate(Destination.SponsorBlockSettings.route) },
+                onDiscordClick = { navController.navigate(Destination.DiscordSettings.route) }
             )
         }
         
@@ -587,6 +588,12 @@ fun NavGraph(
                     android.widget.Toast.makeText(navController.context, "Connected as $username", android.widget.Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(Destination.DiscordSettings.route) {
+            com.suvojeet.suvmusic.ui.screens.settings.DiscordSettingsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 
