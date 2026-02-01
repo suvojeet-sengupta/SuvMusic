@@ -171,20 +171,31 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val token = sessionManager.getDiscordToken()
             val enabled = sessionManager.isDiscordRpcEnabled()
-            discordManager.initialize(token, enabled)
+            val useDetails = sessionManager.isDiscordUseDetailsEnabled()
+            discordManager.initialize(token, enabled, useDetails)
             
             // Listen for setting changes
             launch {
                 sessionManager.discordRpcEnabledFlow.collect { newEnabled ->
                     val currToken = sessionManager.getDiscordToken()
-                    discordManager.updateSettings(currToken, newEnabled)
+                    val currUseDetails = sessionManager.isDiscordUseDetailsEnabled()
+                    discordManager.updateSettings(currToken, newEnabled, currUseDetails)
                     updateDiscordPresence()
                 }
             }
             launch {
                 sessionManager.discordTokenFlow.collect { newToken ->
                     val currEnabled = sessionManager.isDiscordRpcEnabled()
-                    discordManager.updateSettings(newToken, currEnabled)
+                    val currUseDetails = sessionManager.isDiscordUseDetailsEnabled()
+                    discordManager.updateSettings(newToken, currEnabled, currUseDetails)
+                    updateDiscordPresence()
+                }
+            }
+            launch {
+                sessionManager.discordUseDetailsFlow.collect { newUseDetails ->
+                    val currToken = sessionManager.getDiscordToken()
+                    val currEnabled = sessionManager.isDiscordRpcEnabled()
+                    discordManager.updateSettings(currToken, currEnabled, newUseDetails)
                     updateDiscordPresence()
                 }
             }

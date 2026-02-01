@@ -28,6 +28,7 @@ sealed class Destination(val route: String) {
     data object Misc : Destination("misc")
     data object LyricsProviders : Destination("lyrics_providers")
     data object SponsorBlockSettings : Destination("sponsor_block_settings")
+    data object DiscordSettings : Destination("discord_settings")
     data object Credits : Destination("credits")
 
     data class Playlist(

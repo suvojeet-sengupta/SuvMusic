@@ -165,6 +165,7 @@ class SessionManager @Inject constructor(
         
         private val DISCORD_RPC_ENABLED_KEY = booleanPreferencesKey("discord_rpc_enabled")
         private val DISCORD_TOKEN_KEY = stringPreferencesKey("discord_token")
+        private val DISCORD_USE_DETAILS_KEY = booleanPreferencesKey("discord_use_details")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -825,6 +826,19 @@ class SessionManager @Inject constructor(
         // We trigger a datastore update to notify listeners, even if we store in encrypted prefs
         context.dataStore.edit { preferences ->
             preferences[DISCORD_TOKEN_KEY] = "stored" 
+        }
+    }
+    
+    suspend fun isDiscordUseDetailsEnabled(): Boolean =
+        context.dataStore.data.first()[DISCORD_USE_DETAILS_KEY] ?: false
+
+    val discordUseDetailsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DISCORD_USE_DETAILS_KEY] ?: false
+    }
+
+    suspend fun setDiscordUseDetails(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[DISCORD_USE_DETAILS_KEY] = enabled
         }
     }
     
