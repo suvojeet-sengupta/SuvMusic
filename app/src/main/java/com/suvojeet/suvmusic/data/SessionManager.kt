@@ -158,6 +158,7 @@ class SessionManager @Inject constructor(
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
         private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
+        private val IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY = booleanPreferencesKey("ignore_audio_focus_during_calls")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -747,6 +748,19 @@ class SessionManager @Inject constructor(
     suspend fun setYouTubeHistorySyncEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun isIgnoreAudioFocusDuringCallsEnabled(): Boolean =
+        context.dataStore.data.first()[IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY] ?: false
+
+    val ignoreAudioFocusDuringCallsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY] ?: false
+    }
+
+    suspend fun setIgnoreAudioFocusDuringCallsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY] = enabled
         }
     }
     
