@@ -40,6 +40,7 @@ import androidx.mediarouter.media.MediaRouteSelector
 import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.util.MusicHapticsManager
+import com.suvojeet.suvmusic.util.TTSManager
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,7 +59,8 @@ class MusicPlayer @Inject constructor(
     private val listeningHistoryRepository: ListeningHistoryRepository,
     private val cache: androidx.media3.datasource.cache.Cache,
     @com.suvojeet.suvmusic.di.PlayerDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
-    private val musicHapticsManager: MusicHapticsManager
+    private val musicHapticsManager: MusicHapticsManager,
+    private val ttsManager: TTSManager
 ) {
     
     // ... (existing properties)
@@ -133,6 +135,16 @@ class MusicPlayer @Inject constructor(
                 scope.launch {
                     delay(1000)
                     updateAvailableDevices()
+
+                    // Bluetooth Autoplay
+                    if (intent?.action == android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED) {
+                        if (sessionManager.isBluetoothAutoplayEnabled()) {
+                            // Check if we have media to play
+                            if (_playerState.value.queue.isNotEmpty() && !isPlaying()) {
+                                play()
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -364,6 +376,14 @@ class MusicPlayer @Inject constructor(
                     scope.launch {
                         sessionManager.addToRecentlyPlayed(song)
                         
+                        // Speak Song Details (TTS) - Only if Bluetooth is connected
+                        if (sessionManager.isSpeakSongDetailsEnabled()) {
+                            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                            if (audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn) {
+                                ttsManager.speak("Now playing ${song.title} by ${song.artist}")
+                            }
+                        }
+
                         // Track previous song if it was playing
                         val prevSong = _playerState.value.currentSong
                         if (prevSong != null && currentSongStartTime > 0) {
