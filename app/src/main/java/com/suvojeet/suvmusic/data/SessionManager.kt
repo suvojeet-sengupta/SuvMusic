@@ -159,6 +159,9 @@ class SessionManager @Inject constructor(
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
         private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
         private val IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY = booleanPreferencesKey("ignore_audio_focus_during_calls")
+        
+        private val BLUETOOTH_AUTOPLAY_ENABLED_KEY = booleanPreferencesKey("bluetooth_autoplay_enabled")
+        private val SPEAK_SONG_DETAILS_ENABLED_KEY = booleanPreferencesKey("speak_song_details_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -761,6 +764,34 @@ class SessionManager @Inject constructor(
     suspend fun setIgnoreAudioFocusDuringCallsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY] = enabled
+        }
+    }
+
+    // --- Bluetooth & Hands-Free ---
+
+    suspend fun isBluetoothAutoplayEnabled(): Boolean =
+        context.dataStore.data.first()[BLUETOOTH_AUTOPLAY_ENABLED_KEY] ?: false
+
+    val bluetoothAutoplayEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[BLUETOOTH_AUTOPLAY_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setBluetoothAutoplayEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[BLUETOOTH_AUTOPLAY_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun isSpeakSongDetailsEnabled(): Boolean =
+        context.dataStore.data.first()[SPEAK_SONG_DETAILS_ENABLED_KEY] ?: false
+
+    val speakSongDetailsEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SPEAK_SONG_DETAILS_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setSpeakSongDetailsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[SPEAK_SONG_DETAILS_ENABLED_KEY] = enabled
         }
     }
     

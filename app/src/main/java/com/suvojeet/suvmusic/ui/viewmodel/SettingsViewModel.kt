@@ -91,7 +91,10 @@ data class SettingsUiState(
     // Content Preferences
     val preferredLanguages: Set<String> = emptySet(),
     val youtubeHistorySyncEnabled: Boolean = false,
-    val ignoreAudioFocusDuringCalls: Boolean = false
+    val ignoreAudioFocusDuringCalls: Boolean = false,
+    // Bluetooth
+    val bluetoothAutoplayEnabled: Boolean = false,
+    val speakSongDetailsEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -308,6 +311,18 @@ class SettingsViewModel @Inject constructor(
                 }
             }
 
+            viewModelScope.launch {
+                sessionManager.bluetoothAutoplayEnabledFlow.collect { enabled ->
+                    _uiState.update { it.copy(bluetoothAutoplayEnabled = enabled) }
+                }
+            }
+
+            viewModelScope.launch {
+                sessionManager.speakSongDetailsEnabledFlow.collect { enabled ->
+                    _uiState.update { it.copy(speakSongDetailsEnabled = enabled) }
+                }
+            }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -356,6 +371,8 @@ class SettingsViewModel @Inject constructor(
             val scrobbleDelaySeconds = sessionManager.getScrobbleDelaySeconds()
             val preferredLanguages = sessionManager.getPreferredLanguages()
             val ignoreAudioFocusDuringCalls = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
+            val bluetoothAutoplayEnabled = sessionManager.isBluetoothAutoplayEnabled()
+            val speakSongDetailsEnabled = sessionManager.isSpeakSongDetailsEnabled()
 
 
             _uiState.update { 
@@ -408,7 +425,9 @@ class SettingsViewModel @Inject constructor(
                     updateChannel = sessionManager.getUpdateChannel(),
                     preferredLanguages = preferredLanguages,
                     youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled(),
-                    ignoreAudioFocusDuringCalls = ignoreAudioFocusDuringCalls
+                    ignoreAudioFocusDuringCalls = ignoreAudioFocusDuringCalls,
+                    bluetoothAutoplayEnabled = bluetoothAutoplayEnabled,
+                    speakSongDetailsEnabled = speakSongDetailsEnabled
                 )
             }
         }
@@ -514,6 +533,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setIgnoreAudioFocusDuringCallsEnabled(enabled)
             _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
+        }
+    }
+
+    fun setBluetoothAutoplayEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setBluetoothAutoplayEnabled(enabled)
+            _uiState.update { it.copy(bluetoothAutoplayEnabled = enabled) }
+        }
+    }
+
+    fun setSpeakSongDetailsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setSpeakSongDetailsEnabled(enabled)
+            _uiState.update { it.copy(speakSongDetailsEnabled = enabled) }
         }
     }
 
