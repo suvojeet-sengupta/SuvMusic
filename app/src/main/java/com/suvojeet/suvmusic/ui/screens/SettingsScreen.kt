@@ -117,6 +117,7 @@ fun SettingsScreen(
     val sheetState = rememberModalBottomSheetState()
     
     var showUpdateChannelDialog by remember { mutableStateOf(false) }
+    var showDiscordTokenDialog by remember { mutableStateOf(false) }
     
     // Floating Player
     val context = LocalContext.current
@@ -384,14 +385,31 @@ fun SettingsScreen(
                         )
                         
                         HorizontalDivider()
-
                         SettingsNavigationItem(
-
                             icon = Icons.Default.FastForward,
                             title = "SponsorBlock",
                             subtitle = "Skip non-music segments",
                             onClick = onSponsorBlockClick
                         )
+
+                        HorizontalDivider()
+
+                        SettingsSwitchItem(
+                            icon = Icons.Default.GraphicEq,
+                            title = "Discord Activity",
+                            subtitle = "Show playing song on Discord",
+                            checked = uiState.discordRpcEnabled,
+                            onCheckedChange = { viewModel.setDiscordRpcEnabled(it) }
+                        )
+
+                        if (uiState.discordRpcEnabled) {
+                            SettingsNavigationItem(
+                                icon = Icons.Default.Tune,
+                                title = "Discord Token",
+                                subtitle = if (uiState.discordToken.isNotBlank()) "Token Set" else "Set Token",
+                                onClick = { showDiscordTokenDialog = true }
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -706,6 +724,40 @@ fun SettingsScreen(
             onDismiss = { viewModel.resetUpdateState() }
         )
         else -> {}
+    }
+
+    // Discord Token Dialog
+    if (showDiscordTokenDialog) {
+        var tempToken by remember { mutableStateOf(uiState.discordToken) }
+        AlertDialog(
+            onDismissRequest = { showDiscordTokenDialog = false },
+            title = { Text("Discord User Token") },
+            text = {
+                Column {
+                    Text("Enter your Discord User Token to enable Rich Presence.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.OutlinedTextField(
+                        value = tempToken,
+                        onValueChange = { tempToken = it },
+                        label = { Text("Token") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setDiscordToken(tempToken)
+                        showDiscordTokenDialog = false
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscordTokenDialog = false }) { Text("Cancel") }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
     }
 }
 

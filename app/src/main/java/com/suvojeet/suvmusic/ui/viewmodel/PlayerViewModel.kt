@@ -44,6 +44,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import javax.inject.Inject
 
+import com.suvojeet.suvmusic.discord.DiscordManager
+
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val musicPlayer: MusicPlayer,
@@ -55,6 +57,7 @@ class PlayerViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val recommendationEngine: RecommendationEngine,
     private val sponsorBlockRepository: SponsorBlockRepository,
+    private val discordManager: DiscordManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -163,6 +166,29 @@ class PlayerViewModel @Inject constructor(
                 }
             }
         }
+
+        // Initialize Discord Manager with saved settings
+        viewModelScope.launch {
+            val token = sessionManager.getDiscordToken()
+            val enabled = sessionManager.isDiscordRpcEnabled()
+            discordManager.initialize(token, enabled)
+            
+            // Listen for setting changes
+            launch {
+                sessionManager.discordRpcEnabledFlow.collect { newEnabled ->
+                    val currToken = sessionManager.getDiscordToken()
+                    discordManager.updateSettings(currToken, newEnabled)
+                    updateDiscordPresence()
+                }
+            }
+            launch {
+                sessionManager.discordTokenFlow.collect { newToken ->
+                    val currEnabled = sessionManager.isDiscordRpcEnabled()
+                    discordManager.updateSettings(newToken, currEnabled)
+                    updateDiscordPresence()
+                }
+            }
+        }
     }
     
     private fun observeDownloadStateConsistency() {
@@ -235,13 +261,43 @@ class PlayerViewModel @Inject constructor(
                         _selectedLyricsProvider.value = LyricsProviderType.AUTO
                         fetchLyrics(song.id)
                         fetchComments(song.id)
+                        
+                        updateDiscordPresence()
                     } else {
                         _lyricsState.value = null
                         _commentsState.value = null
+                        updateDiscordPresence()
                     }
                 }
         }
+
+        // Observe play/pause state for Discord
+        viewModelScope.launch {
+            playerState.map { it.isPlaying }
+                .distinctUntilChanged()
+                .collect { isPlaying ->
+                    updateDiscordPresence()
+                }
+        }
     }
+    
+    private fun updateDiscordPresence() {
+        val song = playerState.value.currentSong
+        val isPlaying = playerState.value.isPlaying
+        val position = playerState.value.currentPosition
+        
+        if (song != null) {
+            discordManager.updatePresence(
+                title = song.title,
+                artist = song.artist,
+                imageUrl = song.albumArtUrl ?: "",
+                isPlaying = isPlaying,
+                duration = song.duration * 1000, 
+                currentPosition = position
+            )
+        }
+    }
+
     
     private fun observeDownloads() {
         viewModelScope.launch {
