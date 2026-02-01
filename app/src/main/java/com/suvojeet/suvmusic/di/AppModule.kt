@@ -129,9 +129,10 @@ object AppModule {
         listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository,
         cache: androidx.media3.datasource.cache.Cache,
         @PlayerDataSource dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
-        musicHapticsManager: com.suvojeet.suvmusic.util.MusicHapticsManager
+        musicHapticsManager: com.suvojeet.suvmusic.util.MusicHapticsManager,
+        ttsManager: com.suvojeet.suvmusic.util.TTSManager
     ): MusicPlayer {
-        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory, musicHapticsManager)
+        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory, musicHapticsManager, ttsManager)
     }
     @Provides
     @Singleton

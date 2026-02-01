@@ -140,7 +140,7 @@ class MusicPlayer @Inject constructor(
                     if (intent?.action == android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED) {
                         if (sessionManager.isBluetoothAutoplayEnabled()) {
                             // Check if we have media to play
-                            if (_playerState.value.queue.isNotEmpty() && !isPlaying()) {
+                            if (_playerState.value.queue.isNotEmpty() && !_playerState.value.isPlaying) {
                                 play()
                             }
                         }
