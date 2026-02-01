@@ -43,7 +43,7 @@ class DiscordRPC(
     private var connected = false
     private var client: HttpClient = HttpClient {
         install(WebSockets) {
-            pingInterval = 20_000
+            pingIntervalMillis = 20_000
         }
     }
     private val json = Json {

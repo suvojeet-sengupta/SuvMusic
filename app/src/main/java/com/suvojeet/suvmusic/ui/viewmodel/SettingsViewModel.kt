@@ -94,7 +94,6 @@ data class SettingsUiState(
     val ignoreAudioFocusDuringCalls: Boolean = false,
     // Bluetooth
     val bluetoothAutoplayEnabled: Boolean = false,
-    val bluetoothAutoplayEnabled: Boolean = false,
     val speakSongDetailsEnabled: Boolean = false,
     // Discord RPC
     val discordRpcEnabled: Boolean = false,
@@ -390,7 +389,6 @@ class SettingsViewModel @Inject constructor(
             val scrobbleDelaySeconds = sessionManager.getScrobbleDelaySeconds()
             val preferredLanguages = sessionManager.getPreferredLanguages()
             val ignoreAudioFocusDuringCalls = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
-            val bluetoothAutoplayEnabled = sessionManager.isBluetoothAutoplayEnabled()
             val bluetoothAutoplayEnabled = sessionManager.isBluetoothAutoplayEnabled()
             val speakSongDetailsEnabled = sessionManager.isSpeakSongDetailsEnabled()
             val discordRpcEnabled = sessionManager.isDiscordRpcEnabled()
