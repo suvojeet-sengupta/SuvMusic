@@ -21,8 +21,24 @@ class RecommendationEngine @Inject constructor(
      * Returns empty list if insufficient data.
      */
     suspend fun getPersonalizedRecommendations(limit: Int = 20): List<Song> {
-        // Try to get recommendations from the last played song (YouTube Radio/Up Next)
-        val lastPlayed = listeningHistoryDao.getRecentlyPlayed(1).first().firstOrNull()
+        // 1. If logged in, prioritize YouTube Music's official recommendations (FEmusic_home)
+        if (youTubeRepository.isLoggedIn()) {
+            try {
+                val officialRecs = youTubeRepository.getRecommendations()
+                if (officialRecs.isNotEmpty()) {
+                    return officialRecs.take(limit)
+                }
+            } catch (e: Exception) {
+                // Fallback to other methods
+            }
+        }
+
+        // 2. Try to get recommendations from the last played song (YouTube Radio/Up Next)
+        val lastPlayed = try {
+            listeningHistoryDao.getRecentlyPlayed(1).first().firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
         
         if (lastPlayed != null) {
             try {
@@ -38,7 +54,7 @@ class RecommendationEngine @Inject constructor(
             }
         }
         
-        // Fallback: If no history or radio failed, try "My Supermix" (RTM)
+        // 3. Fallback: "My Supermix" (RTM) - Available if user has some YT Music history
         try {
             val supermix = youTubeRepository.getPlaylist("RTM")
             if (supermix.songs.isNotEmpty()) {
@@ -48,9 +64,9 @@ class RecommendationEngine @Inject constructor(
             // Ignore
         }
         
-        // Final fallback: Trending
+        // 4. Final fallback: Trending/Hits
         return try {
-            youTubeRepository.search("trending music 2024", YouTubeRepository.FILTER_SONGS).take(limit)
+            youTubeRepository.search("top hits 2026", YouTubeRepository.FILTER_SONGS).take(limit)
         } catch (e: Exception) {
             emptyList()
         }
