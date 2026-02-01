@@ -256,8 +256,34 @@ class YouTubeRepository @Inject constructor(
         }
         try {
             val jsonResponse = fetchInternalApi("FEmusic_home")
+            
+            // Try to find "Quick picks" or "Listen again" section specifically for the home grid
+            val sections = parseHomeSectionsFromInternalJson(jsonResponse)
+            val quickPicks = sections.find { 
+                it.title.contains("Quick picks", ignoreCase = true) || 
+                it.title.contains("Listen again", ignoreCase = true) ||
+                it.title.contains("Your favorites", ignoreCase = true) ||
+                it.title.contains("Your top", ignoreCase = true) ||
+                it.title.contains("Mixed for you", ignoreCase = true) ||
+                it.title.contains("Made for you", ignoreCase = true)
+            }
+            
+            if (quickPicks != null) {
+                val songs = quickPicks.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+                if (songs.isNotEmpty()) return@withContext songs
+            }
+            
+            // Fallback to any section that has songs
+            val firstSongSection = sections.find { it.items.any { item -> item is HomeItem.SongItem } }
+            if (firstSongSection != null) {
+                val songs = firstSongSection.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+                if (songs.isNotEmpty()) return@withContext songs
+            }
+
+            // Fallback to generic parsing if sections didn't work
             val items = parseSongsFromInternalJson(jsonResponse)
             if (items.isNotEmpty()) return@withContext items
+            
             getLikedMusic()
         } catch (e: Exception) {
             search("trending music 2024", FILTER_SONGS)
