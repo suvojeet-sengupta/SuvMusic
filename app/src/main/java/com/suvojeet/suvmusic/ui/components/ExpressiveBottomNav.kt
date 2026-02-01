@@ -70,7 +70,8 @@ fun ExpressiveBottomNav(
     )
     
     // Spotify-style solid/transparent dark background
-    val backgroundColor = Color.Black.copy(alpha = alpha)
+    // Use MaterialTheme.colorScheme.surface to adapt to light/dark mode
+    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = alpha)
     
     Box(
         modifier = modifier
@@ -106,9 +107,9 @@ private fun GlassNavItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     
-    // Static colors for Spotify look
-    val selectedColor = Color.White
-    val unselectedColor = Color(0xFFB3B3B3) // Light gray
+    // Adaptive colors based on theme
+    val selectedColor = MaterialTheme.colorScheme.onSurface
+    val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
     
     val contentColor = if (isSelected) selectedColor else unselectedColor
     
