@@ -94,6 +94,7 @@ class MusicPlayerService : MediaLibraryService() {
             .build()
             
         val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
+        val ignoreAudioFocus = kotlinx.coroutines.runBlocking { sessionManager.isIgnoreAudioFocusDuringCallsEnabled() }
         
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory))
@@ -103,7 +104,7 @@ class MusicPlayerService : MediaLibraryService() {
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                     .setUsage(C.USAGE_MEDIA)
                     .build(),
-                true
+                !ignoreAudioFocus
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
@@ -162,6 +163,19 @@ class MusicPlayerService : MediaLibraryService() {
                 Triple(normEnabled, boostEnabled, boostAmount)
             }.collect { (normEnabled, boostEnabled, boostAmount) ->
                  updateAudioEffects(normEnabled, boostEnabled, boostAmount, animate = true)
+            }
+        }
+
+        serviceScope.launch {
+            sessionManager.ignoreAudioFocusDuringCallsFlow.collect { ignoreFocus ->
+                val player = mediaLibrarySession?.player as? ExoPlayer ?: return@collect
+                player.setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                        .setUsage(C.USAGE_MEDIA)
+                        .build(),
+                    !ignoreFocus // handleAudioFocus is false when ignoreFocus is true
+                )
             }
         }
 

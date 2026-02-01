@@ -90,7 +90,8 @@ data class SettingsUiState(
     val updateChannel: com.suvojeet.suvmusic.data.model.UpdateChannel = com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE,
     // Content Preferences
     val preferredLanguages: Set<String> = emptySet(),
-    val youtubeHistorySyncEnabled: Boolean = false
+    val youtubeHistorySyncEnabled: Boolean = false,
+    val ignoreAudioFocusDuringCalls: Boolean = false
 )
 
 @HiltViewModel
@@ -301,6 +302,12 @@ class SettingsViewModel @Inject constructor(
                 }
             }
 
+            viewModelScope.launch {
+                sessionManager.ignoreAudioFocusDuringCallsFlow.collect { enabled ->
+                    _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
+                }
+            }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -348,6 +355,7 @@ class SettingsViewModel @Inject constructor(
             val scrobbleMinDuration = sessionManager.getScrobbleMinDuration()
             val scrobbleDelaySeconds = sessionManager.getScrobbleDelaySeconds()
             val preferredLanguages = sessionManager.getPreferredLanguages()
+            val ignoreAudioFocusDuringCalls = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
 
 
             _uiState.update { 
@@ -399,7 +407,8 @@ class SettingsViewModel @Inject constructor(
 
                     updateChannel = sessionManager.getUpdateChannel(),
                     preferredLanguages = preferredLanguages,
-                    youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled()
+                    youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled(),
+                    ignoreAudioFocusDuringCalls = ignoreAudioFocusDuringCalls
                 )
             }
         }
@@ -498,6 +507,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setYouTubeHistorySyncEnabled(enabled)
             _uiState.update { it.copy(youtubeHistorySyncEnabled = enabled) }
+        }
+    }
+
+    fun setIgnoreAudioFocusDuringCalls(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setIgnoreAudioFocusDuringCallsEnabled(enabled)
+            _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
         }
     }
 
