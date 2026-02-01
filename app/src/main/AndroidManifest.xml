@@ -33,6 +33,10 @@
     <!-- Vibration permission for Music Haptics -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Permission to modify system settings for Set as Ringtone -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" 
+        tools:ignore="ProtectedPermissions" />
+
     <!-- Package visibility for Android 11+ -->
     <queries>
         <!-- For YouTube deep links -->
