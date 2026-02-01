@@ -59,6 +59,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -91,6 +94,7 @@ import kotlinx.coroutines.launch
 /**
  * Settings screen with Material 3 design and organized categories.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -109,7 +113,9 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
-    var showAccountsDialog by remember { mutableStateOf(false) }
+    var showAccountsSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    
     var showUpdateChannelDialog by remember { mutableStateOf(false) }
     
     // Floating Player
@@ -217,7 +223,7 @@ fun SettingsScreen(
                             SettingsActionItem(
                                 icon = Icons.Default.SwitchAccount,
                                 title = "Switch Account",
-                                onClick = { showAccountsDialog = true }
+                                onClick = { showAccountsSheet = true }
                             )
                             
                             SettingsActionItem(
@@ -491,66 +497,115 @@ fun SettingsScreen(
         )
     }
 
-    // Accounts Dialog
-    if (showAccountsDialog) {
-        AlertDialog(
-            onDismissRequest = { showAccountsDialog = false },
-            icon = { Icon(Icons.Default.SwitchAccount, null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("Switch Account") },
-            text = {
-                Column {
-                    Text("Select an account:", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    if (uiState.storedAccounts.isNotEmpty()) {
-                        uiState.storedAccounts.forEach { account ->
-                            ListItem(
-                                headlineContent = { Text(account.name, maxLines = 1) },
-                                supportingContent = { Text(account.email, maxLines = 1) },
-                                leadingContent = {
-                                    AsyncImage(
-                                        model = account.avatarUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(32.dp).clip(CircleShape)
-                                    )
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        viewModel.switchAccount(account)
-                                        showAccountsDialog = false
+    // Accounts Bottom Sheet
+    if (showAccountsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAccountsSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp) // Add padding for navigation bar/gesture area
+            ) {
+                Text(
+                    text = "Switch Account",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+
+                if (uiState.storedAccounts.isNotEmpty()) {
+                    uiState.storedAccounts.forEach { account ->
+                        val isCurrent = account.email == (uiState.storedAccounts.firstOrNull { it.email == "current" }?.email ?: "")
+                        // Note: current detection might need better logic if "current" isn't explicitly marked in list,
+                        // usually the first one or we match cookies.
+                        // Assuming list contains all saved accounts.
+                        
+                        ListItem(
+                            headlineContent = { 
+                                Text(
+                                    account.name, 
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal 
+                                )
+                            },
+                            supportingContent = { Text(account.email) },
+                            leadingContent = {
+                                AsyncImage(
+                                    model = account.avatarUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .border(
+                                            if (isCurrent) 2.dp else 0.dp, 
+                                            MaterialTheme.colorScheme.primary, 
+                                            CircleShape
+                                        )
+                                )
+                            },
+                            trailingContent = {
+                                Icon(
+                                    Icons.Default.Close,
+                                    "Remove",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .clickable { viewModel.removeAccount(account.email) }
+                                        .padding(8.dp)
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.switchAccount(account)
+                                    // Scope needed to hide sheet properly
+                                    scope.launch { sheetState.hide() }.invokeOnCompletion { 
+                                        showAccountsSheet = false 
                                     }
-                                    .padding(vertical = 4.dp),
-                                trailingContent = {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        "Remove",
-                                        modifier = Modifier.clickable { viewModel.removeAccount(account.email) }
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                }
+                                .padding(horizontal = 8.dp), // Inner padding
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                ListItem(
+                    headlineContent = { Text("Add another account", fontWeight = FontWeight.Medium) },
+                    leadingContent = {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Person, 
+                                null, 
+                                modifier = Modifier.padding(10.dp),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    TextButton(
-                        onClick = {
-                            viewModel.prepareAddAccount()
-                            showAccountsDialog = false
-                            onLoginClick()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Person, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Add another account")
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showAccountsDialog = false }) { Text("Cancel") } },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            // Fix: Don't logout immediately! Only clear WebView cookies.
+                            viewModel.clearWebViewCookies()
+                            
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { 
+                                showAccountsSheet = false 
+                                onLoginClick()
+                            }
+                        }
+                        .padding(horizontal = 8.dp),
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+            }
+        }
     }
 
     // Update Channel Dialog
