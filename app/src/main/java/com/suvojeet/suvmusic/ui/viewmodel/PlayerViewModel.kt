@@ -14,6 +14,7 @@ import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
@@ -390,6 +391,10 @@ class PlayerViewModel @Inject constructor(
     
     fun toggleVideoMode() {
         musicPlayer.toggleVideoMode()
+    }
+
+    fun setVideoQuality(quality: VideoQuality) {
+        musicPlayer.setVideoQuality(quality)
     }
     
     fun toggleFullScreen() {
