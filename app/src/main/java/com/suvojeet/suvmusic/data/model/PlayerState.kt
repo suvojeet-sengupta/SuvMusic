@@ -14,6 +14,7 @@ data class PlayerState(
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val audioQuality: AudioQuality = AudioQuality.HIGH,
+    val videoQuality: VideoQuality = VideoQuality.HIGH,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLiked: Boolean = false,
