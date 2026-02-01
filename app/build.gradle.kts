@@ -170,12 +170,11 @@ dependencies {
     implementation(libs.jsoup)
     
     // Ktor (HTTP Client for lyrics providers)
-    // Ktor (HTTP Client for lyrics providers)
-    implementation("io.ktor:ktor-client-core:3.4.0")
-    implementation("io.ktor:ktor-client-cio:3.4.0")
-    implementation("io.ktor:ktor-client-content-negotiation:3.4.0")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.0")
-    implementation("io.ktor:ktor-client-websockets:3.4.0")
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.websockets)
     
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")

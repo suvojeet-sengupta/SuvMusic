@@ -1,14 +1,21 @@
 package com.suvojeet.suvmusic.discord
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonContentPolymorphicSerializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 // OpCodes
+@Serializable(with = OpCodeSerializer::class)
 enum class OpCode(val value: Int) {
     DISPATCH(0),
     HEARTBEAT(1),
@@ -157,9 +164,15 @@ data class Secrets(
 data class Metadata(
     @SerialName("button_urls") val buttonUrls: List<String>? = null
 )
+object OpCodeSerializer : KSerializer<OpCode> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("OpCode", PrimitiveKind.INT)
 
-object OpCodeSerializer: JsonContentPolymorphicSerializer<OpCode>(OpCode::class){
-    override fun selectDeserializer(element: JsonElement): SerializationStrategy<OpCode> {
-        return super.selectDeserializer(element)
+    override fun serialize(encoder: Encoder, value: OpCode) {
+        encoder.encodeInt(value.value)
+    }
+
+    override fun deserialize(decoder: Decoder): OpCode {
+        val v = decoder.decodeInt()
+        return OpCode.entries.find { it.value == v } ?: OpCode.DISPATCH
     }
 }
