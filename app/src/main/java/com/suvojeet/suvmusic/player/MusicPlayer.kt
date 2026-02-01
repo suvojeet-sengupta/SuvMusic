@@ -18,6 +18,7 @@ import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -98,6 +99,12 @@ class MusicPlayer @Inject constructor(
     private var deviceReceiver: android.content.BroadcastReceiver? = null
     
     init {
+        // Initialize video quality from settings
+        scope.launch {
+            val quality = sessionManager.getVideoQuality()
+            _playerState.update { it.copy(videoQuality = quality) }
+        }
+        
         connectToService()
         
         // Setup sleep timer callback
@@ -529,7 +536,7 @@ class MusicPlayer @Inject constructor(
                                 val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
                                     resolvedVideoIds.put(song.id, it) 
                                 }
-                                youTubeRepository.getVideoStreamUrl(videoId)
+                                youTubeRepository.getVideoStreamUrl(videoId, _playerState.value.videoQuality)
                             } else {
                                 youTubeRepository.getStreamUrl(song.id)
                             }
@@ -557,15 +564,17 @@ class MusicPlayer @Inject constructor(
                 return
             }
             
+            val cacheKey = if (_playerState.value.isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" else song.id
+
             // Start aggressive caching in background
             if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
-                startAggressiveCaching(song.id, streamUrl)
+                startAggressiveCaching(cacheKey, streamUrl)
             }
 
             val newMediaItem = MediaItem.Builder()
                 .setUri(streamUrl)
                 .setMediaId(song.id)
-                .setCustomCacheKey(song.id) // CRITICAL: Stable cache key
+                .setCustomCacheKey(cacheKey) // CRITICAL: Stable cache key
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(song.title)
@@ -612,6 +621,24 @@ class MusicPlayer @Inject constructor(
             }
         } catch (e: Exception) {
             _playerState.update { it.copy(error = e.message, isLoading = false) }
+        }
+    }
+
+    fun setVideoQuality(quality: VideoQuality) {
+        if (_playerState.value.videoQuality == quality) return
+        
+        _playerState.update { it.copy(videoQuality = quality) }
+        
+        // Save to session and reload if needed
+        scope.launch {
+            sessionManager.setVideoQuality(quality)
+            
+            // If currently in video mode, reload the stream
+            val currentSong = _playerState.value.currentSong
+            if (_playerState.value.isVideoMode && currentSong != null) {
+                 // Force re-resolution with new quality
+                 resolveAndPlayCurrentItem(currentSong, _playerState.value.currentIndex)
+            }
         }
     }
 

@@ -104,19 +104,21 @@ class YouTubeStreamingService @Inject constructor(
      * Get video stream URL for video playback mode.
      * Returns the best quality video stream that includes audio (for combined playback).
      */
-    suspend fun getVideoStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): String? = withContext(Dispatchers.IO) {
+        val targetQuality = quality ?: sessionManager.getVideoQuality()
+        
         // Check cache first for fast playback
-        val cacheKey = "video_$videoId"
+        // Include quality in cache key to separate different resolutions
+        val cacheKey = "video_${videoId}_${targetQuality.name}"
         streamCache.get(cacheKey)?.let { cached ->
             if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
-                android.util.Log.d("YouTubeStreaming", "Video stream URL from cache: $videoId")
+                android.util.Log.d("YouTubeStreaming", "Video stream URL from cache: $videoId (${targetQuality.name})")
                 return@withContext cached.url
             }
         }
         
         retryWithBackoff {
-            val videoQuality = sessionManager.getVideoQuality()
-            android.util.Log.d("YouTubeStreaming", "Fetching video stream for $videoId. Quality: $videoQuality (Max: ${videoQuality.maxResolution}p)")
+            android.util.Log.d("YouTubeStreaming", "Fetching video stream for $videoId. Quality: $targetQuality (Max: ${targetQuality.maxResolution}p)")
 
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
@@ -132,7 +134,7 @@ class YouTubeStreamingService @Inject constructor(
             // For simplicity in this codebase, we assume we are getting a playable stream URL.
             val videoStreams = streamExtractor.videoStreams
             
-            val targetResolution = videoQuality.maxResolution
+            val targetResolution = targetQuality.maxResolution
             
             // Filter and find best match
             val bestVideoStream = videoStreams

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -76,6 +77,7 @@ fun FullScreenVideoPlayer(
     
     // Auto-hide controls logic
     var areControlsVisible by remember { mutableStateOf(true) }
+    var showQualityDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(areControlsVisible, playerState.isPlaying) {
         if (areControlsVisible && playerState.isPlaying) {
@@ -111,8 +113,44 @@ fun FullScreenVideoPlayer(
         }
     }
     
+
     BackHandler {
         onDismiss()
+    }
+
+    if (showQualityDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showQualityDialog = false },
+            title = { Text("Video Quality") },
+            text = {
+                Column {
+                    com.suvojeet.suvmusic.data.model.VideoQuality.entries.forEach { quality ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setVideoQuality(quality)
+                                    showQualityDialog = false
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.RadioButton(
+                                selected = playerState.videoQuality == quality,
+                                onClick = null // Handled by Row
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = quality.label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showQualityDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 
     Box(
@@ -213,6 +251,14 @@ fun FullScreenVideoPlayer(
                         )
                     }
                     
+                    IconButton(onClick = { showQualityDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Quality",
+                            tint = Color.White
+                        )
+                    }
+
                     IconButton(onClick = {
                         val activity = context as? Activity
                         if (isLandscape) {
