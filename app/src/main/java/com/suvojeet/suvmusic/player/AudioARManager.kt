@@ -48,15 +48,28 @@ class AudioARManager @Inject constructor(
     private var smoothedBalance = 0f
     private val alpha = 0.1f // low-pass filter factor
 
+    private var isPlaying = false
+    private var isSettingsEnabled = false
+
     init {
         scope.launch {
             sessionManager.audioArEnabledFlow.collect { enabled ->
-                if (enabled) {
-                    start()
-                } else {
-                    stop()
-                }
+                isSettingsEnabled = enabled
+                updateSensorState()
             }
+        }
+    }
+
+    fun setPlaying(playing: Boolean) {
+        isPlaying = playing
+        updateSensorState()
+    }
+
+    private fun updateSensorState() {
+        if (isSettingsEnabled && isPlaying) {
+            start()
+        } else {
+            stop()
         }
     }
 
