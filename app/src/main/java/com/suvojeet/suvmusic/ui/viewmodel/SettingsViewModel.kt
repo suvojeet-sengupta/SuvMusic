@@ -100,12 +100,7 @@ data class SettingsUiState(
     val discordToken: String = "", // Empty means not set
     val discordUseDetails: Boolean = false,
     val privacyModeEnabled: Boolean = false,
-    val audioArEnabled: Boolean = false,
-    
-    // Hi-Res Audio
-    val hiResOutputEnabled: Boolean = false,
-    val force24BitEnabled: Boolean = false,
-    val audioSampleRate: Int = 0 // 0 = Auto
+    val audioArEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -373,24 +368,6 @@ class SettingsViewModel @Inject constructor(
                     _uiState.update { it.copy(audioArEnabled = enabled) }
                 }
             }
-            
-            viewModelScope.launch {
-                sessionManager.hiResOutputEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(hiResOutputEnabled = enabled) }
-                }
-            }
-            
-            viewModelScope.launch {
-                sessionManager.force24BitEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(force24BitEnabled = enabled) }
-                }
-            }
-            
-            viewModelScope.launch {
-                sessionManager.audioSampleRateFlow.collect { rate ->
-                    _uiState.update { it.copy(audioSampleRate = rate) }
-                }
-            }
 
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -504,10 +481,7 @@ class SettingsViewModel @Inject constructor(
                     discordToken = discordToken,
                     discordUseDetails = discordUseDetails,
                     privacyModeEnabled = sessionManager.isPrivacyModeEnabled(),
-                    audioArEnabled = sessionManager.isAudioArEnabled(),
-                    hiResOutputEnabled = sessionManager.isHiResOutputEnabled(),
-                    force24BitEnabled = sessionManager.isForce24BitEnabled(),
-                    audioSampleRate = sessionManager.getAudioSampleRate()
+                    audioArEnabled = sessionManager.isAudioArEnabled()
                 )
             }
         }
@@ -667,27 +641,6 @@ class SettingsViewModel @Inject constructor(
     
     fun calibrateAudioAr() {
         audioARManager.calibrate()
-    }
-
-    fun setHiResOutputEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            sessionManager.setHiResOutputEnabled(enabled)
-            _uiState.update { it.copy(hiResOutputEnabled = enabled) }
-        }
-    }
-    
-    fun setForce24BitEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            sessionManager.setForce24BitEnabled(enabled)
-            _uiState.update { it.copy(force24BitEnabled = enabled) }
-        }
-    }
-    
-    fun setAudioSampleRate(rate: Int) {
-        viewModelScope.launch {
-            sessionManager.setAudioSampleRate(rate)
-            _uiState.update { it.copy(audioSampleRate = rate) }
-        }
     }
 
     /**
