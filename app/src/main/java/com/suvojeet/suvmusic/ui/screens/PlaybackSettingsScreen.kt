@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -554,6 +555,41 @@ fun PlaybackSettingsScreen(
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
+
+            ListItem(
+                headlineContent = { Text("Audio AR (Spatial Audio)") },
+                supportingContent = { 
+                    Text("Rotate soundstage based on device rotation. Requires headphones.") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.audioArEnabled,
+                        onCheckedChange = { viewModel.setAudioArEnabled(it) }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            if (uiState.audioArEnabled) {
+                ListItem(
+                    headlineContent = { Text("Recenter Audio") },
+                    supportingContent = { Text("Set current direction as front") },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.calibrateAudioAr() },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+            }
             
             // Gestures
             SectionTitle("Gestures")

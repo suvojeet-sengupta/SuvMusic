@@ -27,7 +27,8 @@ import javax.inject.Singleton
 @Singleton
 class ListenTogetherManager @Inject constructor(
     private val client: ListenTogetherClient,
-    private val youTubeRepository: YouTubeRepository
+    private val youTubeRepository: YouTubeRepository,
+    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     companion object {
         private const val TAG = "ListenTogetherManager"
@@ -195,6 +196,16 @@ class ListenTogetherManager @Inject constructor(
                 } else if (newRole != RoomRole.HOST && wasHost) {
                     Log.d(TAG, "Role changed from HOST, stopping sync services")
                     stopHeartbeat()
+                }
+            }
+        }
+        
+        // Monitor Privacy Mode
+        scope.launch {
+            sessionManager.privacyModeEnabledFlow.collect { privacyEnabled ->
+                if (privacyEnabled && isInRoom) {
+                    Log.i(TAG, "Privacy Mode enabled, leaving Listen Together room.")
+                    leaveRoom()
                 }
             }
         }
@@ -697,8 +708,25 @@ class ListenTogetherManager @Inject constructor(
         cleanup()
         client.disconnect()
     }
-    fun createRoom(username: String) = client.createRoom(username)
-    fun joinRoom(roomCode: String, username: String) = client.joinRoom(roomCode, username)
+    fun createRoom(username: String) {
+        scope.launch {
+            if (sessionManager.isPrivacyModeEnabled()) {
+                Log.w(TAG, "Cannot create room in Privacy Mode")
+                return@launch
+            }
+            client.createRoom(username)
+        }
+    }
+    
+    fun joinRoom(roomCode: String, username: String) {
+         scope.launch {
+            if (sessionManager.isPrivacyModeEnabled()) {
+                Log.w(TAG, "Cannot join room in Privacy Mode")
+                return@launch
+            }
+            client.joinRoom(roomCode, username)
+        }
+    }
     fun leaveRoom() {
         cleanup()
         client.leaveRoom()

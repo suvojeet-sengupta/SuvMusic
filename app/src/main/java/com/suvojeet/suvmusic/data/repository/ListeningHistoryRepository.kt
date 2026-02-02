@@ -13,7 +13,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ListeningHistoryRepository @Inject constructor(
-    private val listeningHistoryDao: ListeningHistoryDao
+    private val listeningHistoryDao: ListeningHistoryDao,
+    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     
     /**
@@ -25,6 +26,8 @@ class ListeningHistoryRepository @Inject constructor(
         durationListenedMs: Long,
         wasSkipped: Boolean = false
     ) {
+        if (sessionManager.isPrivacyModeEnabled()) return
+
         val existing = listeningHistoryDao.getHistoryForSong(song.id)
         
         val updated = if (existing != null) {

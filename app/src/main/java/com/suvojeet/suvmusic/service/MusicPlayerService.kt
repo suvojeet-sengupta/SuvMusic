@@ -62,6 +62,9 @@ class MusicPlayerService : MediaLibraryService() {
     @Inject
     lateinit var listenTogetherManager: com.suvojeet.suvmusic.listentogether.ListenTogetherManager
 
+    @Inject
+    lateinit var audioARManager: com.suvojeet.suvmusic.player.AudioARManager
+
     private var mediaLibrarySession: MediaLibrarySession? = null
     
     // Constants for Android Auto browsing
@@ -81,6 +84,10 @@ class MusicPlayerService : MediaLibraryService() {
     private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
     private var dynamicsProcessing: android.media.audiofx.DynamicsProcessing? = null
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
+    
+    // Audio AR & Effects state
+    private var currentGlobalGainDb = 0f
+    private var currentBalance = 0f
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -176,6 +183,14 @@ class MusicPlayerService : MediaLibraryService() {
                         .build(),
                     !ignoreFocus // handleAudioFocus is false when ignoreFocus is true
                 )
+            }
+        }
+        
+        // Audio AR Monitoring
+        serviceScope.launch {
+            audioARManager.stereoBalance.collect { balance ->
+                currentBalance = balance
+                applyGains()
             }
         }
 
@@ -482,9 +497,14 @@ class MusicPlayerService : MediaLibraryService() {
                         // But to be safe on sudden jumps, let's ramp if the jump is large?
                         // Just applying instantly for slider changes is better responsiveness.
                         // Animation is mostly for Enable/Disable Toggle.
-                        setEffectGain(targetGainDb) 
+                        // Animation is mostly for Enable/Disable Toggle.
+                        
+                        // Update Global Gain State
+                        currentGlobalGainDb = targetGainDb
+                        applyGains()
                     } else {
-                        setEffectGain(targetGainDb)
+                        currentGlobalGainDb = targetGainDb
+                        applyGains()
                     }
                 } else {
                     // Disable: Smooth Ramp Down -> Release
@@ -549,15 +569,45 @@ class MusicPlayerService : MediaLibraryService() {
     }
 
     private fun setEffectGain(gainDb: Float) {
+        currentGlobalGainDb = gainDb
+        applyGains()
+    }
+
+    private fun applyGains() {
         try {
+            // Calculate Channel Gains
+            // Left: 1.0 if balance <= 0, else Fade
+            // Right: 1.0 if balance >= 0, else Fade
+            
+            // Balance -1 (Left) -> Left=1, Right=0
+            // Balance 1 (Right) -> Left=0, Right=1
+            
+            val balance = currentBalance
+            
+            // Linear factors (0..1)
+            val leftFactor = if (balance > 0) 1f - balance else 1f
+            val rightFactor = if (balance < 0) 1f + balance else 1f
+            
+            // Convert attenuation to dB: 20 * log10(factor)
+            // Prevent log(0) -> -infinity
+            val leftPanDb = if (leftFactor <= 0.001f) -100f else (20 * kotlin.math.log10(leftFactor))
+            val rightPanDb = if (rightFactor <= 0.001f) -100f else (20 * kotlin.math.log10(rightFactor))
+            
+            val finalLeftDb = currentGlobalGainDb + leftPanDb
+            val finalRightDb = currentGlobalGainDb + rightPanDb
+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 dynamicsProcessing?.apply {
-                    setInputGainAllChannelsTo(gainDb)
+                    // Set Channel 0 (Left)
+                    setInputGainbyChannel(0, finalLeftDb)
+                    // Set Channel 1 (Right)
+                    setInputGainbyChannel(1, finalRightDb)
                 }
             } else {
                 loudnessEnhancer?.apply {
-                    // mB = dB * 100
-                    val targetmB = (gainDb * 100).toInt()
+                    // LoudnessEnhancer is global, can't pan.
+                    // Just set global gain.
+                    val targetmB = (currentGlobalGainDb * 100).toInt()
                     setTargetGain(targetmB)
                 }
             }
