@@ -90,7 +90,7 @@ import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
 import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
-import com.suvojeet.suvmusic.ui.components.SongCreditsSheet
+import com.suvojeet.suvmusic.ui.components.SongInfoSheet
 import com.suvojeet.suvmusic.ui.components.PlaybackSpeedSheet
 import com.suvojeet.suvmusic.ui.components.WaveformSeeker
 import com.suvojeet.suvmusic.ui.components.DominantColors
@@ -294,7 +294,7 @@ fun PlayerScreen(
     var showCommentsSheet by remember { mutableStateOf(false) }
     var showActionsSheet by remember { mutableStateOf(false) }
     var selectedSongForMenu by remember { mutableStateOf<com.suvojeet.suvmusic.data.model.Song?>(null) }
-    var showCreditsSheet by remember { mutableStateOf(false) }
+    var showInfoSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showOutputDeviceSheet by remember { mutableStateOf(false) }
     var showPlaybackSpeedSheet by remember { mutableStateOf(false) }
@@ -954,9 +954,9 @@ fun PlayerScreen(
                 onDeleteDownload = {
                     playerViewModel.deleteDownload(menuSong.id)
                 },
-                onViewCredits = {
+                onViewInfo = {
                     showActionsSheet = false
-                    showCreditsSheet = true
+                    showInfoSheet = true
                 },
                 onAddToPlaylist = {
                     showActionsSheet = false
@@ -1044,13 +1044,16 @@ fun PlayerScreen(
                 onDismiss = { showRingtoneProgress = false }
             )
 
-            // Song Credits Sheet
+            // Song Info (Credits) Sheet
             if (song != null) {
-                SongCreditsSheet(
+                SongInfoSheet(
                     song = song,
-                    isVisible = showCreditsSheet,
-                    onDismiss = { showCreditsSheet = false },
-                    audioFormatDisplay = playerState.audioFormatDisplay
+                    isVisible = showInfoSheet,
+                    onDismiss = { showInfoSheet = false },
+                    audioCodec = playerState.audioCodec,
+                    audioBitrate = playerState.audioBitrate,
+                    audioBits = playerState.audioBits,
+                    audioSampleRate = playerState.audioSampleRateStr
                 )
             }
 
