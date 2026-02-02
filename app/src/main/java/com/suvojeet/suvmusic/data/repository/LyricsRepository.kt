@@ -41,6 +41,13 @@ class LyricsRepository @Inject constructor(
     private val cache = LruCache<String, Lyrics>(MAX_CACHE_SIZE)
 
     /**
+     * Cache key helper
+     */
+    private fun getCacheKey(songId: String, provider: LyricsProviderType): String {
+        return "${songId}_${provider.name}"
+    }
+
+    /**
      * Ordered list of lyrics providers
      */
     private suspend fun getLyricsProviders(): List<LyricsProvider> {
@@ -70,15 +77,17 @@ class LyricsRepository @Inject constructor(
     }
 
     suspend fun getLyrics(song: Song, providerType: LyricsProviderType = LyricsProviderType.AUTO): Lyrics? = withContext(Dispatchers.IO) {
-        // If specific provider requested, bypass cache for that provider
-        if (providerType != LyricsProviderType.AUTO) {
-            return@withContext fetchFromProvider(song, providerType)
-        }
+        val cacheKey = getCacheKey(song.id, providerType)
         
-        // Check cache first for AUTO mode
-        val cached = cache.get(song.id)
+        // Check cache first
+        val cached = cache.get(cacheKey)
         if (cached != null) {
             return@withContext cached
+        }
+        
+        // If specific provider requested, fetch directly
+        if (providerType != LyricsProviderType.AUTO) {
+            return@withContext fetchFromProvider(song, providerType)
         }
         
         // AUTO Mode: Priority Order
@@ -107,7 +116,9 @@ class LyricsRepository @Inject constructor(
                             isSynced = true,
                             provider = providerEnum
                         )
-                        cache.put(song.id, lyrics)
+                        // Cache for AUTO and specific provider
+                        cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lyrics)
+                        cache.put(getCacheKey(song.id, providerEnum), lyrics)
                         return@withContext lyrics
                     }
                 }
@@ -119,34 +130,20 @@ class LyricsRepository @Inject constructor(
         // 2. Try LRCLIB for synced lyrics
         val lrcLibLyrics = fetchExternalLyrics(lrcLibLyricsProvider, song, LyricsProviderType.LRCLIB)
         if (lrcLibLyrics != null) {
-            // Check if it is synced or plain
-             // fetchExternalLyrics assumes synced if parseLrcLyrics succeeds. 
-             // If parseLrcLyrics fails or empty, it returns null.
-             // But lrcLib might return plain text which parseLrcLyrics might treat as empty or single line?
-             // parseLrcLyrics looks for timestamps.
-             
-             // If we got a result from fetchExternalLyrics, it means it parsed as LRC (synced).
-             cache.put(song.id, lrcLibLyrics)
+             cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lrcLibLyrics)
+             cache.put(getCacheKey(song.id, LyricsProviderType.LRCLIB), lrcLibLyrics)
              return@withContext lrcLibLyrics
         }
         
-        // If fetchExternalLyrics returned null, maybe it was plain text?
-        // Let's try to get plain text from LRCLIB manually if needed, 
-        // OR modify fetchExternalLyrics to handle plain text.
-        // For now, let's assume if LrcLib returns something, we want it.
-        
         // 3. Fallback: Get lyrics from the original source (JioSaavn/YouTube)
         val sourceLyrics = fetchFromSource(song)
-        
         if (sourceLyrics != null) {
-            cache.put(song.id, sourceLyrics)
+            cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), sourceLyrics)
+            cache.put(getCacheKey(song.id, sourceLyrics.provider), sourceLyrics)
             return@withContext sourceLyrics
         }
         
         // 4. Last resort: Try LRCLIB plain lyrics
-        // Since step 2 only accepted synced, we can try to fetch again and accept plain?
-        // Actually, fetchExternalLyrics implementation below only accepts parsed LRC.
-        // Let's manually call provider and handle plain text.
         try {
             val result = lrcLibLyricsProvider.getLyrics(
                 id = song.id,
@@ -164,17 +161,18 @@ class LyricsRepository @Inject constructor(
                     isSynced = false,
                     provider = LyricsProviderType.LRCLIB
                 )
-                cache.put(song.id, lyrics)
+                cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lyrics)
+                cache.put(getCacheKey(song.id, LyricsProviderType.LRCLIB), lyrics)
                 return@withContext lyrics
             }
-        } catch (e: Exception) { } // Ignore exceptions here, as it's a last resort
+        } catch (e: Exception) { }
         
         null
     }
     
     // Fetch from a specific provider
     private suspend fun fetchFromProvider(song: Song, providerType: LyricsProviderType): Lyrics? {
-        return when (providerType) {
+        val result = when (providerType) {
             LyricsProviderType.BETTER_LYRICS -> {
                 if (sessionManager.doesEnableBetterLyrics()) {
                     fetchExternalLyrics(betterLyricsProvider, song, LyricsProviderType.BETTER_LYRICS)
@@ -221,6 +219,12 @@ class LyricsRepository @Inject constructor(
             }
             LyricsProviderType.AUTO -> getLyrics(song, LyricsProviderType.AUTO)
         }
+        
+        if (result != null) {
+            cache.put(getCacheKey(song.id, providerType), result)
+        }
+        
+        return result
     }
 
     private suspend fun fetchExternalLyrics(
@@ -273,84 +277,9 @@ class LyricsRepository @Inject constructor(
     }
 
     private fun parseLrcLyrics(lrcContent: String): List<LyricsLine> {
-        val lines = mutableListOf<LyricsLine>()
-        val lrcPattern = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")
-        val wordTimingPattern = Regex("<(.*)>")
-
-        val rawLines = lrcContent.split("\n")
-        var i = 0
-        while (i < rawLines.size) {
-            val line = rawLines[i]
-            val lrcMatch = lrcPattern.find(line)
-            
-            if (lrcMatch != null) {
-                // Parse Standard Line
-                val minutes = lrcMatch.groupValues[1].toLongOrNull() ?: 0L
-                val seconds = lrcMatch.groupValues[2].toLongOrNull() ?: 0L
-                val millisPart = lrcMatch.groupValues[3]
-                val millis = if (millisPart.length == 2) {
-                    (millisPart.toLongOrNull() ?: 0L) * 10
-                } else {
-                    millisPart.toLongOrNull() ?: 0L
-                }
-                val text = lrcMatch.groupValues[4].trim()
-                
-                val startTimeMs = (minutes * 60 * 1000) + (seconds * 1000) + millis
-                
-                // Check if NEXT line is word timing metadata
-                var words: List<com.suvojeet.suvmusic.providers.lyrics.LyricsWord>? = null
-                if (i + 1 < rawLines.size) {
-                    val nextLine = rawLines[i + 1].trim()
-                    val wordMatch = wordTimingPattern.find(nextLine)
-                    if (wordMatch != null) {
-                        try {
-                            val content = wordMatch.groupValues[1]
-                            val wordParts = content.split("|")
-                            words = wordParts.mapNotNull { part ->
-                                val p = part.split(":")
-                                if (p.size >= 3) {
-                                    val wText = p[0]
-                                    val wStart = (p[1].toDoubleOrNull() ?: 0.0) * 1000
-                                    val wEnd = (p[2].toDoubleOrNull() ?: 0.0) * 1000
-                                    com.suvojeet.suvmusic.providers.lyrics.LyricsWord(
-                                        text = wText,
-                                        startTimeMs = wStart.toLong(),
-                                        endTimeMs = wEnd.toLong()
-                                    )
-                                } else null
-                            }
-                            i++ // Skip the timing line since we consumed it
-                        } catch (e: Exception) {
-                            // Ignore parsing errors for words
-                        }
-                    }
-                }
-
-                if (text.isNotBlank()) {
-                    lines.add(
-                        LyricsLine(
-                            text = text,
-                            startTimeMs = startTimeMs,
-                            words = words
-                        )
-                    )
-                }
-            }
-            i++
-        }
-        
-        // Calculate end times based on next line's start time
-        for (j in lines.indices) {
-            if (j < lines.lastIndex) {
-                lines[j] = lines[j].copy(endTimeMs = lines[j + 1].startTimeMs)
-            } else {
-                lines[j] = lines[j].copy(endTimeMs = lines[j].startTimeMs + 5000)
-            }
-        }
-        
-        return lines
+        return com.suvojeet.suvmusic.utils.LyricsUtils.parseLyrics(lrcContent)
     }
-    
+
     companion object {
         private const val MAX_CACHE_SIZE = 50
     }
