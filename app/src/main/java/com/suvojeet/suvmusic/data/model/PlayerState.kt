@@ -28,6 +28,8 @@ data class PlayerState(
     val pitch: Float = 1.0f,
     val audioCodec: String? = null, // e.g., "opus", "aac", "mp3"
     val audioBitrate: Int? = null, // in kbps, e.g., 256
+    val audioBits: Int? = null, // e.g., 16, 24
+    val audioSampleRateStr: String? = null, // e.g. "44.1 kHz"
     val dominantColor: Int = -16777216, // Black/Dark default
     val videoNotFound: Boolean = false // Flag for video stream failures
 ) {
@@ -45,7 +47,11 @@ data class PlayerState(
         get() {
             val codec = audioCodec?.uppercase() ?: return "Unknown"
             val bitrate = audioBitrate?.let { "${it}kbps" } ?: ""
-            return if (bitrate.isNotEmpty()) "$codec • $bitrate" else codec
+            val bits = audioBits?.let { "${it}-bit" } ?: ""
+            val rate = audioSampleRateStr ?: ""
+            
+            val parts = listOf(codec, bitrate, bits, rate).filter { it.isNotEmpty() }
+            return parts.joinToString(" • ")
         }
 }
 
