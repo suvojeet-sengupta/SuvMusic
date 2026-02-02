@@ -98,7 +98,9 @@ data class SettingsUiState(
     // Discord RPC
     val discordRpcEnabled: Boolean = false,
     val discordToken: String = "", // Empty means not set
-    val discordUseDetails: Boolean = false
+    val discordUseDetails: Boolean = false,
+    val privacyModeEnabled: Boolean = false,
+    val audioArEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -107,6 +109,7 @@ class SettingsViewModel @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
     private val updateRepo: UpdateRepository,
     private val lastFmRepository: LastFmRepository,
+    private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -134,6 +137,12 @@ class SettingsViewModel @Inject constructor(
     
     // Discord RPC
     val discordRpcEnabled = sessionManager.discordRpcEnabledFlow
+
+    // Privacy Mode
+    val privacyModeEnabled = sessionManager.privacyModeEnabledFlow
+
+    // Audio AR
+    val audioArEnabled = sessionManager.audioArEnabledFlow
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -348,6 +357,18 @@ class SettingsViewModel @Inject constructor(
                 }
             }
 
+            viewModelScope.launch {
+                sessionManager.privacyModeEnabledFlow.collect { enabled ->
+                    _uiState.update { it.copy(privacyModeEnabled = enabled) }
+                }
+            }
+
+            viewModelScope.launch {
+                sessionManager.audioArEnabledFlow.collect { enabled ->
+                    _uiState.update { it.copy(audioArEnabled = enabled) }
+                }
+            }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -458,7 +479,9 @@ class SettingsViewModel @Inject constructor(
                     speakSongDetailsEnabled = speakSongDetailsEnabled,
                     discordRpcEnabled = discordRpcEnabled,
                     discordToken = discordToken,
-                    discordUseDetails = discordUseDetails
+                    discordUseDetails = discordUseDetails,
+                    privacyModeEnabled = sessionManager.isPrivacyModeEnabled(),
+                    audioArEnabled = sessionManager.isAudioArEnabled()
                 )
             }
         }
@@ -600,6 +623,24 @@ class SettingsViewModel @Inject constructor(
             sessionManager.setDiscordUseDetails(enabled)
             _uiState.update { it.copy(discordUseDetails = enabled) }
         }
+    }
+
+    fun setPrivacyModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setPrivacyModeEnabled(enabled)
+            _uiState.update { it.copy(privacyModeEnabled = enabled) }
+        }
+    }
+
+    fun setAudioArEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setAudioArEnabled(enabled)
+            _uiState.update { it.copy(audioArEnabled = enabled) }
+        }
+    }
+    
+    fun calibrateAudioAr() {
+        audioARManager.calibrate()
     }
 
     /**

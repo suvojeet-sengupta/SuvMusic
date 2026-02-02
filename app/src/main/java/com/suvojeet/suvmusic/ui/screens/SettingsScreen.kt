@@ -285,6 +285,16 @@ fun SettingsScreen(
                         )
                         
                         HorizontalDivider()
+
+                        SettingsSwitchItem(
+                            icon = Icons.Default.Warning, // Or Icons.Default.Security or Icons.Default.VisibilityOff
+                            title = "Privacy Mode",
+                            subtitle = "Stop history & activity sharing",
+                            checked = uiState.privacyModeEnabled,
+                            onCheckedChange = { viewModel.setPrivacyModeEnabled(it) }
+                        )
+                        
+                        HorizontalDivider()
                         
                         SettingsSwitchItem(
                             icon = Icons.Default.Smartphone,

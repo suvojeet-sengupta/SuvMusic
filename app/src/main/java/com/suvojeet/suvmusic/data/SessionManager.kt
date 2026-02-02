@@ -166,6 +166,10 @@ class SessionManager @Inject constructor(
         private val DISCORD_RPC_ENABLED_KEY = booleanPreferencesKey("discord_rpc_enabled")
         private val DISCORD_TOKEN_KEY = stringPreferencesKey("discord_token")
         private val DISCORD_USE_DETAILS_KEY = booleanPreferencesKey("discord_use_details")
+        private val PRIVACY_MODE_ENABLED_KEY = booleanPreferencesKey("privacy_mode_enabled")
+        
+        // Audio AR
+        private val AUDIO_AR_ENABLED_KEY = booleanPreferencesKey("audio_ar_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -799,6 +803,36 @@ class SessionManager @Inject constructor(
         }
     }
 
+    // --- Privacy Mode ---
+
+    suspend fun isPrivacyModeEnabled(): Boolean =
+        context.dataStore.data.first()[PRIVACY_MODE_ENABLED_KEY] ?: false
+
+    val privacyModeEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PRIVACY_MODE_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setPrivacyModeEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PRIVACY_MODE_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- Audio AR ---
+
+    val audioArEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[AUDIO_AR_ENABLED_KEY] ?: false
+    }
+
+    suspend fun isAudioArEnabled(): Boolean =
+        context.dataStore.data.first()[AUDIO_AR_ENABLED_KEY] ?: false
+
+    suspend fun setAudioArEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[AUDIO_AR_ENABLED_KEY] = enabled
+        }
+    }
+    
     // --- Discord RPC ---
 
     suspend fun isDiscordRpcEnabled(): Boolean =

@@ -79,6 +79,8 @@ class LastFmManager @Inject constructor(
         // 1. Update "Now Playing" and Start Monitoring
         if (shouldScrobble(mediaItem)) {
             scope.launch {
+                if (sessionManager.isPrivacyModeEnabled()) return@launch
+
                 val sessionKey = sessionManager.getLastFmSessionKey() ?: return@launch
                 if (!sessionManager.isLastFmScrobblingEnabled()) return@launch
 
@@ -166,6 +168,7 @@ class LastFmManager @Inject constructor(
         val player = currentPlayer ?: return
         val item = player.currentMediaItem ?: return
         
+        if (sessionManager.isPrivacyModeEnabled()) return
         if (!shouldScrobble(item)) return
         
         val sessionKey = sessionManager.getLastFmSessionKey() ?: return

@@ -172,9 +172,10 @@ object AppModule {
     @Singleton
     fun provideListenTogetherManager(
         client: com.suvojeet.suvmusic.listentogether.ListenTogetherClient,
-        youTubeRepository: YouTubeRepository
+        youTubeRepository: YouTubeRepository,
+        sessionManager: SessionManager
     ): com.suvojeet.suvmusic.listentogether.ListenTogetherManager {
-        val manager = com.suvojeet.suvmusic.listentogether.ListenTogetherManager(client, youTubeRepository)
+        val manager = com.suvojeet.suvmusic.listentogether.ListenTogetherManager(client, youTubeRepository, sessionManager)
         manager.initialize()
         return manager
     }
