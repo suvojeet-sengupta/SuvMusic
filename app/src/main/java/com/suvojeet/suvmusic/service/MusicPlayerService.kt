@@ -112,8 +112,7 @@ class MusicPlayerService : MediaLibraryService() {
             override fun buildAudioSink(
                 context: android.content.Context,
                 enableFloatOutput: Boolean,
-                enableAudioTrackPlaybackParams: Boolean,
-                enableOffload: Boolean
+                enableAudioTrackPlaybackParams: Boolean
             ): AudioSink? {
                 // Enable float output (for 24-bit/32-bit processing) if requested
                 // This bypasses some internal 16-bit truncations
