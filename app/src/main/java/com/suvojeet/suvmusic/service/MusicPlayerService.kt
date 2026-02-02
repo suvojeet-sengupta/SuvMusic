@@ -168,10 +168,10 @@ class MusicPlayerService : MediaLibraryService() {
                 sessionManager.volumeBoostEnabledFlow,
                 sessionManager.volumeBoostAmountFlow,
                 sessionManager.audioArEnabledFlow
-            ) { normEnabled, boostEnabled, boostAmount, audioArEnabled ->
-                Quadruple(normEnabled, boostEnabled, boostAmount, audioArEnabled)
-            }.collect { (normEnabled, boostEnabled, boostAmount, audioArEnabled) ->
-                 updateAudioEffects(normEnabled, boostEnabled, boostAmount, audioArEnabled, animate = true)
+            ) { norm: Boolean, boost: Boolean, amount: Int, ar: Boolean ->
+                AudioEffectsState(norm, boost, amount, ar)
+            }.collect { state ->
+                 updateAudioEffects(state.normEnabled, state.boostEnabled, state.boostAmount, state.audioArEnabled, animate = true)
             }
         }
 
@@ -431,11 +431,12 @@ class MusicPlayerService : MediaLibraryService() {
             val normEnabled = sessionManager.isVolumeNormalizationEnabled()
             val boostEnabled = sessionManager.isVolumeBoostEnabled()
             val boostAmount = sessionManager.getVolumeBoostAmount()
+            val audioArEnabled = sessionManager.isAudioArEnabled()
 
-            if (normEnabled || (boostEnabled && boostAmount > 0)) {
+            if (normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled) {
                 // Determine if we need to create/reset effects for the new session
                 // For new session, we apply instantly (no fade) to avoid dips at track start
-                updateAudioEffects(normEnabled, boostEnabled, boostAmount, animate = false, forcedSessionId = sessionId)
+                updateAudioEffects(normEnabled, boostEnabled, boostAmount, audioArEnabled, animate = false, forcedSessionId = sessionId)
             }
         }
     }
@@ -692,9 +693,15 @@ class MusicPlayerService : MediaLibraryService() {
             .setMediaMetadata(metadata)
             .build()
     }
+
+    private data class AudioEffectsState(
+        val normEnabled: Boolean,
+        val boostEnabled: Boolean,
+        val boostAmount: Int,
+        val audioArEnabled: Boolean
+    )
     
     private fun <T> List<T>.toImmutableList(): ImmutableList<T> {
         return ImmutableList.copyOf(this)
     }
 }
-
