@@ -104,11 +104,23 @@ fun LyricsScreen(
     // Lyrics Settings State
     var fontSize by remember { mutableStateOf(26f) }
     var syncOffset by remember { mutableStateOf(0L) }
+    var lineSpacingMultiplier by remember { mutableStateOf(1.5f) }
+    var keepScreenOn by remember { mutableStateOf(true) } // Default to true for lyrics
+    
     // We keep local state for these to allow immediate UI updates, 
     // but ideally they should be persisted or passed back up.
     // For now, we'll use the passed parameters as initial values.
     var currentTextPosition by remember { mutableStateOf(lyricsTextPosition) }
     var currentAnimationType by remember { mutableStateOf(lyricsAnimationType) }
+
+    // Keep Screen On Effect
+    val currentView = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(keepScreenOn) {
+        currentView.keepScreenOn = keepScreenOn
+        onDispose {
+            currentView.keepScreenOn = false
+        }
+    }
     
     // Formatting helper for seek bar
     fun formatTime(ms: Long): String {
@@ -299,7 +311,8 @@ fun LyricsScreen(
                         artworkUrl = artworkUrl,
                         textPosition = currentTextPosition,
                         animationType = currentAnimationType,
-                        fontSize = fontSize
+                        fontSize = fontSize,
+                        lineSpacingMultiplier = lineSpacingMultiplier
                     )
                 }
             }
@@ -307,15 +320,20 @@ fun LyricsScreen(
             // Footer (Source Credit)
             val credit = lyrics?.sourceCredit
             if (credit != null) {
-                Text(
-                    text = credit,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.4f),
-                    modifier = Modifier
-                        .padding(bottom = 8.dp)
-                        .align(Alignment.CenterHorizontally),
-                    textAlign = TextAlign.Center
-                )
+                // Show provider pill
+                Surface(
+                    color = textColor.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally)
+                ) {
+                    Text(
+                        text = credit,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textColor.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
             
             // Bottom Seek Bar
@@ -434,7 +452,29 @@ fun LyricsScreen(
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
                     
-                    // 1. Appearance Section
+                     // 1. General Section (New)
+                    Text(
+                        text = "General",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { keepScreenOn = !keepScreenOn }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Keep Screen On", style = MaterialTheme.typography.bodyLarge)
+                        Switch(checked = keepScreenOn, onCheckedChange = { keepScreenOn = it })
+                    }
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                    // 2. Appearance Section
                     Text(
                         text = "Appearance",
                         style = MaterialTheme.typography.titleMedium,
@@ -455,12 +495,36 @@ fun LyricsScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Text Size", style = MaterialTheme.typography.bodyMedium)
+                            Text("Text Size: ${fontSize.toInt()}sp", style = MaterialTheme.typography.bodyMedium)
                             Slider(
                                 value = fontSize,
                                 onValueChange = { fontSize = it },
-                                valueRange = 16f..40f,
+                                valueRange = 16f..50f,
                                 steps = 0,
+                                modifier = Modifier.height(30.dp)
+                            )
+                        }
+                    }
+
+                     // Line Spacing
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FormatAlignLeft, // Reuse icon or find Expand icon
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Line Spacing: ${"%.1f".format(lineSpacingMultiplier)}x", style = MaterialTheme.typography.bodyMedium)
+                            Slider(
+                                value = lineSpacingMultiplier,
+                                onValueChange = { lineSpacingMultiplier = it },
+                                valueRange = 1.0f..2.5f,
+                                steps = 5,
                                 modifier = Modifier.height(30.dp)
                             )
                         }
@@ -501,7 +565,7 @@ fun LyricsScreen(
 
                     HorizontalDivider(modifier = Modifier.padding(bottom = 24.dp))
 
-                    // 2. Sync Section
+                    // 3. Sync Section
                     Text(
                         text = "Sync Correction",
                         style = MaterialTheme.typography.titleMedium,
@@ -544,7 +608,7 @@ fun LyricsScreen(
                     
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
-                    // 3. Source Section
+                    // 4. Source Section
                     Text(
                         text = "Lyrics Source",
                         style = MaterialTheme.typography.titleMedium,
@@ -735,13 +799,16 @@ fun LyricsList(
     artworkUrl: String?,
     textPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
     animationType: LyricsAnimationType = LyricsAnimationType.WORD,
-    fontSize: Float = 24f
+    fontSize: Float = 24f,
+    lineSpacingMultiplier: Float = 1.5f
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val textColor = if (isDarkTheme) Color.White else Color.Black
     val currentTime = currentTimeProvider()
+
+
 
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -892,7 +959,7 @@ fun LyricsList(
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontSize = fontSize.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = (fontSize * 1.5).sp
+                                lineHeight = (fontSize * lineSpacingMultiplier).sp
                             ),
                             color = textColor.copy(alpha = alpha),
                             textAlign = TextAlign.Start,
@@ -965,7 +1032,7 @@ fun LyricsList(
                                         style = MaterialTheme.typography.headlineMedium.copy(
                                             fontSize = fontSize.sp, 
                                             fontWeight = FontWeight.Bold,
-                                            lineHeight = (fontSize * 1.5).sp
+                                            lineHeight = (fontSize * lineSpacingMultiplier).sp
                                         ),
                                         color = wordColor.copy(alpha = wordAlpha),
                                         modifier = Modifier.padding(vertical = 2.dp)
@@ -985,7 +1052,7 @@ fun LyricsList(
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontSize = fontSize.sp,
                                     fontWeight = FontWeight.Bold,
-                                    lineHeight = (fontSize * 1.5).sp
+                                    lineHeight = (fontSize * lineSpacingMultiplier).sp
                                 ),
                                 color = textColor.copy(alpha = lineAlpha),
                                 textAlign = textAlign,
