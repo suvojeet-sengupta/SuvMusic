@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,13 +98,16 @@ data class ArtistCreditInfo(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SongCreditsSheet(
+fun SongInfoSheet(
     song: Song,
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onArtistClick: (String) -> Unit = {},
-    audioFormatDisplay: String = "Unknown", // e.g., "OPUS • 256kbps"
-    viewModel: SongCreditsViewModel = hiltViewModel()
+    audioCodec: String? = null,
+    audioBitrate: Int? = null,
+    audioBits: Int? = null,
+    audioSampleRate: String? = null,
+    viewModel: SongInfoViewModel = hiltViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
@@ -256,17 +261,78 @@ fun SongCreditsSheet(
                         Badge(text = sourceBadge)
                         
                         // Show actual codec from player
-                        if (audioFormatDisplay != "Unknown") {
+                        if (audioCodec != null) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            // Extract just the codec name for badge (e.g., "OPUS" from "OPUS • 256kbps")
-                            val codecBadge = audioFormatDisplay.substringBefore(" •").uppercase()
                             Badge(
-                                text = codecBadge,
+                                text = audioCodec.uppercase(),
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             )
                         }
                     }
                     
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // AUDIO INFORMATION Section (New)
+                    Text(
+                        text = "AUDIO INFORMATION",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            letterSpacing = 2.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Audio Info items
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                            // Sample Rate
+                            val sampleRateDisplay = audioSampleRate ?: "Unknown"
+                            CreditItem(
+                                icon = Icons.Default.Speed, // Using Speed icon for sample rate
+                                label = "Sample Rate",
+                                value = sampleRateDisplay
+                            )
+                            
+                            CreditDivider()
+                            
+                            // Bit Depth
+                            val bitDepthDisplay = audioBits?.let { "$it-bit" } ?: "Unknown"
+                            CreditItem(
+                                icon = Icons.Default.GraphicEq, // Using GraphicEq for bit depth
+                                label = "Bit Depth",
+                                value = bitDepthDisplay
+                            )
+                            
+                            CreditDivider()
+                            
+                            // Bitrate
+                            val bitrateDisplay = audioBitrate?.let { "${it}kbps" } ?: "Unknown"
+                            CreditItem(
+                                icon = Icons.Default.MusicNote,
+                                label = "Bitrate",
+                                value = bitrateDisplay
+                            )
+                            
+                            CreditDivider()
+                            
+                            // Codec
+                            val codecDisplay = audioCodec?.uppercase() ?: "Unknown"
+                            CreditItem(
+                                icon = Icons.Default.Headphones,
+                                label = "Codec",
+                                value = codecDisplay
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
                     
                     // PERFORMING ARTISTS Section (Apple Music style)
@@ -354,22 +420,6 @@ fun SongCreditsSheet(
                                 icon = Icons.Default.Timer,
                                 label = "Duration",
                                 value = formatDurationForCredits(song.duration)
-                            )
-                            
-                            CreditDivider()
-                            
-                            CreditItem(
-                                icon = Icons.Default.MusicNote,
-                                label = "Format",
-                                value = audioFormatDisplay
-                            )
-                            
-                            CreditDivider()
-                            
-                            CreditItem(
-                                icon = Icons.Default.Headphones,
-                                label = "Quality",
-                                value = "High Quality Audio"
                             )
                         }
                     }
@@ -690,7 +740,7 @@ private fun ArtistCreditRow(
  * ViewModel for fetching artist credits with thumbnails from YouTube Music
  */
 @HiltViewModel
-class SongCreditsViewModel @Inject constructor(
+class SongInfoViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 ) : ViewModel() {
