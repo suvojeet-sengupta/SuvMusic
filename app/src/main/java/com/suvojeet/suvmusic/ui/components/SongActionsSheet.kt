@@ -64,7 +64,7 @@ fun SongActionsSheet(
     onDownload: () -> Unit = {},
     onDeleteDownload: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
-    onViewCredits: () -> Unit = {},
+    onViewInfo: () -> Unit = {},
     onViewComments: () -> Unit = {},
     onSleepTimer: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
@@ -237,10 +237,10 @@ fun SongActionsSheet(
                 
                 ActionItem(
                     icon = Icons.Default.Info,
-                    title = "View Credits",
+                    title = "View Info",
                     iconTint = contentColor,
                     textColor = contentColor,
-                    onClick = { onViewCredits(); onDismiss() }
+                    onClick = { onViewInfo(); onDismiss() }
                 )
                 
                 ActionItem(
