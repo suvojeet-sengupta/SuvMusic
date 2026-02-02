@@ -18,7 +18,6 @@ import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.AudioQuality
-import com.suvojeet.suvmusic.data.model.AudioSampleRate
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
@@ -171,11 +170,6 @@ class SessionManager @Inject constructor(
         
         // Audio AR
         private val AUDIO_AR_ENABLED_KEY = booleanPreferencesKey("audio_ar_enabled")
-        
-        // Hi-Res Audio
-        private val HI_RES_OUTPUT_ENABLED_KEY = booleanPreferencesKey("hi_res_output_enabled")
-        private val FORCE_24_BIT_ENABLED_KEY = booleanPreferencesKey("force_24_bit_enabled")
-        private val AUDIO_SAMPLE_RATE_KEY = intPreferencesKey("audio_sample_rate")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -836,47 +830,6 @@ class SessionManager @Inject constructor(
     suspend fun setAudioArEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[AUDIO_AR_ENABLED_KEY] = enabled
-        }
-    }
-    
-    // --- Hi-Res Audio ---
-    
-    suspend fun isHiResOutputEnabled(): Boolean =
-        context.dataStore.data.first()[HI_RES_OUTPUT_ENABLED_KEY] ?: false
-        
-    val hiResOutputEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[HI_RES_OUTPUT_ENABLED_KEY] ?: false
-    }
-    
-    suspend fun setHiResOutputEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[HI_RES_OUTPUT_ENABLED_KEY] = enabled
-        }
-    }
-    
-    suspend fun isForce24BitEnabled(): Boolean =
-        context.dataStore.data.first()[FORCE_24_BIT_ENABLED_KEY] ?: false
-        
-    val force24BitEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[FORCE_24_BIT_ENABLED_KEY] ?: false
-    }
-    
-    suspend fun setForce24BitEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[FORCE_24_BIT_ENABLED_KEY] = enabled
-        }
-    }
-    
-    suspend fun getAudioSampleRate(): Int =
-        context.dataStore.data.first()[AUDIO_SAMPLE_RATE_KEY] ?: 0 // 0 = Auto
-        
-    val audioSampleRateFlow: Flow<Int> = context.dataStore.data.map { preferences ->
-        preferences[AUDIO_SAMPLE_RATE_KEY] ?: 0
-    }
-    
-    suspend fun setAudioSampleRate(rate: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[AUDIO_SAMPLE_RATE_KEY] = rate
         }
     }
     
