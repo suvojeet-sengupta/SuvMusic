@@ -308,17 +308,6 @@ fun SettingsScreen(
                                 }
                             }
                         )
-                        
-                        HorizontalDivider()
-                        
-                        // Last.fm Integration
-                        val isLastFmConnected = uiState.lastFmUsername != null
-                        SettingsNavigationItem(
-                            icon = Icons.Default.MusicNote,
-                            title = "Last.fm",
-                            subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music hits",
-                            onClick = onLastFmClick
-                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -390,6 +379,17 @@ fun SettingsScreen(
                             title = "SponsorBlock",
                             subtitle = "Skip non-music segments",
                             onClick = onSponsorBlockClick
+                        )
+
+                        HorizontalDivider()
+
+                        // Last.fm Integration
+                        val isLastFmConnected = uiState.lastFmUsername != null
+                        SettingsNavigationItem(
+                            icon = Icons.Default.MusicNote,
+                            title = "Last.fm",
+                            subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music hits",
+                            onClick = onLastFmClick
                         )
 
                         HorizontalDivider()

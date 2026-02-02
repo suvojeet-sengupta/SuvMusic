@@ -670,9 +670,10 @@ fun SuvMusicApp(
                         onToggleAutoplay = { playerViewModel.toggleAutoplay() },
                         onToggleVideoMode = { playerViewModel.toggleVideoMode() },
                         onDismissVideoError = { playerViewModel.dismissVideoError() },
-                        onStartRadio = { 
-                            playbackInfo.currentSong?.let { song ->
-                                playerViewModel.startRadio(song)
+                        onStartRadio = { song ->
+                            val targetSong = song ?: playbackInfo.currentSong
+                            targetSong?.let { 
+                                playerViewModel.startRadio(it)
                             }
                         },
                         onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
