@@ -500,10 +500,12 @@ class PlayerViewModel @Inject constructor(
             _isRadioMode.value = true
             radioBaseSongId = song.id
             
-            val radioSongs = mutableListOf<Song>()
-            radioSongs.add(song) // Current song first
+            // Play immediately with just the selected song
+            musicPlayer.playSong(song)
             
             try {
+                val radioSongs = mutableListOf<Song>()
+                
                 // Try YT Music recommendations first (works best when logged in)
                 if (song.source == SongSource.YOUTUBE || song.source == SongSource.DOWNLOADED) {
                     val relatedSongs = youTubeRepository.getRelatedSongs(song.id)
@@ -515,20 +517,25 @@ class PlayerViewModel @Inject constructor(
                 // If not enough songs, use local recommendation engine
                 if (radioSongs.size < 10) {
                     val localRecommendations = recommendationEngine.getPersonalizedRecommendations(30)
-                    // Filter out songs already in queue
-                    val existingIds = radioSongs.map { it.id }.toSet()
+                    // Filter out songs already in queue (currently just the playing song)
+                    // and any we just fetched
+                    val existingIds = mutableSetOf(song.id)
+                    existingIds.addAll(radioSongs.map { it.id })
+                    
                     val newSongs = localRecommendations.filter { it.id !in existingIds }
                     radioSongs.addAll(newSongs)
                 }
                 
-                // Play the radio queue
-                if (radioSongs.isNotEmpty()) {
-                    musicPlayer.playSong(song, radioSongs, 0)
+                // Filter out the current song if it appears in recommendations to avoid immediate duplicate
+                val songsToAdd = radioSongs.filter { it.id != song.id }
+                
+                // Add recommendations to queue
+                if (songsToAdd.isNotEmpty()) {
+                    musicPlayer.addToQueue(songsToAdd)
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error starting radio", e)
-                // Fallback: just play the song
-                musicPlayer.playSong(song)
+                // Already playing, so no fallback needed
             }
         }
     }

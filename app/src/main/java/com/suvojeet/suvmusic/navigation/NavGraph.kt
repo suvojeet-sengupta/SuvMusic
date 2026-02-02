@@ -233,7 +233,6 @@ fun NavGraph(
                 onSongClick = { songs, index -> 
                     if (sessionManager.isLoggedIn()) {
                         onStartRadio(songs[index])
-                        navController.navigate(Destination.Player.route)
                     } else {
                         onPlaySong(songs, index)
                     }
