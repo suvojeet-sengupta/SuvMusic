@@ -146,6 +146,7 @@ class MusicPlayerService : MediaLibraryService() {
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     super.onIsPlayingChanged(isPlaying)
+                    audioARManager.setPlaying(isPlaying)
                     if (isPlaying) {
                         startSponsorBlockMonitoring()
                     } else {
@@ -165,11 +166,12 @@ class MusicPlayerService : MediaLibraryService() {
             kotlinx.coroutines.flow.combine(
                 sessionManager.volumeNormalizationEnabledFlow,
                 sessionManager.volumeBoostEnabledFlow,
-                sessionManager.volumeBoostAmountFlow
-            ) { normEnabled, boostEnabled, boostAmount ->
-                Triple(normEnabled, boostEnabled, boostAmount)
-            }.collect { (normEnabled, boostEnabled, boostAmount) ->
-                 updateAudioEffects(normEnabled, boostEnabled, boostAmount, animate = true)
+                sessionManager.volumeBoostAmountFlow,
+                sessionManager.audioArEnabledFlow
+            ) { normEnabled, boostEnabled, boostAmount, audioArEnabled ->
+                Quadruple(normEnabled, boostEnabled, boostAmount, audioArEnabled)
+            }.collect { (normEnabled, boostEnabled, boostAmount, audioArEnabled) ->
+                 updateAudioEffects(normEnabled, boostEnabled, boostAmount, audioArEnabled, animate = true)
             }
         }
 
@@ -461,6 +463,7 @@ class MusicPlayerService : MediaLibraryService() {
         normEnabled: Boolean, 
         boostEnabled: Boolean, 
         boostAmount: Int, 
+        audioArEnabled: Boolean,
         animate: Boolean, 
         forcedSessionId: Int? = null
     ) {
@@ -472,7 +475,7 @@ class MusicPlayerService : MediaLibraryService() {
                 
                 if (sessionId == C.AUDIO_SESSION_ID_UNSET) return@launch
 
-                val shouldEnable = normEnabled || (boostEnabled && boostAmount > 0)
+                val shouldEnable = normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled
                 
                 // Calculate Target Gain in dB
                 // Normalization: +5.5 dB
@@ -642,6 +645,7 @@ class MusicPlayerService : MediaLibraryService() {
         }
         releaseAudioEffects()
         
+        audioARManager.setPlaying(false)
         listenTogetherManager.setPlayer(null)
 
         mediaLibrarySession?.run {
