@@ -905,14 +905,7 @@ fun PlaybackSettingsScreen(
             }
         }
     }
-                        Text(text = getDownloadQualityLabel(quality, uiState.musicSource))
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-    }
+
 
     // Music Source Bottom Sheet
     if (showMusicSourceSheet) {
