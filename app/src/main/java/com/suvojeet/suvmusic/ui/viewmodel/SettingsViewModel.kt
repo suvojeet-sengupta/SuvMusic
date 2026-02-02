@@ -504,7 +504,6 @@ class SettingsViewModel @Inject constructor(
                     discordToken = discordToken,
                     discordUseDetails = discordUseDetails,
                     privacyModeEnabled = sessionManager.isPrivacyModeEnabled(),
-                    privacyModeEnabled = sessionManager.isPrivacyModeEnabled(),
                     audioArEnabled = sessionManager.isAudioArEnabled(),
                     hiResOutputEnabled = sessionManager.isHiResOutputEnabled(),
                     force24BitEnabled = sessionManager.isForce24BitEnabled(),
