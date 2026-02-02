@@ -1,7 +1,10 @@
 package com.suvojeet.suvmusic.ui.screens.settings
 
 import android.graphics.Bitmap
+import android.os.Build
 import android.webkit.CookieManager
+import android.webkit.JsResult
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -255,22 +258,37 @@ fun DiscordSettingsScreen(
                                 settings.databaseEnabled = true
                                 settings.useWideViewPort = true
                                 settings.loadWithOverviewMode = true
-                                settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                                
+                                val jsSnippet = "javascript:(function()%7Bvar%20i%3Ddocument.createElement('iframe')%3Bdocument.body.appendChild(i)%3Balert(i.contentWindow.localStorage.token.slice(1,-1))%7D)()"
+                                val motorola = "motorola"
+                                val samsungUserAgent = "Mozilla/5.0 (Linux; Android 14; SM-S921U; Build/UP1A.231005.007) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36"
+
+                                if (Build.MANUFACTURER.equals(motorola, ignoreCase = true)) {
+                                    settings.userAgentString = samsungUserAgent
+                                } else {
+                                    settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                                }
                                 
                                 CookieManager.getInstance().setAcceptCookie(true)
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 
-                                webChromeClient = android.webkit.WebChromeClient()
+                                webChromeClient = object : WebChromeClient() {
+                                    override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                                        if (!message.isNullOrBlank() && message != "null" && message != "undefined") {
+                                            viewModel.setDiscordToken(message)
+                                            showWebLogin = false
+                                        }
+                                        result?.confirm()
+                                        return true
+                                    }
+                                }
                                 
                                 webViewClient = object : WebViewClient() {
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                        val url = request?.url?.toString()
-                                        if (url != null && url.startsWith("suvmusic://discord-auth")) {
-                                            val token = android.net.Uri.parse(url).getQueryParameter("token")
-                                            if (token != null) {
-                                                viewModel.setDiscordToken(token)
-                                                showWebLogin = false
-                                            }
+                                        val url = request?.url?.toString() ?: return false
+                                        if (url.endsWith("/app")) {
+                                            view?.stopLoading()
+                                            view?.loadUrl(jsSnippet)
                                             return true
                                         }
                                         return false
@@ -278,64 +296,12 @@ fun DiscordSettingsScreen(
 
                                     @Deprecated("Deprecated in Java")
                                     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                                        if (url != null && url.startsWith("suvmusic://discord-auth")) {
-                                            val token = android.net.Uri.parse(url).getQueryParameter("token")
-                                            if (token != null) {
-                                                viewModel.setDiscordToken(token)
-                                                showWebLogin = false
-                                            }
+                                        if (url != null && url.endsWith("/app")) {
+                                            view?.stopLoading()
+                                            view?.loadUrl(jsSnippet)
                                             return true
                                         }
                                         return false
-                                    }
-                                    
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        super.onPageFinished(view, url)
-                                        // Inject JS to extract token
-                                        val js = """
-                                            (function() {
-                                                function checkToken() {
-                                                    try {
-                                                        // Method 1: Webpack (Standard Client)
-                                                        var token = (webpackChunkdiscord_app.push([[''],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!==undefined).exports.default.getToken();
-                                                        if(token) {
-                                                            window.location.href = "suvmusic://discord-auth?token=" + token;
-                                                            return;
-                                                        }
-                                                    } catch(e) {}
-                                                    
-                                                     try {
-                                                        // Method 2: LocalStorage 'token'
-                                                         var token = localStorage.getItem("token");
-                                                          if(token) {
-                                                             token = token.replace(/"/g, "");
-                                                             window.location.href = "suvmusic://discord-auth?token=" + token;
-                                                             return;
-                                                         }
-                                                    } catch(e) {}
-
-                                                    try {
-                                                        // Method 3: LocalStorage 'tokens' (Multi-account)
-                                                        var tokens = localStorage.getItem("tokens");
-                                                        if (tokens) {
-                                                            var parsed = JSON.parse(tokens);
-                                                            // Get the first token found
-                                                            for (var key in parsed) {
-                                                                if (parsed.hasOwnProperty(key)) {
-                                                                    var token = parsed[key];
-                                                                     if(token) {
-                                                                         window.location.href = "suvmusic://discord-auth?token=" + token;
-                                                                         return;
-                                                                     }
-                                                                }
-                                                            }
-                                                        }
-                                                    } catch(e) {}
-                                                }
-                                                setInterval(checkToken, 2000);
-                                            })();
-                                        """.trimIndent()
-                                        view?.evaluateJavascript(js, null)
                                     }
                                 }
                                 loadUrl("https://discord.com/login")
