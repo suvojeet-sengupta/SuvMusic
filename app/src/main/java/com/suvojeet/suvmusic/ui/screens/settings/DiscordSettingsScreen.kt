@@ -263,6 +263,20 @@ fun DiscordSettingsScreen(
                                 webChromeClient = android.webkit.WebChromeClient()
                                 
                                 webViewClient = object : WebViewClient() {
+                                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                        val url = request?.url?.toString()
+                                        if (url != null && url.startsWith("suvmusic://discord-auth")) {
+                                            val token = android.net.Uri.parse(url).getQueryParameter("token")
+                                            if (token != null) {
+                                                viewModel.setDiscordToken(token)
+                                                showWebLogin = false
+                                            }
+                                            return true
+                                        }
+                                        return false
+                                    }
+
+                                    @Deprecated("Deprecated in Java")
                                     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                                         if (url != null && url.startsWith("suvmusic://discord-auth")) {
                                             val token = android.net.Uri.parse(url).getQueryParameter("token")
@@ -282,18 +296,40 @@ fun DiscordSettingsScreen(
                                             (function() {
                                                 function checkToken() {
                                                     try {
+                                                        // Method 1: Webpack (Standard Client)
                                                         var token = (webpackChunkdiscord_app.push([[''],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!==undefined).exports.default.getToken();
                                                         if(token) {
                                                             window.location.href = "suvmusic://discord-auth?token=" + token;
+                                                            return;
                                                         }
                                                     } catch(e) {}
                                                     
                                                      try {
+                                                        // Method 2: LocalStorage 'token'
                                                          var token = localStorage.getItem("token");
                                                           if(token) {
                                                              token = token.replace(/"/g, "");
                                                              window.location.href = "suvmusic://discord-auth?token=" + token;
+                                                             return;
                                                          }
+                                                    } catch(e) {}
+
+                                                    try {
+                                                        // Method 3: LocalStorage 'tokens' (Multi-account)
+                                                        var tokens = localStorage.getItem("tokens");
+                                                        if (tokens) {
+                                                            var parsed = JSON.parse(tokens);
+                                                            // Get the first token found
+                                                            for (var key in parsed) {
+                                                                if (parsed.hasOwnProperty(key)) {
+                                                                    var token = parsed[key];
+                                                                     if(token) {
+                                                                         window.location.href = "suvmusic://discord-auth?token=" + token;
+                                                                         return;
+                                                                     }
+                                                                }
+                                                            }
+                                                        }
                                                     } catch(e) {}
                                                 }
                                                 setInterval(checkToken, 2000);
