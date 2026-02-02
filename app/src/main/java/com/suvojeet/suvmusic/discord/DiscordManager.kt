@@ -15,12 +15,14 @@ import javax.inject.Singleton
 
 @Singleton
 class DiscordManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     private var discordRPC: DiscordRPC? = null
     private var token: String? = null
     private var isEnabled: Boolean = false
     private var useDetails: Boolean = false
+    private var isPrivacyMode: Boolean = false
     
     private val scope = CoroutineScope(Dispatchers.IO)
     
@@ -36,6 +38,23 @@ class DiscordManager @Inject constructor(
             connect()
         } else {
             disconnect()
+        }
+        
+        scope.launch {
+            sessionManager.privacyModeEnabledFlow.collect { enabled ->
+                isPrivacyMode = enabled
+                if (enabled) {
+                    // Start Privacy Mode: Clear presence but keep connection? 
+                    // Or maybe just show "Listening to Music" without details?
+                    // "Stealth Listening" implies hiding completely.
+                    // Discord RPC doesn't have a "Hide" method other than clearing, 
+                    // but usually we just stop sending updates.
+                    // If we want to hide "Playing SuvMusic", we should probably disconnect or send empty.
+                    // Let's just stop sending updates for now.
+                    // Optionally, we can clear the activity:
+                    discordRPC?.updateActivity(name = "SuvMusic", state = null, details = null)
+                }
+            }
         }
     }
     
@@ -89,6 +108,7 @@ class DiscordManager @Inject constructor(
         currentPosition: Long
     ) {
         if (!isEnabled || discordRPC == null) return
+        if (isPrivacyMode) return 
         
         if (isPlaying) {
              val startTime = System.currentTimeMillis() - currentPosition

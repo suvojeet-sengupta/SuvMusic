@@ -62,6 +62,8 @@ import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import com.suvojeet.suvmusic.ui.utils.LyricsPdfGenerator
+import com.suvojeet.suvmusic.ui.utils.MoodDetector
+import com.suvojeet.suvmusic.ui.components.DynamicLyricsBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,6 +118,12 @@ fun LyricsScreen(
         return "%d:%02d".format(minutes, seconds)
     }
     
+    // Detect Mood/Style
+    val currentStyle = remember(songTitle, artistName, lyrics) {
+        val text = lyrics?.lines?.joinToString(" ") { it.text } ?: ""
+        MoodDetector.detectStyle(songTitle, artistName, text)
+    }
+    
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -125,32 +133,11 @@ fun LyricsScreen(
                 detectVerticalDragGestures { _, _ -> }
             }
     ) {
-        // Blurred Background
-        if (artworkUrl != null) {
-            AsyncImage(
-                model = artworkUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(80.dp)
-                    .alpha(if (isDarkTheme) 0.6f else 0.4f),
-                contentScale = ContentScale.Crop
-            )
-        }
-        
-        // Gradient Overlay
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            overlayColor.copy(alpha = 0.4f),
-                            overlayColor.copy(alpha = 0.7f),
-                            overlayColor.copy(alpha = 0.9f)
-                        )
-                    )
-                )
+        // Dynamic Background
+        DynamicLyricsBackground(
+            artworkUrl = artworkUrl,
+            style = currentStyle,
+            isDarkTheme = isDarkTheme
         )
 
         Column(
