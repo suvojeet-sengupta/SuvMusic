@@ -1216,26 +1216,10 @@ class MusicPlayer @Inject constructor(
             }
         }
         
-        // Extract Bit Depth and Sample Rate
-        val sampleRate = if (audioFormat.sampleRate != androidx.media3.common.Format.NO_VALUE) {
-             "${audioFormat.sampleRate / 1000.0} kHz".replace(".0 kHz", " kHz")
-        } else null
-        
-        val bits = when (audioFormat.pcmEncoding) {
-            androidx.media3.common.C.ENCODING_PCM_8BIT -> 8
-            androidx.media3.common.C.ENCODING_PCM_16BIT -> 16
-            androidx.media3.common.C.ENCODING_PCM_24BIT -> 24
-            androidx.media3.common.C.ENCODING_PCM_32BIT -> 32
-            androidx.media3.common.C.ENCODING_PCM_FLOAT -> 32 // Float is effectively 32-bit
-            else -> null
-        }
-        
         _playerState.update { 
             it.copy(
                 audioCodec = codec,
-                audioBitrate = bitrateKbps,
-                audioBits = bits,
-                audioSampleRateStr = sampleRate
+                audioBitrate = bitrateKbps
             )
         }
     }

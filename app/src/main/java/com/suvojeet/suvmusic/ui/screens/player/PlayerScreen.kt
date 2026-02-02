@@ -1051,9 +1051,7 @@ fun PlayerScreen(
                     isVisible = showInfoSheet,
                     onDismiss = { showInfoSheet = false },
                     audioCodec = playerState.audioCodec,
-                    audioBitrate = playerState.audioBitrate,
-                    audioBits = playerState.audioBits,
-                    audioSampleRate = playerState.audioSampleRateStr
+                    audioBitrate = playerState.audioBitrate
                 )
             }
 

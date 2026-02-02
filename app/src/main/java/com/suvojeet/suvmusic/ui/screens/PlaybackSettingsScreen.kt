@@ -62,7 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.AudioQuality
-import com.suvojeet.suvmusic.data.model.AudioSampleRate
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
@@ -98,11 +97,6 @@ fun PlaybackSettingsScreen(
     var showHapticsIntensitySheet by remember { mutableStateOf(false) }
     val hapticsModeSheetState = rememberModalBottomSheetState()
     val hapticsIntensitySheetState = rememberModalBottomSheetState()
-    
-    // Hi-Res Audio
-    var showSampleRateSheet by remember { mutableStateOf(false) }
-    val sampleRateSheetState = rememberModalBottomSheetState()
-    
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -597,58 +591,6 @@ fun PlaybackSettingsScreen(
                 )
             }
             
-            // Advanced Audio Output
-            SectionTitle("Advanced Audio Output")
-            
-            ListItem(
-                headlineContent = { Text("High-Resolution Output") },
-                supportingContent = { 
-                    Text("Enable 32-bit float internal processing. Requires app restart.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
-                        checked = uiState.hiResOutputEnabled,
-                        onCheckedChange = { viewModel.setHiResOutputEnabled(it) }
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            if (uiState.hiResOutputEnabled) {
-                ListItem(
-                    headlineContent = { Text("Force 24-bit Output") },
-                    supportingContent = { 
-                        Text("Force outputting at 24-bit/32-bit if supported by device.") 
-                    },
-                    trailingContent = {
-                        Switch(
-                            checked = uiState.force24BitEnabled,
-                            onCheckedChange = { viewModel.setForce24BitEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.padding(start = 16.dp),
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
-                
-                ListItem(
-                    headlineContent = { Text("Target Sample Rate") },
-                    supportingContent = { 
-                        val rate = AudioSampleRate.fromValue(uiState.audioSampleRate)
-                        Text(rate.label) 
-                    },
-                     modifier = Modifier
-                        .clickable { showSampleRateSheet = true }
-                        .padding(start = 16.dp),
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
-            }
-            
             // Gestures
             SectionTitle("Gestures")
             
@@ -856,7 +798,7 @@ fun PlaybackSettingsScreen(
                             onClick = null
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = quality.label)
+                        Text(text = getDownloadQualityLabel(quality, uiState.musicSource))
                     }
                 }
                 
@@ -864,48 +806,6 @@ fun PlaybackSettingsScreen(
             }
         }
     }
-    
-    // Sample Rate Bottom Sheet
-    if (showSampleRateSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSampleRateSheet = false },
-            sheetState = sampleRateSheetState
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Target Sample Rate",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                AudioSampleRate.entries.forEach { rate ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.setAudioSampleRate(rate.value)
-                                scope.launch {
-                                    sampleRateSheetState.hide()
-                                    showSampleRateSheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.audioSampleRate == rate.value,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = rate.label)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-    }
-
 
     // Music Source Bottom Sheet
     if (showMusicSourceSheet) {

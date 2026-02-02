@@ -105,8 +105,6 @@ fun SongInfoSheet(
     onArtistClick: (String) -> Unit = {},
     audioCodec: String? = null,
     audioBitrate: Int? = null,
-    audioBits: Int? = null,
-    audioSampleRate: String? = null,
     viewModel: SongInfoViewModel = hiltViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -293,26 +291,6 @@ fun SongInfoSheet(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                            // Sample Rate
-                            val sampleRateDisplay = audioSampleRate ?: "Unknown"
-                            CreditItem(
-                                icon = Icons.Default.Speed, // Using Speed icon for sample rate
-                                label = "Sample Rate",
-                                value = sampleRateDisplay
-                            )
-                            
-                            CreditDivider()
-                            
-                            // Bit Depth
-                            val bitDepthDisplay = audioBits?.let { "$it-bit" } ?: "Unknown"
-                            CreditItem(
-                                icon = Icons.Default.GraphicEq, // Using GraphicEq for bit depth
-                                label = "Bit Depth",
-                                value = bitDepthDisplay
-                            )
-                            
-                            CreditDivider()
-                            
                             // Bitrate
                             val bitrateDisplay = audioBitrate?.let { "${it}kbps" } ?: "Unknown"
                             CreditItem(

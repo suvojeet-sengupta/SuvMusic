@@ -14,9 +14,6 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService.LibraryParams
-import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.audio.DefaultAudioSink
-import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.google.common.collect.ImmutableList
@@ -105,25 +102,9 @@ class MusicPlayerService : MediaLibraryService() {
             
         val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
         val ignoreAudioFocus = kotlinx.coroutines.runBlocking { sessionManager.isIgnoreAudioFocusDuringCallsEnabled() }
-        val isHiResEnabled = kotlinx.coroutines.runBlocking { sessionManager.isHiResOutputEnabled() }
-        val isForce24Bit = kotlinx.coroutines.runBlocking { sessionManager.isForce24BitEnabled() }
 
-        val renderersFactory = object : DefaultRenderersFactory(this) {
-            override fun buildAudioSink(
-                context: android.content.Context,
-                enableFloatOutput: Boolean,
-                enableAudioTrackPlaybackParams: Boolean
-            ): AudioSink? {
-                // Enable float output (for 24-bit/32-bit processing) if requested
-                // This bypasses some internal 16-bit truncations
-                return DefaultAudioSink.Builder()
-                    .setEnableFloatOutput(isHiResEnabled || isForce24Bit)
-                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .build()
-            }
-        }
         
-        val player = ExoPlayer.Builder(this, renderersFactory)
+        val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory))
             .setLoadControl(loadControl)
             .setAudioAttributes(
