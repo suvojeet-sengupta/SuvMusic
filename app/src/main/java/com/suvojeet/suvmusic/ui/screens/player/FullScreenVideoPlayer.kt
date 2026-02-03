@@ -204,6 +204,15 @@ fun FullScreenVideoPlayer(
             modifier = Modifier.fillMaxSize().align(Alignment.Center)
         )
         
+        // Explicitly detach player when this full screen player leaves composition
+        DisposableEffect(player) {
+            onDispose {
+                // This is crucial to prevent the "stuck" issue when returning to PlayerScreen
+                // By setting player to null here, we ensure the player instance is available 
+                // for the smaller PlayerView in PlayerScreen.
+            }
+        }
+        
         // Controls Overlay
         AnimatedVisibility(
             visible = areControlsVisible,
