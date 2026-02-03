@@ -49,13 +49,14 @@ class UpdateRepository @Inject constructor(
         try {
             // Logic:
             // STABLE -> /releases/latest (GitHub returns latest non-prerelease)
-            // NIGHTLY -> /releases (List, pick first one which is absolute latest)
+            // NIGHTLY -> /releases (List, iterate to find latest pre-release)
             
             val isStable = channel == com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE
             val url = if (isStable) {
                 API_URL // .../releases/latest
             } else {
-                 "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases?per_page=1"
+                 // Fetch more to ensure we find a pre-release if latest is stable
+                 "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases?per_page=5"
             }
 
             val request = Request.Builder()
@@ -74,7 +75,16 @@ class UpdateRepository @Inject constructor(
             // For Nightly (/releases), response is an Array. For Stable (/releases/latest), it's an Object.
             val json = if (!isStable) {
                 val array = gson.fromJson(body, com.google.gson.JsonArray::class.java)
-                if (array.size() > 0) array.get(0).asJsonObject else return@withContext Result.failure(Exception("No releases found"))
+                // Filter for the first pre-release
+                var foundRelease: JsonObject? = null
+                for (element in array) {
+                    val release = element.asJsonObject
+                    if (release.get("prerelease")?.asBoolean == true) {
+                        foundRelease = release
+                        break
+                    }
+                }
+                foundRelease ?: return@withContext Result.failure(Exception("No nightly releases found"))
             } else {
                 gson.fromJson(body, JsonObject::class.java)
             }
