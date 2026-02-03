@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.suvojeet.suvmusic.utils.ImageUtils
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
@@ -85,10 +86,7 @@ fun PlaylistDisplayCard(
     val context = LocalContext.current
     
     // Get high-res thumbnail (replace w120 or similar with w544)
-    val highResThumbnail = playlist.thumbnailUrl?.let { url ->
-        url.replace(Regex("w\\d+-h\\d+"), "w544-h544")
-            .replace(Regex("=w\\d+"), "=w544")
-    } ?: playlist.thumbnailUrl
+    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl) ?: playlist.thumbnailUrl
     
     Box(
         modifier = Modifier
@@ -151,10 +149,7 @@ fun MediumSongCard(
     val context = LocalContext.current
     
     // Get high-res thumbnail (replace w120 or similar with w544)
-    val highResThumbnail = song.thumbnailUrl?.let { url ->
-        url.replace(Regex("w\\d+-h\\d+"), "w544-h544")
-            .replace(Regex("=w\\d+"), "=w544")
-    } ?: song.thumbnailUrl
+    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
     
     Column(
         modifier = Modifier
