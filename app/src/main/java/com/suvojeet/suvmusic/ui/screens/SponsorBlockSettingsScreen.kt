@@ -110,32 +110,34 @@ fun SponsorBlockSettingsScreen(
                     }
                 }
 
-                item {
-                    Text(
-                        text = "Categories to skip",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp)
-                    )
-                }
+                if (isMasterEnabled) {
+                    item {
+                        Text(
+                            text = "Categories to skip",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp)
+                        )
+                    }
 
-                item {
-                    // Categories Card
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        SponsorCategory.entries.forEachIndexed { index, category ->
-                            val isChecked = enabledCategories.contains(category.key)
+                    item {
+                        // Categories Card
+                        GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            SponsorCategory.entries.forEachIndexed { index, category ->
+                                val isChecked = enabledCategories.contains(category.key)
 
-                            SponsorBlockCategoryItem(
-                                category = category,
-                                isChecked = isChecked,
-                                isEnabled = isMasterEnabled,
-                                onCheckedChange = { checked ->
-                                    viewModel.toggleSponsorCategory(category.key, checked)
+                                SponsorBlockCategoryItem(
+                                    category = category,
+                                    isChecked = isChecked,
+                                    isEnabled = isMasterEnabled,
+                                    onCheckedChange = { checked ->
+                                        viewModel.toggleSponsorCategory(category.key, checked)
+                                    }
+                                )
+
+                                if (index < SponsorCategory.entries.lastIndex) {
+                                    HorizontalDivider()
                                 }
-                            )
-
-                            if (index < SponsorCategory.entries.lastIndex) {
-                                HorizontalDivider()
                             }
                         }
                     }
