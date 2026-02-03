@@ -84,7 +84,7 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Liked", "Playlists", "Artists", "Albums", "Offline")
+    val tabs = listOf("Liked", "Playlists", "Offline")
     
     // Create playlist dialog state
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
@@ -179,31 +179,7 @@ fun LibraryScreen(
                 // Content based on selected tab
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedTab) {
-                        0 -> LikedTab(
-                            songs = uiState.likedSongs,
-                            isSyncing = uiState.isSyncingLikedSongs,
-                            onSongClick = onSongClick,
-                            onSync = { viewModel.refresh() }
-                        )
-                        1 -> PlaylistsTab(
-                            playlists = uiState.playlists,
-                            onPlaylistClick = onPlaylistClick,
-                            onMoreClick = { playlist ->
-                                selectedPlaylist = playlist
-                                showPlaylistMenu = true
-                            },
-                            onCreatePlaylistClick = { showCreatePlaylistDialog = true },
-                            onImportSpotifyClick = { showImportSpotifyDialog = true }
-                        )
-                        2 -> ArtistsTab(
-                            artists = uiState.libraryArtists,
-                            onArtistClick = { artist -> onArtistClick(artist.id) }
-                        )
-                        3 -> AlbumsTab(
-                            albums = uiState.libraryAlbums,
-                            onAlbumClick = onAlbumClick
-                        )
-                        4 -> OfflineTab(
+                        2 -> OfflineTab(
                             localSongs = uiState.localSongs,
                             downloadedSongs = uiState.downloadedSongs,
                             onSongClick = onSongClick,
@@ -744,151 +720,4 @@ private fun EmptyState(
     }
 }
 
-@Composable
-private fun ArtistsTab(
-    artists: List<Artist>,
-    onArtistClick: (Artist) -> Unit
-) {
-    LazyColumn(
-        contentPadding = PaddingValues(bottom = 140.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        if (artists.isEmpty()) {
-            item {
-                EmptyState(
-                    icon = Icons.Default.Person,
-                    title = "No artists",
-                    message = "Add songs to your library to see artists here"
-                )
-            }
-        } else {
-            item {
-                Text(
-                    text = "${artists.size} Artists",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp)
-                )
-            }
-            
-            items(artists) { artist ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onArtistClick(artist) }
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                         Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    Text(
-                        text = artist.name,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AlbumsTab(
-    albums: List<Album>,
-    onAlbumClick: (Album) -> Unit
-) {
-    LazyColumn(
-        contentPadding = PaddingValues(bottom = 140.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        if (albums.isEmpty()) {
-            item {
-                EmptyState(
-                    icon = Icons.Default.Album,
-                    title = "No albums",
-                    message = "Add songs to your library to see albums here"
-                )
-            }
-        } else {
-            item {
-                Text(
-                    text = "${albums.size} Albums",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp)
-                )
-            }
-            
-            items(albums) { album ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onAlbumClick(album) }
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        if (album.thumbnailUrl != null) {
-                            coil.compose.AsyncImage(
-                                model = album.thumbnailUrl,
-                                contentDescription = album.title,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                            )
-                        } else {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Album,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    Column {
-                        Text(
-                            text = album.title,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = album.artist,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
-    }
 }
