@@ -434,258 +434,316 @@ fun LyricsScreen(
             ModalBottomSheet(
                 onDismissRequest = { showSettingsSheet = false },
                 sheetState = sheetState,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                dragHandle = { BottomSheetDefaults.DragHandle() },
+                containerColor = Color.Black.copy(alpha = 0.85f), // Semi-transparent black for immersion
+                contentColor = Color.White,
+                dragHandle = { 
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 12.dp)
+                            .width(40.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color.White.copy(alpha = 0.2f))
+                    )
+                },
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = 48.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Lyrics Settings",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
-                    
-                     // 1. General Section (New)
-                    Text(
-                        text = "General",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { keepScreenOn = !keepScreenOn }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Keep Screen On", style = MaterialTheme.typography.bodyLarge)
-                        Switch(checked = keepScreenOn, onCheckedChange = { keepScreenOn = it })
-                    }
-                    
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                    // 2. Appearance Section
-                    Text(
                         text = "Appearance",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    
-                    // Font Size
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.FormatSize,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Text Size: ${fontSize.toInt()}sp", style = MaterialTheme.typography.bodyMedium)
-                            Slider(
-                                value = fontSize,
-                                onValueChange = { fontSize = it },
-                                valueRange = 16f..50f,
-                                steps = 0,
-                                modifier = Modifier.height(30.dp)
-                            )
-                        }
-                    }
-
-                     // Line Spacing
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.FormatAlignLeft, // Reuse icon or find Expand icon
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Line Spacing: ${"%.1f".format(lineSpacingMultiplier)}x", style = MaterialTheme.typography.bodyMedium)
-                            Slider(
-                                value = lineSpacingMultiplier,
-                                onValueChange = { lineSpacingMultiplier = it },
-                                valueRange = 1.0f..2.5f,
-                                steps = 5,
-                                modifier = Modifier.height(30.dp)
-                            )
-                        }
-                    }
-                    
-                    // Alignment
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.FormatAlignLeft,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text("Alignment", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        
-                        SingleChoiceSegmentedButtonRow {
-                             SegmentedButton(
-                                selected = currentTextPosition == LyricsTextPosition.LEFT,
-                                onClick = { currentTextPosition = LyricsTextPosition.LEFT },
-                                shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
-                            ) { Text("Left") }
-                            SegmentedButton(
-                                selected = currentTextPosition == LyricsTextPosition.CENTER,
-                                onClick = { currentTextPosition = LyricsTextPosition.CENTER },
-                                shape = RoundedCornerShape(0.dp)
-                            ) { Text("Center") }
-                            SegmentedButton(
-                                selected = currentTextPosition == LyricsTextPosition.RIGHT,
-                                onClick = { currentTextPosition = LyricsTextPosition.RIGHT },
-                                shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-                            ) { Text("Right") }
-                        }
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(bottom = 24.dp))
-
-                    // 3. Sync Section
-                    Text(
-                        text = "Sync Correction",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 12.dp)
                     )
-                    
+
+                    // Font Size & Spacing Combined Row for compactness
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Delay Button
-                        FilledTonalButton(
-                            onClick = { syncOffset -= 500L }
-                        ) {
-                            Text("-0.5s")
-                        }
-                        
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Font Size
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "${if (syncOffset > 0) "+" else ""}${syncOffset}ms",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                text = "Size", 
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.6f)
                             )
-                            if (syncOffset != 0L) {
-                                TextButton(onClick = { syncOffset = 0L }, modifier = Modifier.height(30.dp)) {
-                                    Text("Reset", style = MaterialTheme.typography.labelSmall)
-                                }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.FormatSize, 
+                                    null, 
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Slider(
+                                    value = fontSize,
+                                    onValueChange = { fontSize = it },
+                                    valueRange = 16f..50f,
+                                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = Color.White.copy(alpha = 0.8f),
+                                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                                    )
+                                )
                             }
-                        }
-                        
-                        // Advance Button
-                        FilledTonalButton(
-                            onClick = { syncOffset += 500L }
-                        ) {
-                            Text("+0.5s")
                         }
                     }
                     
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
-
-                    // 4. Source Section
-                    Text(
-                        text = "Lyrics Source",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                     
-                    var expandedProvider by remember { mutableStateOf(false) }
-                    
-                    OutlinedCard(
-                        onClick = { expandedProvider = !expandedProvider },
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
+                        // Line Spacing
+                        Column(modifier = Modifier.weight(1f)) {
+                             Text(
+                                text = "Spacing", 
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Filled.LibraryMusic,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
+                                    Icons.Default.FormatAlignLeft, 
+                                    null, 
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Current Provider",
-                                        style = MaterialTheme.typography.labelMedium
+                                Slider(
+                                    value = lineSpacingMultiplier,
+                                    onValueChange = { lineSpacingMultiplier = it },
+                                    valueRange = 1.0f..2.5f,
+                                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                                     colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = Color.White.copy(alpha = 0.8f),
+                                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
                                     )
-                                    Text(
-                                        text = selectedProvider.displayName,
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                }
-                                Icon(
-                                    imageVector = if(expandedProvider) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                                    contentDescription = null
                                 )
                             }
-                            
-                            if (expandedProvider) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.entries.forEach { provider ->
-                                    val isEnabled = enabledProviders[provider] ?: true
-                                    Row(
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // Alignment & Screen On
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Alignment", 
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.1f))
+                                    .padding(4.dp)
+                            ) {
+                                LyricsTextPosition.entries.forEach { position ->
+                                    val isSelected = currentTextPosition == position
+                                    Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable(enabled = isEnabled) {
-                                                onProviderChange(provider)
-                                                expandedProvider = false
-                                            }
-                                            .padding(vertical = 12.dp)
-                                            .alpha(if (isEnabled) 1f else 0.5f),
-                                        verticalAlignment = Alignment.CenterVertically
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color.White.copy(alpha = 0.2f) else Color.Transparent)
+                                            .clickable { currentTextPosition = position }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
                                     ) {
-                                        RadioButton(
-                                            selected = provider == selectedProvider,
-                                            onClick = null, 
-                                            enabled = isEnabled
+                                        Text(
+                                            text = position.name.lowercase().replaceFirstChar { it.uppercase() },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(
-                                                text = provider.displayName,
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                            if (!isEnabled) {
-                                                Text(
-                                                    text = "Disabled",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.error
-                                                )
-                                            }
-                                        }
                                     }
                                 }
                             }
+                        }
+                        
+                        // Screen On Toggle
+                         Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "Screen On", 
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Switch(
+                                checked = keepScreenOn, 
+                                onCheckedChange = { keepScreenOn = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = Color.White.copy(alpha = 0.5f),
+                                    uncheckedThumbColor = Color.White.copy(alpha = 0.6f),
+                                    uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Sync Correction
+                    Text(
+                        text = "Sync Correction",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(
+                            onClick = { syncOffset -= 500L },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color.White.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
+                        ) {
+                            Text("-0.5s", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        }
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "${if (syncOffset > 0) "+" else ""}${syncOffset}ms",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (syncOffset != 0L) MaterialTheme.colorScheme.primary else Color.White
+                            )
+                            if (syncOffset != 0L) {
+                                Text(
+                                    text = "Tap to reset",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    modifier = Modifier.clickable { syncOffset = 0L }
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { syncOffset += 500L },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color.White.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
+                        ) {
+                            Text("+0.5s", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Source Provider
+                    Text(
+                        text = "Source",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    var expandedProvider by remember { mutableStateOf(false) }
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .clickable { expandedProvider = !expandedProvider }
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.LibraryMusic,
+                                null,
+                                tint = Color.White.copy(alpha = 0.8f)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Provider",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.5f)
+                                )
+                                Text(
+                                    text = selectedProvider.displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                             Icon(
+                                imageVector = if(expandedProvider) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.5f)
+                            )
+                        }
+                        
+                        if (expandedProvider) {
+                             Spacer(modifier = Modifier.height(16.dp))
+                             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                             Spacer(modifier = Modifier.height(8.dp))
+                             
+                             com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.entries.forEach { provider ->
+                                val isEnabled = enabledProviders[provider] ?: true
+                                val isSelected = provider == selectedProvider
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = isEnabled) {
+                                            onProviderChange(provider)
+                                            expandedProvider = false
+                                        }
+                                        .padding(vertical = 12.dp)
+                                        .alpha(if (isEnabled) 1f else 0.5f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = null,
+                                        enabled = isEnabled,
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = Color.White,
+                                            unselectedColor = Color.White.copy(alpha = 0.5f)
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = provider.displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
+                                    )
+                                }
+                             }
                         }
                     }
                 }
