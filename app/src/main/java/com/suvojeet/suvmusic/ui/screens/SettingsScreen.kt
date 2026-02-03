@@ -383,13 +383,15 @@ fun SettingsScreen(
                             onCheckedChange = { scope.launch { viewModel.setSponsorBlockEnabled(it) } }
                         )
                         
-                        HorizontalDivider()
-                        SettingsNavigationItem(
-                            icon = Icons.Default.FastForward,
-                            title = "SponsorBlock",
-                            subtitle = "Skip non-music segments",
-                            onClick = onSponsorBlockClick
-                        )
+                        if (sponsorBlockEnabled) {
+                            HorizontalDivider()
+                            SettingsNavigationItem(
+                                icon = Icons.Default.FastForward,
+                                title = "SponsorBlock",
+                                subtitle = "Skip non-music segments",
+                                onClick = onSponsorBlockClick
+                            )
+                        }
 
                         HorizontalDivider()
 
