@@ -84,6 +84,7 @@ class MusicPlayer @Inject constructor(
     
     // Preloading state for gapless playback
     private var preloadedNextSongId: String? = null
+    private var lastPreloadAttemptTime: Long = 0L
     private var preloadedStreamUrl: String? = null
     private var isPreloading = false
     
@@ -796,8 +797,11 @@ class MusicPlayer @Inject constructor(
     private fun checkPreloadNextSong(currentPosition: Long, duration: Long) {
         if (isPreloading || duration <= 0) return
         
-        val preloadStartMs = duration - 15000L // Start preloading 15 seconds before end
-        if (currentPosition < preloadStartMs) return
+        // Start preloading after 3 seconds of playback (prevents churn during rapid skipping)
+        if (currentPosition < 3000L) return
+        
+        // Throttle failed attempts (retry every 10 seconds)
+        if (System.currentTimeMillis() - lastPreloadAttemptTime < 10000L) return
         
         val state = _playerState.value
         val isVideoMode = state.isVideoMode
@@ -830,6 +834,7 @@ class MusicPlayer @Inject constructor(
         }
         
         isPreloading = true
+        lastPreloadAttemptTime = System.currentTimeMillis()
         scope.launch {
             try {
                 val streamUrl = when (nextSong.source) {
