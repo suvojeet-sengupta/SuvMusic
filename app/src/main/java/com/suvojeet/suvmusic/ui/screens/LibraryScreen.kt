@@ -179,6 +179,22 @@ fun LibraryScreen(
                 // Content based on selected tab
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedTab) {
+                        0 -> LikedTab(
+                            songs = uiState.likedSongs,
+                            isSyncing = uiState.isSyncingLikedSongs,
+                            onSongClick = onSongClick,
+                            onSync = { viewModel.syncLikedSongs() }
+                        )
+                        1 -> PlaylistsTab(
+                            playlists = uiState.playlists,
+                            onPlaylistClick = onPlaylistClick,
+                            onMoreClick = { playlist ->
+                                selectedPlaylist = playlist
+                                showPlaylistMenu = true
+                            },
+                            onCreatePlaylistClick = { showCreatePlaylistDialog = true },
+                            onImportSpotifyClick = { showImportSpotifyDialog = true }
+                        )
                         2 -> OfflineTab(
                             localSongs = uiState.localSongs,
                             downloadedSongs = uiState.downloadedSongs,
