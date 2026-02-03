@@ -290,4 +290,20 @@ class LibraryViewModel @Inject constructor(
             } catch (e: Exception) { }
         }
     }
+
+    fun syncLikedSongs() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncingLikedSongs = true) }
+            try {
+                if (sessionManager.isLoggedIn()) {
+                    val syncedSongs = youTubeRepository.getLikedMusic(fetchAll = true)
+                    _uiState.update { it.copy(likedSongs = syncedSongs) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Sync failed: ${e.message}") }
+            } finally {
+                _uiState.update { it.copy(isSyncingLikedSongs = false) }
+            }
+        }
+    }
 }
