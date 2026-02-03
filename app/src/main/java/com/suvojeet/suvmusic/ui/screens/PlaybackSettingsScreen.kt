@@ -408,6 +408,66 @@ fun PlaybackSettingsScreen(
             )
             
             ListItem(
+                headlineContent = { Text("Preload next song") },
+                supportingContent = { 
+                    Text("Start loading the next song early for instant playback.") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.FastForward,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.nextSongPreloadingEnabled,
+                        onCheckedChange = { viewModel.setNextSongPreloadingEnabled(it) }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            if (uiState.nextSongPreloadingEnabled) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Start Preloading After",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "${uiState.nextSongPreloadDelay}s",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Slider(
+                        value = uiState.nextSongPreloadDelay.toFloat(),
+                        onValueChange = { viewModel.setNextSongPreloadDelay(it.toInt()) },
+                        valueRange = 0f..30f,
+                        steps = 29
+                    )
+                    
+                    Text(
+                        text = "Set to 0s for immediate preload, or higher to save data when skipping.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+            
+            ListItem(
                 headlineContent = { Text("Automix") },
                 supportingContent = { 
                     Text("Allows seamless transitions between songs on certain playlists.") 

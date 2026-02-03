@@ -100,7 +100,10 @@ data class SettingsUiState(
     val discordToken: String = "", // Empty means not set
     val discordUseDetails: Boolean = false,
     val privacyModeEnabled: Boolean = false,
-    val audioArEnabled: Boolean = false
+    val audioArEnabled: Boolean = false,
+    // Preloading
+    val nextSongPreloadingEnabled: Boolean = true,
+    val nextSongPreloadDelay: Int = 3 // seconds
 )
 
 @HiltViewModel
@@ -369,6 +372,18 @@ class SettingsViewModel @Inject constructor(
                 }
             }
 
+            viewModelScope.launch {
+                sessionManager.nextSongPreloadingEnabledFlow.collect { enabled ->
+                    _uiState.update { it.copy(nextSongPreloadingEnabled = enabled) }
+                }
+            }
+
+            viewModelScope.launch {
+                sessionManager.nextSongPreloadDelayFlow.collect { delay ->
+                    _uiState.update { it.copy(nextSongPreloadDelay = delay) }
+                }
+            }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -481,7 +496,9 @@ class SettingsViewModel @Inject constructor(
                     discordToken = discordToken,
                     discordUseDetails = discordUseDetails,
                     privacyModeEnabled = sessionManager.isPrivacyModeEnabled(),
-                    audioArEnabled = sessionManager.isAudioArEnabled()
+                    audioArEnabled = sessionManager.isAudioArEnabled(),
+                    nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled(),
+                    nextSongPreloadDelay = sessionManager.getNextSongPreloadDelay()
                 )
             }
         }
@@ -636,6 +653,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAudioArEnabled(enabled)
             _uiState.update { it.copy(audioArEnabled = enabled) }
+        }
+    }
+    
+    fun setNextSongPreloadingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setNextSongPreloadingEnabled(enabled)
+            _uiState.update { it.copy(nextSongPreloadingEnabled = enabled) }
+        }
+    }
+    
+    fun setNextSongPreloadDelay(seconds: Int) {
+        viewModelScope.launch {
+            sessionManager.setNextSongPreloadDelay(seconds)
+            _uiState.update { it.copy(nextSongPreloadDelay = seconds) }
         }
     }
     

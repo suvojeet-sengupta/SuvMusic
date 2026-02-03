@@ -170,6 +170,10 @@ class SessionManager @Inject constructor(
         
         // Audio AR
         private val AUDIO_AR_ENABLED_KEY = booleanPreferencesKey("audio_ar_enabled")
+        
+        // Next Song Preloading
+        private val NEXT_SONG_PRELOADING_ENABLED_KEY = booleanPreferencesKey("next_song_preloading_enabled")
+        private val NEXT_SONG_PRELOAD_DELAY_KEY = intPreferencesKey("next_song_preload_delay")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -802,6 +806,35 @@ class SessionManager @Inject constructor(
             preferences[SPEAK_SONG_DETAILS_ENABLED_KEY] = enabled
         }
     }
+    
+    // --- Next Song Preloading ---
+    
+    suspend fun isNextSongPreloadingEnabled(): Boolean =
+        context.dataStore.data.first()[NEXT_SONG_PRELOADING_ENABLED_KEY] ?: true
+
+    val nextSongPreloadingEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[NEXT_SONG_PRELOADING_ENABLED_KEY] ?: true
+    }
+
+    suspend fun setNextSongPreloadingEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[NEXT_SONG_PRELOADING_ENABLED_KEY] = enabled
+        }
+    }
+    
+    suspend fun getNextSongPreloadDelay(): Int =
+        context.dataStore.data.first()[NEXT_SONG_PRELOAD_DELAY_KEY] ?: 3
+
+    val nextSongPreloadDelayFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[NEXT_SONG_PRELOAD_DELAY_KEY] ?: 3
+    }
+    
+    suspend fun setNextSongPreloadDelay(seconds: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[NEXT_SONG_PRELOAD_DELAY_KEY] = seconds
+        }
+    }
+
 
     // --- Privacy Mode ---
 
