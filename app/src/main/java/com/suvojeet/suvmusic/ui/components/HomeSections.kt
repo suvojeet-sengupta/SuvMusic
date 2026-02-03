@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.suvojeet.suvmusic.utils.ImageUtils
 import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.data.model.HomeSection
@@ -276,10 +277,7 @@ fun HomeItemCardLarge(
         else -> Triple("", "", null)
     }
     
-    val highResThumbnail = imageUrl?.let { url ->
-         url.replace(Regex("w\\d+-h\\d+"), "w544-h544")
-            .replace(Regex("=w\\d+"), "=w544")
-    }
+    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(imageUrl)
     
     Box(
         modifier = Modifier
