@@ -103,6 +103,34 @@ fun PlaybackSettingsScreen(
      var showOffloadInfo by remember { mutableStateOf(false) }
     var showGaplessInfo by remember { mutableStateOf(false) }
     var showHistorySyncInfo by remember { mutableStateOf(false) }
+    var showAudioArInfo by remember { mutableStateOf(false) }
+
+    if (showAudioArInfo) {
+        AlertDialog(
+            onDismissRequest = { showAudioArInfo = false },
+            title = { 
+                Text(
+                    "What is Audio AR?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = {
+                Text(
+                    "Audio AR (Spatial Audio) creates a 3D soundstage using your device's sensors.\n\n" +
+                    "• Dynamic Soundstage: As you rotate your phone, the audio positioning shifts to simulate a fixed sound source.\n" +
+                    "• Immersion: Provides a more realistic, concert-like listening experience.\n\n" +
+                    "Note: Best experienced with headphones. Uses gyroscope sensors.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showAudioArInfo = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
 
     if (showHistorySyncInfo) {
         AlertDialog(
@@ -557,7 +585,23 @@ fun PlaybackSettingsScreen(
             )
 
             ListItem(
-                headlineContent = { Text("Audio AR (Spatial Audio)") },
+                headlineContent = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Audio AR (Spatial Audio)")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { showAudioArInfo = true },
+                            modifier = Modifier.height(24.dp).width(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.height(16.dp).width(16.dp)
+                            )
+                        }
+                    }
+                },
                 supportingContent = { 
                     Text("Rotate soundstage based on device rotation. Requires headphones.") 
                 },
