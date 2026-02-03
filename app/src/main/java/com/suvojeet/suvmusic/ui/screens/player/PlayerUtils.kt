@@ -1,20 +1,9 @@
 package com.suvojeet.suvmusic.ui.screens.player
 
+import com.suvojeet.suvmusic.utils.ImageUtils
+
 fun getHighResThumbnail(url: String?): String? {
-    return url?.let {
-        when {
-            it.contains("ytimg.com") -> it
-                .replace("hqdefault", "maxresdefault")
-                .replace("mqdefault", "maxresdefault")
-                .replace("sddefault", "maxresdefault")
-                .replace("default", "maxresdefault")
-                .replace(Regex("w\\d+-h\\d+"), "w544-h544")
-            it.contains("lh3.googleusercontent.com") ->
-                it.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
-                    .replace(Regex("=s\\d+"), "=s544")
-            else -> it
-        }
-    }
+    return ImageUtils.getHighResThumbnailUrl(url)
 }
 
 fun formatDuration(millis: Long): String {

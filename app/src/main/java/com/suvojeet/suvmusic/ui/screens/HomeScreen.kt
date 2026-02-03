@@ -49,6 +49,7 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
+import com.suvojeet.suvmusic.utils.ImageUtils
 import java.util.Calendar
 
 /**
@@ -344,10 +345,7 @@ private fun MediumSongCard(
 ) {
     // Spotify Style: Square image, Title below, Artist below that
     val context = LocalContext.current
-    val highResThumbnail = song.thumbnailUrl?.let { url ->
-        url.replace(Regex("w\\d+-h\\d+"), "w544-h544")
-            .replace(Regex("=w\\d+"), "=w544")
-    } ?: song.thumbnailUrl
+    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
 
     Column(
         modifier = Modifier
@@ -391,10 +389,7 @@ private fun PlaylistDisplayCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val highResThumbnail = playlist.thumbnailUrl?.let { url ->
-        url.replace(Regex("w\\d+-h\\d+"), "w544-h544")
-            .replace(Regex("=w\\d+"), "=w544")
-    } ?: playlist.thumbnailUrl
+    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl) ?: playlist.thumbnailUrl
 
     Column(
         modifier = Modifier
