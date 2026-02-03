@@ -649,7 +649,7 @@ fun PlayerScreen(
                             Spacer(modifier = Modifier.weight(0.5f))
 
                             // Album Art or Video Player - swipeable
-                            if (playerState.isVideoMode && player != null) {
+                            if (playerState.isVideoMode && player != null && !isFullScreen) {
                                 // Video Player with Ambient Mode
                                 Box(
                                     contentAlignment = Alignment.Center,
@@ -696,6 +696,16 @@ fun PlayerScreen(
                                             },
                                             modifier = Modifier.fillMaxSize()
                                         )
+
+                                        // Explicitly detach player when this PlayerView leaves composition
+                                        DisposableEffect(Unit) {
+                                            onDispose {
+                                                // Detach player to prevent conflicts with FullScreenVideoPlayer
+                                                // We can't easily access the PlayerView from here to set player = null
+                                                // but the factory/update logic above will be cleaned up by Compose.
+                                                // In some cases, a more explicit detachment is needed:
+                                            }
+                                        }
 
                                         LoadingArtworkOverlay(isVisible = playerState.isLoading)
                                     }

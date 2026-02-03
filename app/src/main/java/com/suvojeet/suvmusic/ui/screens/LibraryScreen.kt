@@ -719,5 +719,3 @@ private fun EmptyState(
         )
     }
 }
-
-}
