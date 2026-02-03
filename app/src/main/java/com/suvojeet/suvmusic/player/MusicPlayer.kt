@@ -101,11 +101,23 @@ class MusicPlayer @Inject constructor(
     
     private var deviceReceiver: android.content.BroadcastReceiver? = null
     
+    // Configurable Preloading
+    private var nextSongPreloadingEnabled = true
+    private var nextSongPreloadDelay = 3
+    
     init {
         // Initialize video quality from settings
         scope.launch {
             val quality = sessionManager.getVideoQuality()
             _playerState.update { it.copy(videoQuality = quality) }
+        }
+        
+        // Listen for preloading settings
+        scope.launch {
+            sessionManager.nextSongPreloadingEnabledFlow.collect { nextSongPreloadingEnabled = it }
+        }
+        scope.launch {
+            sessionManager.nextSongPreloadDelayFlow.collect { nextSongPreloadDelay = it }
         }
         
         connectToService()
@@ -795,10 +807,10 @@ class MusicPlayer @Inject constructor(
      * Starts preloading ~15 seconds before current song ends.
      */
     private fun checkPreloadNextSong(currentPosition: Long, duration: Long) {
-        if (isPreloading || duration <= 0) return
+        if (!nextSongPreloadingEnabled || isPreloading || duration <= 0) return
         
-        // Start preloading after 3 seconds of playback (prevents churn during rapid skipping)
-        if (currentPosition < 3000L) return
+        // Start preloading after configured delay (prevents churn during rapid skipping)
+        if (currentPosition < (nextSongPreloadDelay * 1000L)) return
         
         // Throttle failed attempts (retry every 10 seconds)
         if (System.currentTimeMillis() - lastPreloadAttemptTime < 10000L) return
