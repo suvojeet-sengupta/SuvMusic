@@ -72,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.Album
@@ -91,6 +92,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
 fun LibraryScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onHistoryClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
     onDownloadsClick: () -> Unit = {},
@@ -135,9 +137,8 @@ fun LibraryScreen(
                 ) {
                     // 1. Top Bar
                     LibraryTopBar(
-                        onHistoryClick = { /* TODO */ },
+                        onHistoryClick = onHistoryClick,
                         onSyncClick = { viewModel.refresh() },
-                        onProfileClick = { /* TODO */ },
                         isSyncing = uiState.isRefreshing
                     )
                     
@@ -287,14 +288,12 @@ fun LibraryScreen(
 fun LibraryTopBar(
     onHistoryClick: () -> Unit,
     onSyncClick: () -> Unit,
-    onProfileClick: () -> Unit,
     isSyncing: Boolean
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -314,10 +313,6 @@ fun LibraryTopBar(
                 } else {
                     Icon(Icons.Default.Cached, contentDescription = "Sync", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-            // Profile Icon with simplified placeholder
-             IconButton(onClick = onProfileClick) {
-                Icon(Icons.Default.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
