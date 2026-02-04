@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.components
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -126,6 +127,16 @@ fun SongActionsSheet(
         context.startActivity(shareIntent)
     }
     
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    
+    val handleAction: (() -> Unit) -> Unit = { action ->
+        scope.launch {
+            sheetState.hide()
+            onDismiss()
+            action()
+        }
+    }
+
     if (isVisible) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
@@ -195,7 +206,7 @@ fun SongActionsSheet(
                         title = "Delete from downloads",
                         iconTint = contentColor,
                         textColor = contentColor,
-                        onClick = { onDeleteDownload(); onDismiss() }
+                        onClick = { handleAction { onDeleteDownload() } }
                     )
                 } else {
                     ActionItem(
@@ -203,7 +214,7 @@ fun SongActionsSheet(
                         title = "Download",
                         iconTint = contentColor,
                         textColor = contentColor,
-                        onClick = { onDownload(); onDismiss() }
+                        onClick = { handleAction { onDownload() } }
                     )
                 }
 
@@ -212,7 +223,7 @@ fun SongActionsSheet(
                     title = "Play Next",
                     iconTint = contentColor,
                     textColor = contentColor,
-                    onClick = { onPlayNext(); onDismiss() }
+                    onClick = { handleAction { onPlayNext() } }
                 )
 
                 ActionItem(
@@ -220,7 +231,7 @@ fun SongActionsSheet(
                     title = "Add to Queue",
                     iconTint = contentColor,
                     textColor = contentColor,
-                    onClick = { onAddToQueue(); onDismiss() }
+                    onClick = { handleAction { onAddToQueue() } }
                 )
 
                 ActionItem(
@@ -228,7 +239,7 @@ fun SongActionsSheet(
                     title = "Add to a Playlist...",
                     iconTint = contentColor,
                     textColor = contentColor,
-                    onClick = { onAddToPlaylist(); onDismiss() }
+                    onClick = { handleAction { onAddToPlaylist() } }
                 )
                 
                 ActionItem(
@@ -236,7 +247,7 @@ fun SongActionsSheet(
                     title = "Start a Radio",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.primary,
                     textColor = contentColor,
-                    onClick = { onStartRadio(); onDismiss() }
+                    onClick = { handleAction { onStartRadio() } }
                 )
 
                 ActionItem(
@@ -244,7 +255,7 @@ fun SongActionsSheet(
                     title = "Listen With Together",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
                     textColor = contentColor,
-                    onClick = { onListenTogether(); onDismiss() }
+                    onClick = { handleAction { onListenTogether() } }
                 )
                 
                 ActionItem(
@@ -252,7 +263,7 @@ fun SongActionsSheet(
                     title = "Share Song",
                     iconTint = contentColor,
                     textColor = contentColor,
-                    onClick = { shareSong(); onDismiss() }
+                    onClick = { handleAction { shareSong() } }
                 )
                 
                 ActionItem(
@@ -260,7 +271,7 @@ fun SongActionsSheet(
                     title = "View Info",
                     iconTint = contentColor,
                     textColor = contentColor,
-                    onClick = { onViewInfo(); onDismiss() }
+                    onClick = { handleAction { onViewInfo() } }
                 )
                 
                 ActionItem(
@@ -268,7 +279,7 @@ fun SongActionsSheet(
                     title = "View Comments",
                     iconTint = contentColor,
                     textColor = contentColor,
-                    onClick = { onViewComments(); onDismiss() }
+                    onClick = { handleAction { onViewComments() } }
                 )
                 
                 val speedLabel = if (currentSpeed == 1.0f) "" else "($currentSpeed x)"
@@ -277,7 +288,7 @@ fun SongActionsSheet(
                     title = "Speed & Tempo $speedLabel",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
                     textColor = contentColor,
-                    onClick = { onPlaybackSpeed(); onDismiss() }
+                    onClick = { handleAction { onPlaybackSpeed() } }
                 )
 
                 ActionItem(
@@ -285,7 +296,7 @@ fun SongActionsSheet(
                     title = "Sleep Timer",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.tertiary,
                     textColor = contentColor,
-                    onClick = { onSleepTimer(); onDismiss() }
+                    onClick = { handleAction { onSleepTimer() } }
                 )
                 
                 ActionItem(
@@ -293,7 +304,7 @@ fun SongActionsSheet(
                     title = if (isFavorite) "Remove from Favourites" else "Add to Favourites",
                     iconTint = if (isFavorite) (if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.primary) else contentColor,
                     textColor = contentColor,
-                    onClick = { onToggleFavorite(); onDismiss() }
+                    onClick = { handleAction { onToggleFavorite() } }
                 )
 
                 // Dislike button removed as per request
@@ -303,7 +314,7 @@ fun SongActionsSheet(
                     title = "Set as Ringtone",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
                     textColor = contentColor,
-                    onClick = { onSetRingtone(); onDismiss() }
+                    onClick = { handleAction { onSetRingtone() } }
                 )
 
                 if (onMoveUp != null || onMoveDown != null || onRemoveFromQueue != null) {
@@ -318,7 +329,7 @@ fun SongActionsSheet(
                             title = "Move Up in Queue",
                             iconTint = contentColor,
                             textColor = contentColor,
-                            onClick = { onMoveUp(); onDismiss() }
+                            onClick = { handleAction { onMoveUp() } }
                         )
                     }
                     
@@ -328,7 +339,7 @@ fun SongActionsSheet(
                             title = "Move Down in Queue",
                             iconTint = contentColor,
                             textColor = contentColor,
-                            onClick = { onMoveDown(); onDismiss() }
+                            onClick = { handleAction { onMoveDown() } }
                         )
                     }
                     
@@ -338,7 +349,7 @@ fun SongActionsSheet(
                             title = "Remove from Queue",
                             iconTint = MaterialTheme.colorScheme.error,
                             textColor = contentColor,
-                            onClick = { onRemoveFromQueue(); onDismiss() }
+                            onClick = { handleAction { onRemoveFromQueue() } }
                         )
                     }
                 }

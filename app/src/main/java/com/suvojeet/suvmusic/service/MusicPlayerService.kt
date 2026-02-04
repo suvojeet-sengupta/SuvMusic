@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.service
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.media.AudioDeviceInfo
@@ -64,6 +65,9 @@ class MusicPlayerService : MediaLibraryService() {
 
     @Inject
     lateinit var audioARManager: com.suvojeet.suvmusic.player.AudioARManager
+
+    @Inject
+    lateinit var sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager
 
     private var mediaLibrarySession: MediaLibrarySession? = null
     
@@ -390,6 +394,8 @@ class MusicPlayerService : MediaLibraryService() {
                 sponsorBlockRepository.setEnabled(enabled)
             }
         }
+        
+        setupSleepTimerNotification()
     }
     
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
@@ -648,6 +654,9 @@ class MusicPlayerService : MediaLibraryService() {
         }
         releaseAudioEffects()
         
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        notificationManager.cancel(NOTIFICATION_ID_SLEEP_TIMER)
+
         audioARManager.setPlaying(false)
         listenTogetherManager.setPlayer(null)
 
@@ -705,5 +714,73 @@ class MusicPlayerService : MediaLibraryService() {
     
     private fun <T> List<T>.toImmutableList(): ImmutableList<T> {
         return ImmutableList.copyOf(this)
+    }
+
+    private fun setupSleepTimerNotification() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val channelId = "sleep_timer_channel"
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                channelId,
+                "Sleep Timer",
+                android.app.NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows active sleep timer countdown"
+                setShowBadge(false)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        serviceScope.launch {
+            // Combine isActive and remainingTimeMs to manage notification
+            kotlinx.coroutines.flow.combine(
+                sleepTimerManager.isActive,
+                sleepTimerManager.remainingTimeMs
+            ) { isActive, remaining ->
+                Pair(isActive, remaining)
+            }.collect { (isActive, remaining) ->
+                if (isActive && remaining != null) {
+                    val minutes = remaining / 1000 / 60
+                    val seconds = (remaining / 1000) % 60
+                    val timeString = String.format("%d:%02d", minutes, seconds)
+                    
+                    val cancelIntent = android.content.Intent(this@MusicPlayerService, MusicPlayerService::class.java).apply {
+                        action = "ACTION_CANCEL_SLEEP_TIMER"
+                    }
+                    val pendingCancelIntent = android.app.PendingIntent.getService(
+                        this@MusicPlayerService, 
+                        99, 
+                        cancelIntent, 
+                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+                    )
+
+                    val notification = androidx.core.app.NotificationCompat.Builder(this@MusicPlayerService, channelId)
+                        .setSmallIcon(com.suvojeet.suvmusic.R.drawable.ic_music_note) // Use appropriate icon
+                        .setContentTitle("Sleep Timer Active")
+                        .setContentText("Stopping audio in $timeString")
+                        .setOnlyAlertOnce(true)
+                        .setOngoing(true)
+                        .addAction(com.suvojeet.suvmusic.R.drawable.ic_music_note, "Cancel", pendingCancelIntent)
+                        .setColor(androidx.core.content.ContextCompat.getColor(this@MusicPlayerService, com.suvojeet.suvmusic.R.color.black))
+                        .build()
+
+                    notificationManager.notify(NOTIFICATION_ID_SLEEP_TIMER, notification)
+                } else {
+                    notificationManager.cancel(NOTIFICATION_ID_SLEEP_TIMER)
+                }
+            }
+        }
+    }
+    
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "ACTION_CANCEL_SLEEP_TIMER") {
+            sleepTimerManager.cancelTimer()
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    companion object {
+        private const val NOTIFICATION_ID_SLEEP_TIMER = 1002
     }
 }
