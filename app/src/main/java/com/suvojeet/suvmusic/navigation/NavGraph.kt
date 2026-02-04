@@ -267,6 +267,9 @@ fun NavGraph(
                     onPlaySong(songs, index)
                     navController.navigate(Destination.Player.route)
                 },
+                onHistoryClick = {
+                    navController.navigate(Destination.Recents.route)
+                },
                 onPlaylistClick = { playlist ->
                     navController.navigate(
                         Destination.Playlist(
