@@ -960,12 +960,12 @@ fun LyricsList(
                 val isSelected = selectedIndices.contains(index)
                 
                 // Opacity logic:
-                // Normal mode: Active=1f, Inactive=0.5f
+                // Normal mode: Active=1f, Inactive=0.3f (Dimmed more for contrast)
                 // Selection mode: Selected=1f, Unselected=0.3f
                 val targetAlpha = if (isSelectionMode) {
                     if (isSelected) 1f else 0.3f
                 } else {
-                    if (isActive || !lyrics.isSynced) 1f else 0.5f
+                    if (isActive) 1f else 0.3f
                 }
                 
                 val alpha by animateFloatAsState(
