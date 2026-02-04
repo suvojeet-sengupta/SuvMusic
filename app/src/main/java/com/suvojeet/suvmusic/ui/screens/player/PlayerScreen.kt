@@ -998,15 +998,12 @@ fun PlayerScreen(
                     showSleepTimerSheet = true
                 },
                 onStartRadio = {
-                    showActionsSheet = false
                     playerViewModel.startRadio(menuSong)
                 },
                 onListenTogether = {
-                    showActionsSheet = false
                     showListenTogetherSheet = true
                 },
                 onPlaybackSpeed = {
-                    showActionsSheet = false
                     showPlaybackSpeedSheet = true
                 },
                 currentSpeed = playerState.playbackSpeed,
@@ -1020,7 +1017,6 @@ fun PlayerScreen(
                     { playerViewModel.removeQueueItems(listOf(playerState.queue.indexOf(menuSong))) }
                 } else null,
                 onSetRingtone = {
-                    showActionsSheet = false
 
                     // Check for WRITE_SETTINGS permission
                     if (!ringtoneViewModel.ringtoneHelper.hasWriteSettingsPermission(context)) {
