@@ -271,8 +271,9 @@ class YouTubeJsonParser @Inject constructor() {
             if (rootContinuation != null) {
                 val playlistContinuation = rootContinuation.optJSONObject("musicPlaylistShelfContinuation")
                 val shelfContinuation = rootContinuation.optJSONObject("musicShelfContinuation")
+                val sectionContinuation = rootContinuation.optJSONObject("sectionListContinuation") // Added this
 
-                val target = playlistContinuation ?: shelfContinuation
+                val target = playlistContinuation ?: shelfContinuation ?: sectionContinuation
                 val continuations = target?.optJSONArray("continuations")
                 if (continuations != null) {
                     return continuations.optJSONObject(0)
@@ -280,10 +281,33 @@ class YouTubeJsonParser @Inject constructor() {
                         ?.optString("continuation")
                 }
             }
+            
+            // 5. Recursive Fallback (Deep Search) - Matches "nextContinuationData" anywhere
+            // This is crucial for deeply nested or varying structures
+            return findContinuationTokenRecursive(json)
 
-            return null
         } catch (e: Exception) {
             return null
         }
+    }
+    
+    private fun findContinuationTokenRecursive(node: Any): String? {
+        if (node is JSONObject) {
+            if (node.has("nextContinuationData")) {
+                return node.getJSONObject("nextContinuationData").optString("continuation")
+            }
+            val keys = node.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val res = findContinuationTokenRecursive(node.get(key))
+                if (res != null) return res
+            }
+        } else if (node is JSONArray) {
+            for (i in 0 until node.length()) {
+                val res = findContinuationTokenRecursive(node.get(i))
+                if (res != null) return res
+            }
+        }
+        return null
     }
 }
