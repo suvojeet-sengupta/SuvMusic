@@ -254,8 +254,6 @@ class PlayerViewModel @Inject constructor(
                         _isMiniPlayerDismissed.value = false // Show mini player when a new song starts
                         checkLikeStatus(song)
                         checkDownloadStatus(song)
-                        checkLikeStatus(song)
-                        checkDownloadStatus(song)
                         
                         // Reset sync state for new song
                         if (song.id != lastSyncedVideoId) {
@@ -270,6 +268,11 @@ class PlayerViewModel @Inject constructor(
                         // Reset provider to AUTO on song change unless user specifically locked a provider?
                         // For now, let's keep it persistent or reset. Resetting is safer for "Best Match".
                         _selectedLyricsProvider.value = LyricsProviderType.AUTO
+                        
+                        // Clear old data synchronously to prevent stale display
+                        _lyricsState.value = null
+                        _commentsState.value = null
+                        
                         fetchLyrics(song.id)
                         fetchComments(song.id)
                         

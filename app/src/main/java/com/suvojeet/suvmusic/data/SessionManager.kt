@@ -125,6 +125,8 @@ class SessionManager @Inject constructor(
         private val PREFERRED_LYRICS_PROVIDER_KEY = stringPreferencesKey("preferred_lyrics_provider")
         private val LYRICS_TEXT_POSITION_KEY = stringPreferencesKey("lyrics_text_position")
         private val LYRICS_ANIMATION_TYPE_KEY = stringPreferencesKey("lyrics_animation_type")
+        private val LYRICS_LINE_SPACING_KEY = floatPreferencesKey("lyrics_line_spacing")
+        private val LYRICS_FONT_SIZE_KEY = floatPreferencesKey("lyrics_font_size")
 
         private val PLAYER_CACHE_LIMIT_KEY = longPreferencesKey("player_cache_limit")
         private val PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY = intPreferencesKey("player_cache_auto_clear_interval")
@@ -595,6 +597,32 @@ class SessionManager @Inject constructor(
     suspend fun setLyricsAnimationType(type: LyricsAnimationType) {
         context.dataStore.edit { preferences ->
             preferences[LYRICS_ANIMATION_TYPE_KEY] = type.name
+        }
+    }
+
+    suspend fun getLyricsLineSpacing(): Float = 
+        context.dataStore.data.first()[LYRICS_LINE_SPACING_KEY] ?: 1.5f
+
+    val lyricsLineSpacingFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[LYRICS_LINE_SPACING_KEY] ?: 1.5f
+    }
+
+    suspend fun setLyricsLineSpacing(multiplier: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[LYRICS_LINE_SPACING_KEY] = multiplier
+        }
+    }
+
+    suspend fun getLyricsFontSize(): Float = 
+        context.dataStore.data.first()[LYRICS_FONT_SIZE_KEY] ?: 26f
+
+    val lyricsFontSizeFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[LYRICS_FONT_SIZE_KEY] ?: 26f
+    }
+
+    suspend fun setLyricsFontSize(size: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[LYRICS_FONT_SIZE_KEY] = size
         }
     }
 
