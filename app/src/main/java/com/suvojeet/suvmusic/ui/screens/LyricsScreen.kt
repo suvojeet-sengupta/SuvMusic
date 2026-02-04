@@ -49,6 +49,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.animation.animateContentSize
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
@@ -674,8 +677,13 @@ fun LyricsScreen(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color.White.copy(alpha = 0.05f))
-                            .clickable { expandedProvider = !expandedProvider }
+                            .clickable(
+                                onClick = { expandedProvider = !expandedProvider },
+                                indication = LocalIndication.current,
+                                interactionSource = remember { MutableInteractionSource() }
+                            )
                             .padding(16.dp)
+                            .animateContentSize()
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
