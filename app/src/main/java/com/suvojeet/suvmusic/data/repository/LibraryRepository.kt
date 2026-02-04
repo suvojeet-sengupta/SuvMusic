@@ -50,6 +50,23 @@ class LibraryRepository @Inject constructor(
         libraryDao.insertPlaylistSongs(entities)
     }
 
+    suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) {
+        val entities = songs.mapIndexed { index, song ->
+            PlaylistSongEntity(
+                playlistId = playlistId,
+                songId = song.id,
+                title = song.title,
+                artist = song.artist,
+                album = song.album,
+                thumbnailUrl = song.thumbnailUrl,
+                duration = song.duration,
+                source = song.source.name,
+                order = startOrder + index
+            )
+        }
+        libraryDao.insertPlaylistSongs(entities)
+    }
+
     suspend fun getCachedPlaylistSongs(playlistId: String): List<Song> {
         return libraryDao.getPlaylistSongs(playlistId).map { entity ->
             Song(

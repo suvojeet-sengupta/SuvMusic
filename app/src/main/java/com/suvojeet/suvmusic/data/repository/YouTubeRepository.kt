@@ -637,49 +637,61 @@ class YouTubeRepository @Inject constructor(
         if (!networkMonitor.isCurrentlyConnected() || !sessionManager.isLoggedIn()) return@withContext false
         
         try {
-            val songs = mutableListOf<Song>()
-            val jsonResponse = fetchInternalApi("FEmusic_liked_videos")
-            songs.addAll(parseSongsFromInternalJson(jsonResponse))
+            // Incremental Sync Strategy:
+            // 1. Clear old data to avoid duplicates/stale data
+            // 2. Fetch pages and append immediately to DB -> Triggers UI Flow updates
             
-            if (fetchAll) {
-                var currentJson = JSONObject(jsonResponse)
-                var continuationToken = extractContinuationToken(currentJson)
-                var pageCount = 0
-                val maxPages = 500 // Increase limit to ~50000 songs
-
-                while (continuationToken != null && pageCount < maxPages) {
-                        try {
-                        val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
-                        if (continuationResponse.isNotEmpty()) {
-                            val newSongs = parseSongsFromInternalJson(continuationResponse)
-                            if (newSongs.isEmpty()) break
-                            
-                            songs.addAll(newSongs)
-                            
-                            currentJson = JSONObject(continuationResponse)
-                            continuationToken = extractContinuationToken(currentJson)
-                            pageCount++
-                        } else {
-                            break
-                        }
-                        } catch (e: Exception) {
-                            break
-                        }
-                }
-            }
+            // Clear existing Liked Songs
+            libraryRepository.removePlaylist("LM")
             
-            if (songs.isNotEmpty()) {
-                val distinctSongs = songs.distinctBy { it.id }
-                // Cache the liked songs with metadata
+            val initialResponse = fetchInternalApi("FEmusic_liked_videos")
+            val initialSongs = parseSongsFromInternalJson(initialResponse)
+            var totalSongsAdded = 0
+            
+            if (initialSongs.isNotEmpty()) {
+                // Save Playlist Metadata first so the card appears/updates
                 libraryRepository.savePlaylist(
                     Playlist(
                         id = "LM",
                         title = "Your Likes",
                         author = "You",
-                        thumbnailUrl = distinctSongs.firstOrNull()?.thumbnailUrl,
-                        songs = distinctSongs
+                        thumbnailUrl = initialSongs.first().thumbnailUrl,
+                        songs = emptyList() // Metadata only
                     )
                 )
+                
+                // Append first batch
+                libraryRepository.appendPlaylistSongs("LM", initialSongs, totalSongsAdded)
+                totalSongsAdded += initialSongs.size
+                
+                if (fetchAll) {
+                    var currentJson = JSONObject(initialResponse)
+                    var continuationToken = extractContinuationToken(currentJson)
+                    var pageCount = 0
+                    val maxPages = 500 // Limit to ~50k songs
+
+                    while (continuationToken != null && pageCount < maxPages) {
+                        try {
+                            val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                            if (continuationResponse.isNotEmpty()) {
+                                val newSongs = parseSongsFromInternalJson(continuationResponse)
+                                if (newSongs.isEmpty()) break
+                                
+                                // Append immediately
+                                libraryRepository.appendPlaylistSongs("LM", newSongs, totalSongsAdded)
+                                totalSongsAdded += newSongs.size
+                                
+                                currentJson = JSONObject(continuationResponse)
+                                continuationToken = extractContinuationToken(currentJson)
+                                pageCount++
+                            } else {
+                                break
+                            }
+                        } catch (e: Exception) {
+                            break
+                        }
+                    }
+                }
                 return@withContext true
             }
         } catch (e: Exception) {
