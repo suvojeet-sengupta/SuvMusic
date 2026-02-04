@@ -121,7 +121,18 @@ class PlaylistViewModel @Inject constructor(
                 val currentSource = sessionManager.getMusicSource()
                 
                 // Smart loading based on source preference
-                val playlist = if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
+                // Smart loading based on source preference
+                val playlist = if (playlistId == "LM") {
+                    // Liked Songs - Load from local library
+                    val songs = libraryRepository.getCachedPlaylistSongs("LM")
+                    Playlist(
+                        id = "LM",
+                        title = "Liked",
+                        author = "You",
+                        thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
+                        songs = songs
+                    )
+                } else if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
                     // In HQ Audio mode, prioritize JioSaavn
                     val jioPlaylist = jioSaavnRepository.getPlaylist(playlistId)
                     if (jioPlaylist != null) {
