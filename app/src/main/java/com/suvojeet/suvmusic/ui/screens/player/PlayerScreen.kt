@@ -855,8 +855,8 @@ fun PlayerScreen(
                     onLoadMore = onLoadMoreRadioSongs,
                     onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
                     onRemoveItems = { indices -> playerViewModel.removeQueueItems(indices) },
-                    onSaveAsPlaylist = { title, desc, isPrivate ->
-                        playerViewModel.saveQueueAsPlaylist(title, desc, isPrivate) { success ->
+                    onSaveAsPlaylist = { title, desc, isPrivate, syncWithYt ->
+                        playerViewModel.saveQueueAsPlaylist(title, desc, isPrivate, syncWithYt) { success ->
                             if (success) {
                                 Toast.makeText(context, "Queue saved as playlist", Toast.LENGTH_SHORT).show()
                             } else {
@@ -1100,8 +1100,8 @@ fun PlayerScreen(
                 isVisible = playlistUiState.showCreatePlaylistDialog,
                 isCreating = playlistUiState.isCreatingPlaylist,
                 onDismiss = { playlistViewModel.hideCreatePlaylistDialog() },
-                onCreate = { title, description, isPrivate ->
-                    playlistViewModel.createPlaylist(title, description, isPrivate)
+                onCreate = { title, description, isPrivate, syncWithYt ->
+                    playlistViewModel.createPlaylist(title, description, isPrivate, syncWithYt)
                 }
             )
 

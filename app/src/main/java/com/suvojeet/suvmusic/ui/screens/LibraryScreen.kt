@@ -55,6 +55,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -116,15 +117,18 @@ fun LibraryScreen(
     var showPlaylistMenu by remember { mutableStateOf(false) }
     var selectedPlaylist: PlaylistDisplayItem? by remember { mutableStateOf(null) }
 
+    // Add Menu State
+    var showAddMenu by remember { mutableStateOf(false) }
+
     Scaffold(
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showCreatePlaylistDialog = true },
+            androidx.compose.material3.FloatingActionButton(
+                onClick = { showAddMenu = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                icon = { Icon(Icons.Default.Add, "New Playlist") },
-                text = { Text("New Playlist") }
-            )
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                 Icon(Icons.Default.Add, "Add")
+            }
         }
     ) { paddingValues ->
         Box(
@@ -145,20 +149,20 @@ fun LibraryScreen(
                             uiState = uiState, // Pass full state for smart playlists
                             onPlaylistClick = onPlaylistClick,
                             onSmartPlaylistClick = { type ->
-                                when(type) {
+                                when (type) {
                                     SmartPlaylistType.LIKED -> {
                                         // Trigger sync if empty (first time)
                                         if (uiState.likedSongs.isEmpty()) {
                                             viewModel.syncLikedSongs()
                                         }
-                                        navController.navigate(Destination.Playlist(id = "LM", name = "Liked Songs", thumbnail = null))
+                                        onPlaylistClick(PlaylistDisplayItem(id = "LM", name = "Liked Songs", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
                                     SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
                                     SmartPlaylistType.TOP_50 -> {
-                                        navController.navigate(Destination.Playlist(id = "TOP_50", name = "My Top 50", thumbnail = null))
+                                        onPlaylistClick(PlaylistDisplayItem(id = "TOP_50", name = "My Top 50", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
                                     SmartPlaylistType.CACHED -> {
-                                        navController.navigate(Destination.Playlist(id = "CACHED_ALL", name = "Cached Songs", thumbnail = null))
+                                        onPlaylistClick(PlaylistDisplayItem(id = "CACHED_ALL", name = "Cached Songs", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
                                 }
                             },
@@ -252,9 +256,9 @@ fun LibraryScreen(
         isVisible = showCreatePlaylistDialog,
         isCreating = isCreatingPlaylist,
         onDismiss = { showCreatePlaylistDialog = false },
-        onCreate = { title, description, isPrivate ->
+        onCreate = { title, description, isPrivate, syncWithYt ->
             isCreatingPlaylist = true
-            viewModel.createPlaylist(title, description, isPrivate) {
+            viewModel.createPlaylist(title, description, isPrivate, syncWithYt) {
                 isCreatingPlaylist = false
                 showCreatePlaylistDialog = false
             }
@@ -311,6 +315,80 @@ fun LibraryScreen(
             onRename = { },
             onDelete = { viewModel.deletePlaylist(playlist.id) }
         )
+    }
+
+    // Add Menu Bottom Sheet
+    if (showAddMenu) {
+        ModalBottomSheet(
+            onDismissRequest = { showAddMenu = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Add to Library",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+
+                // Create Playlist Item
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showAddMenu = false
+                            showCreatePlaylistDialog = true
+                        }
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Create playlist", style = MaterialTheme.typography.titleMedium)
+                }
+
+                // Import Spotify Item
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showAddMenu = false
+                            showImportSpotifyDialog = true
+                        }
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1DB954)), // Spotify Green
+                        contentAlignment = Alignment.Center
+                    ) {
+                         // Use generic icon or download generic one, for now Add is fine or specific import
+                         Icon(Icons.Outlined.FileDownload, null, tint = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text("Import from Spotify", style = MaterialTheme.typography.titleMedium)
+                        Text("Transfer your playlists", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -482,7 +560,7 @@ fun PlaylistsGrid(
              SmartPlaylistCard(
                 title = "My top 50",
                 icon = Icons.Default.TrendingUp,
-                count = "0 songs", // TODO
+                count = "${uiState.top50SongCount} songs",
                 onClick = { onSmartPlaylistClick(SmartPlaylistType.TOP_50) }
             )
         }

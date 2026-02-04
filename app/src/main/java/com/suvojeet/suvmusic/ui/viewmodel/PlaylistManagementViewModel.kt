@@ -2,9 +2,13 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import java.util.UUID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +35,9 @@ data class PlaylistManagementUiState(
  */
 @HiltViewModel
 class PlaylistManagementViewModel @Inject constructor(
-    private val youTubeRepository: YouTubeRepository
+    private val youTubeRepository: YouTubeRepository,
+    private val libraryRepository: LibraryRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(PlaylistManagementUiState())
@@ -97,18 +103,48 @@ class PlaylistManagementViewModel @Inject constructor(
     /**
      * Create a new playlist on YouTube Music.
      */
-    fun createPlaylist(title: String, description: String, isPrivate: Boolean) {
+    fun createPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean) {
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingPlaylist = true) }
             
-            val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
-            val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
+            val playlistId = if (syncWithYt && sessionManager.isLoggedIn()) {
+                val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
+                youTubeRepository.createPlaylist(title, description, privacyStatus)
+            } else {
+                // Create Local Playlist
+                try {
+                    val id = "local_" + UUID.randomUUID().toString()
+                    val playlist = Playlist(
+                        id = id, 
+                        title = title, 
+                        author = "You", 
+                        thumbnailUrl = null, 
+                        songs = emptyList()
+                    )
+                    libraryRepository.savePlaylist(playlist)
+                    id
+                } catch (e: Exception) {
+                    null
+                }
+            }
             
             if (playlistId != null) {
                 // If there's a selected song, add it to the new playlist
                 val song = _uiState.value.selectedSong
                 if (song != null) {
-                    val added = youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                    val added = if (syncWithYt && sessionManager.isLoggedIn()) {
+                        youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                    } else {
+                         // For local playlist, we need to implement adding song (LibraryRepository logic)
+                         // Assuming savePlaylist works for updates or we have addSongToPlaylist in libraryRepo
+                         try {
+                             libraryRepository.addSongToPlaylist(playlistId, song)
+                             true
+                         } catch (e: Exception) {
+                             false
+                         }
+                    }
+
                     if (added) {
                         _uiState.update { 
                             it.copy(
@@ -144,7 +180,7 @@ class PlaylistManagementViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         isCreatingPlaylist = false,
-                        errorMessage = "Failed to create playlist. Make sure you're signed in."
+                        errorMessage = "Failed to create playlist."
                     )
                 }
             }

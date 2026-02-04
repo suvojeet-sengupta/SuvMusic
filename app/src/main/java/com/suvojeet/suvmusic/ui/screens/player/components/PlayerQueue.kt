@@ -86,7 +86,7 @@ fun QueueView(
     onLoadMore: () -> Unit = {},
     onMoveItem: (Int, Int) -> Unit,
     onRemoveItems: (List<Int>) -> Unit,
-    onSaveAsPlaylist: (String, String, Boolean) -> Unit,
+    onSaveAsPlaylist: (String, String, Boolean, Boolean) -> Unit,
     dominantColors: DominantColors
 ) {
     // Capture background color for QueueView as well
@@ -428,8 +428,8 @@ fun QueueView(
             isVisible = showSavePlaylistDialog,
             isCreating = false,
             onDismiss = { showSavePlaylistDialog = false },
-            onCreate = { title, description, isPrivate ->
-                onSaveAsPlaylist(title, description, isPrivate)
+            onCreate = { title, description, isPrivate, syncWithYt ->
+                onSaveAsPlaylist(title, description, isPrivate, syncWithYt)
                 showSavePlaylistDialog = false
             }
         )
