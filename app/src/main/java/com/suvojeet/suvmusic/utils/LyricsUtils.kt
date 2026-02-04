@@ -54,7 +54,7 @@ object LyricsUtils {
         return lines.sortedBy { it.startTimeMs }
     }
 
-    private fun parseRichSyncContent(content: String): List<com.suvojeet.suvmusic.data.model.LyricsWord> {
+    private fun parseRichSyncContent(content: String): List<com.suvojeet.suvmusic.providers.lyrics.LyricsWord> {
         return try {
             content.split("|").mapNotNull { wordData ->
                 val parts = wordData.split(":")
@@ -62,7 +62,7 @@ object LyricsUtils {
                     val text = parts[0]
                     val startSec = parts[1].toDoubleOrNull() ?: 0.0
                     val endSec = parts[2].toDoubleOrNull() ?: 0.0
-                    com.suvojeet.suvmusic.data.model.LyricsWord(
+                    com.suvojeet.suvmusic.providers.lyrics.LyricsWord(
                         text = text,
                         startTimeMs = (startSec * 1000).toLong(),
                         endTimeMs = (endSec * 1000).toLong()
