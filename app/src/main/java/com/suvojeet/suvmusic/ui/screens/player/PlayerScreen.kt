@@ -195,6 +195,8 @@ fun PlayerScreen(
     val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsState(initial = false)
     val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition.CENTER)
     val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
+    val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsState(initial = 1.5f)
+    val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsState(initial = 26f)
     
     // Keep Screen On Logic
     DisposableEffect(keepScreenOn) {
@@ -886,8 +888,15 @@ fun PlayerScreen(
                     selectedProvider = selectedLyricsProvider,
                     enabledProviders = enabledLyricsProviders,
                     onProviderChange = onLyricsProviderChange,
+
                     lyricsTextPosition = lyricsTextPosition,
                     lyricsAnimationType = lyricsAnimationType,
+                    lyricsLineSpacing = lyricsLineSpacing,
+                    lyricsFontSize = lyricsFontSize,
+                    onLineSpacingChange = { coroutineScope.launch { sessionManager.setLyricsLineSpacing(it) } },
+                    onFontSizeChange = { coroutineScope.launch { sessionManager.setLyricsFontSize(it) } },
+                    onTextPositionChange = { coroutineScope.launch { sessionManager.setLyricsTextPosition(it) } },
+                    onAnimationTypeChange = { coroutineScope.launch { sessionManager.setLyricsAnimationType(it) } },
                     isPlaying = playerState.isPlaying,
                     onPlayPause = onPlayPause,
                     onNext = onNext,
