@@ -174,13 +174,16 @@ fun LibraryScreen(
                                 onPlaylistClick = onPlaylistClick,
                                 onSmartPlaylistClick = { type ->
                                     when(type) {
-                                        SmartPlaylistType.LIKED -> { /* Handled layout internally? No. Open Liked Activity/Screen? */ 
-                                            // For now, let's treat Liked as a special playlist or just navigate
-                                            // Since we are in LibraryScreen, maybe we just switch tab? 
-                                            // The redesign implies these open into detail views.
-                                            // We'll map them to navigation actions.
-                                            // Since arguments are limited, we might need a workaround or assume specific handling.
-                                            // For now, we will just show a toast or log if not handled by props.
+                                        SmartPlaylistType.LIKED -> {
+                                            val likedPlaylist = PlaylistDisplayItem(
+                                                id = "LM",
+                                                name = "Liked",
+                                                thumbnailUrl = uiState.likedSongs.firstOrNull()?.thumbnailUrl,
+                                                songCount = uiState.likedSongs.size,
+                                                url = "",
+                                                uploaderName = "You"
+                                            )
+                                            onPlaylistClick(likedPlaylist)
                                         }
                                         SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
                                         SmartPlaylistType.TOP_50 -> { /* TODO */ }
