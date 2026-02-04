@@ -122,6 +122,7 @@ class PlaylistViewModel @Inject constructor(
                 
                 // Smart loading based on source preference
                 // Smart loading based on source preference
+                // Smart loading based on source preference
                 val playlist = if (playlistId == "LM") {
                     // Liked Songs - Load from local library
                     val songs = libraryRepository.getCachedPlaylistSongs("LM")
@@ -132,6 +133,28 @@ class PlaylistViewModel @Inject constructor(
                         thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
                         songs = songs
                     )
+                } else if (playlistId == "CACHED_ALL") {
+                     // Cached Songs
+                     val songs = downloadRepository.downloadedSongs.value
+                     Playlist(
+                         id = "CACHED_ALL",
+                         title = "Cached Songs",
+                         author = "Local Device",
+                         thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
+                         songs = songs
+                     )
+                } else if (playlistId == "TOP_50") {
+                     // My Top 50 (Mapped to Supermix RTM)
+                     val supermix = try {
+                         youTubeRepository.getPlaylist("RTM")
+                     } catch (e: Exception) {
+                         Playlist("TOP_50", "My Top 50", "YouTube Music", null, emptyList())
+                     }
+                     supermix.copy(
+                         id = "TOP_50",
+                         title = "My Top 50", // Override title
+                         author = "You"
+                     )
                 } else if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
                     // In HQ Audio mode, prioritize JioSaavn
                     val jioPlaylist = jioSaavnRepository.getPlaylist(playlistId)

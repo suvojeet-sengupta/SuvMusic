@@ -151,19 +151,15 @@ fun LibraryScreen(
                                         if (uiState.likedSongs.isEmpty()) {
                                             viewModel.syncLikedSongs()
                                         }
-                                        val likedPlaylist = PlaylistDisplayItem(
-                                            id = "LM",
-                                            name = "Liked",
-                                            thumbnailUrl = uiState.likedSongs.firstOrNull()?.thumbnailUrl,
-                                            songCount = uiState.likedSongs.size,
-                                            url = "",
-                                            uploaderName = "You"
-                                        )
-                                        onPlaylistClick(likedPlaylist)
+                                        navController.navigate(Destination.Playlist(id = "LM", name = "Liked Songs", thumbnail = null))
                                     }
                                     SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
-                                    SmartPlaylistType.TOP_50 -> { /* TODO */ }
-                                    SmartPlaylistType.CACHED -> { /* TODO: Open Local Files */ }
+                                    SmartPlaylistType.TOP_50 -> {
+                                        navController.navigate(Destination.Playlist(id = "TOP_50", name = "My Top 50", thumbnail = null))
+                                    }
+                                    SmartPlaylistType.CACHED -> {
+                                        navController.navigate(Destination.Playlist(id = "CACHED_ALL", name = "Cached Songs", thumbnail = null))
+                                    }
                                 }
                             },
                             onMoreClick = { playlist ->
