@@ -964,6 +964,14 @@ fun PlayerScreen(
                 onDeleteDownload = {
                     playerViewModel.deleteDownload(menuSong.id)
                 },
+                onPlayNext = {
+                    playerViewModel.playNext(menuSong)
+                    Toast.makeText(context, "Playing next", Toast.LENGTH_SHORT).show()
+                },
+                onAddToQueue = {
+                    playerViewModel.addToQueue(menuSong)
+                    Toast.makeText(context, "Added to queue", Toast.LENGTH_SHORT).show()
+                },
                 onViewInfo = {
                     showActionsSheet = false
                     showInfoSheet = true

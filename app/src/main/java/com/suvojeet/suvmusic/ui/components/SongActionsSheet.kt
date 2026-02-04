@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddToQueue
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Comment
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.RingVolume
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
@@ -63,6 +65,8 @@ fun SongActionsSheet(
     isDownloaded: Boolean = false,
     onDownload: () -> Unit = {},
     onDeleteDownload: () -> Unit = {},
+    onPlayNext: () -> Unit = {},
+    onAddToQueue: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
     onViewInfo: () -> Unit = {},
     onViewComments: () -> Unit = {},
@@ -202,6 +206,22 @@ fun SongActionsSheet(
                         onClick = { onDownload(); onDismiss() }
                     )
                 }
+
+                ActionItem(
+                    icon = Icons.Default.SkipNext,
+                    title = "Play Next",
+                    iconTint = contentColor,
+                    textColor = contentColor,
+                    onClick = { onPlayNext(); onDismiss() }
+                )
+
+                ActionItem(
+                    icon = Icons.Default.AddToQueue,
+                    title = "Add to Queue",
+                    iconTint = contentColor,
+                    textColor = contentColor,
+                    onClick = { onAddToQueue(); onDismiss() }
+                )
 
                 ActionItem(
                     icon = Icons.Default.PlaylistAdd,
