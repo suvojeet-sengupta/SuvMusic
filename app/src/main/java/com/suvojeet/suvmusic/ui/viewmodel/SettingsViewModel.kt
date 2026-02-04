@@ -70,6 +70,8 @@ data class SettingsUiState(
     val preferredLyricsProvider: String = "BetterLyrics",
     val lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
     val lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
+    val lyricsLineSpacing: Float = 1.5f,
+    val lyricsFontSize: Float = 26f,
     // Audio Offload
     val audioOffloadEnabled: Boolean = false,
     // Volume Boost
@@ -146,6 +148,10 @@ class SettingsViewModel @Inject constructor(
 
     // Audio AR
     val audioArEnabled = sessionManager.audioArEnabledFlow
+    
+    // Lyrics Settings Flows
+    val lyricsLineSpacing = sessionManager.lyricsLineSpacingFlow
+    val lyricsFontSize = sessionManager.lyricsFontSizeFlow
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -281,6 +287,18 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lyricsAnimationType = type) }
             }
         }
+        
+        viewModelScope.launch {
+            sessionManager.lyricsLineSpacingFlow.collect { spacing ->
+                _uiState.update { it.copy(lyricsLineSpacing = spacing) }
+            }
+        }
+        
+        viewModelScope.launch {
+            sessionManager.lyricsFontSizeFlow.collect { size ->
+                _uiState.update { it.copy(lyricsFontSize = size) }
+            }
+        }
 
         viewModelScope.launch {
             sessionManager.audioOffloadEnabledFlow.collect { enabled ->
@@ -312,77 +330,77 @@ class SettingsViewModel @Inject constructor(
             }
         }
         
-            viewModelScope.launch {
-                sessionManager.preferredLanguagesFlow.collect { languages ->
-                    _uiState.update { it.copy(preferredLanguages = languages) }
-                }
+        viewModelScope.launch {
+            sessionManager.preferredLanguagesFlow.collect { languages ->
+                _uiState.update { it.copy(preferredLanguages = languages) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.youtubeHistorySyncEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(youtubeHistorySyncEnabled = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.youtubeHistorySyncEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(youtubeHistorySyncEnabled = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.ignoreAudioFocusDuringCallsFlow.collect { enabled ->
-                    _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.ignoreAudioFocusDuringCallsFlow.collect { enabled ->
+                _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.bluetoothAutoplayEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(bluetoothAutoplayEnabled = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.bluetoothAutoplayEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(bluetoothAutoplayEnabled = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.speakSongDetailsEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(speakSongDetailsEnabled = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.speakSongDetailsEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(speakSongDetailsEnabled = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.discordRpcEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(discordRpcEnabled = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.discordRpcEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(discordRpcEnabled = enabled) }
             }
-            
-            viewModelScope.launch {
-                sessionManager.discordTokenFlow.collect { token ->
-                    _uiState.update { it.copy(discordToken = token) }
-                }
+        }
+        
+        viewModelScope.launch {
+            sessionManager.discordTokenFlow.collect { token ->
+                _uiState.update { it.copy(discordToken = token) }
             }
-            
-            viewModelScope.launch {
-                sessionManager.discordUseDetailsFlow.collect { enabled ->
-                    _uiState.update { it.copy(discordUseDetails = enabled) }
-                }
+        }
+        
+        viewModelScope.launch {
+            sessionManager.discordUseDetailsFlow.collect { enabled ->
+                _uiState.update { it.copy(discordUseDetails = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.privacyModeEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(privacyModeEnabled = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.privacyModeEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(privacyModeEnabled = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.audioArEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(audioArEnabled = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.audioArEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(audioArEnabled = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.nextSongPreloadingEnabledFlow.collect { enabled ->
-                    _uiState.update { it.copy(nextSongPreloadingEnabled = enabled) }
-                }
+        viewModelScope.launch {
+            sessionManager.nextSongPreloadingEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(nextSongPreloadingEnabled = enabled) }
             }
+        }
 
-            viewModelScope.launch {
-                sessionManager.nextSongPreloadDelayFlow.collect { delay ->
-                    _uiState.update { it.copy(nextSongPreloadDelay = delay) }
-                }
+        viewModelScope.launch {
+            sessionManager.nextSongPreloadDelayFlow.collect { delay ->
+                _uiState.update { it.copy(nextSongPreloadDelay = delay) }
             }
+        }
 
         // Refresh account info if logged in
         viewModelScope.launch {
@@ -434,9 +452,23 @@ class SettingsViewModel @Inject constructor(
             val ignoreAudioFocusDuringCalls = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
             val bluetoothAutoplayEnabled = sessionManager.isBluetoothAutoplayEnabled()
             val speakSongDetailsEnabled = sessionManager.isSpeakSongDetailsEnabled()
-            val discordRpcEnabled = sessionManager.isDiscordRpcEnabled()
             val discordToken = sessionManager.getDiscordToken()
             val discordUseDetails = sessionManager.isDiscordUseDetailsEnabled()
+            val lyricsLineSpacing = sessionManager.getLyricsLineSpacing()
+            val lyricsFontSize = sessionManager.getLyricsFontSize()
+            val preferredLyricsProvider = sessionManager.getPreferredLyricsProvider()
+            val lyricsTextPosition = sessionManager.getLyricsTextPosition()
+            val lyricsAnimationType = sessionManager.getLyricsAnimationType()
+            val audioOffloadEnabled = sessionManager.isAudioOffloadEnabled()
+            val volumeBoostEnabled = sessionManager.isVolumeBoostEnabled()
+            val volumeBoostAmount = sessionManager.getVolumeBoostAmount()
+            val updateChannel = sessionManager.getUpdateChannel()
+            val youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled()
+            val discordRpcEnabled = sessionManager.isDiscordRpcEnabled()
+            val privacyModeEnabled = sessionManager.isPrivacyModeEnabled()
+            val audioArEnabled = sessionManager.isAudioArEnabled()
+            val nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled()
+            val nextSongPreloadDelay = sessionManager.getNextSongPreloadDelay()
 
 
             _uiState.update { 
@@ -470,12 +502,14 @@ class SettingsViewModel @Inject constructor(
                     pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
                     keepScreenOn = keepScreenOn,
                     pureBlackEnabled = pureBlackEnabled,
-                    preferredLyricsProvider = sessionManager.getPreferredLyricsProvider(),
-                    lyricsTextPosition = sessionManager.getLyricsTextPosition(),
-                    lyricsAnimationType = sessionManager.getLyricsAnimationType(),
-                    audioOffloadEnabled = sessionManager.isAudioOffloadEnabled(),
-                    volumeBoostEnabled = sessionManager.isVolumeBoostEnabled(),
-                    volumeBoostAmount = sessionManager.getVolumeBoostAmount(),
+                    preferredLyricsProvider = preferredLyricsProvider,
+                    lyricsTextPosition = lyricsTextPosition,
+                    lyricsAnimationType = lyricsAnimationType,
+                    lyricsLineSpacing = lyricsLineSpacing,
+                    lyricsFontSize = lyricsFontSize,
+                    audioOffloadEnabled = audioOffloadEnabled,
+                    volumeBoostEnabled = volumeBoostEnabled,
+                    volumeBoostAmount = volumeBoostAmount,
                     sponsorBlockEnabled = sponsorBlockEnabled,
                     lastFmUsername = lastFmUsername,
                     lastFmScrobblingEnabled = lastFmScrobblingEnabled,
@@ -486,19 +520,19 @@ class SettingsViewModel @Inject constructor(
                     scrobbleMinDuration = scrobbleMinDuration,
                     scrobbleDelaySeconds = scrobbleDelaySeconds,
 
-                    updateChannel = sessionManager.getUpdateChannel(),
+                    updateChannel = updateChannel,
                     preferredLanguages = preferredLanguages,
-                    youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled(),
+                    youtubeHistorySyncEnabled = youtubeHistorySyncEnabled,
                     ignoreAudioFocusDuringCalls = ignoreAudioFocusDuringCalls,
                     bluetoothAutoplayEnabled = bluetoothAutoplayEnabled,
                     speakSongDetailsEnabled = speakSongDetailsEnabled,
                     discordRpcEnabled = discordRpcEnabled,
                     discordToken = discordToken,
                     discordUseDetails = discordUseDetails,
-                    privacyModeEnabled = sessionManager.isPrivacyModeEnabled(),
-                    audioArEnabled = sessionManager.isAudioArEnabled(),
-                    nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled(),
-                    nextSongPreloadDelay = sessionManager.getNextSongPreloadDelay()
+                    privacyModeEnabled = privacyModeEnabled,
+                    audioArEnabled = audioArEnabled,
+                    nextSongPreloadingEnabled = nextSongPreloadingEnabled,
+                    nextSongPreloadDelay = nextSongPreloadDelay
                 )
             }
         }
@@ -669,6 +703,20 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(nextSongPreloadDelay = seconds) }
         }
     }
+
+    fun setLyricsLineSpacing(multiplier: Float) {
+        viewModelScope.launch {
+            sessionManager.setLyricsLineSpacing(multiplier)
+            _uiState.update { it.copy(lyricsLineSpacing = multiplier) }
+        }
+    }
+
+    fun setLyricsFontSize(size: Float) {
+        viewModelScope.launch {
+            sessionManager.setLyricsFontSize(size)
+            _uiState.update { it.copy(lyricsFontSize = size) }
+        }
+    }
     
     fun calibrateAudioAr() {
         audioARManager.calibrate()
@@ -744,9 +792,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Check for updates from GitHub Releases.
-     */
     /**
      * Check for updates from GitHub Releases.
      */

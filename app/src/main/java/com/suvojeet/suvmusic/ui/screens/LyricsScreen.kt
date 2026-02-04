@@ -91,6 +91,12 @@ fun LyricsScreen(
     onProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
     lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
     lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
+    lyricsLineSpacing: Float = 1.5f,
+    lyricsFontSize: Float = 26f,
+    onLineSpacingChange: (Float) -> Unit = {},
+    onFontSizeChange: (Float) -> Unit = {},
+    onTextPositionChange: (LyricsTextPosition) -> Unit = {},
+    onAnimationTypeChange: (LyricsAnimationType) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Theme-aware colors
@@ -105,16 +111,15 @@ fun LyricsScreen(
     val scope = rememberCoroutineScope()
     
     // Lyrics Settings State
-    var fontSize by remember { mutableStateOf(26f) }
+    // Lyrics Settings State
     var syncOffset by remember { mutableStateOf(0L) }
-    var lineSpacingMultiplier by remember { mutableStateOf(1.5f) }
     var keepScreenOn by remember { mutableStateOf(true) } // Default to true for lyrics
     
     // We keep local state for these to allow immediate UI updates, 
     // but ideally they should be persisted or passed back up.
     // For now, we'll use the passed parameters as initial values.
-    var currentTextPosition by remember { mutableStateOf(lyricsTextPosition) }
-    var currentAnimationType by remember { mutableStateOf(lyricsAnimationType) }
+    // var currentTextPosition by remember { mutableStateOf(lyricsTextPosition) }
+    // var currentAnimationType by remember { mutableStateOf(lyricsAnimationType) }
 
     // Keep Screen On Effect
     val currentView = androidx.compose.ui.platform.LocalView.current
@@ -312,10 +317,10 @@ fun LyricsScreen(
                         songTitle = songTitle,
                         artistName = artistName,
                         artworkUrl = artworkUrl,
-                        textPosition = currentTextPosition,
-                        animationType = currentAnimationType,
-                        fontSize = fontSize,
-                        lineSpacingMultiplier = lineSpacingMultiplier
+                        textPosition = lyricsTextPosition, // Use passed param directly
+                        animationType = lyricsAnimationType, // Use passed param directly
+                        fontSize = lyricsFontSize,
+                        lineSpacingMultiplier = lyricsLineSpacing
                     )
                 }
             }
@@ -487,8 +492,8 @@ fun LyricsScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Slider(
-                                    value = fontSize,
-                                    onValueChange = { fontSize = it },
+                                    value = lyricsFontSize,
+                                    onValueChange = onFontSizeChange,
                                     valueRange = 16f..50f,
                                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                                     colors = SliderDefaults.colors(
@@ -523,8 +528,8 @@ fun LyricsScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Slider(
-                                    value = lineSpacingMultiplier,
-                                    onValueChange = { lineSpacingMultiplier = it },
+                                    value = lyricsLineSpacing,
+                                    onValueChange = onLineSpacingChange,
                                     valueRange = 1.0f..2.5f,
                                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                                      colors = SliderDefaults.colors(
@@ -559,12 +564,12 @@ fun LyricsScreen(
                                     .padding(4.dp)
                             ) {
                                 LyricsTextPosition.entries.forEach { position ->
-                                    val isSelected = currentTextPosition == position
+                                    val isSelected = lyricsTextPosition == position
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(if (isSelected) Color.White.copy(alpha = 0.2f) else Color.Transparent)
-                                            .clickable { currentTextPosition = position }
+                                            .clickable { onTextPositionChange(position) }
                                             .padding(horizontal = 12.dp, vertical = 8.dp)
                                     ) {
                                         Text(
