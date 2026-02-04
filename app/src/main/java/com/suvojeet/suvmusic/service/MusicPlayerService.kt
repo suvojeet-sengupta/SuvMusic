@@ -94,8 +94,9 @@ class MusicPlayerService : MediaLibraryService() {
         super.onCreate()
         
         // Ultra-fast buffer for instant playback
+        // Increased min buffer for Android Auto stability
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(5_000, 50_000, 250, 1_000)
+            .setBufferDurationsMs(5_000, 50_000, 2000, 3_000)
             .setPrioritizeTimeOverSizeThresholds(true)
             .setBackBuffer(30_000, true)
             .build()
@@ -456,7 +457,7 @@ class MusicPlayerService : MediaLibraryService() {
                         // Note: Toast might not be appropriate from Service, could send custom command to UI
                     }
                 }
-                delay(1000L) // Check every second
+                delay(200L) // Check every 200ms for better precision
             }
         }
     }

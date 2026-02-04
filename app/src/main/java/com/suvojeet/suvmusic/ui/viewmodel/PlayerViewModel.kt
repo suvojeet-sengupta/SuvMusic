@@ -847,10 +847,13 @@ class PlayerViewModel @Inject constructor(
             _lyricsState.value = null
             
             val currentSong = playerState.value.currentSong
-            if (currentSong != null) {
+            if (currentSong != null && currentSong.id == videoId) {
                 try {
                     val lyrics = lyricsRepository.getLyrics(currentSong, provider)
-                    _lyricsState.value = lyrics
+                    // Check if song is still the same after fetch
+                    if (playerState.value.currentSong?.id == videoId) {
+                        _lyricsState.value = lyrics
+                    }
                 } catch (e: Exception) {
                     Log.e("PlayerViewModel", "Error fetching lyrics", e)
                 }
