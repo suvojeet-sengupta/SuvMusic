@@ -17,6 +17,7 @@ import com.suvojeet.suvmusic.data.model.SongSource
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
 import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
@@ -52,6 +53,7 @@ class PlayerViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
+    private val libraryRepository: LibraryRepository,
     private val lyricsRepository: LyricsRepository,
     private val sleepTimerManager: SleepTimerManager,
     private val sessionManager: SessionManager,
@@ -441,7 +443,7 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.clearQueue()
     }
 
-    fun saveQueueAsPlaylist(title: String, description: String, isPrivate: Boolean, onComplete: (Boolean) -> Unit) {
+    fun saveQueueAsPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean = true, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
                 val songs = playerState.value.queue
@@ -450,15 +452,29 @@ class PlayerViewModel @Inject constructor(
                     return@launch
                 }
 
-                val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
-                val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
-                
-                if (playlistId != null) {
-                    val videoIds = songs.map { it.id }
-                    val success = youTubeRepository.addSongsToPlaylist(playlistId, videoIds)
-                    onComplete(success)
+                if (syncWithYt && sessionManager.isLoggedIn()) {
+                    val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
+                    val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
+                    
+                    if (playlistId != null) {
+                        val videoIds = songs.map { it.id }
+                        val success = youTubeRepository.addSongsToPlaylist(playlistId, videoIds)
+                        onComplete(success)
+                    } else {
+                        onComplete(false)
+                    }
                 } else {
-                    onComplete(false)
+                    // Create Local Playlist from Queue
+                    val id = "local_q_" + java.util.UUID.randomUUID().toString()
+                    val playlist = com.suvojeet.suvmusic.data.model.Playlist(
+                        id = id,
+                        title = title,
+                        author = "You",
+                        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
+                        songs = songs
+                    )
+                    libraryRepository.savePlaylist(playlist)
+                    onComplete(true)
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error saving queue as playlist", e)
