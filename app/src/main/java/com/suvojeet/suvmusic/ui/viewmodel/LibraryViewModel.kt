@@ -67,7 +67,8 @@ class LibraryViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val spotifyImportHelper: SpotifyImportHelper,
     private val libraryRepository: LibraryRepository,
-    private val musicPlayer: MusicPlayer
+    private val musicPlayer: MusicPlayer,
+    private val workManager: androidx.work.WorkManager
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -79,6 +80,36 @@ class LibraryViewModel @Inject constructor(
         observeDownloads()
         observeLibraryPlaylists()
         observeImportService()
+        observeLikedSongs()
+        schedulePeriodicSync()
+    }
+
+    private fun observeLikedSongs() {
+        viewModelScope.launch {
+            libraryRepository.getCachedPlaylistSongsFlow("LM").collect { songs ->
+                _uiState.update { it.copy(likedSongs = songs) }
+            }
+        }
+    }
+
+    private fun schedulePeriodicSync() {
+        if (!sessionManager.isLoggedIn()) return
+        
+        val syncRequest = androidx.work.PeriodicWorkRequestBuilder<com.suvojeet.suvmusic.data.worker.LikedSongsSyncWorker>(
+            15, java.util.concurrent.TimeUnit.MINUTES // Minimum interval
+        )
+            .setConstraints(
+                androidx.work.Constraints.Builder()
+                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                .build()
+            )
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "LikedSongsPeriodicSync",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
     }
 
     private fun observeImportService() {
@@ -124,9 +155,12 @@ class LibraryViewModel @Inject constructor(
                 val local = localAudioRepository.getAllLocalSongs()
                 _uiState.update { it.copy(localSongs = local) }
 
-                // Load liked songs (cached)
-                val liked = preloadedLikedSongs ?: youTubeRepository.getLikedMusic(fetchAll = false)
-                _uiState.update { it.copy(likedSongs = liked) }
+                // Liked songs are now observed via Flow, no need to fetch here manually
+                // But if it's the first run and empty, we might want to trigger a sync
+                // observeLikedSongs takes care of updates.
+                
+                // If we have preloaded songs (e.g. from refresh), we don't need to do anything as flow updates
+                // But for force refresh logic, we might need to trigger sync.
 
                 // Load library playlists
                 if (sessionManager.isLoggedIn()) {
@@ -155,14 +189,13 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
             try {
-                var syncedSongs: List<Song>? = null
                 if (sessionManager.isLoggedIn()) {
+                    syncLikedSongs() // Trigger background sync
                     youTubeRepository.getUserPlaylists()
                     youTubeRepository.getLibraryArtists()
                     youTubeRepository.getLibraryAlbums()
-                    syncedSongs = youTubeRepository.getLikedMusic(fetchAll = true)
                 }
-                loadData(forceRefresh = false, preloadedLikedSongs = syncedSongs)
+                loadData(forceRefresh = false)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Refresh failed: ${e.message}") }
             } finally {
@@ -292,17 +325,31 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun syncLikedSongs() {
+        if (!sessionManager.isLoggedIn()) return
+        
+        _uiState.update { it.copy(isSyncingLikedSongs = true) }
+        
+        val syncRequest = androidx.work.OneTimeWorkRequestBuilder<com.suvojeet.suvmusic.data.worker.LikedSongsSyncWorker>()
+            .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .build()
+
+        workManager.enqueueUniqueWork(
+            "LikedSongsValidSync",
+            androidx.work.ExistingWorkPolicy.REPLACE,
+            syncRequest
+        )
+        
+        // We can listen to the work status if needed, but for now we just rely on Flow updates
+        // To update the spinner, we could observe the WorkInfo, but for simplicity
+        // in this step, let's just reset the spinner after a delay or separate observer.
+        // Actually, let's keep it simple: UI already observes Flow. 
+        // We'll set isSyncing to false after a short delay since the real work is background.
+        // Or better, observe the work status.
         viewModelScope.launch {
-            _uiState.update { it.copy(isSyncingLikedSongs = true) }
-            try {
-                if (sessionManager.isLoggedIn()) {
-                    val syncedSongs = youTubeRepository.getLikedMusic(fetchAll = true)
-                    _uiState.update { it.copy(likedSongs = syncedSongs) }
+            workManager.getWorkInfoByIdFlow(syncRequest.id).collect { workInfo ->
+                if (workInfo != null && workInfo.state.isFinished) {
+                     _uiState.update { it.copy(isSyncingLikedSongs = false) }
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Sync failed: ${e.message}") }
-            } finally {
-                _uiState.update { it.copy(isSyncingLikedSongs = false) }
             }
         }
     }
