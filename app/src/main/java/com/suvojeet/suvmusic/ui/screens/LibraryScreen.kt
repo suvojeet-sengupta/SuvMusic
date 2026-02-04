@@ -451,10 +451,10 @@ fun PlaylistsGrid(
     controlBar: @Composable () -> Unit
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(120.dp),
-        contentPadding = PaddingValues(bottom = 100.dp), // Removed specific top padding
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Headers as Full Span Items
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { topBar() }
