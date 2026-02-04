@@ -578,21 +578,23 @@ private fun PlaylistHeader(
                 )
             }
 
-            // Save Button (Bookmark icon as requested)
-            IconButton(
-                onClick = onToggleSave,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
+            // Save Button (Bookmark icon as requested) - Hide for Liked Songs
+            if (playlist.id != "LM") {
+                IconButton(
+                    onClick = onToggleSave,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
+                        tint = if (isSaved) MaterialTheme.colorScheme.primary else contentColor
                     )
-            ) {
-                Icon(
-                    imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
-                    tint = if (isSaved) MaterialTheme.colorScheme.primary else contentColor
-                )
+                }
             }
             
             // Play Button (Large Central)
@@ -648,7 +650,32 @@ private fun PlaylistHeader(
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Sort Option (Date Added)
+        if (playlist.id == "LM") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Date added",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor,
+                    fontWeight = FontWeight.Medium
+                )
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowDownward, // Or Sort icon
+                    contentDescription = null, // decorative
+                    tint = contentColor,
+                    modifier = Modifier.size(16.dp).padding(start = 4.dp)
+                )
+            }
+        }
+        
+        if (playlist.id != "LM") Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
