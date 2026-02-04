@@ -172,12 +172,12 @@ class SpotifyImportService : Service() {
         )
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Try using launcher foreground
+            .setSmallIcon(R.drawable.ic_music_note)
             .setContentTitle("Spotify Import")
             .setContentText(title)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
-            .addAction(R.drawable.ic_launcher_foreground, "Cancel", pendingCancelIntent) // Using generic icon if specific cancel icon not available easily
+            .addAction(R.drawable.ic_close, "Cancel", pendingCancelIntent)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
 
         if (max > 0) {
@@ -197,7 +197,7 @@ class SpotifyImportService : Service() {
     private fun showCompletionNotification(successCount: Int, total: Int) {
          val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
          val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_music_note)
             .setContentTitle("Import Completed")
             .setContentText("Successfully imported $successCount of $total songs.")
             .setAutoCancel(true)
