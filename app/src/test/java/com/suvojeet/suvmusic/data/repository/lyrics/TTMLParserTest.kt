@@ -50,4 +50,33 @@ class TTMLParserTest {
         val lines = TTMLParser.parseTTML(ttml)
         assertEquals(0, lines.size) // Empty time causes continue
     }
+
+    @Test
+    fun parseTTML_withSpans_extractsWords() {
+        val ttml = """
+            <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttp="http://www.w3.org/ns/ttml#parameter" ttp:timeBase="media">
+                <body>
+                    <div>
+                        <p begin="00:00:10.000" end="00:00:12.000">
+                            <span begin="00:00:10.000" end="00:00:10.500">Word1</span>
+                            <span> </span>
+                            <span begin="00:00:10.500" end="00:00:11.000">Word2</span>
+                        </p>
+                    </div>
+                </body>
+            </tt>
+        """.trimIndent()
+        
+        val lines = TTMLParser.parseTTML(ttml)
+        
+        assertEquals(1, lines.size)
+        val line = lines[0]
+        assertEquals("Word1 Word2", line.text)
+        assertNotNull(line.words)
+        assertEquals(2, line.words.size)
+        assertEquals("Word1", line.words[0].text)
+        assertEquals(10000L, line.words[0].startTimeMs)
+        assertEquals("Word2", line.words[1].text)
+        assertEquals(10500L, line.words[1].startTimeMs)
+    }
 }
