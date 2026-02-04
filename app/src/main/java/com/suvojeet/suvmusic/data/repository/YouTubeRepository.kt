@@ -632,7 +632,7 @@ class YouTubeRepository @Inject constructor(
                     var currentJson = JSONObject(jsonResponse)
                     var continuationToken = extractContinuationToken(currentJson)
                     var pageCount = 0
-                    val maxPages = 100 // Limit to ~10000 songs
+                    val maxPages = 500 // Increase limit to ~50000 songs
 
                     while (continuationToken != null && pageCount < maxPages) {
                          try {
@@ -706,8 +706,25 @@ class YouTubeRepository @Inject constructor(
             // Use internal API for Liked Music if logged in
             if (sessionManager.isLoggedIn()) {
                 try {
-                    val json = fetchInternalApi("FEmusic_liked_videos")
-                    val songs = parseSongsFromInternalJson(json)
+                    val songs = mutableListOf<Song>()
+                    var json = fetchInternalApi("FEmusic_liked_videos")
+                    songs.addAll(parseSongsFromInternalJson(json))
+                    
+                    // Add Pagination for your likes
+                    var currentJson = JSONObject(json)
+                    var continuationToken = extractContinuationToken(currentJson)
+                    var pageCount = 0
+                    while (continuationToken != null && pageCount < 200) { // Limit to 20000 songs
+                        val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                        if (continuationResponse.isEmpty()) break
+                        val newSongs = parseSongsFromInternalJson(continuationResponse)
+                        if (newSongs.isEmpty()) break
+                        songs.addAll(newSongs)
+                        currentJson = JSONObject(continuationResponse)
+                        continuationToken = extractContinuationToken(currentJson)
+                        pageCount++
+                    }
+
                     if (songs.isNotEmpty()) {
                         val playlist = Playlist(
                             id = playlistId,
@@ -770,9 +787,27 @@ class YouTubeRepository @Inject constructor(
             val browseId = if (playlistId.startsWith("VL")) playlistId else "VL$playlistId"
             val json = fetchInternalApi(browseId)
             val playlist = parsePlaylistFromInternalJson(json, playlistId)
-            if (playlist.songs.isNotEmpty()) {
-                // libraryRepository.savePlaylist(playlist)
-                return@withContext playlist
+            
+            // Add Pagination for playlists
+            val songs = playlist.songs.toMutableList()
+            var currentJson = JSONObject(json)
+            var continuationToken = extractContinuationToken(currentJson)
+            var pageCount = 0
+            while (continuationToken != null && pageCount < 100) { // Limit to 10000 songs
+                val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                if (continuationResponse.isEmpty()) break
+                val newSongs = parseSongsFromInternalJson(continuationResponse)
+                if (newSongs.isEmpty()) break
+                songs.addAll(newSongs)
+                currentJson = JSONObject(continuationResponse)
+                continuationToken = extractContinuationToken(currentJson)
+                pageCount++
+            }
+
+            if (songs.isNotEmpty()) {
+                val finalPlaylist = playlist.copy(songs = songs.distinctBy { it.id })
+                // libraryRepository.savePlaylist(finalPlaylist)
+                return@withContext finalPlaylist
             }
         } catch(e: Exception) { }
 
@@ -794,24 +829,38 @@ class YouTubeRepository @Inject constructor(
                 playlistExtractor.thumbnails?.lastOrNull()?.url 
             } catch (e: Exception) { null }
             
-            val songs = playlistExtractor.initialPage.items
-                .filterIsInstance<StreamInfoItem>()
-                .mapNotNull { item ->
-                    val videoId = extractVideoId(item.url)
-                    // Get thumbnail from NewPipe, fallback to YouTube standard thumbnail URL
-                    val itemThumbnail = item.thumbnails?.lastOrNull()?.url
-                        ?: "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
-                    
-                    Song.fromYouTube(
-                        videoId = videoId,
-                        title = item.name ?: "Unknown",
-                        artist = item.uploaderName ?: "Unknown Artist",
-                        album = playlistName ?: "",
-                        duration = item.duration * 1000L,
-                        thumbnailUrl = itemThumbnail,
-                        isMembersOnly = false // Default to false
-                    )
+            val songs = mutableListOf<Song>()
+            var page: org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage<StreamInfoItem>? = playlistExtractor.initialPage
+            
+            while (page != null) {
+                val pageSongs = page.items
+                    .filterIsInstance<StreamInfoItem>()
+                    .mapNotNull { item ->
+                        val videoId = extractVideoId(item.url)
+                        val itemThumbnail = item.thumbnails?.lastOrNull()?.url
+                            ?: "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+                        
+                        Song.fromYouTube(
+                            videoId = videoId,
+                            title = item.name ?: "Unknown",
+                            artist = item.uploaderName ?: "Unknown Artist",
+                            album = playlistName ?: "",
+                            duration = item.duration * 1000L,
+                            thumbnailUrl = itemThumbnail,
+                            isMembersOnly = false
+                        )
+                    }
+                songs.addAll(pageSongs)
+                
+                if (page.hasNextPage()) {
+                    page = playlistExtractor.getPage(page.nextPage)
+                } else {
+                    page = null
                 }
+                
+                // Safety break for extremely large playlists in fallback mode
+                if (songs.size > 5000) break
+            }
             
             if (songs.isNotEmpty()) {
                 val playlist = Playlist(

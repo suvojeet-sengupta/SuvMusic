@@ -7,18 +7,18 @@ import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jsoup.Jsoup
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SpotifyImportHelper @Inject constructor(
-    private val youTubeRepository: YouTubeRepository
+    private val youTubeRepository: YouTubeRepository,
+    private val okHttpClient: OkHttpClient,
+    private val gson: Gson
 ) {
-    /**
-     * Extracts song titles and artists from a Spotify playlist URL.
-     * Note: This uses Jsoup to scrape the public Spotify playlist page.
-     */
     /**
      * Extracts song titles and artists from a Spotify playlist URL.
      * Note: This uses Jsoup to scrape the public Spotify playlist page.
@@ -29,8 +29,25 @@ class SpotifyImportHelper @Inject constructor(
         var playlistName = "Spotify Import ${System.currentTimeMillis() / 1000}"
 
         try {
-            // 1. Try to extract playlist ID and use Embed method (most reliable)
             val playlistId = extractPlaylistId(url)
+            
+            // 1. Try API Method (Best for large playlists > 100 songs)
+            if (playlistId != null) {
+                try {
+                    val accessToken = extractAccessToken(url)
+                    if (accessToken != null) {
+                        val (name, apiSongs) = fetchSpotifyTracksWithApi(playlistId, accessToken)
+                        if (name.isNotEmpty()) playlistName = name
+                        if (apiSongs.isNotEmpty()) {
+                            return@withContext playlistName to apiSongs
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // 2. Try Embed Method fallback (Reliable for < 100 songs)
             if (playlistId != null) {
                 try {
                     val embedUrl = "https://open.spotify.com/embed/playlist/$playlistId"
@@ -41,7 +58,6 @@ class SpotifyImportHelper @Inject constructor(
                     val nextDataScript = doc.select("script#__NEXT_DATA__").first()
                     if (nextDataScript != null) {
                         val json = nextDataScript.html()
-                        val gson = Gson()
                         val jsonObject = gson.fromJson(json, JsonObject::class.java)
 
                         // Navigate JSON: props -> pageProps -> state -> data -> entity
@@ -78,7 +94,7 @@ class SpotifyImportHelper @Inject constructor(
                 }
             }
 
-            // 2. Fallback to scraping the original URL if embed failed or no songs found
+            // 3. Final Fallback: Scrape original URL
             if (songs.isEmpty()) {
                 val doc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -136,6 +152,119 @@ class SpotifyImportHelper @Inject constructor(
         val pattern = "playlist/([a-zA-Z0-9]+)".toRegex()
         val match = pattern.find(url)
         return match?.groupValues?.get(1)
+    }
+
+    private suspend fun extractAccessToken(url: String): String? {
+        return try {
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .get()
+
+            val nextDataScript = doc.select("script#__NEXT_DATA__").first() ?: return null
+            val json = nextDataScript.html()
+            val jsonObject = gson.fromJson(json, JsonObject::class.java)
+
+            // props -> pageProps -> session -> accessToken
+            // Or props -> pageProps -> session -> data -> accessToken
+            val pageProps = jsonObject.getAsJsonObject("props")?.getAsJsonObject("pageProps")
+            val session = pageProps?.getAsJsonObject("session")
+            
+            if (session != null) {
+                if (session.has("accessToken")) {
+                    return session.get("accessToken").asString
+                }
+                if (session.has("data")) {
+                    return session.getAsJsonObject("data").get("accessToken").asString
+                }
+            }
+            // Sometimes it's in a different structure depending on the build
+            null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun fetchSpotifyTracksWithApi(playlistId: String, accessToken: String): Pair<String, List<Pair<String, String>>> {
+        val songs = mutableListOf<Pair<String, String>>()
+        var playlistName = ""
+        var nextUrl: String? = "https://api.spotify.com/v1/playlists/$playlistId/tracks?offset=0&limit=100"
+
+        // First, fetch playlist details to get the name
+        try {
+            val request = Request.Builder()
+                .url("https://api.spotify.com/v1/playlists/$playlistId")
+                .addHeader("Authorization", "Bearer $accessToken")
+                .build()
+            
+            val response = okHttpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                val json = response.body?.string()
+                if (json != null) {
+                    val jsonObj = gson.fromJson(json, JsonObject::class.java)
+                    if (jsonObj.has("name")) {
+                        playlistName = jsonObj.get("name").asString
+                    }
+                }
+            }
+            response.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Pagination Loop
+        while (nextUrl != null) {
+            try {
+                val request = Request.Builder()
+                    .url(nextUrl!!)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .build()
+
+                val response = okHttpClient.newCall(request).execute()
+                if (!response.isSuccessful) {
+                    response.close()
+                    break
+                }
+
+                val json = response.body?.string() ?: break
+                val jsonObj = gson.fromJson(json, JsonObject::class.java)
+
+                // Get items
+                val items = jsonObj.getAsJsonArray("items")
+                if (items != null) {
+                    for (item in items) {
+                        val trackObj = item.asJsonObject.getAsJsonObject("track") ?: continue
+                        val title = trackObj.get("name").asString
+                        
+                        val artistsArray = trackObj.getAsJsonArray("artists")
+                        val artistList = mutableListOf<String>()
+                        if (artistsArray != null) {
+                            for (artist in artistsArray) {
+                                artistList.add(artist.asJsonObject.get("name").asString)
+                            }
+                        }
+                        val artist = artistList.joinToString(", ")
+                        
+                        songs.add(title to artist)
+                    }
+                }
+
+                // Check for next page
+                nextUrl = if (jsonObj.has("next") && !jsonObj.get("next").isJsonNull) {
+                    jsonObj.get("next").asString
+                } else {
+                    null
+                }
+                
+                response.close()
+                
+            } catch (e: Exception) {
+                e.printStackTrace()
+                break
+            }
+        }
+        
+        return playlistName to songs
     }
 
     /**
