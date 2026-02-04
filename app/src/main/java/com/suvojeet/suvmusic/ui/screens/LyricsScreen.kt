@@ -1099,7 +1099,7 @@ fun LyricsList(
                                     // For now, simple opacity transition is cleaner
                                     
                                     Text(
-                                        text = word.text,
+                                        text = word.text + " ",
                                         style = MaterialTheme.typography.headlineMedium.copy(
                                             fontSize = fontSize.sp, 
                                             fontWeight = FontWeight.Bold,
