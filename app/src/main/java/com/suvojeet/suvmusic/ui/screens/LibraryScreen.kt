@@ -451,7 +451,7 @@ fun PlaylistsGrid(
     controlBar: @Composable () -> Unit
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Adaptive(120.dp),
         contentPadding = PaddingValues(bottom = 100.dp), // Removed specific top padding
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
