@@ -2,6 +2,12 @@ package com.suvojeet.suvmusic.ui.screens
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -547,11 +553,11 @@ fun SmartPlaylistCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 if (count.isNotEmpty()) {
-                     androidx.compose.animation.AnimatedContent(
+                     AnimatedContent(
                          targetState = count,
                          transitionSpec = {
-                             androidx.compose.animation.slideInVertically { height -> height } + androidx.compose.animation.fadeIn() togetherWith
-                             androidx.compose.animation.slideOutVertically { height -> -height } + androidx.compose.animation.fadeOut()
+                             slideInVertically { height -> height } + fadeIn() togetherWith
+                             slideOutVertically { height -> -height } + fadeOut()
                          },
                          label = "CountAnimation"
                      ) { targetCount ->
