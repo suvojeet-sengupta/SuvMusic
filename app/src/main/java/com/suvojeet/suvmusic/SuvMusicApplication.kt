@@ -15,8 +15,11 @@ import coil.util.DebugLogger
  * Annotated with @HiltAndroidApp to enable Hilt dependency injection.
  */
 @HiltAndroidApp
-class SuvMusicApplication : Application(), ImageLoaderFactory {
+class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Configuration.Provider {
     
+    @javax.inject.Inject
+    lateinit var workerFactory: androidx.hilt.work.HiltWorkerFactory
+
     companion object {
         lateinit var instance: SuvMusicApplication
             private set
@@ -27,6 +30,11 @@ class SuvMusicApplication : Application(), ImageLoaderFactory {
         instance = this
         // Initialize any app-wide components here
     }
+
+    override val workManagerConfiguration: androidx.work.Configuration
+        get() = androidx.work.Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)

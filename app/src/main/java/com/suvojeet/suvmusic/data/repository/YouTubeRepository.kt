@@ -618,67 +618,74 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun getLikedMusic(fetchAll: Boolean = false): List<Song> = withContext(Dispatchers.IO) {
-        if (!networkMonitor.isCurrentlyConnected()) {
+        // Offline-First: Always try to return local data first, unless it's empty
+        val localSongs = libraryRepository.getCachedPlaylistSongs("LM")
+        if (localSongs.isNotEmpty()) {
+            return@withContext localSongs
+        }
+
+        // If no local data and we are online, try to sync
+        if (networkMonitor.isCurrentlyConnected() && sessionManager.isLoggedIn()) {
+            syncLikedSongs(fetchAll)
             return@withContext libraryRepository.getCachedPlaylistSongs("LM")
         }
-
-        if (sessionManager.isLoggedIn()) {
-            try {
-                val songs = mutableListOf<Song>()
-                var jsonResponse = fetchInternalApi("FEmusic_liked_videos")
-                songs.addAll(parseSongsFromInternalJson(jsonResponse))
-                
-                if (fetchAll) {
-                    var currentJson = JSONObject(jsonResponse)
-                    var continuationToken = extractContinuationToken(currentJson)
-                    var pageCount = 0
-                    val maxPages = 500 // Increase limit to ~50000 songs
-
-                    while (continuationToken != null && pageCount < maxPages) {
-                         try {
-                            val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
-                            if (continuationResponse.isNotEmpty()) {
-                                val newSongs = parseSongsFromInternalJson(continuationResponse)
-                                if (newSongs.isEmpty()) break
-                                
-                                songs.addAll(newSongs)
-                                
-                                currentJson = JSONObject(continuationResponse)
-                                continuationToken = extractContinuationToken(currentJson)
-                                pageCount++
-                            } else {
-                                break
-                            }
-                         } catch (e: Exception) {
-                             break
-                         }
-                    }
-                }
-                
-                if (songs.isNotEmpty()) {
-                    val distinctSongs = songs.distinctBy { it.id }
-                    // Cache the liked songs with metadata
-                    libraryRepository.savePlaylist(
-                        Playlist(
-                            id = "LM",
-                            title = "Your Likes",
-                            author = "You",
-                            thumbnailUrl = distinctSongs.firstOrNull()?.thumbnailUrl,
-                            songs = distinctSongs
-                        )
-                    )
-                    return@withContext distinctSongs
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
         
-        val fallback = getPlaylist("LM").songs
-        if (fallback.isNotEmpty()) {
-            libraryRepository.savePlaylistSongs("LM", fallback)
+        return@withContext emptyList()
+    }
+
+    suspend fun syncLikedSongs(fetchAll: Boolean = false): Boolean = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected() || !sessionManager.isLoggedIn()) return@withContext false
+        
+        try {
+            val songs = mutableListOf<Song>()
+            val jsonResponse = fetchInternalApi("FEmusic_liked_videos")
+            songs.addAll(parseSongsFromInternalJson(jsonResponse))
+            
+            if (fetchAll) {
+                var currentJson = JSONObject(jsonResponse)
+                var continuationToken = extractContinuationToken(currentJson)
+                var pageCount = 0
+                val maxPages = 500 // Increase limit to ~50000 songs
+
+                while (continuationToken != null && pageCount < maxPages) {
+                        try {
+                        val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                        if (continuationResponse.isNotEmpty()) {
+                            val newSongs = parseSongsFromInternalJson(continuationResponse)
+                            if (newSongs.isEmpty()) break
+                            
+                            songs.addAll(newSongs)
+                            
+                            currentJson = JSONObject(continuationResponse)
+                            continuationToken = extractContinuationToken(currentJson)
+                            pageCount++
+                        } else {
+                            break
+                        }
+                        } catch (e: Exception) {
+                            break
+                        }
+                }
+            }
+            
+            if (songs.isNotEmpty()) {
+                val distinctSongs = songs.distinctBy { it.id }
+                // Cache the liked songs with metadata
+                libraryRepository.savePlaylist(
+                    Playlist(
+                        id = "LM",
+                        title = "Your Likes",
+                        author = "You",
+                        thumbnailUrl = distinctSongs.firstOrNull()?.thumbnailUrl,
+                        songs = distinctSongs
+                    )
+                )
+                return@withContext true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        fallback
+        return@withContext false
     }
 
     suspend fun removeFromLikedCache(songId: String) {
