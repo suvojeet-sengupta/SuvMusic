@@ -393,7 +393,12 @@ class MusicPlayer @Inject constructor(
                         if (sessionManager.isSpeakSongDetailsEnabled()) {
                             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                             if (audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn) {
+                                // Duck volume
+                                mediaController?.volume = 0.2f
                                 ttsManager.speak("Now playing ${song.title} by ${song.artist}")
+                                // Restore volume after delay (approx 3s)
+                                delay(3000)
+                                mediaController?.volume = 1.0f
                             }
                         }
 
@@ -754,8 +759,16 @@ class MusicPlayer @Inject constructor(
                     // Music Haptics - simulate amplitude based on progress
                     // In a real implementation, this would use actual audio analysis
                     if (_playerState.value.isPlaying) {
-                        val normalizedPosition = (currentPos % 500) / 500f // Creates a beat-like pattern
-                        val simulatedAmplitude = (kotlin.math.sin(normalizedPosition * kotlin.math.PI * 2).toFloat() + 1f) / 2f
+                        // Simulate beat: Spike every 500ms (120 BPM)
+                        // Use a sharp curve: 1.0 near beat, 0.0 otherwise
+                        val beatPeriod = 500
+                        val timeInBeat = currentPos % beatPeriod
+                        val simulatedAmplitude = if (timeInBeat < 100) {
+                            // Sharp decay from 1.0 to 0.0 over 100ms
+                            1f - (timeInBeat / 100f)
+                        } else {
+                            0f
+                        }
                         musicHapticsManager.processAmplitude(simulatedAmplitude)
                     }
                 }

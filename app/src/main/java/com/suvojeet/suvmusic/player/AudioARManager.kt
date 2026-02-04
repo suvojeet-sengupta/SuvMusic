@@ -46,7 +46,7 @@ class AudioARManager @Inject constructor(
 
     // Smoothing
     private var smoothedBalance = 0f
-    private val alpha = 0.1f // low-pass filter factor
+    private val alpha = 0.2f // low-pass filter factor (increased for responsiveness)
 
     private var isPlaying = false
     private var isSettingsEnabled = false
