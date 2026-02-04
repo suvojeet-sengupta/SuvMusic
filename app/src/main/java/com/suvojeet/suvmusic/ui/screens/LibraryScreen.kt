@@ -132,87 +132,114 @@ fun LibraryScreen(
                 onRefresh = { viewModel.refresh() },
                 modifier = Modifier.fillMaxSize()
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // 1. Top Bar
-                    LibraryTopBar(
-                        onHistoryClick = onHistoryClick,
-                        onSyncClick = { viewModel.refresh() },
-                        isSyncing = uiState.isRefreshing
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // 2. Filter Chips
-                    LibraryFilterChips(
-                        selectedFilter = uiState.selectedFilter,
-                        onFilterSelected = { viewModel.setFilter(it) }
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // 3. Control Bar (Sort & View Toggle)
-                    LibraryControlBar(
-                        sortOption = uiState.sortOption,
-                        viewMode = uiState.viewMode,
-                        onSortClick = { /* Toggle Sort or Open Dialog */ },
-                        onViewModeClick = { 
-                            val newMode = if (uiState.viewMode == LibraryViewMode.GRID) LibraryViewMode.LIST else LibraryViewMode.GRID
-                            viewModel.setViewMode(newMode)
-                        },
-                        itemCount = getCountForFilter(uiState)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // 4. Content Area
-                    if (uiState.selectedFilter == LibraryFilter.PLAYLISTS) {
-                        if (uiState.viewMode == LibraryViewMode.GRID) {
-                            PlaylistsGrid(
-                                uiState = uiState, // Pass full state for smart playlists
-                                onPlaylistClick = onPlaylistClick,
-                                onSmartPlaylistClick = { type ->
-                                    when(type) {
-                                        SmartPlaylistType.LIKED -> {
-                                            val likedPlaylist = PlaylistDisplayItem(
-                                                id = "LM",
-                                                name = "Liked",
-                                                thumbnailUrl = uiState.likedSongs.firstOrNull()?.thumbnailUrl,
-                                                songCount = uiState.likedSongs.size,
-                                                url = "",
-                                                uploaderName = "You"
-                                            )
-                                            onPlaylistClick(likedPlaylist)
+                // 4. Content Area
+                if (uiState.selectedFilter == LibraryFilter.PLAYLISTS) {
+                    if (uiState.viewMode == LibraryViewMode.GRID) {
+                        PlaylistsGrid(
+                            uiState = uiState, // Pass full state for smart playlists
+                            onPlaylistClick = onPlaylistClick,
+                            onSmartPlaylistClick = { type ->
+                                when(type) {
+                                    SmartPlaylistType.LIKED -> {
+                                        // Trigger sync if empty (first time)
+                                        if (uiState.likedSongs.isEmpty()) {
+                                            viewModel.syncLikedSongs()
                                         }
-                                        SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
-                                        SmartPlaylistType.TOP_50 -> { /* TODO */ }
-                                        SmartPlaylistType.CACHED -> { /* TODO: Open Local Files */ }
+                                        val likedPlaylist = PlaylistDisplayItem(
+                                            id = "LM",
+                                            name = "Liked",
+                                            thumbnailUrl = uiState.likedSongs.firstOrNull()?.thumbnailUrl,
+                                            songCount = uiState.likedSongs.size,
+                                            url = "",
+                                            uploaderName = "You"
+                                        )
+                                        onPlaylistClick(likedPlaylist)
                                     }
-                                },
-                                onMoreClick = { playlist ->
-                                    selectedPlaylist = playlist
-                                    showPlaylistMenu = true
+                                    SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
+                                    SmartPlaylistType.TOP_50 -> { /* TODO */ }
+                                    SmartPlaylistType.CACHED -> { /* TODO: Open Local Files */ }
                                 }
-                            )
-                        } else {
-                            PlaylistsList(
-                                playlists = uiState.playlists,
-                                onPlaylistClick = onPlaylistClick,
-                                onMoreClick = { playlist ->
-                                    selectedPlaylist = playlist
-                                    showPlaylistMenu = true
-                                }
-                            )
-                        }
+                            },
+                            onMoreClick = { playlist ->
+                                selectedPlaylist = playlist
+                                showPlaylistMenu = true
+                            },
+                            // Pass Headers
+                            topBar = {
+                                LibraryTopBar(
+                                    onHistoryClick = onHistoryClick,
+                                    onSyncClick = { viewModel.refresh() },
+                                    isSyncing = uiState.isRefreshing
+                                )
+                            },
+                            filterChips = {
+                                LibraryFilterChips(
+                                    selectedFilter = uiState.selectedFilter,
+                                    onFilterSelected = { viewModel.setFilter(it) }
+                                )
+                            },
+                            controlBar = {
+                                LibraryControlBar(
+                                    sortOption = uiState.sortOption,
+                                    viewMode = uiState.viewMode,
+                                    onSortClick = { /* Toggle Sort */ },
+                                    onViewModeClick = { viewModel.setViewMode(LibraryViewMode.LIST) },
+                                    itemCount = getCountForFilter(uiState)
+                                )
+                            }
+                        )
                     } else {
-                        // Other filters (Songs, Albums, Artists) - Placeholder List
-                        OtherContentList(
-                            filter = uiState.selectedFilter,
-                            uiState = uiState, // Access lists
-                            onSongClick = onSongClick
+                        PlaylistsList(
+                            playlists = uiState.playlists,
+                            onPlaylistClick = onPlaylistClick,
+                            onMoreClick = { playlist ->
+                                selectedPlaylist = playlist
+                                showPlaylistMenu = true
+                            },
+                            topBar = {
+                                LibraryTopBar(
+                                    onHistoryClick = onHistoryClick,
+                                    onSyncClick = { viewModel.refresh() },
+                                    isSyncing = uiState.isRefreshing
+                                )
+                            },
+                            filterChips = {
+                                LibraryFilterChips(
+                                    selectedFilter = uiState.selectedFilter,
+                                    onFilterSelected = { viewModel.setFilter(it) }
+                                )
+                            },
+                            controlBar = {
+                                LibraryControlBar(
+                                    sortOption = uiState.sortOption,
+                                    viewMode = uiState.viewMode,
+                                    onSortClick = { /* Toggle Sort */ },
+                                    onViewModeClick = { viewModel.setViewMode(LibraryViewMode.GRID) },
+                                    itemCount = getCountForFilter(uiState)
+                                )
+                            }
                         )
                     }
+                } else {
+                    // Other filters
+                     OtherContentList(
+                        filter = uiState.selectedFilter,
+                        uiState = uiState,
+                        onSongClick = onSongClick,
+                         topBar = {
+                             LibraryTopBar(
+                                 onHistoryClick = onHistoryClick,
+                                 onSyncClick = { viewModel.refresh() },
+                                 isSyncing = uiState.isRefreshing
+                             )
+                         },
+                         filterChips = {
+                             LibraryFilterChips(
+                                 selectedFilter = uiState.selectedFilter,
+                                 onFilterSelected = { viewModel.setFilter(it) }
+                             )
+                         }
+                    )
                 }
             }
         }
@@ -296,13 +323,13 @@ fun LibraryTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp, top = 16.dp), // Added top padding as it's now in scroll
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "Library",
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), // Smaller than displaySmall
             color = MaterialTheme.colorScheme.onBackground
         )
         
@@ -412,20 +439,32 @@ fun PlaylistsGrid(
     uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onSmartPlaylistClick: (SmartPlaylistType) -> Unit,
-    onMoreClick: (PlaylistDisplayItem) -> Unit
+    onMoreClick: (PlaylistDisplayItem) -> Unit,
+    topBar: @Composable () -> Unit,
+    filterChips: @Composable () -> Unit,
+    controlBar: @Composable () -> Unit
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(24.dp),
+        contentPadding = PaddingValues(bottom = 100.dp), // Removed specific top padding
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Headers as Full Span Items
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { topBar() }
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { 
+             Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() }
+        }
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { 
+             Box(modifier = Modifier.padding(bottom = 8.dp)) { controlBar() }
+        }
+
         // 1. Smart Playlists (Fixed)
         item {
             SmartPlaylistCard(
                 title = "Liked",
                 icon = Icons.Default.FavoriteBorder,
-                count = "${uiState.likedSongs.size} songs", // Placeholder
+                count = "${uiState.likedSongs.size} songs",
                 onClick = { onSmartPlaylistClick(SmartPlaylistType.LIKED) }
             )
         }
@@ -463,6 +502,7 @@ fun PlaylistsGrid(
         }
     }
 }
+
 
 @Composable
 fun SmartPlaylistCard(
@@ -506,13 +546,22 @@ fun SmartPlaylistCard(
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
-//                if (count.isNotEmpty()) {
-//                     Text(
-//                        text = count,
-//                        style = MaterialTheme.typography.bodySmall,
-//                        color = MaterialTheme.colorScheme.onSurfaceVariant
-//                    )
-//                }
+                if (count.isNotEmpty()) {
+                     androidx.compose.animation.AnimatedContent(
+                         targetState = count,
+                         transitionSpec = {
+                             androidx.compose.animation.slideInVertically { height -> height } + androidx.compose.animation.fadeIn() togetherWith
+                             androidx.compose.animation.slideOutVertically { height -> -height } + androidx.compose.animation.fadeOut()
+                         },
+                         label = "CountAnimation"
+                     ) { targetCount ->
+                         Text(
+                            text = targetCount,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                     }
+                }
             }
         }
     }
@@ -572,11 +621,18 @@ fun GridPlaylistCard(
 fun PlaylistsList(
     playlists: List<PlaylistDisplayItem>,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onMoreClick: (PlaylistDisplayItem) -> Unit
+    onMoreClick: (PlaylistDisplayItem) -> Unit,
+    topBar: @Composable () -> Unit,
+    filterChips: @Composable () -> Unit,
+    controlBar: @Composable () -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(bottom = 100.dp)
     ) {
+         item { topBar() }
+         item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
+         item { Box(modifier = Modifier.padding(bottom = 8.dp)) { controlBar() } }
+         
          items(playlists) { playlist ->
             // Re-use existing list item style or create simplified one
              Row(
@@ -614,7 +670,9 @@ fun PlaylistsList(
 fun OtherContentList(
     filter: LibraryFilter,
     uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState,
-    onSongClick: (List<Song>, Int) -> Unit
+    onSongClick: (List<Song>, Int) -> Unit,
+    topBar: @Composable () -> Unit,
+    filterChips: @Composable () -> Unit
 ) {
     // Placeholder for other tabs
     // If Filter is SONGS -> Show all songs (mixed? or just liked? user needs to clarify, 
@@ -625,15 +683,22 @@ fun OtherContentList(
     
     if (filter == LibraryFilter.SONGS) {
         LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
+             item { topBar() }
+             item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
+
              items(songs.size) { index ->
                 val song = songs[index]
                  MusicCard(song = song, onClick = { onSongClick(songs, index) })
             }
         }
     } else {
-         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Coming Soon", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+         Column(modifier = Modifier.fillMaxSize()) {
+            topBar()
+            Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() }
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text("Coming Soon", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+         }
     }
 }
 
