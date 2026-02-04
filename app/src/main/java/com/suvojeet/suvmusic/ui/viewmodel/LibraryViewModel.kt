@@ -42,7 +42,8 @@ data class LibraryUiState(
     val isSyncingLikedSongs: Boolean = false,
     val viewMode: LibraryViewMode = LibraryViewMode.GRID,
     val sortOption: LibrarySortOption = LibrarySortOption.DATE_ADDED,
-    val selectedFilter: LibraryFilter = LibraryFilter.PLAYLISTS
+    val selectedFilter: LibraryFilter = LibraryFilter.PLAYLISTS,
+    val top50SongCount: Int = 0
 )
 
 enum class LibraryViewMode {
@@ -190,6 +191,14 @@ class LibraryViewModel @Inject constructor(
 
                     val albums = youTubeRepository.getLibraryAlbums()
                     _uiState.update { it.copy(libraryAlbums = albums) }
+
+                    // Fetch Top 50 (RTM) Count
+                    try {
+                        val top50 = youTubeRepository.getPlaylist("RTM")
+                        _uiState.update { it.copy(top50SongCount = top50.songs.size) }
+                    } catch (e: Exception) {
+                        // Ignore failure for optional smart playlist
+                    }
                 }
 
                 if (forceRefresh && sessionManager.isLoggedIn()) {
@@ -244,12 +253,27 @@ class LibraryViewModel @Inject constructor(
         }
     }
     
-    fun createPlaylist(title: String, description: String, isPrivate: Boolean, onComplete: () -> Unit) {
+    fun createPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean, onComplete: () -> Unit) {
         viewModelScope.launch {
             try {
-                val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
-                val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
-                if (playlistId != null) {
+                if (syncWithYt && sessionManager.isLoggedIn()) {
+                    val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
+                    val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
+                    if (playlistId != null) {
+                        refresh()
+                    }
+                } else {
+                    // Create Local Playlist
+                    val id = "local_" + java.util.UUID.randomUUID().toString()
+                    val playlist = com.suvojeet.suvmusic.data.model.Playlist(
+                        id = id, 
+                        title = title, 
+                        author = "You", 
+                        thumbnailUrl = null, 
+                        songs = emptyList()
+                    )
+                    libraryRepository.savePlaylist(playlist)
+                    // Refresh local lists
                     refresh()
                 }
             } catch (e: Exception) {

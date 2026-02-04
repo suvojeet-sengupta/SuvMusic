@@ -296,18 +296,18 @@ fun CreatePlaylistDialog(
     isVisible: Boolean,
     isCreating: Boolean,
     onDismiss: () -> Unit,
-    onCreate: (title: String, description: String, isPrivate: Boolean) -> Unit,
+    onCreate: (title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean) -> Unit,
     isLoggedIn: Boolean = true
 ) {
     if (isVisible) {
         var title by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
+        var syncWithYt by remember { mutableStateOf(isLoggedIn) }
         var isPrivate by remember { mutableStateOf(true) }
         
         // Theme-aware colors
         val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-        val backgroundColor = MaterialTheme.colorScheme.background
-        val surfaceColor = MaterialTheme.colorScheme.surface
+        val backgroundColor = MaterialTheme.colorScheme.surface
         val primaryColor = MaterialTheme.colorScheme.primary
         val onSurface = MaterialTheme.colorScheme.onSurface
         val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
@@ -322,28 +322,13 @@ fun CreatePlaylistDialog(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(backgroundColor)
+                    .background(MaterialTheme.colorScheme.background) // Main background
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
             ) {
-                // Ambient Background Gradient (Subtle premium feel)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    primaryColor.copy(alpha = if (isDark) 0.15f else 0.1f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
                 ) {
                     // Top Bar
                     Row(
@@ -355,11 +340,7 @@ fun CreatePlaylistDialog(
                         androidx.compose.material3.IconButton(
                             onClick = { if (!isCreating) onDismiss() }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = onSurface
-                            )
+                            Icon(Icons.Default.Close, "Close", tint = onSurface)
                         }
                         
                         Text(
@@ -371,11 +352,11 @@ fun CreatePlaylistDialog(
                             textAlign = TextAlign.Center
                         )
                         
-                        // Create Action (Top Right Text Button)
+                        // Create Action
                         TextButton(
                             onClick = { 
                                 if (title.isNotBlank()) {
-                                    onCreate(title, description, isPrivate)
+                                    onCreate(title, description, isPrivate, syncWithYt)
                                 }
                             },
                             enabled = title.isNotBlank() && !isCreating,
@@ -391,174 +372,124 @@ fun CreatePlaylistDialog(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text(
-                                    text = "Create",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
+                                Text("Create", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                     
-                    if (!isLoggedIn) {
-                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp),
-                             horizontalAlignment = Alignment.CenterHorizontally
-                         ) {
-                             Spacer(modifier = Modifier.height(48.dp))
-                             Icon(
-                                 imageVector = Icons.Default.MusicNote,
-                                 contentDescription = null,
-                                 modifier = Modifier.size(64.dp),
-                                 tint = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
-                             )
-                             Spacer(modifier = Modifier.height(16.dp))
-                             Text(
-                                 text = "Login Required",
-                                 style = MaterialTheme.typography.headlineSmall,
-                                 fontWeight = FontWeight.Bold,
-                                 color = onSurface
-                             )
-                             Text(
-                                 text = "You need to be logged in to YouTube Music to create playlists.",
-                                 style = MaterialTheme.typography.bodyMedium,
-                                 color = secondaryText,
-                                 textAlign = TextAlign.Center,
-                                 modifier = Modifier.padding(top = 8.dp)
-                             )
-                         }
-                    } else {
-                        // Content
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                                .padding(horizontal = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                    // Content
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                            .padding(horizontal = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        // Artwork Placeholder
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.size(160.dp)
                         ) {
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
-                            // Placeholder Artwork (Neumorphic/Soft style)
-                            Box(
-                                modifier = Modifier
-                                    .size(180.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(
-                                                primaryColor.copy(alpha = 0.05f),
-                                                primaryColor.copy(alpha = 0.1f)
-                                            )
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = secondaryText.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        // Inputs
+                        androidx.compose.material3.OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = { Text("Playlist Name") },
+                            singleLine = true,
+                            enabled = !isCreating,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        androidx.compose.material3.OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Description (Optional)") },
+                            minLines = 2,
+                            maxLines = 4,
+                            enabled = !isCreating,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        // Options Section
+                        Text(
+                            text = "OPTIONS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = secondaryText,
+                            modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+                        )
+                        
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column {
+                                // Sync Toggle
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = !isCreating && isLoggedIn) { syncWithYt = !syncWithYt }
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MusicNote,
-                                        contentDescription = null,
-                                        tint = primaryColor.copy(alpha = 0.5f),
-                                        modifier = Modifier.size(64.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        text = title.ifBlank { "Playlist Name" },
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = if (title.isBlank()) secondaryText.copy(alpha = 0.5f) else onSurface,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Sync with YouTube Music", style = MaterialTheme.typography.bodyMedium, color = onSurface)
+                                        if (!isLoggedIn) {
+                                            Text("Login required", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                    androidx.compose.material3.Switch(
+                                        checked = syncWithYt,
+                                        onCheckedChange = { syncWithYt = it },
+                                        enabled = !isCreating && isLoggedIn
                                     )
                                 }
-                            }
-                            
-                            Spacer(modifier = Modifier.height(40.dp))
-                            
-                            // Title Input (M3 OutlinedTextField style but cleaner)
-                            androidx.compose.material3.OutlinedTextField(
-                                value = title,
-                                onValueChange = { title = it },
-                                label = { Text("Title") },
-                                textStyle = MaterialTheme.typography.bodyLarge,
-                                singleLine = true,
-                                enabled = !isCreating,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = androidx.compose.material3.TextFieldDefaults.colors(
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = primaryColor,
-                                    unfocusedIndicatorColor = secondaryText.copy(alpha = 0.3f),
-                                    focusedLabelColor = primaryColor,
-                                    unfocusedLabelColor = secondaryText
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
-                            // Description Input
-                            androidx.compose.material3.OutlinedTextField(
-                                value = description,
-                                onValueChange = { description = it },
-                                label = { Text("Description (Optional)") },
-                                textStyle = MaterialTheme.typography.bodyMedium,
-                                minLines = 3,
-                                maxLines = 5,
-                                enabled = !isCreating,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = androidx.compose.material3.TextFieldDefaults.colors(
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = primaryColor,
-                                    unfocusedIndicatorColor = secondaryText.copy(alpha = 0.3f),
-                                    focusedLabelColor = primaryColor,
-                                    unfocusedLabelColor = secondaryText
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
-                            // Privacy Toggle
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(surfaceColor.copy(alpha = 0.3f))
-                                    .clickable(enabled = !isCreating) { isPrivate = !isPrivate }
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Private Playlist",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium,
-                                        color = onSurface
-                                    )
-                                    Text(
-                                        text = "Only you can view this playlist",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = secondaryText
-                                    )
+                                
+                                if (syncWithYt) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    // Privacy Toggle (Only for YT playlists)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(enabled = !isCreating) { isPrivate = !isPrivate }
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text("Private Playlist", style = MaterialTheme.typography.bodyMedium, color = onSurface)
+                                            Text("Only you can view this", style = MaterialTheme.typography.bodySmall, color = secondaryText)
+                                        }
+                                        androidx.compose.material3.Switch(
+                                            checked = isPrivate,
+                                            onCheckedChange = { isPrivate = it },
+                                            enabled = !isCreating
+                                        )
+                                    }
                                 }
-                                androidx.compose.material3.Switch(
-                                    checked = isPrivate,
-                                    onCheckedChange = { isPrivate = it },
-                                    enabled = !isCreating,
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = primaryColor
-                                    )
-                                )
                             }
-                            
-                            Spacer(modifier = Modifier.height(32.dp))
                         }
                     }
                 }
