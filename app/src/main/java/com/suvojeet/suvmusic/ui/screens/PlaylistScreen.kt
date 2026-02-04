@@ -370,8 +370,8 @@ fun PlaylistScreen(
                 isVisible = showCreateDialog,
                 isCreating = uiState.isCreating,
                 onDismiss = { showCreateDialog = false },
-                onCreate = { title, desc, isPrivate ->
-                    viewModel.createPlaylist(title, desc, isPrivate)
+                onCreate = { title, desc, isPrivate, syncWithYt ->
+                    viewModel.createPlaylist(title, desc, isPrivate, syncWithYt)
                     showCreateDialog = false
                 },
                 isLoggedIn = uiState.isLoggedIn

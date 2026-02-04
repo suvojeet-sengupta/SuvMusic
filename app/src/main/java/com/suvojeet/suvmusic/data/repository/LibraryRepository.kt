@@ -106,6 +106,11 @@ class LibraryRepository @Inject constructor(
         libraryDao.deleteSongFromPlaylist(playlistId, songId)
     }
 
+    suspend fun addSongToPlaylist(playlistId: String, song: Song) {
+        val currentSongs = getCachedPlaylistSongs(playlistId)
+        appendPlaylistSongs(playlistId, listOf(song), currentSongs.size)
+    }
+
     suspend fun saveAlbum(album: Album) {
         val entity = LibraryEntity(
             id = album.id,

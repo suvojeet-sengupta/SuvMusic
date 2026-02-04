@@ -633,10 +633,10 @@ fun SearchScreen(
                 isVisible = playlistUiState.showCreatePlaylistDialog,
                 isCreating = playlistUiState.isCreatingPlaylist,
                 onDismiss = { playlistViewModel.hideCreatePlaylistDialog() },
-                onCreate = { title, description, isPrivate ->
-                    playlistViewModel.createPlaylist(title, description, isPrivate)
+                onCreate = { title, description, isPrivate, syncWithYt ->
+                    playlistViewModel.createPlaylist(title, description, isPrivate, syncWithYt)
                 },
-                isLoggedIn = true // Assuming logged in if we are here
+                isLoggedIn = true 
              )
         }
     }

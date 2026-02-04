@@ -31,6 +31,8 @@ data class PlaylistUiState(
     val userPlaylists: List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> = emptyList(),
     val isLoadingPlaylists: Boolean = false,
     val showAddToPlaylistSheet: Boolean = false,
+    val showCreatePlaylistDialog: Boolean = false,
+    val isCreatingPlaylist: Boolean = false,
     val selectedSong: Song? = null
 ) {
     val isUserPlaylist: Boolean
@@ -226,12 +228,31 @@ class PlaylistViewModel @Inject constructor(
         }
     }
     
-    fun createPlaylist(title: String, description: String, isPrivate: Boolean) {
+    fun createPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean) {
         viewModelScope.launch {
-             _uiState.update { it.copy(isCreating = true) }
-             val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
-             youTubeRepository.createPlaylist(title, description, privacyStatus)
-             _uiState.update { it.copy(isCreating = false) }
+            _uiState.update { it.copy(isCreatingPlaylist = true) }
+            try {
+                if (syncWithYt && sessionManager.isLoggedIn()) {
+                    val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
+                    youTubeRepository.createPlaylist(title, description, privacyStatus)
+                } else {
+                    // Create Local Playlist
+                    val id = "local_" + java.util.UUID.randomUUID().toString()
+                    val playlist = com.suvojeet.suvmusic.data.model.Playlist(
+                        id = id, 
+                        title = title, 
+                        author = "You", 
+                        thumbnailUrl = null, 
+                        songs = emptyList()
+                    )
+                    libraryRepository.savePlaylist(playlist)
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to create playlist: ${e.message}") }
+            } finally {
+                _uiState.update { it.copy(isCreatingPlaylist = false) }
+                hideCreatePlaylistDialog()
+            }
         }
     }
 
@@ -346,11 +367,11 @@ class PlaylistViewModel @Inject constructor(
     }
 
     fun showCreatePlaylistDialog() {
-        // Implement if needed or redirect
+        _uiState.update { it.copy(showCreatePlaylistDialog = true) }
     }
 
     fun hideCreatePlaylistDialog() {
-        // Implement if needed or redirect
+        _uiState.update { it.copy(showCreatePlaylistDialog = false) }
     }
 }
 
