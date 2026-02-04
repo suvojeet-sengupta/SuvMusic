@@ -39,8 +39,26 @@ data class LibraryUiState(
     val importState: ImportState = ImportState.Idle,
     val error: String? = null,
     val isLoggedIn: Boolean = false,
-    val isSyncingLikedSongs: Boolean = false
+    val isSyncingLikedSongs: Boolean = false,
+    val viewMode: LibraryViewMode = LibraryViewMode.GRID,
+    val sortOption: LibrarySortOption = LibrarySortOption.DATE_ADDED,
+    val selectedFilter: LibraryFilter = LibraryFilter.PLAYLISTS
 )
+
+enum class LibraryViewMode {
+    GRID, LIST
+}
+
+enum class LibrarySortOption {
+    DATE_ADDED, NAME
+}
+
+enum class LibraryFilter(val title: String) {
+    PLAYLISTS("Playlists"),
+    SONGS("Songs"),
+    ALBUMS("Albums"),
+    ARTISTS("Artists")
+}
 
 sealed class ImportState {
     object Idle : ImportState()
@@ -352,5 +370,17 @@ class LibraryViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun setViewMode(mode: LibraryViewMode) {
+        _uiState.update { it.copy(viewMode = mode) }
+    }
+
+    fun setSortOption(option: LibrarySortOption) {
+        _uiState.update { it.copy(sortOption = option) }
+    }
+
+    fun setFilter(filter: LibraryFilter) {
+        _uiState.update { it.copy(selectedFilter = filter) }
     }
 }
