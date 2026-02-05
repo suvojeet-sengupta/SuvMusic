@@ -372,6 +372,8 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0) {
+        // Reset radio base so Autoplay adapts to this new song
+        radioBaseSongId = null
         musicPlayer.playSong(song, queue, startIndex)
     }
     
@@ -597,30 +599,34 @@ class PlayerViewModel @Inject constructor(
         if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
         
         val currentSong = playerState.value.currentSong ?: return
-        val baseSongId = radioBaseSongId ?: currentSong.id
+        var baseSongId = radioBaseSongId ?: currentSong.id
         
         viewModelScope.launch {
             _isLoadingMoreSongs.value = true
             try {
-                val moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
-                if (moreSongs.isNotEmpty()) {
-                    // Filter out songs already in queue
-                    val currentQueue = playerState.value.queue
-                    val existingIds = currentQueue.map { it.id }.toSet()
-                    val newSongs = moreSongs.filter { it.id !in existingIds }
-                    
-                    if (newSongs.isNotEmpty()) {
-                        musicPlayer.addToQueue(newSongs.take(10))
-                        // Update base song for next batch (use last added song for variety)
-                        radioBaseSongId = newSongs.lastOrNull()?.id ?: baseSongId
-                    } else {
-                        // If no new songs from YT, try local recommendations
-                        val localRecs = recommendationEngine.getPersonalizedRecommendations(15)
-                        val newLocalSongs = localRecs.filter { it.id !in existingIds }
-                        if (newLocalSongs.isNotEmpty()) {
-                            musicPlayer.addToQueue(newLocalSongs.take(10))
-                        }
-                    }
+                var moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
+                
+                // Filter out songs already in queue
+                val currentQueue = playerState.value.queue
+                val existingIds = currentQueue.map { it.id }.toSet()
+                var newSongs = moreSongs.filter { it.id !in existingIds }
+                
+                // If no new songs found from the tail, try using the currently playing song as seed
+                // This ensures we stay related to what the user is actually listening to
+                if (newSongs.isEmpty() && baseSongId != currentSong.id) {
+                    baseSongId = currentSong.id
+                    moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
+                    newSongs = moreSongs.filter { it.id !in existingIds }
+                }
+                
+                if (newSongs.isNotEmpty()) {
+                    musicPlayer.addToQueue(newSongs.take(10))
+                    // Update base song for next batch (use last added song for variety)
+                    radioBaseSongId = newSongs.lastOrNull()?.id ?: baseSongId
+                } else {
+                    // Strict YT Music recommendations requested:
+                    // Removed local fallback to ensure accuracy and relevance.
+                    Log.w("PlayerViewModel", "Could not find more related songs from YouTube Music")
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error loading more radio songs", e)
