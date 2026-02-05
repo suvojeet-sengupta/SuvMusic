@@ -29,7 +29,7 @@ class AboutViewModel @Inject constructor(
     }
     
     /**
-     * Disable developer mode - hides JioSaavn feature.
+     * Disable developer mode - hides advanced experimental features.
      */
     fun disableDeveloperMode() {
         viewModelScope.launch {

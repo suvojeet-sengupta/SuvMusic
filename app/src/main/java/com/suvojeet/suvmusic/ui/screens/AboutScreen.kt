@@ -188,7 +188,7 @@ fun AboutScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Whether you're streaming your favorite tracks, exploring new genres, or downloading for offline playback, SuvMusic ensures high-fidelity audio and a user-centric design without any subscriptions.",
+                        text = "With support for advanced audio effects like Reverb and Virtualization, alongside high-fidelity streaming, SuvMusic ensures a superior auditory journey tailored for audiophiles.",
                         style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
                         color = onSurfaceVariant
                     )
@@ -234,8 +234,8 @@ fun AboutScreen(
                     )
                     FeatureRow(
                         icon = Icons.Default.Bolt,
-                        title = "Fast & Smooth",
-                        subtitle = "Optimized performance",
+                        title = "Audio Effects",
+                        subtitle = "Reverb & Virtualizer support",
                         accentColor = primaryColor,
                         showDivider = false
                     )
