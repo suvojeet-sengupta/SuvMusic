@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.utils.dpadFocusable
 
 /**
  * Custom skip previous icon (double left triangles) like Apple Music
@@ -88,7 +90,7 @@ private fun AppleMusicButton(
             .size(size)
             .scale(scale)
             .clip(CircleShape)
-            .com.suvojeet.suvmusic.utils.dpadFocusable(
+            .dpadFocusable(
                 shape = CircleShape,
                 focusedScale = 1.1f,
                 borderColor = Color.White
@@ -132,7 +134,7 @@ fun PlaybackControls(
                 contentDescription = "Shuffle",
                 tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier
-                    .com.suvojeet.suvmusic.utils.dpadFocusable(
+                    .dpadFocusable(
                          shape = CircleShape,
                          focusedScale = 1.1f
                     )
@@ -201,7 +203,7 @@ fun PlaybackControls(
                 contentDescription = "Repeat",
                 tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier
-                    .com.suvojeet.suvmusic.utils.dpadFocusable(
+                    .dpadFocusable(
                          shape = CircleShape,
                          focusedScale = 1.1f
                     )
