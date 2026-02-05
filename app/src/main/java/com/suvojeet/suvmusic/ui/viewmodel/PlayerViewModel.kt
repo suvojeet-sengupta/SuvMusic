@@ -60,6 +60,7 @@ class PlayerViewModel @Inject constructor(
     private val recommendationEngine: RecommendationEngine,
     private val sponsorBlockRepository: SponsorBlockRepository,
     private val discordManager: DiscordManager,
+    private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -761,6 +762,10 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    fun calibrateAudioAr() {
+        audioARManager.calibrate()
+    }
+
     /**
      * Extract filename from a content URI.
      */

@@ -172,6 +172,12 @@ class SessionManager @Inject constructor(
         
         // Audio AR
         private val AUDIO_AR_ENABLED_KEY = booleanPreferencesKey("audio_ar_enabled")
+        private val AUDIO_AR_SENSITIVITY_KEY = floatPreferencesKey("audio_ar_sensitivity")
+        private val AUDIO_AR_AUTO_CALIBRATE_KEY = booleanPreferencesKey("audio_ar_auto_calibrate")
+        
+        // Audio Effects
+        private val REVERB_PRESET_KEY = stringPreferencesKey("audio_reverb_preset")
+        private val VIRTUALIZER_STRENGTH_KEY = intPreferencesKey("audio_virtualizer_strength")
         
         // Next Song Preloading
         private val NEXT_SONG_PRELOADING_ENABLED_KEY = booleanPreferencesKey("next_song_preloading_enabled")
@@ -891,6 +897,63 @@ class SessionManager @Inject constructor(
     suspend fun setAudioArEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[AUDIO_AR_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun getAudioArSensitivity(): Float =
+        context.dataStore.data.first()[AUDIO_AR_SENSITIVITY_KEY] ?: 1.0f
+
+    val audioArSensitivityFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[AUDIO_AR_SENSITIVITY_KEY] ?: 1.0f
+    }
+
+    suspend fun setAudioArSensitivity(sensitivity: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[AUDIO_AR_SENSITIVITY_KEY] = sensitivity
+        }
+    }
+
+    suspend fun isAudioArAutoCalibrateEnabled(): Boolean =
+        context.dataStore.data.first()[AUDIO_AR_AUTO_CALIBRATE_KEY] ?: true
+
+    val audioArAutoCalibrateFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[AUDIO_AR_AUTO_CALIBRATE_KEY] ?: true
+    }
+
+    suspend fun setAudioArAutoCalibrate(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[AUDIO_AR_AUTO_CALIBRATE_KEY] = enabled
+        }
+    }
+
+    // --- Audio Effects ---
+
+    suspend fun getReverbPreset(): com.suvojeet.suvmusic.data.model.ReverbPreset {
+        val name = context.dataStore.data.first()[REVERB_PRESET_KEY]
+        return com.suvojeet.suvmusic.data.model.ReverbPreset.fromName(name)
+    }
+
+    val reverbPresetFlow: Flow<com.suvojeet.suvmusic.data.model.ReverbPreset> = context.dataStore.data.map { preferences ->
+        val name = preferences[REVERB_PRESET_KEY]
+        com.suvojeet.suvmusic.data.model.ReverbPreset.fromName(name)
+    }
+
+    suspend fun setReverbPreset(preset: com.suvojeet.suvmusic.data.model.ReverbPreset) {
+        context.dataStore.edit { preferences ->
+            preferences[REVERB_PRESET_KEY] = preset.name
+        }
+    }
+
+    suspend fun getVirtualizerStrength(): Int =
+        context.dataStore.data.first()[VIRTUALIZER_STRENGTH_KEY] ?: 0
+
+    val virtualizerStrengthFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[VIRTUALIZER_STRENGTH_KEY] ?: 0
+    }
+
+    suspend fun setVirtualizerStrength(strength: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[VIRTUALIZER_STRENGTH_KEY] = strength
         }
     }
     
