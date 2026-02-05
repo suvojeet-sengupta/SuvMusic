@@ -1,6 +1,8 @@
 package com.suvojeet.suvmusic.utils
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -38,15 +40,15 @@ fun Modifier.dpadFocusable(
         .onFocusChanged { isFocused = it.isFocused }
         .scale(if (isFocused) focusedScale else 1f)
         .then(
-             if (onClick != null) {
-                 Modifier.clickable(
-                     interactionSource = interactionSource,
-                     indication = androidx.compose.foundation.LocalIndication.current,
-                     onClick = onClick
-                 )
-             } else {
-                 Modifier.focusable(interactionSource = interactionSource)
-             }
+            if (onClick != null) {
+                Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = androidx.compose.foundation.LocalIndication.current,
+                    onClick = onClick
+                )
+            } else {
+                Modifier.focusable(interactionSource = interactionSource)
+            }
         )
         .then(
             if (isFocused) {
