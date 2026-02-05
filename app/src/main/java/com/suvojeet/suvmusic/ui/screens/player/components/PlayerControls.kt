@@ -89,18 +89,14 @@ private fun AppleMusicButton(
         modifier = modifier
             .size(size)
             .scale(scale)
-            .clip(CircleShape)
             .dpadFocusable(
+                onClick = onClick,
                 shape = CircleShape,
                 focusedScale = 1.1f,
                 borderColor = Color.White
             )
-            .background(Color.Black.copy(alpha = backgroundAlpha))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            ),
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = backgroundAlpha)),
         contentAlignment = Alignment.Center
     ) {
         content(isPressed)
@@ -125,25 +121,26 @@ fun PlaybackControls(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Shuffle
-        IconButton(
-            onClick = onShuffleToggle,
-            modifier = Modifier.size(48.dp)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .dpadFocusable(
+                    onClick = onShuffleToggle,
+                    shape = CircleShape,
+                    focusedScale = 1.1f
+                )
+                .background(
+                    if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
+                    CircleShape
+                )
+                .padding(10.dp), // Padding to scale down icon relative to 48dp box
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
                 tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier
-                    .dpadFocusable(
-                         shape = CircleShape,
-                         focusedScale = 1.1f
-                    )
-                    .size(28.dp)
-                    .background(
-                        if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                        CircleShape
-                    )
-                    .padding(2.dp)
+                modifier = Modifier.size(28.dp)
             )
         }
 
@@ -191,9 +188,20 @@ fun PlaybackControls(
         }
 
         // Repeat
-        IconButton(
-            onClick = onRepeatToggle,
-            modifier = Modifier.size(48.dp)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .dpadFocusable(
+                    onClick = onRepeatToggle,
+                    shape = CircleShape,
+                    focusedScale = 1.1f
+                )
+                .background(
+                    if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
+                    CircleShape
+                )
+                .padding(10.dp),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = when (repeatMode) {
@@ -202,17 +210,7 @@ fun PlaybackControls(
                 },
                 contentDescription = "Repeat",
                 tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier
-                    .dpadFocusable(
-                         shape = CircleShape,
-                         focusedScale = 1.1f
-                    )
-                    .size(28.dp)
-                    .background(
-                        if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                        CircleShape
-                    )
-                    .padding(2.dp)
+                modifier = Modifier.size(28.dp)
             )
         }
     }
