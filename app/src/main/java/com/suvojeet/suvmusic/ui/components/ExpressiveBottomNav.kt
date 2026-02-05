@@ -63,10 +63,10 @@ fun ExpressiveBottomNav(
     alpha: Float = 0.9f
 ) {
     val navItems = listOf(
-        NavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
-        NavItem(Destination.Search, "Search", Icons.Outlined.Search, Icons.Filled.Search),
-        NavItem(Destination.Library, "Your Library", Icons.Outlined.ViewWeek, Icons.Filled.ViewWeek),
-        NavItem(Destination.Settings, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
+        BottomNavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
+        BottomNavItem(Destination.Search, "Search", Icons.Outlined.Search, Icons.Filled.Search),
+        BottomNavItem(Destination.Library, "Your Library", Icons.Outlined.ViewWeek, Icons.Filled.ViewWeek),
+        BottomNavItem(Destination.Settings, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
     
     // Spotify-style solid/transparent dark background
@@ -101,7 +101,7 @@ fun ExpressiveBottomNav(
 
 @Composable
 private fun GlassNavItem(
-    item: NavItem,
+    item: BottomNavItem,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -143,7 +143,7 @@ private fun GlassNavItem(
     }
 }
 
-private data class NavItem(
+private data class BottomNavItem(
     val destination: Destination,
     val label: String,
     val unselectedIcon: ImageVector,
