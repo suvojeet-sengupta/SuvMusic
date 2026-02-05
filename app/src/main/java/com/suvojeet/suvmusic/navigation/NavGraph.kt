@@ -231,11 +231,8 @@ fun NavGraph(
         composable(Destination.Search.route) {
             SearchScreen(
                 onSongClick = { songs, index -> 
-                    if (sessionManager.isLoggedIn()) {
-                        onStartRadio(songs[index])
-                    } else {
-                        onPlaySong(songs, index)
-                    }
+                    onStartRadio(songs[index])
+                    navController.navigate(Destination.Player.route)
                 },
                 onArtistClick = { artistId ->
                     navController.navigate(Destination.Artist(artistId).route)
