@@ -178,13 +178,13 @@ fun WaveformSeeker(
                 .onKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown) {
                         when (event.key) {
-                            Key.DpadLeft -> {
+                            Key.DirectionLeft -> {
                                 val newProgress = (currentProgress - 0.05f).coerceAtLeast(0f)
                                 currentProgress = newProgress
                                 onSeek(newProgress)
                                 true
                             }
-                            Key.DpadRight -> {
+                            Key.DirectionRight -> {
                                 val newProgress = (currentProgress + 0.05f).coerceAtMost(1f)
                                 currentProgress = newProgress
                                 onSeek(newProgress)
