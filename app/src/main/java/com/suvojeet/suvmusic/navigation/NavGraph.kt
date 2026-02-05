@@ -673,6 +673,15 @@ fun NavGraph(
                 },
                 onArtistClick = { artist ->
                     navController.navigate(Destination.Artist(artist.id).route)
+                },
+                onPlaylistClick = { playlist ->
+                    navController.navigate(
+                        Destination.Playlist(
+                            playlistId = playlist.id,
+                            name = playlist.name,
+                            thumbnailUrl = playlist.thumbnailUrl
+                        ).route
+                    )
                 }
             )
         }
