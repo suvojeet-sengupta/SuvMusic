@@ -678,7 +678,7 @@ fun NavGraph(
                     navController.navigate(
                         Destination.Playlist(
                             playlistId = playlist.id,
-                            name = playlist.name,
+                            name = playlist.title,
                             thumbnailUrl = playlist.thumbnailUrl
                         ).route
                     )
