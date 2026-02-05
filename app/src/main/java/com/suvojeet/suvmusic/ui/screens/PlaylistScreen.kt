@@ -74,6 +74,7 @@ import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
+import com.suvojeet.suvmusic.utils.dpadFocusable
 
 @Composable
 fun PlaylistScreen(
@@ -426,7 +427,14 @@ private fun TopBar(
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onBackClick) {
+        Box(
+            modifier = Modifier
+                .dpadFocusable(
+                    onClick = onBackClick,
+                    shape = CircleShape,
+                )
+                .padding(8.dp)
+        ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
@@ -563,14 +571,15 @@ private fun PlaylistHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Download Button
-            IconButton(
-                onClick = onDownload,
+            Box(
                 modifier = Modifier
                     .size(48.dp)
+                    .dpadFocusable(onClick = onDownload, shape = CircleShape)
                     .background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
                         shape = CircleShape
-                    )
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Download,
@@ -581,14 +590,15 @@ private fun PlaylistHeader(
 
             // Save Button (Bookmark icon as requested) - Hide for Liked Songs
             if (playlist.id != "LM") {
-                IconButton(
-                    onClick = onToggleSave,
+                Box(
                     modifier = Modifier
                         .size(48.dp)
+                        .dpadFocusable(onClick = onToggleSave, shape = CircleShape)
                         .background(
                             color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
                             shape = CircleShape
-                        )
+                        ),
+                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -599,32 +609,36 @@ private fun PlaylistHeader(
             }
             
             // Play Button (Large Central)
-            androidx.compose.material3.FilledIconButton(
-                onClick = onPlayAll,
-                modifier = Modifier
+            Box(
+                 modifier = Modifier
                     .size(72.dp)
-                    .shadow(elevation = 12.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary),
-                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                    .shadow(elevation = 12.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary)
+                    .dpadFocusable(
+                        onClick = onPlayAll,
+                        shape = CircleShape,
+                        focusedScale = 1.1f
+                    )
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(36.dp)
                 )
             }
             
             // Share Button
-            IconButton(
-                onClick = onShare,
+            Box(
                 modifier = Modifier
                     .size(48.dp)
+                    .dpadFocusable(onClick = onShare, shape = CircleShape)
                     .background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
                         shape = CircleShape
-                    )
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Share,
@@ -634,14 +648,15 @@ private fun PlaylistHeader(
             }
             
             // More Button
-            IconButton(
-                onClick = onMoreClick,
+            Box(
                 modifier = Modifier
                     .size(48.dp)
+                    .dpadFocusable(onClick = onMoreClick, shape = CircleShape)
                     .background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
                         shape = CircleShape
-                    )
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
@@ -697,7 +712,7 @@ private fun SongListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
