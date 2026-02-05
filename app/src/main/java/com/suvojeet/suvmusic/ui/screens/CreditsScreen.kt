@@ -3,7 +3,6 @@ package com.suvojeet.suvmusic.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,7 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,14 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.suvojeet.suvmusic.ui.theme.Purple40
-import com.suvojeet.suvmusic.ui.theme.Purple80
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,23 +39,19 @@ fun CreditsScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            LargeTopAppBar(
-                title = { Text("Credits", fontWeight = FontWeight.Bold) },
+            TopAppBar(
+                title = { Text("Credits & Contributors", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background
-                )
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
@@ -66,22 +62,18 @@ fun CreditsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- Main Developer ---
+            // --- Lead Developer ---
             item {
+                SectionHeader("Lead Developer")
                 DeveloperCard()
             }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-
-            // --- Special Mentions ---
+            // --- Core Engine ---
             item {
-                SectionHeader("Powered By")
-            }
-
-            item {
+                SectionHeader("Core Engine")
                 LibraryCard(
                     name = "NewPipe Extractor",
-                    description = "The core engine behind SuvMusic. Parses YouTube data, streams, and metadata without API keys.",
+                    description = "The powerful engine that parses YouTube data and streams without using official APIs.",
                     isSpecial = true,
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/TeamNewPipe/NewPipeExtractor"))
@@ -89,11 +81,13 @@ fun CreditsScreen(
                     }
                 )
             }
-            
+
+            // --- Special Thanks ---
             item {
+                SectionHeader("Special Thanks")
                 LibraryCard(
                     name = "SponsorBlock",
-                    description = "Community-driven platform for skipping sponsor segments in YouTube videos.",
+                    description = "For providing the segments that help users skip annoying sponsors automatically.",
                     isSpecial = true,
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://sponsor.ajay.app/"))
@@ -102,11 +96,9 @@ fun CreditsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-
             // --- Lyrics Providers ---
             item {
-                SectionHeader("Lyrics Providers")
+                SectionHeader("Lyrics Ecosystem")
             }
             
             items(getLyricsProviders()) { provider ->
@@ -122,11 +114,9 @@ fun CreditsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-
             // --- Open Source Libraries ---
             item {
-                SectionHeader("Open Source Libraries")
+                SectionHeader("Key Libraries")
             }
 
             items(getLibraries()) { lib ->
@@ -145,13 +135,13 @@ fun CreditsScreen(
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Made with ❤️ using Kotlin & Jetpack Compose",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "SuvMusic is built with passion and respect for the open-source community.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -159,77 +149,75 @@ fun CreditsScreen(
 
 @Composable
 private fun DeveloperCard() {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            AsyncImage(
+                model = "https://avatars.githubusercontent.com/u/suvojeet-sengupta",
+                contentDescription = "Suvojeet Sengupta",
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(80.dp)
                     .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Purple40, Purple80)
-                        )
-                    )
-                    .border(2.dp, MaterialTheme.colorScheme.onPrimaryContainer, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.White
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = "Suvojeet Sengupta",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                    .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                contentScale = ContentScale.Crop
             )
             
-            Text(
-                text = "Lead Developer & Designer",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-            )
+            Spacer(modifier = Modifier.width(20.dp))
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { 
-                        // Link would go here (e.g. GitHub/Portfolio)
-                    }
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Code,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Visit Portfolio",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "Suvojeet Sengupta",
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                
+                Text(
+                    text = "Main Developer & Maintainer",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    modifier = Modifier.clickable {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta"))
+                        context.startActivity(intent)
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Code,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "GitHub",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
     }
@@ -239,10 +227,10 @@ private fun DeveloperCard() {
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
+        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp, start = 4.dp)
     )
 }
 
@@ -260,38 +248,60 @@ private fun LibraryCard(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSpecial) 
-                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f) 
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
             else 
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = if (isSpecial) BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)) else null
+        border = if (isSpecial) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) else null
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (isSpecial) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isSpecial) Icons.Default.Favorite else Icons.Default.Terminal,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = if (isSpecial) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSpecial) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
-                if (isSpecial) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = "Special",
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.tertiary
-                    )
-                }
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Icon(
+                imageVector = Icons.Default.OpenInNew,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
     }
@@ -307,19 +317,18 @@ private fun getLyricsProviders(): List<LibraryItem> {
     return listOf(
         LibraryItem("BetterLyrics", "Fetches time-synced lyrics from Apple Music.", "https://github.com/BetterLyrics"),
         LibraryItem("KuGou", "Provides high-quality synced lyrics from KuGou Music.", "https://www.kugou.com/"),
-        LibraryItem("SimpMusic / LRCLIB", "Open-source lyrics provider with a massive database.", "https://lrclib.net/")
+        LibraryItem("LRCLIB", "Open-source lyrics provider with a massive community database.", "https://lrclib.net/")
     )
 }
 
 private fun getLibraries(): List<LibraryItem> {
     return listOf(
-        LibraryItem("Media3 / ExoPlayer", "Google's media player framework for Android.", "https://github.com/androidx/media"),
-        LibraryItem("Jetpack Compose", "Modern toolkit for building native UI.", "https://developer.android.com/jetpack/compose"),
-        LibraryItem("Hilt", "Dependency injection library for Android.", "https://dagger.dev/hilt/"),
-        LibraryItem("Coil", "Image loading library for Kotlin Coroutines.", "https://coil-kt.github.io/coil/"),
-        LibraryItem("Retrofit", "Type-safe HTTP client for Android and Java.", "https://square.github.io/retrofit/"),
-        LibraryItem("OkHttp", "Square's meticulous HTTP client for Java and Kotlin.", "https://square.github.io/okhttp/"),
-        LibraryItem("Room", "Persistence library provides an abstraction layer over SQLite.", "https://developer.android.com/training/data-storage/room"),
-        LibraryItem("Material Design 3", "Latest design system from Google.", "https://m3.material.io/")
+        LibraryItem("Media3 / ExoPlayer", "The engine for media playback on Android.", "https://github.com/androidx/media"),
+        LibraryItem("Jetpack Compose", "The modern toolkit for native UI development.", "https://developer.android.com/jetpack/compose"),
+        LibraryItem("Hilt", "Dependency injection for cleaner code structure.", "https://dagger.dev/hilt/"),
+        LibraryItem("Coil", "Image loading with Kotlin Coroutines.", "https://coil-kt.github.io/coil/"),
+        LibraryItem("Retrofit", "The type-safe HTTP client for network requests.", "https://square.github.io/retrofit/"),
+        LibraryItem("Room", "The local database solution for playlists and history.", "https://developer.android.com/training/data-storage/room"),
+        LibraryItem("Material Design 3", "Latest design system for a modern experience.", "https://m3.material.io/")
     )
 }
