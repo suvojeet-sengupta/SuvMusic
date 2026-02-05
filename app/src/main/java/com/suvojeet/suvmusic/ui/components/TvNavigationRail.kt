@@ -104,13 +104,13 @@ private fun TvNavRailItem(
 
     Column(
         modifier = Modifier
+            .clip(CircleShape)
             .dpadFocusable(
                 shape = CircleShape,
                 focusedScale = 1.15f,
                 borderColor = MaterialTheme.colorScheme.primary,
                 borderWidth = 2.dp
             )
-            .clip(CircleShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = androidx.compose.material3.ripple(),
