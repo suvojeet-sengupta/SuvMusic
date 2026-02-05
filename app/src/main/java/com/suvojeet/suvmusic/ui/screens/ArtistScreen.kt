@@ -42,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -566,7 +567,7 @@ private fun ArtistHeroHeader(
 
                 item {
                     // Shuffle Button
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = onShuffle,
                         shape = RoundedCornerShape(24.dp),
                         modifier = Modifier.height(44.dp)
@@ -586,7 +587,7 @@ private fun ArtistHeroHeader(
 
                 item {
                     // Radio Button
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = onStartRadio,
                         shape = RoundedCornerShape(24.dp),
                         modifier = Modifier.height(44.dp)
