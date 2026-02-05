@@ -23,6 +23,12 @@ interface ListeningHistoryDao {
     suspend fun getHistoryForSong(songId: String): ListeningHistory?
     
     /**
+     * Get all listening history.
+     */
+    @Query("SELECT * FROM listening_history")
+    suspend fun getAllHistory(): List<ListeningHistory>
+
+    /**
      * Get top played songs ordered by play count.
      */
     @Query("SELECT * FROM listening_history ORDER BY playCount DESC LIMIT :limit")

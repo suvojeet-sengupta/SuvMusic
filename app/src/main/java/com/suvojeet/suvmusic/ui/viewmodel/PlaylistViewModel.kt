@@ -47,6 +47,8 @@ class PlaylistViewModel @Inject constructor(
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
     private val libraryRepository: LibraryRepository,
+    private val cache: androidx.media3.datasource.cache.Cache,
+    private val listeningHistoryDao: com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -136,8 +138,8 @@ class PlaylistViewModel @Inject constructor(
                         songs = songs
                     )
                 } else if (playlistId == "CACHED_ALL") {
-                     // Cached Songs
-                     val songs = downloadRepository.downloadedSongs.value
+                     // Cached Songs - Now including ALL cached items from player cache
+                     val songs = loadAllCachedSongs()
                      Playlist(
                          id = "CACHED_ALL",
                          title = "Cached Songs",
@@ -372,6 +374,54 @@ class PlaylistViewModel @Inject constructor(
 
     fun hideCreatePlaylistDialog() {
         _uiState.update { it.copy(showCreatePlaylistDialog = false) }
+    }
+
+    private suspend fun loadAllCachedSongs(): List<Song> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val allKeys = cache.keys
+        val allHistory = listeningHistoryDao.getAllHistory()
+        val cachedSongs = mutableListOf<Song>()
+
+        // Map history by song ID for fast lookup
+        val historyMap = allHistory.associateBy { it.songId }
+
+        for (key in allKeys) {
+            // Keys can be direct songId or "audio_songId" or "video_songId"
+            val songId = key.removePrefix("audio_").removePrefix("video_").substringBefore("_")
+            
+            val history = historyMap[songId]
+            if (history != null) {
+                // Verify if the resource is actually fully or substantially cached
+                // For simplicity, we assume if the key exists, it's partially cached and playable
+                val song = Song(
+                    id = history.songId,
+                    title = history.songTitle,
+                    artist = history.artist,
+                    album = history.album ?: "",
+                    duration = history.duration,
+                    thumbnailUrl = history.thumbnailUrl,
+                    source = try { 
+                        com.suvojeet.suvmusic.data.model.SongSource.valueOf(history.source) 
+                    } catch (e: Exception) { 
+                        com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE 
+                    },
+                    localUri = history.localUri?.let { android.net.Uri.parse(it) },
+                    artistId = history.artistId
+                )
+                if (cachedSongs.none { it.id == song.id }) {
+                    cachedSongs.add(song)
+                }
+            }
+        }
+        
+        // Also include downloaded songs which might not be in player cache but are local
+        val downloaded = downloadRepository.downloadedSongs.value
+        downloaded.forEach { song ->
+            if (cachedSongs.none { it.id == song.id }) {
+                cachedSongs.add(song)
+            }
+        }
+
+        cachedSongs.sortedByDescending { historyMap[it.id]?.lastPlayed ?: 0L }
     }
 }
 

@@ -43,7 +43,8 @@ data class LibraryUiState(
     val viewMode: LibraryViewMode = LibraryViewMode.GRID,
     val sortOption: LibrarySortOption = LibrarySortOption.DATE_ADDED,
     val selectedFilter: LibraryFilter = LibraryFilter.PLAYLISTS,
-    val top50SongCount: Int = 0
+    val top50SongCount: Int = 0,
+    val cachedSongCount: Int = 0
 )
 
 enum class LibraryViewMode {
@@ -87,7 +88,9 @@ class LibraryViewModel @Inject constructor(
     private val spotifyImportHelper: SpotifyImportHelper,
     private val libraryRepository: LibraryRepository,
     private val musicPlayer: MusicPlayer,
-    private val workManager: androidx.work.WorkManager
+    private val workManager: androidx.work.WorkManager,
+    private val cache: androidx.media3.datasource.cache.Cache,
+    private val listeningHistoryDao: com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -201,6 +204,8 @@ class LibraryViewModel @Inject constructor(
                     }
                 }
 
+                loadCachedSongCount()
+
                 if (forceRefresh && sessionManager.isLoggedIn()) {
                     refresh()
                 }
@@ -222,6 +227,7 @@ class LibraryViewModel @Inject constructor(
                     youTubeRepository.getLibraryArtists()
                     youTubeRepository.getLibraryAlbums()
                 }
+                loadCachedSongCount()
                 loadData(forceRefresh = false)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Refresh failed: ${e.message}") }
@@ -406,5 +412,29 @@ class LibraryViewModel @Inject constructor(
 
     fun setFilter(filter: LibraryFilter) {
         _uiState.update { it.copy(selectedFilter = filter) }
+    }
+
+    private suspend fun loadCachedSongCount() {
+        val count = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val allKeys = cache.keys
+            val allHistory = listeningHistoryDao.getAllHistory()
+            val historyIds = allHistory.map { it.songId }.toSet()
+            
+            val cachedIds = mutableSetOf<String>()
+            
+            for (key in allKeys) {
+                val songId = key.removePrefix("audio_").removePrefix("video_").substringBefore("_")
+                if (historyIds.contains(songId)) {
+                    cachedIds.add(songId)
+                }
+            }
+            
+            // Also include downloaded songs
+            val downloadedIds = downloadRepository.downloadedSongs.value.map { it.id }
+            cachedIds.addAll(downloadedIds)
+            
+            cachedIds.size
+        }
+        _uiState.update { it.copy(cachedSongCount = count) }
     }
 }
