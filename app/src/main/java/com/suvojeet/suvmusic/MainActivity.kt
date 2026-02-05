@@ -725,7 +725,8 @@ fun SuvMusicApp(
                         enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsState().value,
                         onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                         startDestination = Destination.Home.route, // Always start at Home
-                        sharedTransitionScope = this@SharedTransitionLayout
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        isTv = isTv
                     )
 
                     // MiniPlayer floating content overlay
