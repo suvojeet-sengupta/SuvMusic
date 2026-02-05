@@ -92,7 +92,8 @@ fun NavGraph(
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: String = Destination.Home.route,
-    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null
+    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
+    isTv: Boolean = false
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -124,41 +125,65 @@ fun NavGraph(
         }
     ) {
         composable(Destination.Home.route) {
-            HomeScreen(
-                onSongClick = { songs, index -> onPlaySong(songs, index) },
-                onPlaylistClick = { playlist ->
-                    navController.navigate(
-                        Destination.Playlist(
-                            playlistId = playlist.id,
-                            name = playlist.name,
-                            thumbnailUrl = playlist.thumbnailUrl
-                        ).route
-                    )
-                },
-                onAlbumClick = { album ->
-                    navController.navigate(
-                        Destination.Album(
-                            albumId = album.id,
-                            name = album.title,
-                            thumbnailUrl = album.thumbnailUrl
-                        ).route
-                    )
-                },
-                onRecentsClick = {
-                    navController.navigate(Destination.Recents.route)
-                },
-                onExploreClick = { browseId, title ->
-                    if (browseId == "FEmusic_moods_and_genres") {
-                        navController.navigate(Destination.MoodAndGenres.route)
-                    } else {
-                        navController.navigate(Destination.Explore.buildRoute(browseId, title))
+            if (isTv) {
+                com.suvojeet.suvmusic.ui.screens.TvHomeScreen(
+                    onSongClick = { songs, index -> onPlaySong(songs, index) },
+                    onPlaylistClick = { playlist ->
+                        navController.navigate(
+                            Destination.Playlist(
+                                playlistId = playlist.id,
+                                name = playlist.name,
+                                thumbnailUrl = playlist.thumbnailUrl
+                            ).route
+                        )
+                    },
+                    onAlbumClick = { album ->
+                        navController.navigate(
+                            Destination.Album(
+                                albumId = album.id,
+                                name = album.title,
+                                thumbnailUrl = album.thumbnailUrl
+                            ).route
+                        )
                     }
-                },
-                onStartRadio = { onStartRadio(null) },
-                onCreateMixClick = {
-                    navController.navigate(Destination.PickMusic.route)
-                }
-            )
+                )
+            } else {
+                HomeScreen(
+                    onSongClick = { songs, index -> onPlaySong(songs, index) },
+                    onPlaylistClick = { playlist ->
+                        navController.navigate(
+                            Destination.Playlist(
+                                playlistId = playlist.id,
+                                name = playlist.name,
+                                thumbnailUrl = playlist.thumbnailUrl
+                            ).route
+                        )
+                    },
+                    onAlbumClick = { album ->
+                        navController.navigate(
+                            Destination.Album(
+                                albumId = album.id,
+                                name = album.title,
+                                thumbnailUrl = album.thumbnailUrl
+                            ).route
+                        )
+                    },
+                    onRecentsClick = {
+                        navController.navigate(Destination.Recents.route)
+                    },
+                    onExploreClick = { browseId, title ->
+                        if (browseId == "FEmusic_moods_and_genres") {
+                            navController.navigate(Destination.MoodAndGenres.route)
+                        } else {
+                            navController.navigate(Destination.Explore.buildRoute(browseId, title))
+                        }
+                    },
+                    onStartRadio = { onStartRadio(null) },
+                    onCreateMixClick = {
+                        navController.navigate(Destination.PickMusic.route)
+                    }
+                )
+            }
         }
         
         composable(
