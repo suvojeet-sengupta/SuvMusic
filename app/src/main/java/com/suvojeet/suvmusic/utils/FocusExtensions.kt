@@ -26,10 +26,12 @@ fun Modifier.dpadFocusable(
     borderColor: Color = Color.White,
     showBorder: Boolean = true
 ) = composed {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     var isFocused by remember { mutableStateOf(false) }
 
     this
         .onFocusChanged { isFocused = it.isFocused }
+        .androidx.compose.foundation.focusable(interactionSource = interactionSource)
         .scale(if (isFocused) focusedScale else 1f)
         .then(
             if (isFocused && showBorder) {

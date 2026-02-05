@@ -50,6 +50,8 @@ import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
 import com.suvojeet.suvmusic.utils.ImageUtils
+import com.suvojeet.suvmusic.utils.dpadFocusable
+import androidx.compose.ui.graphics.Shape
 import java.util.Calendar
 
 /**
@@ -274,7 +276,10 @@ fun QuickAccessCard(
     val context = LocalContext.current
     // Darker surface for contrast
     Surface(
-        modifier = modifier.bounceClick(onClick = onClick),
+        modifier = modifier.bounceClick(
+            shape = RoundedCornerShape(4.dp),
+            onClick = onClick
+        ),
         shape = RoundedCornerShape(4.dp), // Slightly rounded like Spotify
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), 
         tonalElevation = 2.dp
@@ -350,7 +355,10 @@ private fun MediumSongCard(
     Column(
         modifier = Modifier
             .width(150.dp) // Slightly tighter
-            .bounceClick(onClick = onClick)
+            .bounceClick(
+                shape = RoundedCornerShape(4.dp),
+                onClick = onClick
+            )
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -394,7 +402,10 @@ private fun PlaylistDisplayCard(
     Column(
         modifier = Modifier
             .width(150.dp)
-            .bounceClick(onClick = onClick)
+            .bounceClick(
+                shape = RoundedCornerShape(4.dp),
+                onClick = onClick
+            )
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -523,6 +534,7 @@ private fun CreateMixCard(
 
 private fun Modifier.bounceClick(
     scaleDown: Float = 0.95f,
+    shape: Shape = RoundedCornerShape(8.dp),
     onClick: () -> Unit
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
@@ -534,6 +546,11 @@ private fun Modifier.bounceClick(
 
     this
         .scale(scale)
+        .dpadFocusable(
+            shape = shape,
+            focusedScale = 1.05f,
+            borderColor = MaterialTheme.colorScheme.primary
+        )
         .clickable(
             interactionSource = interactionSource,
             indication = null,
