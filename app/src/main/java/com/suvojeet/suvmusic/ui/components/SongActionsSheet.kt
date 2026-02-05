@@ -303,14 +303,6 @@ fun SongActionsSheet(
                     textColor = contentColor,
                     onClick = { handleAction { onSleepTimer() } }
                 )
-                
-                ActionItem(
-                    icon = if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
-                    title = if (isFavorite) "Remove from Favourites" else "Add to Favourites",
-                    iconTint = if (isFavorite) (if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.primary) else contentColor,
-                    textColor = contentColor,
-                    onClick = { handleAction { onToggleFavorite() } }
-                )
 
                 // Dislike button removed as per request
                 
