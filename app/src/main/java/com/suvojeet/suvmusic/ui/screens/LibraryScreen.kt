@@ -568,7 +568,7 @@ fun PlaylistsGrid(
              SmartPlaylistCard(
                 title = "Cached",
                 icon = Icons.Default.Cached,
-                count = "${uiState.localSongs.size} songs",
+                count = "${uiState.cachedSongCount} songs",
                 onClick = { onSmartPlaylistClick(SmartPlaylistType.CACHED) }
             )
         }
