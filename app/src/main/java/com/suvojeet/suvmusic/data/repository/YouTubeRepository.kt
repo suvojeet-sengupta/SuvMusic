@@ -286,6 +286,18 @@ class YouTubeRepository @Inject constructor(
             
             getLikedMusic()
         } catch (e: Exception) {
+            // Fallback: Mix functionality
+            // Try to get some recommendations based on followed artists
+            val followedArtists = libraryRepository.getSavedArtists().first()
+            if (followedArtists.isNotEmpty()) {
+                val randomArtist = followedArtists.random()
+                try {
+                    val artistSongs = search(randomArtist.title, FILTER_SONGS).take(5)
+                    if (artistSongs.isNotEmpty()) return@withContext artistSongs
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
             search("trending music 2024", FILTER_SONGS)
         }
     }
@@ -914,7 +926,12 @@ class YouTubeRepository @Inject constructor(
     suspend fun getArtist(browseId: String): Artist? = withContext(Dispatchers.IO) {
         try {
             val json = fetchInternalApi(browseId)
-            parseArtistFromInternalJson(json, browseId)
+            val artist = parseArtistFromInternalJson(json, browseId)
+            
+            // Check local subscription state to merge with remote state
+            val isLocalSubscribed = libraryRepository.isArtistSaved(browseId).first()
+            
+            artist.copy(isSubscribed = artist.isSubscribed || isLocalSubscribed)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -1257,13 +1274,34 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun subscribe(channelId: String, isSubscribe: Boolean): Boolean = withContext(Dispatchers.IO) {
         try {
-             val endpoint = if (isSubscribe) "subscription/subscribe" else "subscription/unsubscribe"
-             val body = """
-                 {
-                     "channelIds": ["$channelId"]
+             // 1. Toggle local persistence (Priority for this feature)
+             if (isSubscribe) {
+                 // We need to fetch the artist to save it if we don't have it. 
+                 // This method only has ID. Fetching it might be expensive if we just want to toggle.
+                 // However, to save to DB we need the Artist object.
+                 // Logic: If fetching fails, we can't save locally, so return false? 
+                 // Or we save a minimal entry? LibraryEntity needs title/thumb.
+                 // Better to fetch.
+                 val artist = getArtist(channelId)
+                 if (artist != null) {
+                     libraryRepository.saveArtist(artist)
                  }
-             """.trimIndent()
-             performAuthenticatedAction(endpoint, body)
+             } else {
+                 libraryRepository.removeArtist(channelId)
+             }
+
+             // 2. Try upstream YouTube subscribe if logged in (Best effort)
+             if (sessionManager.isLoggedIn()) {
+                 val endpoint = if (isSubscribe) "subscription/subscribe" else "subscription/unsubscribe"
+                 val body = """
+                     {
+                         "channelIds": ["$channelId"]
+                     }
+                 """.trimIndent()
+                 performAuthenticatedAction(endpoint, body)
+             }
+             
+             true
         } catch (e: Exception) {
             e.printStackTrace()
             false
