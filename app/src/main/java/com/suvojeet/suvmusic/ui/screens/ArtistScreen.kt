@@ -58,6 +58,7 @@ fun ArtistScreen(
     onSeeAllSinglesClick: () -> Unit,
     onArtistClick: (ArtistPreview) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
+    onStartRadio: (String) -> Unit,
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -121,7 +122,7 @@ fun ArtistScreen(
                             onSubscribe = viewModel::toggleSubscribe,
                             isSubscribed = artist.isSubscribed,
                             isSubscribing = uiState.isSubscribing,
-                            onStartRadio = { viewModel.startRadio { /* Handle radio start */ } }
+                            onStartRadio = { viewModel.startRadio(onStartRadio) }
                         )
                     }
 
