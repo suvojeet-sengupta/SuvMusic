@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -546,6 +548,9 @@ fun SuvMusicApp(
             showWelcomeDialog = true
         }
     }
+    
+    // Check for TV Mode
+    val isTv = remember { com.suvojeet.suvmusic.utils.TvUtils.isTv(context) }
 
     if (showWelcomeDialog) {
         androidx.compose.material3.AlertDialog(
@@ -616,7 +621,7 @@ fun SuvMusicApp(
                     }
                 },
                 bottomBar = {
-                    if (showBottomNav) {
+                    if (showBottomNav && !isTv) {
                         Column {
 
                             
@@ -640,13 +645,32 @@ fun SuvMusicApp(
                     }
                 }
             ) { innerPadding ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            bottom = if (showBottomNav) innerPadding.calculateBottomPadding() else innerPadding.calculateBottomPadding()
+                Row(modifier = Modifier.fillMaxSize()) {
+                    if (isTv && showBottomNav) {
+                        com.suvojeet.suvmusic.ui.components.TvNavigationRail(
+                            currentDestination = currentDestination,
+                            onDestinationChange = { destination ->
+                                navController.navigate(destination.route) {
+                                    popUpTo(Destination.Home.route) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
                         )
-                ) {
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                            .padding(
+                                bottom = if (showBottomNav && !isTv) innerPadding.calculateBottomPadding() else 0.dp
+                                // We don't apply top padding here as it might be handled by screens or scaffolds inside
+                                // But for TV, we might need some padding if rail is taking space
+                            )
+                    ) {
 
                     NavGraph(
                         navController = navController,
@@ -705,7 +729,7 @@ fun SuvMusicApp(
                     )
 
                     // MiniPlayer floating content overlay
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = showMiniPlayer,
                         enter = fadeIn(),
                         exit = fadeOut(),
@@ -779,6 +803,7 @@ fun SuvMusicApp(
             else -> {}
         }
     }
+}
 }
 
 /**

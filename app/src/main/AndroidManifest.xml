@@ -32,6 +32,10 @@
     
     <!-- Vibration permission for Music Haptics -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    
+    <!-- TV features -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <!-- Permission to modify system settings for Set as Ringtone -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS" 
@@ -141,6 +145,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="suvmusic" android:host="lastfm-auth" />
+            </intent-filter>
+            
+            <!-- Android TV Launcher Intent -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
         
