@@ -97,6 +97,8 @@ fun PlaybackSettingsScreen(
     var showHapticsIntensitySheet by remember { mutableStateOf(false) }
     val hapticsModeSheetState = rememberModalBottomSheetState()
     val hapticsIntensitySheetState = rememberModalBottomSheetState()
+    var showReverbSheet by remember { mutableStateOf(false) }
+    val reverbSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -239,7 +241,7 @@ fun PlaybackSettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Music Source
-            SectionTitle("Music Source")
+            PlaybackSectionTitle("Music Source")
             
             ListItem(
                 headlineContent = { Text("Primary Source") },
@@ -263,7 +265,7 @@ fun PlaybackSettingsScreen(
             )
 
             // Content Preferences
-            SectionTitle("Content Preferences")
+            PlaybackSectionTitle("Content Preferences")
 
             ListItem(
                 headlineContent = { Text("Music Languages") },
@@ -321,7 +323,7 @@ fun PlaybackSettingsScreen(
             )
             
             // Audio Section
-            SectionTitle("Audio")
+            PlaybackSectionTitle("Audio")
             
             ListItem(
                 headlineContent = { Text("Streaming Quality") },
@@ -369,7 +371,7 @@ fun PlaybackSettingsScreen(
             )
             
             // Track Transitions
-            SectionTitle("Track transitions")
+            PlaybackSectionTitle("Track transitions")
             
             ListItem(
                 headlineContent = { 
@@ -482,7 +484,7 @@ fun PlaybackSettingsScreen(
             )
             
             // Volume Controls
-            SectionTitle("Volume")
+            PlaybackSectionTitle("Volume")
             
             ListItem(
                 headlineContent = { Text("In-app volume slider") },
@@ -682,6 +684,49 @@ fun PlaybackSettingsScreen(
 
             if (uiState.audioArEnabled) {
                 ListItem(
+                    headlineContent = { Text("Auto-Calibration") },
+                    supportingContent = { Text("Automatically adjust center point if head is stable") },
+                    trailingContent = {
+                        Switch(
+                            checked = uiState.audioArAutoCalibrate,
+                            onCheckedChange = { viewModel.setAudioArAutoCalibrate(it) }
+                        )
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Soundstage Depth (Sensitivity)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = String.format("%.1fx", uiState.audioArSensitivity),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Slider(
+                        value = uiState.audioArSensitivity,
+                        onValueChange = { viewModel.setAudioArSensitivity(it) },
+                        valueRange = 0.5f..2.5f,
+                        steps = 19
+                    )
+                }
+
+                ListItem(
                     headlineContent = { Text("Recenter Audio") },
                     supportingContent = { Text("Set current direction as front") },
                     leadingContent = {
@@ -694,9 +739,56 @@ fun PlaybackSettingsScreen(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
+
+            // Audio Effects
+            PlaybackSectionTitle("Audio Effects")
+
+            ListItem(
+                headlineContent = { Text("Reverb Preset") },
+                supportingContent = { Text(uiState.reverbPreset.label) },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { showReverbSheet = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Virtualizer (Surround Sound)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "${(uiState.virtualizerStrength / 10)}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Slider(
+                    value = uiState.virtualizerStrength.toFloat(),
+                    onValueChange = { viewModel.setVirtualizerStrength(it.toInt()) },
+                    valueRange = 0f..1000f,
+                    steps = 99
+                )
+            }
             
             // Gestures
-            SectionTitle("Gestures")
+            PlaybackSectionTitle("Gestures")
             
             ListItem(
                 headlineContent = { Text("Double tap to seek") },
@@ -714,7 +806,7 @@ fun PlaybackSettingsScreen(
             )
             
             // Music Haptics Section
-            SectionTitle("Music Haptics")
+            PlaybackSectionTitle("Music Haptics")
             
             ListItem(
                 headlineContent = { Text("Music Haptics") },
@@ -1076,11 +1168,10 @@ fun PlaybackSettingsScreen(
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
-    
+
     // Haptics Intensity Bottom Sheet
     if (showHapticsIntensitySheet) {
         ModalBottomSheet(
@@ -1129,6 +1220,48 @@ fun PlaybackSettingsScreen(
         }
     }
 
+    // Reverb Preset Bottom Sheet
+    if (showReverbSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showReverbSheet = false },
+            sheetState = reverbSheetState
+        ) {
+            Column(modifier = Modifier.padding(16.dp).navigationBarsPadding()) {
+                Text(
+                    text = "Reverb Preset",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                com.suvojeet.suvmusic.data.model.ReverbPreset.entries.forEach { preset ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setReverbPreset(preset)
+                                scope.launch {
+                                    reverbSheetState.hide()
+                                    showReverbSheet = false
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.reverbPreset == preset,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = preset.label,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     if (showLanguageDialog) {
         com.suvojeet.suvmusic.ui.components.LanguageSelectionDialog(
             initialSelection = uiState.preferredLanguages,
@@ -1142,7 +1275,7 @@ fun PlaybackSettingsScreen(
 }
 
 @Composable
-private fun SectionTitle(title: String) {
+private fun PlaybackSectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
