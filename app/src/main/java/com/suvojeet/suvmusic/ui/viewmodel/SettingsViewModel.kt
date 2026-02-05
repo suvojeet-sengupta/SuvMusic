@@ -103,6 +103,10 @@ data class SettingsUiState(
     val discordUseDetails: Boolean = false,
     val privacyModeEnabled: Boolean = false,
     val audioArEnabled: Boolean = false,
+    val audioArSensitivity: Float = 1.0f,
+    val audioArAutoCalibrate: Boolean = true,
+    val reverbPreset: com.suvojeet.suvmusic.data.model.ReverbPreset = com.suvojeet.suvmusic.data.model.ReverbPreset.NONE,
+    val virtualizerStrength: Int = 0,
     // Preloading
     val nextSongPreloadingEnabled: Boolean = true,
     val nextSongPreloadDelay: Int = 3 // seconds
@@ -152,6 +156,8 @@ class SettingsViewModel @Inject constructor(
     // Lyrics Settings Flows
     val lyricsLineSpacing = sessionManager.lyricsLineSpacingFlow
     val lyricsFontSize = sessionManager.lyricsFontSizeFlow
+    val reverbPreset = sessionManager.reverbPresetFlow
+    val virtualizerStrength = sessionManager.virtualizerStrengthFlow
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -391,6 +397,30 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.audioArSensitivityFlow.collect { value ->
+                _uiState.update { it.copy(audioArSensitivity = value) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.audioArAutoCalibrateFlow.collect { enabled ->
+                _uiState.update { it.copy(audioArAutoCalibrate = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.reverbPresetFlow.collect { preset ->
+                _uiState.update { it.copy(reverbPreset = preset) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.virtualizerStrengthFlow.collect { strength ->
+                _uiState.update { it.copy(virtualizerStrength = strength) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.nextSongPreloadingEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(nextSongPreloadingEnabled = enabled) }
             }
@@ -531,6 +561,10 @@ class SettingsViewModel @Inject constructor(
                     discordUseDetails = discordUseDetails,
                     privacyModeEnabled = privacyModeEnabled,
                     audioArEnabled = audioArEnabled,
+                    audioArSensitivity = sessionManager.getAudioArSensitivity(),
+                    audioArAutoCalibrate = sessionManager.isAudioArAutoCalibrateEnabled(),
+                    reverbPreset = sessionManager.getReverbPreset(),
+                    virtualizerStrength = sessionManager.getVirtualizerStrength(),
                     nextSongPreloadingEnabled = nextSongPreloadingEnabled,
                     nextSongPreloadDelay = nextSongPreloadDelay
                 )
@@ -687,6 +721,34 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAudioArEnabled(enabled)
             _uiState.update { it.copy(audioArEnabled = enabled) }
+        }
+    }
+
+    fun setAudioArSensitivity(sensitivity: Float) {
+        viewModelScope.launch {
+            sessionManager.setAudioArSensitivity(sensitivity)
+            _uiState.update { it.copy(audioArSensitivity = sensitivity) }
+        }
+    }
+
+    fun setAudioArAutoCalibrate(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setAudioArAutoCalibrate(enabled)
+            _uiState.update { it.copy(audioArAutoCalibrate = enabled) }
+        }
+    }
+
+    fun setReverbPreset(preset: com.suvojeet.suvmusic.data.model.ReverbPreset) {
+        viewModelScope.launch {
+            sessionManager.setReverbPreset(preset)
+            _uiState.update { it.copy(reverbPreset = preset) }
+        }
+    }
+
+    fun setVirtualizerStrength(strength: Int) {
+        viewModelScope.launch {
+            sessionManager.setVirtualizerStrength(strength)
+            _uiState.update { it.copy(virtualizerStrength = strength) }
         }
     }
     

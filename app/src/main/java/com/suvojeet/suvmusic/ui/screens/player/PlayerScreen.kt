@@ -36,6 +36,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -197,6 +198,7 @@ fun PlayerScreen(
     val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
     val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsState(initial = 1.5f)
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsState(initial = 26f)
+    val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsState(initial = false)
     
     // Keep Screen On Logic
     DisposableEffect(keepScreenOn) {
@@ -552,6 +554,16 @@ fun PlayerScreen(
                                             tint = dominantColors.onBackground
                                         )
                                     }
+                                    
+                                    if (audioArEnabled) {
+                                        IconButton(onClick = { playerViewModel.calibrateAudioAr() }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = "Recenter Audio",
+                                                tint = dominantColors.onBackground
+                                            )
+                                        }
+                                    }
                                 }
 
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -645,7 +657,9 @@ fun PlayerScreen(
                             PlayerTopBar(
                                 onBack = onBack,
                                 onShowQueue = { showQueue = true },
-                                dominantColors = dominantColors
+                                dominantColors = dominantColors,
+                                audioArEnabled = audioArEnabled,
+                                onRecenter = { playerViewModel.calibrateAudioAr() }
                             )
 
                             Spacer(modifier = Modifier.weight(0.5f))

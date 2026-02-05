@@ -30,6 +30,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.abs
+import kotlin.math.log10
+import kotlin.math.sin
+import kotlin.math.cos
 
 /**
  * Media3 MediaSessionService for background music playback.
@@ -87,6 +91,8 @@ class MusicPlayerService : MediaLibraryService() {
     private val serviceScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
     private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
     private var dynamicsProcessing: android.media.audiofx.DynamicsProcessing? = null
+    private var presetReverb: android.media.audiofx.PresetReverb? = null
+    private var virtualizer: android.media.audiofx.Virtualizer? = null
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
     
     // Audio AR & Effects state
@@ -173,11 +179,28 @@ class MusicPlayerService : MediaLibraryService() {
                 sessionManager.volumeNormalizationEnabledFlow,
                 sessionManager.volumeBoostEnabledFlow,
                 sessionManager.volumeBoostAmountFlow,
-                sessionManager.audioArEnabledFlow
-            ) { norm: Boolean, boost: Boolean, amount: Int, ar: Boolean ->
-                AudioEffectsState(norm, boost, amount, ar)
+                sessionManager.audioArEnabledFlow,
+                sessionManager.reverbPresetFlow,
+                sessionManager.virtualizerStrengthFlow
+            ) { args: Array<Any?> ->
+                AudioEffectsState(
+                    normEnabled = args[0] as Boolean,
+                    boostEnabled = args[1] as Boolean,
+                    boostAmount = args[2] as Int,
+                    audioArEnabled = args[3] as Boolean,
+                    reverbPreset = args[4] as com.suvojeet.suvmusic.data.model.ReverbPreset,
+                    virtualizerStrength = args[5] as Int
+                )
             }.collect { state ->
-                 updateAudioEffects(state.normEnabled, state.boostEnabled, state.boostAmount, state.audioArEnabled, animate = true)
+                 updateAudioEffects(
+                     state.normEnabled, 
+                     state.boostEnabled, 
+                     state.boostAmount, 
+                     state.audioArEnabled, 
+                     state.reverbPreset,
+                     state.virtualizerStrength,
+                     animate = true
+                 )
             }
         }
 
@@ -440,11 +463,22 @@ class MusicPlayerService : MediaLibraryService() {
             val boostEnabled = sessionManager.isVolumeBoostEnabled()
             val boostAmount = sessionManager.getVolumeBoostAmount()
             val audioArEnabled = sessionManager.isAudioArEnabled()
+            val reverbPreset = sessionManager.getReverbPreset()
+            val virtualizerStrength = sessionManager.getVirtualizerStrength()
 
-            if (normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled) {
+            if (normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled || reverbPreset != com.suvojeet.suvmusic.data.model.ReverbPreset.NONE || virtualizerStrength > 0) {
                 // Determine if we need to create/reset effects for the new session
                 // For new session, we apply instantly (no fade) to avoid dips at track start
-                updateAudioEffects(normEnabled, boostEnabled, boostAmount, audioArEnabled, animate = false, forcedSessionId = sessionId)
+                updateAudioEffects(
+                    normEnabled, 
+                    boostEnabled, 
+                    boostAmount, 
+                    audioArEnabled, 
+                    reverbPreset,
+                    virtualizerStrength,
+                    animate = false, 
+                    forcedSessionId = sessionId
+                )
             }
         }
     }
@@ -473,6 +507,8 @@ class MusicPlayerService : MediaLibraryService() {
         boostEnabled: Boolean, 
         boostAmount: Int, 
         audioArEnabled: Boolean,
+        reverbPreset: com.suvojeet.suvmusic.data.model.ReverbPreset,
+        virtualizerStrength: Int,
         animate: Boolean, 
         forcedSessionId: Int? = null
     ) {
@@ -484,54 +520,36 @@ class MusicPlayerService : MediaLibraryService() {
                 
                 if (sessionId == C.AUDIO_SESSION_ID_UNSET) return@launch
 
-                val shouldEnable = normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled
+                val shouldEnable = normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled || reverbPreset != com.suvojeet.suvmusic.data.model.ReverbPreset.NONE || virtualizerStrength > 0
                 
                 // Calculate Target Gain in dB
-                // Normalization: +5.5 dB
-                // Boost: Map 0-100 to 0-15 dB
                 var targetGainDb = 0f
                 if (normEnabled) targetGainDb += 5.5f
                 if (boostEnabled) targetGainDb += (boostAmount / 100f) * 15f
 
                 if (shouldEnable) {
                     // Create effects if they don't exist
-                    if (loudnessEnhancer == null && dynamicsProcessing == null) {
+                    if (loudnessEnhancer == null && dynamicsProcessing == null && presetReverb == null && virtualizer == null) {
                         createAudioEffects(sessionId)
-                        // If animating, start from 0 gain
-                        if (animate) setEffectGain(0f)
                     }
 
-                    if (animate) {
-                        // Smooth Ramp to Target
-                        // We need to know current gain? Simplified: just ramp 0 -> Target if starting,
-                        // or strict update if just changing value?
-                        // For simplicity, we just set the target directly unless it's a fresh enable.
-                        // But to be safe on sudden jumps, let's ramp if the jump is large?
-                        // Just applying instantly for slider changes is better responsiveness.
-                        // Animation is mostly for Enable/Disable Toggle.
-                        // Animation is mostly for Enable/Disable Toggle.
-                        
-                        // Update Global Gain State
-                        currentGlobalGainDb = targetGainDb
-                        applyGains()
-                    } else {
-                        currentGlobalGainDb = targetGainDb
-                        applyGains()
+                    // Apply Presets
+                    presetReverb?.apply {
+                        preset = reverbPreset.preset
                     }
-                } else {
-                    // Disable: Smooth Ramp Down -> Release
-                    if (loudnessEnhancer != null || dynamicsProcessing != null) {
-                        if (animate) {
-                            // Smooth Ramp Down to 0
-                            // Note: We don't know current gain cleanly, so maybe just release?
-                            // Safest to just release for now to avoid complexity.
+                    virtualizer?.apply {
+                        if (strengthSupported) {
+                            setStrength(virtualizerStrength.toShort())
                         }
-                        releaseAudioEffects()
                     }
+
+                    currentGlobalGainDb = targetGainDb
+                    applyGains()
+                } else {
+                    releaseAudioEffects()
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MusicPlayerService", "Error updating audio effects", e)
-                e.printStackTrace()
             }
         }
     }
@@ -574,9 +592,16 @@ class MusicPlayerService : MediaLibraryService() {
                 loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
                 loudnessEnhancer?.enabled = true
             }
+
+            // Common effects
+            presetReverb = android.media.audiofx.PresetReverb(0, sessionId)
+            presetReverb?.enabled = true
+
+            virtualizer = android.media.audiofx.Virtualizer(0, sessionId)
+            virtualizer?.enabled = true
+
         } catch (e: Exception) {
             android.util.Log.e("MusicPlayerService", "Error creating audio effects", e)
-            e.printStackTrace()
         }
     }
 
@@ -587,45 +612,44 @@ class MusicPlayerService : MediaLibraryService() {
 
     private fun applyGains() {
         try {
-            // Calculate Channel Gains
-            // Left: 1.0 if balance <= 0, else Fade
-            // Right: 1.0 if balance >= 0, else Fade
-            
-            // Balance -1 (Left) -> Left=1, Right=0
-            // Balance 1 (Right) -> Left=0, Right=1
-            
             val balance = currentBalance
             
             // Linear factors (0..1)
             val leftFactor = if (balance > 0) 1f - balance else 1f
             val rightFactor = if (balance < 0) 1f + balance else 1f
             
+            // Frequency Occlusion Logic (Simple version for Atmos-like feel)
+            // The ear "further" away gets a slight gain reduction beyond linear panning
+            // and potentially a low-pass (though that requires per-channel EQ, which DynamicsProcessing supports)
+            
             // Convert attenuation to dB: 20 * log10(factor)
-            // Prevent log(0) -> -infinity
             val leftPanDb = if (leftFactor <= 0.001f) -100f else (20 * kotlin.math.log10(leftFactor))
             val rightPanDb = if (rightFactor <= 0.001f) -100f else (20 * kotlin.math.log10(rightFactor))
             
-            val finalLeftDb = currentGlobalGainDb + leftPanDb
-            val finalRightDb = currentGlobalGainDb + rightPanDb
+            // Occlusion: If turning right (balance < 0 in our logic? No, let's re-verify)
+            // Balance -1 (Looking Right) -> Left Pan -100dB? 
+            // WAIT: AudioARManager says: Turning Head Right (Positive Delta) -> Balance Left (-1)
+            // So if Balance is negative, we are turning RIGHT, source is on the LEFT.
+            // Right ear is "further" -> Occlude Right.
+            
+            val occlusionDb = if (abs(balance) > 0.5f) -3f * (abs(balance) - 0.5f) * 2f else 0f
+            
+            val finalLeftDb = currentGlobalGainDb + leftPanDb + (if (balance > 0) occlusionDb else 0f)
+            val finalRightDb = currentGlobalGainDb + rightPanDb + (if (balance < 0) occlusionDb else 0f)
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 dynamicsProcessing?.apply {
-                    // Set Channel 0 (Left)
                     setInputGainbyChannel(0, finalLeftDb)
-                    // Set Channel 1 (Right)
                     setInputGainbyChannel(1, finalRightDb)
                 }
             } else {
                 loudnessEnhancer?.apply {
-                    // LoudnessEnhancer is global, can't pan.
-                    // Just set global gain.
                     val targetmB = (currentGlobalGainDb * 100).toInt()
                     setTargetGain(targetmB)
                 }
             }
         } catch (e: Exception) {
             android.util.Log.e("MusicPlayerService", "Error setting effect gain", e)
-            e.printStackTrace()
         }
     }
 
@@ -638,9 +662,16 @@ class MusicPlayerService : MediaLibraryService() {
             dynamicsProcessing?.enabled = false
             dynamicsProcessing?.release()
             dynamicsProcessing = null
+
+            presetReverb?.enabled = false
+            presetReverb?.release()
+            presetReverb = null
+
+            virtualizer?.enabled = false
+            virtualizer?.release()
+            virtualizer = null
         } catch (e: Exception) {
             android.util.Log.e("MusicPlayerService", "Error releasing audio effects", e)
-            e.printStackTrace()
         }
     }
 
@@ -709,7 +740,9 @@ class MusicPlayerService : MediaLibraryService() {
         val normEnabled: Boolean,
         val boostEnabled: Boolean,
         val boostAmount: Int,
-        val audioArEnabled: Boolean
+        val audioArEnabled: Boolean,
+        val reverbPreset: com.suvojeet.suvmusic.data.model.ReverbPreset,
+        val virtualizerStrength: Int
     )
     
     private fun <T> List<T>.toImmutableList(): ImmutableList<T> {

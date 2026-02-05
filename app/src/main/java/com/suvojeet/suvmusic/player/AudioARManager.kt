@@ -50,12 +50,31 @@ class AudioARManager @Inject constructor(
 
     private var isPlaying = false
     private var isSettingsEnabled = false
+    private var sensitivity = 1.0f
+    private var autoCalibrateEnabled = true
+
+    // Drift / Auto-Calibrate logic
+    private var lastStableAzimuth: Float? = null
+    private var stableStartTime: Long = 0
+    private val stableThreshold = 0.05f // Radians (~3 degrees)
+    private val stableDuration = 5000L // 5 seconds
+    private val driftSpeed = 0.005f // How fast it shifts back to center per event
 
     init {
         scope.launch {
             sessionManager.audioArEnabledFlow.collect { enabled ->
                 isSettingsEnabled = enabled
                 updateSensorState()
+            }
+        }
+        scope.launch {
+            sessionManager.audioArSensitivityFlow.collect { value ->
+                sensitivity = value
+            }
+        }
+        scope.launch {
+            sessionManager.audioArAutoCalibrateFlow.collect { enabled ->
+                autoCalibrateEnabled = enabled
             }
         }
     }
@@ -91,6 +110,27 @@ class AudioARManager @Inject constructor(
         anchorAzimuth = null // Next sensor event will set current direction as front
     }
 
+    internal object AudioARMath {
+        fun normalizeAngle(angle: Float): Float {
+            var normalized = angle
+            while (normalized > Math.PI) normalized -= (2 * Math.PI).toFloat()
+            while (normalized < -Math.PI) normalized += (2 * Math.PI).toFloat()
+            return normalized
+        }
+
+        fun calculateTargetBalance(delta: Float, sensitivity: Float): Float {
+            // Map delta to balance
+            // If delta is 0 (looking at anchor) -> Balance 0
+            // If delta is +PI/2 (looking right) -> Sound should come from LEFT (Balance -1.0)
+            // If delta is -PI/2 (looking left) -> Sound should come from RIGHT (Balance +1.0)
+            return -sin(delta * sensitivity).coerceIn(-1f, 1f)
+        }
+
+        fun calculateDrift(delta: Float, driftSpeed: Float): Float {
+            return delta * driftSpeed
+        }
+    }
+
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || !isEnabled) return
 
@@ -115,23 +155,24 @@ class AudioARManager @Inject constructor(
             var delta = azimuth - anchor
             
             // Normalize to -PI to PI
-            if (delta > Math.PI) delta -= (2 * Math.PI).toFloat()
-            if (delta < -Math.PI) delta += (2 * Math.PI).toFloat()
+            delta = AudioARMath.normalizeAngle(delta)
+
+            // Auto-Calibration / Drift Logic
+            if (autoCalibrateEnabled) {
+                val currentTime = System.currentTimeMillis()
+                if (lastStableAzimuth == null || abs(azimuth - (lastStableAzimuth ?: 0f)) > stableThreshold) {
+                    lastStableAzimuth = azimuth
+                    stableStartTime = currentTime
+                } else if (currentTime - stableStartTime > stableDuration) {
+                    // Orientation has been stable at a new position for > 5s
+                    // Slowly drift the anchor towards current azimuth to re-center
+                    val driftAmount = AudioARMath.calculateDrift(delta, driftSpeed)
+                    anchorAzimuth = AudioARMath.normalizeAngle((anchorAzimuth ?: 0f) + driftAmount)
+                }
+            }
             
             // Map delta to balance
-            // If delta is 0 (looking at anchor) -> Balance 0
-            // If delta is +PI/2 (looking right) -> Sound should come from LEFT (Balance -1.0)
-            // If delta is -PI/2 (looking left) -> Sound should come from RIGHT (Balance +1.0)
-            
-            // Logic: 
-            // Turning Head Right (Positive Delta) -> Source moves to Left Ear relative to head -> Balance Left (-1)
-            // Turning Head Left (Negative Delta) -> Source moves to Right Ear relative to head -> Balance Right (+1)
-            
-            // We clamp rotation to +/- 90 degrees (PI/2) for full pan? 
-            // Or maybe smoother 180 degrees?
-            // Let's use sin(delta) for natural falloff, negated.
-            
-            val targetBalance = -sin(delta)
+            val targetBalance = AudioARMath.calculateTargetBalance(delta, sensitivity)
             
             // Apply smoothing
             smoothedBalance += alpha * (targetBalance - smoothedBalance)
