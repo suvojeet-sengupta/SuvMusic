@@ -57,8 +57,6 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             .crossfade(true)
             .logger(DebugLogger())
             .build()
-            .logger(DebugLogger())
-            .build()
     }
     
     private fun setupWorkers() {
@@ -78,3 +76,4 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             workRequest
         )
     }
+}
