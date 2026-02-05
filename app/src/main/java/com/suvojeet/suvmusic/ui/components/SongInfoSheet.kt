@@ -228,15 +228,16 @@ fun SongInfoSheet(
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     // Artist name
+                    val mainArtistId = song.artistId ?: artistCredits.firstOrNull()?.artistId
                     Text(
                         text = song.artist,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary, // Use primary color instead of fixed pink
+                        color = if (mainArtistId != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(enabled = song.artistId != null) {
-                                song.artistId?.let { onArtistClick(it) }
+                            .clickable(enabled = mainArtistId != null) {
+                                mainArtistId?.let { onArtistClick(it) }
                             }
                     )
 
