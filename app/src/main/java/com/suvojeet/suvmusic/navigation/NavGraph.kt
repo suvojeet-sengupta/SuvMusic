@@ -232,7 +232,6 @@ fun NavGraph(
             SearchScreen(
                 onSongClick = { songs, index -> 
                     onStartRadio(songs[index])
-                    navController.navigate(Destination.Player.route)
                 },
                 onArtistClick = { artistId ->
                     navController.navigate(Destination.Artist(artistId).route)
