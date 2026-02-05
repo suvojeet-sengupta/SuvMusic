@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.utils
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +32,7 @@ fun Modifier.dpadFocusable(
 
     this
         .onFocusChanged { isFocused = it.isFocused }
-        .androidx.compose.foundation.focusable(interactionSource = interactionSource)
+        .focusable(interactionSource = interactionSource)
         .scale(if (isFocused) focusedScale else 1f)
         .then(
             if (isFocused && showBorder) {
