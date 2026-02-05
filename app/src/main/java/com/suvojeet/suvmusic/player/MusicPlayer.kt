@@ -746,12 +746,15 @@ class MusicPlayer @Inject constructor(
                         
                         // Early transition: If we're in the last 1.5 seconds and next song is preloaded,
                         // trigger transition to prevent any audible gap during the final silence/fade-out
+                        // Fix: Do NOT trigger this if Repeat One is active, as we want to loop the current song
                         if (duration > 0 && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
-                            val nextIndex = state.currentIndex + 1
-                            if (nextIndex < state.queue.size && state.queue.getOrNull(nextIndex)?.id == preloadedNextSongId) {
-                                // Transition to next song immediately
-                                controller.seekToNextMediaItem()
+                            if (state.repeatMode != RepeatMode.ONE) {
+                                val nextIndex = state.currentIndex + 1
+                                if (nextIndex < state.queue.size && state.queue.getOrNull(nextIndex)?.id == preloadedNextSongId) {
+                                    // Transition to next song immediately
+                                    controller.seekToNextMediaItem()
+                                }
                             }
                         }
                     }
@@ -835,6 +838,11 @@ class MusicPlayer @Inject constructor(
         // Handle shuffle mode
         if (state.shuffleEnabled && state.queue.size > 1) {
             // For shuffle, we can't predict the next song, so skip preloading
+            return
+        }
+
+        // Fix: If Repeat One is active, don't preload next song (we will loop current one)
+        if (state.repeatMode == RepeatMode.ONE) {
             return
         }
         
