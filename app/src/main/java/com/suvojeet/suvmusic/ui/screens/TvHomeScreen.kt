@@ -272,15 +272,15 @@ private fun TvQuickAccessCard(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             .dpadFocusable(
+                onClick = onClick,
                 focusedScale = 1.05f,
                 shape = RoundedCornerShape(8.dp),
                 borderWidth = 2.dp,
                 borderColor = MaterialTheme.colorScheme.primary
-            ) // Correctly applies focusable and clickable
-            .clickable(onClick = onClick), // Redundant if dpadFocusable handles click? No, dpadFocusable is modifier, clickable is interaction
+            )
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -332,13 +332,13 @@ private fun TvSongCard(song: Song, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(200.dp)
-            .clip(RoundedCornerShape(12.dp))
             .dpadFocusable(
+                onClick = onClick,
                 shape = RoundedCornerShape(12.dp), 
                 focusedScale = 1.1f,
                 borderColor = MaterialTheme.colorScheme.primary
             )
-            .clickable(onClick = onClick)
+            .clip(RoundedCornerShape(12.dp))
             .padding(8.dp) // Inner padding so focus border doesn't overlap text
     ) {
         AsyncImage(
@@ -373,9 +373,12 @@ private fun TvPlaylistCard(playlist: com.suvojeet.suvmusic.data.model.PlaylistDi
     Column(
         modifier = Modifier
             .width(200.dp)
+            .dpadFocusable(
+                onClick = onClick,
+                shape = RoundedCornerShape(12.dp),
+                focusedScale = 1.1f
+            )
             .clip(RoundedCornerShape(12.dp))
-            .dpadFocusable(shape = RoundedCornerShape(12.dp), focusedScale = 1.1f)
-            .clickable(onClick = onClick)
             .padding(8.dp)
     ) {
         AsyncImage(
@@ -408,9 +411,12 @@ private fun TvAlbumCard(album: com.suvojeet.suvmusic.data.model.Album, onClick: 
     Column(
         modifier = Modifier
             .width(200.dp)
+            .dpadFocusable(
+                onClick = onClick,
+                shape = RoundedCornerShape(12.dp),
+                focusedScale = 1.1f
+            )
             .clip(RoundedCornerShape(12.dp))
-            .dpadFocusable(shape = RoundedCornerShape(12.dp), focusedScale = 1.1f)
-            .clickable(onClick = onClick)
             .padding(8.dp)
     ) {
         AsyncImage(

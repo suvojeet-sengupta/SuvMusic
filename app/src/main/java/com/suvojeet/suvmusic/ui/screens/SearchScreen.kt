@@ -81,6 +81,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
+import com.suvojeet.suvmusic.utils.dpadFocusable
 
 /**
  * Apple Music-inspired search screen with recent searches, suggestions, and inline results.
@@ -303,7 +304,7 @@ fun SearchScreen(
                 contentPadding = PaddingValues(bottom = 140.dp)
             ) {
                 // Show suggestions when typing
-                if (uiState.query.isNotBlank() && uiState.suggestions.isNotEmpty()) {
+                if (uiState.showSuggestions && uiState.query.isNotBlank() && uiState.suggestions.isNotEmpty()) {
                     items(uiState.suggestions.take(3)) { suggestion ->
                         SuggestionItem(
                             suggestion = suggestion,
@@ -650,7 +651,7 @@ fun ArtistSearchListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -693,7 +694,7 @@ fun AlbumSearchListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -737,7 +738,7 @@ fun PlaylistSearchListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -782,7 +783,7 @@ private fun SuggestionItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -813,7 +814,7 @@ private fun SearchResultItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -869,7 +870,12 @@ private fun SearchResultItem(
         }
         
         // Menu button
-        IconButton(onClick = onMoreClick) {
+        Box(
+            modifier = Modifier
+                .dpadFocusable(onClick = onMoreClick, shape = CircleShape)
+                .background(Color.Transparent, CircleShape)
+                .padding(8.dp)
+        ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",
@@ -890,7 +896,10 @@ private fun ArtistSearchCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(100.dp)
-            .clickable(onClick = onClick)
+            .dpadFocusable(
+                onClick = onClick,
+                shape = RoundedCornerShape(8.dp)
+            )
     ) {
         // Circular artist image
         Box(
@@ -962,7 +971,10 @@ private fun PlaylistSearchCard(
     Column(
         modifier = Modifier
             .width(140.dp)
-            .clickable(onClick = onClick)
+            .dpadFocusable(
+                onClick = onClick,
+                shape = RoundedCornerShape(8.dp)
+            )
     ) {
         // Playlist thumbnail
         Box(
@@ -1027,7 +1039,10 @@ private fun AlbumSearchCard(
     Column(
         modifier = Modifier
             .width(140.dp)
-            .clickable(onClick = onClick)
+            .dpadFocusable(
+                onClick = onClick,
+                shape = RoundedCornerShape(8.dp)
+            )
     ) {
         // Album thumbnail
         Box(

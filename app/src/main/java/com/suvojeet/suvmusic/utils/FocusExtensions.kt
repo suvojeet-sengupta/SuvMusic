@@ -18,13 +18,17 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Modifier to handle focus state for TV D-pad navigation.
- * Applies a scale effect and an optional border when the item is focused.
+ * Applies a scale effect, border, and background highlight when focused.
+ * 
+ * @param onClick Optional click handler. If provided, applies clickable with the same interaction source to avoid double-focus nodes.
  */
 fun Modifier.dpadFocusable(
+    onClick: (() -> Unit)? = null,
     focusedScale: Float = 1.1f,
     shape: Shape = RoundedCornerShape(8.dp),
     borderWidth: androidx.compose.ui.unit.Dp = 2.dp,
     borderColor: Color = Color.White,
+    focusBackgroundColor: Color = Color.White.copy(alpha = 0.1f),
     showBorder: Boolean = true
 ) = composed {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -32,11 +36,23 @@ fun Modifier.dpadFocusable(
 
     this
         .onFocusChanged { isFocused = it.isFocused }
-        .focusable(interactionSource = interactionSource)
         .scale(if (isFocused) focusedScale else 1f)
         .then(
-            if (isFocused && showBorder) {
-                Modifier.border(borderWidth, borderColor, shape)
+             if (onClick != null) {
+                 Modifier.clickable(
+                     interactionSource = interactionSource,
+                     indication = androidx.compose.foundation.LocalIndication.current,
+                     onClick = onClick
+                 )
+             } else {
+                 Modifier.focusable(interactionSource = interactionSource)
+             }
+        )
+        .then(
+            if (isFocused) {
+                Modifier
+                    .background(focusBackgroundColor, shape)
+                    .then(if (showBorder) Modifier.border(borderWidth, borderColor, shape) else Modifier)
             } else {
                 Modifier
             }
