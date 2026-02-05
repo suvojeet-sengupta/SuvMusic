@@ -20,7 +20,7 @@ data class PlayerState(
     val isLiked: Boolean = false,
     val isDisliked: Boolean = false,
     val downloadState: DownloadState = DownloadState.NOT_DOWNLOADED,
-    val isAutoplayEnabled: Boolean = true,
+    val isAutoplayEnabled: Boolean = false,
     val isVideoMode: Boolean = false, // Video playback mode for YouTube songs
     val availableDevices: List<OutputDevice> = emptyList(),
     val selectedDevice: OutputDevice? = null,
