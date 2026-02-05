@@ -1087,6 +1087,7 @@ fun PlayerScreen(
                     song = song,
                     isVisible = showInfoSheet,
                     onDismiss = { showInfoSheet = false },
+                    onArtistClick = onArtistClick,
                     audioCodec = playerState.audioCodec,
                     audioBitrate = playerState.audioBitrate
                 )
