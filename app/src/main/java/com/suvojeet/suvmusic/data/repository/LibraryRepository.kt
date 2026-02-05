@@ -143,4 +143,27 @@ class LibraryRepository @Inject constructor(
     fun getSavedAlbums(): Flow<List<LibraryEntity>> {
         return libraryDao.getItemsByType("ALBUM")
     }
+
+    suspend fun saveArtist(artist: com.suvojeet.suvmusic.data.model.Artist) {
+        val entity = LibraryEntity(
+            id = artist.id,
+            title = artist.name,
+            subtitle = artist.subscribers ?: "",
+            thumbnailUrl = artist.thumbnailUrl,
+            type = "ARTIST"
+        )
+        libraryDao.insertItem(entity)
+    }
+
+    suspend fun removeArtist(artistId: String) {
+        libraryDao.deleteItem(artistId)
+    }
+
+    fun getSavedArtists(): Flow<List<LibraryEntity>> {
+        return libraryDao.getItemsByType("ARTIST")
+    }
+
+    fun isArtistSaved(artistId: String): Flow<Boolean> {
+        return libraryDao.isItemSavedFlow(artistId)
+    }
 }
