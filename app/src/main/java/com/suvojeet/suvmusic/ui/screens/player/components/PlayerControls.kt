@@ -66,7 +66,8 @@ private fun AppleMusicButton(
     isLarge: Boolean = false,
     content: @Composable (isPressed: Boolean) -> Unit
 ) {
-    var isPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     
     // Animate the background alpha for smooth fade in/out
     val backgroundAlpha by animateFloatAsState(
@@ -87,20 +88,17 @@ private fun AppleMusicButton(
             .size(size)
             .scale(scale)
             .clip(CircleShape)
+            .com.suvojeet.suvmusic.utils.dpadFocusable(
+                shape = CircleShape,
+                focusedScale = 1.1f,
+                borderColor = Color.White
+            )
             .background(Color.Black.copy(alpha = backgroundAlpha))
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        try {
-                            awaitRelease()
-                        } finally {
-                            isPressed = false
-                        }
-                        onClick()
-                    }
-                )
-            },
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
         contentAlignment = Alignment.Center
     ) {
         content(isPressed)
@@ -134,6 +132,10 @@ fun PlaybackControls(
                 contentDescription = "Shuffle",
                 tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier
+                    .com.suvojeet.suvmusic.utils.dpadFocusable(
+                         shape = CircleShape,
+                         focusedScale = 1.1f
+                    )
                     .size(28.dp)
                     .background(
                         if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
@@ -199,6 +201,10 @@ fun PlaybackControls(
                 contentDescription = "Repeat",
                 tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier
+                    .com.suvojeet.suvmusic.utils.dpadFocusable(
+                         shape = CircleShape,
+                         focusedScale = 1.1f
+                    )
                     .size(28.dp)
                     .background(
                         if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
