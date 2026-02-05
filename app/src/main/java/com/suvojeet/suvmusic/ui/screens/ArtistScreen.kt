@@ -92,6 +92,7 @@ fun ArtistScreen(
     onSeeAllAlbumsClick: () -> Unit,
     onSeeAllSinglesClick: () -> Unit,
     onArtistClick: (ArtistPreview) -> Unit,
+    onPlaylistClick: (Playlist) -> Unit,
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -258,7 +259,7 @@ fun ArtistScreen(
                                 items(artist.featuredPlaylists) { playlist ->
                                     FeaturedPlaylistCard(
                                         playlist = playlist,
-                                        onClick = { /* Navigate to playlist */ }
+                                        onClick = { onPlaylistClick(playlist) }
                                     )
                                 }
                             }

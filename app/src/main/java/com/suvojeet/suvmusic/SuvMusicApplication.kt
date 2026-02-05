@@ -29,6 +29,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
         super.onCreate()
         instance = this
         // Initialize any app-wide components here
+        setupWorkers()
     }
 
     override val workManagerConfiguration: androidx.work.Configuration
@@ -56,5 +57,24 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             .crossfade(true)
             .logger(DebugLogger())
             .build()
+            .logger(DebugLogger())
+            .build()
     }
-}
+    
+    private fun setupWorkers() {
+        val workRequest = androidx.work.PeriodicWorkRequestBuilder<com.suvojeet.suvmusic.workers.NewReleaseWorker>(
+            12, java.util.concurrent.TimeUnit.HOURS
+        )
+            .setConstraints(
+                androidx.work.Constraints.Builder()
+                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "NewReleaseCheck",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+    }
