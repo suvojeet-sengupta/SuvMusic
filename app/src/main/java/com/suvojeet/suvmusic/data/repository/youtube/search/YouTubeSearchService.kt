@@ -246,6 +246,8 @@ class YouTubeSearchService @Inject constructor(
                     })
                 })
                 put("videoId", videoId)
+                // RDAMVM + videoId is the standard radio playlist for a song on YT Music
+                put("playlistId", "RDAMVM$videoId")
                 put("enablePersistentPlaylistPanel", true)
                 put("isAudioOnly", true)
             }
@@ -276,49 +278,86 @@ class YouTubeSearchService @Inject constructor(
         val songs = mutableListOf<Song>()
         try {
             val root = JSONObject(json)
-            val contents = root.optJSONObject("contents")
-                ?.optJSONObject("singleColumnMusicWatchNextResultsRenderer")
-                ?.optJSONObject("tabbedRenderer")
-                ?.optJSONObject("watchNextTabbedResultsRenderer")
-                ?.optJSONArray("tabs")
-                ?.optJSONObject(0)
-                ?.optJSONObject("tabRenderer")
-                ?.optJSONObject("content")
-                ?.optJSONObject("musicQueueRenderer")
-                ?.optJSONObject("content")
-                ?.optJSONObject("playlistPanelRenderer")
-                ?.optJSONArray("contents")
+            
+            // Use a more robust deep search for the playlist items
+            val playlistItems = mutableListOf<JSONObject>()
+            jsonParser.findAllObjects(root, "playlistPanelVideoRenderer", playlistItems)
+            
+            if (playlistItems.isNotEmpty()) {
+                for (item in playlistItems) {
+                    val videoId = item.optString("videoId")
+                    if (videoId.isNullOrBlank()) continue
+                    
+                    val title = jsonParser.getRunText(item.optJSONObject("title")) ?: "Unknown"
+                    
+                    // Extract artist and album from byline or longByline
+                    val bylineObj = item.optJSONObject("longBylineText") ?: item.optJSONObject("shortBylineText")
+                    val fullByline = jsonParser.getRunText(bylineObj) ?: ""
+                    
+                    val parts = fullByline.split(" • ").map { it.trim() }
+                    val artist = parts.firstOrNull() ?: "Unknown Artist"
+                    val album = parts.getOrNull(1) ?: ""
+                    
+                    val lengthText = jsonParser.getRunText(item.optJSONObject("lengthText")) ?: ""
+                    val duration = jsonParser.parseDurationText(lengthText)
+                    
+                    val thumbnail = jsonParser.extractThumbnail(item)
+                    val setVideoId = item.optString("setVideoId")
 
-            if (contents != null) {
-                for (i in 0 until contents.length()) {
-                    val item = contents.optJSONObject(i)?.optJSONObject("playlistPanelVideoRenderer")
-                    if (item != null) {
-                        val videoId = item.optString("videoId")
-                        val title = jsonParser.getRunText(item.optJSONObject("title")) ?: "Unknown"
-                        val longByline = jsonParser.getRunText(item.optJSONObject("longBylineText")) ?: ""
-                        
-                        // longByline is typically "Artist • Album" or just "Artist"
-                        val artist = longByline.split("•").firstOrNull()?.trim() ?: "Unknown Artist"
-                        val album = if (longByline.contains("•")) longByline.split("•").lastOrNull()?.trim() ?: "" else ""
-                        
-                        val lengthText = jsonParser.getRunText(item.optJSONObject("lengthText")) ?: ""
-                        val duration = jsonParser.parseDurationText(lengthText)
-                        
-                        val thumbnail = jsonParser.extractThumbnail(item)
-                        
-                        // setVideoId is used for moving/removing items in the specific queue instance
-                        val setVideoId = item.optString("setVideoId")
+                    Song.fromYouTube(
+                        videoId = videoId,
+                        title = title,
+                        artist = artist,
+                        album = album,
+                        duration = duration,
+                        thumbnailUrl = thumbnail,
+                        setVideoId = setVideoId,
+                        isMembersOnly = false
+                    )?.let { songs.add(it) }
+                }
+            } else {
+                // Fallback to older navigation if deep search yielded nothing
+                val contents = root.optJSONObject("contents")
+                    ?.optJSONObject("singleColumnMusicWatchNextResultsRenderer")
+                    ?.optJSONObject("tabbedRenderer")
+                    ?.optJSONObject("watchNextTabbedResultsRenderer")
+                    ?.optJSONArray("tabs")
+                    ?.optJSONObject(0)
+                    ?.optJSONObject("tabRenderer")
+                    ?.optJSONObject("content")
+                    ?.optJSONObject("musicQueueRenderer")
+                    ?.optJSONObject("content")
+                    ?.optJSONObject("playlistPanelRenderer")
+                    ?.optJSONArray("contents")
 
-                        Song.fromYouTube(
-                            videoId = videoId,
-                            title = title,
-                            artist = artist,
-                            album = album,
-                            duration = duration,
-                            thumbnailUrl = thumbnail,
-                            setVideoId = setVideoId,
-                            isMembersOnly = false
-                        )?.let { songs.add(it) }
+                if (contents != null) {
+                    for (i in 0 until contents.length()) {
+                        val item = contents.optJSONObject(i)?.optJSONObject("playlistPanelVideoRenderer")
+                        if (item != null) {
+                            val videoId = item.optString("videoId")
+                            val title = jsonParser.getRunText(item.optJSONObject("title")) ?: "Unknown"
+                            val longByline = jsonParser.getRunText(item.optJSONObject("longBylineText")) ?: ""
+                            
+                            val artist = longByline.split("•").firstOrNull()?.trim() ?: "Unknown Artist"
+                            val album = if (longByline.contains("•")) longByline.split("•").lastOrNull()?.trim() ?: "" else ""
+                            
+                            val lengthText = jsonParser.getRunText(item.optJSONObject("lengthText")) ?: ""
+                            val duration = jsonParser.parseDurationText(lengthText)
+                            
+                            val thumbnail = jsonParser.extractThumbnail(item)
+                            val setVideoId = item.optString("setVideoId")
+
+                            Song.fromYouTube(
+                                videoId = videoId,
+                                title = title,
+                                artist = artist,
+                                album = album,
+                                duration = duration,
+                                thumbnailUrl = thumbnail,
+                                setVideoId = setVideoId,
+                                isMembersOnly = false
+                            )?.let { songs.add(it) }
+                        }
                     }
                 }
             }
