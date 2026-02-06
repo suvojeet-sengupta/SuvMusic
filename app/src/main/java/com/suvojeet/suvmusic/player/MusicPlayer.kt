@@ -538,14 +538,8 @@ class MusicPlayer @Inject constructor(
                     isLoading = false
                 )
             }
-            }
-        }
-    }
 
-    /**
-     * Set video quality preference and enforce resolution limits for DASH streams.
-     * Reloads the current song to apply changes immediately.
-     */
+
     fun setVideoQuality(quality: VideoQuality) {
         val currentQuality = _playerState.value.videoQuality
         if (currentQuality == quality) return
@@ -564,11 +558,14 @@ class MusicPlayer @Inject constructor(
             android.util.Log.d("MusicPlayer", "Updated track selection: Max video size $maxResolution")
         }
         
-        // If in video mode, reload stream to ensure correct quality constraints are applied
-        if (_playerState.value.isVideoMode) {
-            val state = _playerState.value
-            state.currentSong?.let { song ->
-                scope.launch {
+        // Save to session and reload if needed
+        scope.launch {
+            sessionManager.setVideoQuality(quality)
+            
+            // If in video mode, reload stream to ensure correct quality constraints are applied
+            if (_playerState.value.isVideoMode) {
+                val state = _playerState.value
+                state.currentSong?.let { song ->
                     resolveAndPlayCurrentItem(song, state.currentIndex, shouldPlay = state.isPlaying)
                 }
             }
@@ -713,23 +710,6 @@ class MusicPlayer @Inject constructor(
         }
     }
 
-    fun setVideoQuality(quality: VideoQuality) {
-        if (_playerState.value.videoQuality == quality) return
-        
-        _playerState.update { it.copy(videoQuality = quality) }
-        
-        // Save to session and reload if needed
-        scope.launch {
-            sessionManager.setVideoQuality(quality)
-            
-            // If currently in video mode, reload the stream
-            val currentSong = _playerState.value.currentSong
-            if (_playerState.value.isVideoMode && currentSong != null) {
-                 // Force re-resolution with new quality
-                 resolveAndPlayCurrentItem(currentSong, _playerState.value.currentIndex)
-            }
-        }
-    }
 
     private fun startAggressiveCaching(contentId: String, streamUrl: String) {
         cachingJob = scope.launch(Dispatchers.IO) {
