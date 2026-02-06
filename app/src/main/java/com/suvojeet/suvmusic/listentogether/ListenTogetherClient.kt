@@ -57,6 +57,9 @@ val ListenTogetherUserIdKey = stringPreferencesKey("listenTogetherUserId")
 val ListenTogetherIsHostKey = booleanPreferencesKey("listenTogetherIsHost")
 val ListenTogetherSessionTimestampKey = longPreferencesKey("listenTogetherSessionTimestamp")
 val ListenTogetherUsernameKey = stringPreferencesKey("listenTogetherUsername")
+val ListenTogetherAutoApprovalKey = booleanPreferencesKey("listenTogetherAutoApproval")
+val ListenTogetherSyncVolumeKey = booleanPreferencesKey("listenTogetherSyncVolume")
+val ListenTogetherMuteHostKey = booleanPreferencesKey("listenTogetherMuteHost")
 
 
 /**
@@ -320,6 +323,39 @@ class ListenTogetherClient @Inject constructor(
     suspend fun saveUsername(username: String) {
         context.dataStore.edit { preferences ->
             preferences[ListenTogetherUsernameKey] = username
+        }
+    }
+    
+    suspend fun getAutoApproval(): Boolean {
+        val prefs = context.dataStore.data.first()
+        return prefs[ListenTogetherAutoApprovalKey] ?: false
+    }
+    
+    suspend fun setAutoApproval(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ListenTogetherAutoApprovalKey] = enabled
+        }
+    }
+    
+    suspend fun getSyncVolume(): Boolean {
+        val prefs = context.dataStore.data.first()
+        return prefs[ListenTogetherSyncVolumeKey] ?: true
+    }
+    
+    suspend fun setSyncVolume(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ListenTogetherSyncVolumeKey] = enabled
+        }
+    }
+    
+    suspend fun getMuteHost(): Boolean {
+        val prefs = context.dataStore.data.first()
+        return prefs[ListenTogetherMuteHostKey] ?: false
+    }
+    
+    suspend fun setMuteHost(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ListenTogetherMuteHostKey] = enabled
         }
     }
 
@@ -662,8 +698,18 @@ class ListenTogetherClient @Inject constructor(
                     val payload = json.decodeFromJsonElement<JoinRequestPayload>(message.payload!!)
                     _pendingJoinRequests.value = _pendingJoinRequests.value + payload
                     log(LogLevel.INFO, "Join request received", "User: ${payload.username}")
+                    
                     if (_role.value == RoomRole.HOST) {
-                        showJoinRequestNotification(payload)
+                        // Check if auto-approval is enabled
+                        scope.launch {
+                            val autoApprovalEnabled = context.dataStore.data.first()[ListenTogetherAutoApprovalKey] ?: false
+                            if (autoApprovalEnabled) {
+                                log(LogLevel.INFO, "Auto-approving join request", "User: ${payload.username}")
+                                approveJoin(payload.userId)
+                            } else {
+                                showJoinRequestNotification(payload)
+                            }
+                        }
                     }
                     scope.launch { _events.emit(ListenTogetherEvent.JoinRequestReceived(payload.userId, payload.username)) }
                 }
