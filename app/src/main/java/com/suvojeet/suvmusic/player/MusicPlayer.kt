@@ -562,25 +562,35 @@ class MusicPlayer @Inject constructor(
             // Resolve stream URL for the song based on source with timeout protection
             // Added explicit retry here in case the repository layer's retry exhausted or for other issues
             var streamUrl: String? = null
+            var audioStreamUrl: String? = null  // For dual-stream video (720p/1080p)
             var attempts = 0
             while (streamUrl == null && attempts < 2) { // Retry 1 time (total 2 attempts)
-                streamUrl = kotlinx.coroutines.withTimeoutOrNull(20_000L) { // Increased timeout
+                val result = kotlinx.coroutines.withTimeoutOrNull(20_000L) { // Increased timeout
                     when (song.source) {
-                        SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
-                        SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id)
+                        SongSource.LOCAL, SongSource.DOWNLOADED -> Pair(song.localUri.toString(), null)
+                        SongSource.JIOSAAVN -> Pair(jioSaavnRepository.getStreamUrl(song.id), null)
                         else -> {
                             if (_playerState.value.isVideoMode) {
-                                // Smart Video Matching
+                                // Smart Video Matching with dual-stream support for 720p/1080p
                                 val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
                                     resolvedVideoIds.put(song.id, it) 
                                 }
-                                youTubeRepository.getVideoStreamUrl(videoId, _playerState.value.videoQuality)
+                                // Use getVideoStreamResult for proper quality
+                                val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                                if (videoResult != null) {
+                                    android.util.Log.d("MusicPlayer", "Video stream: ${videoResult.resolution}, has separate audio: ${videoResult.audioUrl != null}")
+                                    Pair(videoResult.videoUrl, videoResult.audioUrl)
+                                } else {
+                                    Pair(null, null)
+                                }
                             } else {
-                                youTubeRepository.getStreamUrl(song.id)
+                                Pair(youTubeRepository.getStreamUrl(song.id), null)
                             }
                         }
                     }
                 }
+                streamUrl = result?.first
+                audioStreamUrl = result?.second
                 if (streamUrl == null) {
                     attempts++
                     if (attempts < 2) delay(1000)
@@ -609,7 +619,8 @@ class MusicPlayer @Inject constructor(
                 startAggressiveCaching(cacheKey, streamUrl)
             }
 
-            val newMediaItem = MediaItem.Builder()
+            // Build MediaItem with optional audio URL for dual-stream video
+            val mediaItemBuilder = MediaItem.Builder()
                 .setUri(streamUrl)
                 .setMediaId(song.id)
                 .setCustomCacheKey(cacheKey) // CRITICAL: Stable cache key
@@ -619,9 +630,17 @@ class MusicPlayer @Inject constructor(
                         .setArtist(song.artist)
                         .setAlbumTitle(song.album)
                         .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                        .setExtras(android.os.Bundle().apply {
+                            // Pass audio URL for dual-stream video (720p/1080p)
+                            if (audioStreamUrl != null) {
+                                putString("AUDIO_STREAM_URL", audioStreamUrl)
+                                android.util.Log.d("MusicPlayer", "Adding separate audio stream for merging")
+                            }
+                        })
                         .build()
                 )
-                .build()
+            
+            val newMediaItem = mediaItemBuilder.build()
             
             mediaController?.let { controller ->
                 // Verify that the item at this index is still the one we resolved
