@@ -110,9 +110,12 @@ class MusicPlayerService : MediaLibraryService() {
         val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
         val ignoreAudioFocus = kotlinx.coroutines.runBlocking { sessionManager.isIgnoreAudioFocusDuringCallsEnabled() }
 
+        // Create custom MediaSourceFactory that handles dual-stream video (video-only + separate audio)
+        val defaultMediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
+        val customMediaSourceFactory = DualStreamMediaSourceFactory(dataSourceFactory, defaultMediaSourceFactory)
         
         val player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory))
+            .setMediaSourceFactory(customMediaSourceFactory)
             .setLoadControl(loadControl)
             .setAudioAttributes(
                 AudioAttributes.Builder()
