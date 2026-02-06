@@ -49,6 +49,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -73,6 +75,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.listentogether.ConnectionState
 import com.suvojeet.suvmusic.listentogether.ListenTogetherClient
 import com.suvojeet.suvmusic.listentogether.RoomRole
+import com.suvojeet.suvmusic.listentogether.ListenTogetherAutoApprovalKey
+import com.suvojeet.suvmusic.listentogether.ListenTogetherSyncVolumeKey
+import com.suvojeet.suvmusic.listentogether.ListenTogetherMuteHostKey
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel
 
@@ -88,6 +93,11 @@ fun ListenTogetherScreen(
     
     val savedUsername by viewModel.savedUsername.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
+    
+    // Settings preferences
+    val autoApproval by viewModel.autoApproval.collectAsState()
+    val syncVolume by viewModel.syncVolume.collectAsState()
+    val muteHost by viewModel.muteHost.collectAsState()
     
     // Local state for username input to avoid stutter, sync with saved on init
     var username by remember { mutableStateOf("") }
@@ -175,6 +185,12 @@ fun ListenTogetherScreen(
                     connectionState = uiState.connectionState,
                     serverUrl = serverUrl,
                     onServerUrlChange = { viewModel.updateServerUrl(it) },
+                    autoApproval = autoApproval,
+                    onAutoApprovalChange = { viewModel.updateAutoApproval(it) },
+                    syncVolume = syncVolume,
+                    onSyncVolumeChange = { viewModel.updateSyncVolume(it) },
+                    muteHost = muteHost,
+                    onMuteHostChange = { viewModel.updateMuteHost(it) },
                     dominantColors = dominantColors
                 )
             }
@@ -191,6 +207,12 @@ fun SetupContent(
     connectionState: ConnectionState,
     serverUrl: String,
     onServerUrlChange: (String) -> Unit,
+    autoApproval: Boolean,
+    onAutoApprovalChange: (Boolean) -> Unit,
+    syncVolume: Boolean,
+    onSyncVolumeChange: (Boolean) -> Unit,
+    muteHost: Boolean,
+    onMuteHostChange: (Boolean) -> Unit,
     dominantColors: DominantColors
 ) {
     var roomCode by remember { mutableStateOf("") }
@@ -365,6 +387,106 @@ fun SetupContent(
                         unfocusedTextColor = dominantColors.onBackground
                     )
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = dominantColors.onBackground.copy(alpha = 0.1f))
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Auto-approval toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Auto-approve join requests",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = dominantColors.onBackground
+                        )
+                        Text(
+                            text = "Automatically approve join requests when you're the host",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.6f)
+                        )
+                    }
+                    Switch(
+                        checked = autoApproval,
+                        onCheckedChange = onAutoApprovalChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = dominantColors.accent,
+                            checkedTrackColor = dominantColors.accent.copy(alpha = 0.5f),
+                            uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.6f),
+                            uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.2f)
+                        )
+                    )
+                }
+                
+                // Sync volume toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Sync host volume",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = dominantColors.onBackground
+                        )
+                        Text(
+                            text = "Sync your volume with the host's volume as a guest",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.6f)
+                        )
+                    }
+                    Switch(
+                        checked = syncVolume,
+                        onCheckedChange = onSyncVolumeChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = dominantColors.accent,
+                            checkedTrackColor = dominantColors.accent.copy(alpha = 0.5f),
+                            uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.6f),
+                            uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.2f)
+                        )
+                    )
+                }
+                
+                // Mute host toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Mute host audio",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = dominantColors.onBackground
+                        )
+                        Text(
+                            text = "Mute the audio when you're a guest",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.6f)
+                        )
+                    }
+                    Switch(
+                        checked = muteHost,
+                        onCheckedChange = onMuteHostChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = dominantColors.accent,
+                            checkedTrackColor = dominantColors.accent.copy(alpha = 0.5f),
+                            uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.6f),
+                            uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.2f)
+                        )
+                    )
+                }
                 
                 if (showCredits) {
                     Spacer(modifier = Modifier.height(12.dp))

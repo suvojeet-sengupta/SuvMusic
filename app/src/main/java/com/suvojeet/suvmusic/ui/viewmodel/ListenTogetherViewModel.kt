@@ -33,11 +33,23 @@ class ListenTogetherViewModel @Inject constructor(
     
     private val _serverUrl = kotlinx.coroutines.flow.MutableStateFlow("")
     val serverUrl: StateFlow<String> = _serverUrl
+    
+    private val _autoApproval = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val autoApproval: StateFlow<Boolean> = _autoApproval
+    
+    private val _syncVolume = kotlinx.coroutines.flow.MutableStateFlow(true)
+    val syncVolume: StateFlow<Boolean> = _syncVolume
+    
+    private val _muteHost = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val muteHost: StateFlow<Boolean> = _muteHost
 
     init {
         viewModelScope.launch {
             _savedUsername.value = manager.getSavedUsername()
             _serverUrl.value = manager.getServerUrl()
+            _autoApproval.value = manager.getAutoApproval()
+            _syncVolume.value = manager.getSyncVolume()
+            _muteHost.value = manager.getMuteHost()
         }
     }
     
@@ -52,6 +64,27 @@ class ListenTogetherViewModel @Inject constructor(
         _serverUrl.value = url
         viewModelScope.launch {
             manager.setServerUrl(url)
+        }
+    }
+    
+    fun updateAutoApproval(enabled: Boolean) {
+        _autoApproval.value = enabled
+        viewModelScope.launch {
+            manager.setAutoApproval(enabled)
+        }
+    }
+    
+    fun updateSyncVolume(enabled: Boolean) {
+        _syncVolume.value = enabled
+        viewModelScope.launch {
+            manager.setSyncVolume(enabled)
+        }
+    }
+    
+    fun updateMuteHost(enabled: Boolean) {
+        _muteHost.value = enabled
+        viewModelScope.launch {
+            manager.setMuteHost(enabled)
         }
     }
     
