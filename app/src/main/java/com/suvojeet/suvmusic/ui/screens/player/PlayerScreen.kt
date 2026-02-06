@@ -1059,6 +1059,9 @@ fun PlayerScreen(
                     isVisible = showRingtoneTrimmer,
                     song = menuSong,
                     onDismiss = { showRingtoneTrimmer = false },
+                    onResolveStreamUrl = { videoId ->
+                        ringtoneViewModel.getStreamUrl(videoId)
+                    },
                     onConfirm = { startMs, endMs ->
                         showRingtoneTrimmer = false
                         // Start ringtone process
