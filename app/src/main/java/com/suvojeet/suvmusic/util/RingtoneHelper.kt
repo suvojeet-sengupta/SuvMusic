@@ -233,41 +233,43 @@ class RingtoneHelper @Inject constructor(
         outputFile: File,
         startMs: Long,
         endMs: Long
-    ): Boolean = suspendCancellableCoroutine { continuation ->
-        val mediaItem = MediaItem.Builder()
-            .setUri(Uri.fromFile(inputFile))
-            .setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(startMs)
-                    .setEndPositionMs(endMs)
-                    .build()
-            )
-            .build()
+    ): Boolean = withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine { continuation ->
+            val mediaItem = MediaItem.Builder()
+                .setUri(Uri.fromFile(inputFile))
+                .setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(startMs)
+                        .setEndPositionMs(endMs)
+                        .build()
+                )
+                .build()
 
-        val transformer = Transformer.Builder(context)
-            .build()
+            val transformer = Transformer.Builder(context)
+                .build()
 
-        val listener = object : Transformer.Listener {
-            override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                continuation.resume(true)
+            val listener = object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    continuation.resume(true)
+                }
+
+                override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
+                    exportException.printStackTrace()
+                    continuation.resume(false)
+                }
             }
 
-            override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
-                exportException.printStackTrace()
+            transformer.addListener(listener)
+            try {
+                transformer.start(mediaItem, outputFile.absolutePath)
+            } catch (e: Exception) {
+                e.printStackTrace()
                 continuation.resume(false)
             }
-        }
 
-        transformer.addListener(listener)
-        try {
-            transformer.start(mediaItem, outputFile.absolutePath)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            continuation.resume(false)
-        }
-
-        continuation.invokeOnCancellation {
-            transformer.cancel()
+            continuation.invokeOnCancellation {
+                transformer.cancel()
+            }
         }
     }
     
