@@ -227,8 +227,8 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
-    // Message Codec
-    private val messageCodec = MessageCodec(MessageFormat.PROTOBUF, compressionEnabled = false)
+    // Message Codec - Using JSON until server supports Protobuf
+    private val messageCodec = MessageCodec(MessageFormat.JSON, compressionEnabled = false)
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
@@ -955,12 +955,21 @@ class ListenTogetherClient @Inject constructor(
 
     private inline fun <reified T> sendMessage(type: String, payload: T?) {
         val bytes = messageCodec.encode(type, payload)
-        webSocket?.send(bytes.toByteString())
+        // Use text for JSON (server expects text), binary for Protobuf
+        if (messageCodec.format == MessageFormat.JSON) {
+            webSocket?.send(bytes.decodeToString())
+        } else {
+            webSocket?.send(bytes.toByteString())
+        }
     }
     
     private fun sendMessageNoPayload(type: String) {
         val bytes = messageCodec.encode(type, null)
-        webSocket?.send(bytes.toByteString())
+        if (messageCodec.format == MessageFormat.JSON) {
+            webSocket?.send(bytes.decodeToString())
+        } else {
+            webSocket?.send(bytes.toByteString())
+        }
     }
 
     fun createRoom(username: String) {
