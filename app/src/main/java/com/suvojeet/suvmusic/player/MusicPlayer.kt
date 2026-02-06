@@ -538,7 +538,8 @@ class MusicPlayer @Inject constructor(
                     isLoading = false
                 )
             }
-
+        }
+    }
 
     fun setVideoQuality(quality: VideoQuality) {
         val currentQuality = _playerState.value.videoQuality
