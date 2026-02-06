@@ -94,6 +94,18 @@ fun CreditsScreen(
                         context.startActivity(intent)
                     }
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LibraryCard(
+                    name = "NYX / Listen Together",
+                    description = "Owner of the Listen Together infrastructure (metroserver.meowery.eu). Special thanks for the server support.",
+                    isSpecial = true,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://nyx.meowery.eu/"))
+                        context.startActivity(intent)
+                    }
+                )
             }
 
             // --- Lyrics Providers ---
