@@ -17,16 +17,27 @@ object TimeUtil {
         if (hours > 0) {
             sb.append("${hours}hrs ")
         }
-        if (minutes > 0 || hours > 0) { // Show minutes if there are hours, even if 0? classic format usually skips if 0, but user example "3hrs 21min" implies standard components.
-            // if hours > 0 and minutes == 0, maybe just "3hrs 0min"? Or skip?
-            // User example: "3hrs 21min 32sec".
-            // Let's stick to appending if > 0 for now to keep it clean, or exactly as requested.
-            // "3hrs 21min 32sec"
+        if (minutes > 0 || hours > 0) {
             sb.append("${minutes}min ")
         }
         sb.append("${seconds}sec")
 
         return sb.toString().trim()
+    }
+
+    /**
+     * Formats duration in milliseconds to "mm:ss" or "hh:mm:ss"
+     */
+    fun formatTime(millis: Long): String {
+        val hours = TimeUnit.MILLISECONDS.toHours(millis)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
+        
+        return if (hours > 0) {
+            String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format("%02d:%02d", minutes, seconds)
+        }
     }
 
     /**
