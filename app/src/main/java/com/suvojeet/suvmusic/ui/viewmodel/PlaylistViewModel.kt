@@ -46,6 +46,7 @@ class PlaylistViewModel @Inject constructor(
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
+    private val localAudioRepository: com.suvojeet.suvmusic.data.repository.LocalAudioRepository,
     private val libraryRepository: LibraryRepository,
     private val cache: androidx.media3.datasource.cache.Cache,
     private val listeningHistoryDao: com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao,
@@ -158,6 +159,16 @@ class PlaylistViewModel @Inject constructor(
                          id = "TOP_50",
                          title = "My Top 50", // Override title
                          author = "You"
+                     )
+                } else if (playlistId == "DEVICE_SONGS") {
+                     // Device Local Songs
+                     val songs = localAudioRepository.getAllLocalSongs()
+                     Playlist(
+                         id = "DEVICE_SONGS",
+                         title = "Device files",
+                         author = "Local Storage",
+                         thumbnailUrl = null,
+                         songs = songs
                      )
                 } else if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
                     // In HQ Audio mode, prioritize JioSaavn
