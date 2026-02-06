@@ -101,20 +101,46 @@ class YouTubeStreamingService @Inject constructor(
     }
 
     /**
-     * Get video stream URL for video playback mode.
-     * Returns the best quality video stream that includes audio (for combined playback).
+     * Data class to hold video stream result with optional separate audio URL.
+     * When videoUrl and audioUrl are both present, they need to be merged for playback.
+     * When only videoUrl is present, it's a muxed stream (has audio included).
+     */
+    data class VideoStreamResult(
+        val videoUrl: String,
+        val audioUrl: String? = null,  // null means video has audio included (muxed stream)
+        val resolution: String? = null
+    )
+    
+    /**
+     * Get video stream URLs for video playback mode.
+     * For 720p+ quality, uses video-only streams with separate audio for best quality.
+     * For lower quality, uses muxed streams (video+audio combined).
      */
     suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): String? = withContext(Dispatchers.IO) {
+        getVideoStreamResult(videoId, quality)?.videoUrl
+    }
+    
+    /**
+     * Get video stream result with both video and audio URLs for high-quality playback.
+     * This is the preferred method for video playback - it returns separate streams for 720p+.
+     */
+    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): VideoStreamResult? = withContext(Dispatchers.IO) {
         val targetQuality = quality ?: sessionManager.getVideoQuality()
         
         // Check cache first for fast playback
         // Include quality in cache key to separate different resolutions
-        val cacheKey = "video_${videoId}_${targetQuality.name}"
-        streamCache.get(cacheKey)?.let { cached ->
-            if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
-                android.util.Log.d("YouTubeStreaming", "Video stream URL from cache: $videoId (${targetQuality.name})")
-                return@withContext cached.url
-            }
+        val videoCacheKey = "video_${videoId}_${targetQuality.name}"
+        val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
+        
+        val cachedVideo = streamCache.get(videoCacheKey)
+        val cachedAudio = streamCache.get(audioCacheKey)
+        
+        if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
+            android.util.Log.d("YouTubeStreaming", "Video stream URL from cache: $videoId (${targetQuality.name})")
+            return@withContext VideoStreamResult(
+                videoUrl = cachedVideo.url,
+                audioUrl = cachedAudio?.url  // May be null for muxed streams
+            )
         }
         
         retryWithBackoff {
@@ -127,38 +153,94 @@ class YouTubeStreamingService @Inject constructor(
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
-            // Get video streams (these include audio in the stream in MPEG-DASH usually, but NewPipe extracts separate streams too)
-            // We want streams that have BOTH audio and video, or handle muxing (ExoPlayer handles DASH automatically if manifest provided, 
-            // but here we are likely getting direct progressive streams or DASH streams).
-            // NewPipe `videoStreams` usually refers to actual video-only or muxed streams.
-            // For simplicity in this codebase, we assume we are getting a playable stream URL.
-            val videoStreams = streamExtractor.videoStreams
-            
             val targetResolution = targetQuality.maxResolution
             
-            // Filter and find best match
-            val bestVideoStream = videoStreams
-                .filter { stream ->
-                    val resolutionString = stream.resolution ?: return@filter false
-                    // Extract numeric height (e.g. "1080p60" -> 1080, "720p" -> 720)
-                    val height = resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
-                    height <= targetResolution && height > 0
-                }
-                .maxByOrNull { stream ->
-                    val resolutionString = stream.resolution ?: "0"
-                    resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
-                }
-                ?: videoStreams.maxByOrNull { stream ->
-                    val resolutionString = stream.resolution ?: "0"
-                    resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
-                }
+            // Strategy:
+            // 1. For higher quality (720p, 1080p), use videoOnlyStreams + separate audio
+            //    These are typically higher quality but require merging
+            // 2. For lower quality (360p) or as fallback, use muxed videoStreams
             
-            android.util.Log.d("YouTubeStreaming", "Video stream: ${bestVideoStream?.resolution}")
+            var videoResult: VideoStreamResult? = null
             
-            bestVideoStream?.content?.also { url ->
-                // Cache the result
-                streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
+            // Try video-only streams first for higher quality
+            if (targetResolution >= 720) {
+                try {
+                    val videoOnlyStreams = streamExtractor.videoOnlyStreams
+                    android.util.Log.d("YouTubeStreaming", "Available video-only streams: ${videoOnlyStreams.map { it.resolution }}")
+                    
+                    val bestVideoOnlyStream = videoOnlyStreams
+                        .filter { stream ->
+                            val resolutionString = stream.resolution ?: return@filter false
+                            val height = resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                            height <= targetResolution && height > 0
+                        }
+                        .maxByOrNull { stream ->
+                            val resolutionString = stream.resolution ?: "0"
+                            resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                        }
+                    
+                    if (bestVideoOnlyStream != null) {
+                        val videoOnlyUrl = bestVideoOnlyStream.content
+                        
+                        // Get best audio stream for merging
+                        val audioStreams = streamExtractor.audioStreams
+                        val bestAudioStream = audioStreams.maxByOrNull { it.averageBitrate }
+                        val audioUrl = bestAudioStream?.content
+                        
+                        if (videoOnlyUrl != null && audioUrl != null) {
+                            android.util.Log.d("YouTubeStreaming", "Using video-only stream: ${bestVideoOnlyStream.resolution} + audio: ${bestAudioStream.averageBitrate}kbps")
+                            
+                            // Cache both URLs
+                            streamCache.put(videoCacheKey, CachedStream(videoOnlyUrl, System.currentTimeMillis()))
+                            streamCache.put(audioCacheKey, CachedStream(audioUrl, System.currentTimeMillis()))
+                            
+                            videoResult = VideoStreamResult(
+                                videoUrl = videoOnlyUrl,
+                                audioUrl = audioUrl,
+                                resolution = bestVideoOnlyStream.resolution
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("YouTubeStreaming", "Failed to get video-only streams, falling back to muxed", e)
+                }
             }
+            
+            // Fallback to muxed streams (video + audio combined) for lower quality or if video-only failed
+            if (videoResult == null) {
+                val videoStreams = streamExtractor.videoStreams
+                android.util.Log.d("YouTubeStreaming", "Available muxed streams: ${videoStreams.map { it.resolution }}")
+                
+                val bestMuxedStream = videoStreams
+                    .filter { stream ->
+                        val resolutionString = stream.resolution ?: return@filter false
+                        val height = resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                        height <= targetResolution && height > 0
+                    }
+                    .maxByOrNull { stream ->
+                        val resolutionString = stream.resolution ?: "0"
+                        resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                    }
+                    ?: videoStreams.maxByOrNull { stream ->
+                        val resolutionString = stream.resolution ?: "0"
+                        resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                    }
+                
+                if (bestMuxedStream != null) {
+                    android.util.Log.d("YouTubeStreaming", "Using muxed stream: ${bestMuxedStream.resolution}")
+                    
+                    bestMuxedStream.content?.let { url ->
+                        streamCache.put(videoCacheKey, CachedStream(url, System.currentTimeMillis()))
+                        videoResult = VideoStreamResult(
+                            videoUrl = url,
+                            audioUrl = null,  // Muxed stream - no separate audio needed
+                            resolution = bestMuxedStream.resolution
+                        )
+                    }
+                }
+            }
+            
+            videoResult
         }
     }
 
