@@ -88,6 +88,7 @@ import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen
 import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
 import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
+import com.suvojeet.suvmusic.ui.components.RingtoneTrimmerDialog
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
 import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
@@ -305,6 +306,7 @@ fun PlayerScreen(
     var showListenTogetherSheet by remember { mutableStateOf(false) }
 
     // Ringtone states
+    var showRingtoneTrimmer by remember { mutableStateOf(false) }
     var showRingtoneProgress by remember { mutableStateOf(false) }
     var ringtoneProgress by remember { mutableStateOf(0f) }
     var ringtoneStatusMessage by remember { mutableStateOf("") }
@@ -1031,7 +1033,6 @@ fun PlayerScreen(
                     { playerViewModel.removeQueueItems(listOf(playerState.queue.indexOf(menuSong))) }
                 } else null,
                 onSetRingtone = {
-
                     // Check for WRITE_SETTINGS permission
                     if (!ringtoneViewModel.ringtoneHelper.hasWriteSettingsPermission(context)) {
                         Toast.makeText(context, "Permission required to set ringtone. Please grant it in settings.", Toast.LENGTH_LONG).show()
@@ -1046,30 +1047,47 @@ fun PlayerScreen(
                         return@SongActionsSheet
                     }
 
-                    // Start ringtone process
-                    coroutineScope.launch {
-                        showRingtoneProgress = true
-                        ringtoneProgress = 0f
-                        ringtoneStatusMessage = "Initializing..."
-                        ringtoneComplete = false
-                        ringtoneSuccess = false
-
-                        ringtoneViewModel.ringtoneHelper.downloadAndSetAsRingtone(
-                            context = context,
-                            song = menuSong,
-                            onProgress = { progress, message ->
-                                ringtoneProgress = progress
-                                ringtoneStatusMessage = message
-                            },
-                            onComplete = { success, message ->
-                                ringtoneComplete = true
-                                ringtoneSuccess = success
-                                ringtoneStatusMessage = message
-                            }
-                        )
-                    }
+                    // Show trimmer first
+                    showActionsSheet = false
+                    showRingtoneTrimmer = true
                 }
             )
+
+            // Ringtone Trimmer Dialog
+            if (menuSong != null) {
+                RingtoneTrimmerDialog(
+                    isVisible = showRingtoneTrimmer,
+                    song = menuSong,
+                    onDismiss = { showRingtoneTrimmer = false },
+                    onConfirm = { startMs, endMs ->
+                        showRingtoneTrimmer = false
+                        // Start ringtone process
+                        coroutineScope.launch {
+                            showRingtoneProgress = true
+                            ringtoneProgress = 0f
+                            ringtoneStatusMessage = "Initializing..."
+                            ringtoneComplete = false
+                            ringtoneSuccess = false
+
+                            ringtoneViewModel.ringtoneHelper.downloadAndTrimAsRingtone(
+                                context = context,
+                                song = menuSong,
+                                startMs = startMs,
+                                endMs = endMs,
+                                onProgress = { progress, message ->
+                                    ringtoneProgress = progress
+                                    ringtoneStatusMessage = message
+                                },
+                                onComplete = { success, message ->
+                                    ringtoneComplete = true
+                                    ringtoneSuccess = success
+                                    ringtoneStatusMessage = message
+                                }
+                            )
+                        }
+                    }
+                )
+            }
 
             // Ringtone Progress Dialog
             RingtoneProgressDialog(
