@@ -73,15 +73,19 @@ private fun AppleMusicButton(
     
     // Animate the background alpha for smooth fade in/out
     val backgroundAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.25f else 0f,
+        targetValue = if (isPressed) 0.2f else 0f,
         animationSpec = tween(durationMillis = if (isPressed) 50 else 200),
         label = "pressedAlpha"
     )
     
-    // Slight scale effect on press
+    // "Jump" / Scale effect
+    // Apple Music style: noticeable scale down with a bit of bounce (spring)
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1f,
-        animationSpec = tween(durationMillis = 100),
+        targetValue = if (isPressed) 0.8f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
         label = "pressedScale"
     )
     
@@ -89,13 +93,21 @@ private fun AppleMusicButton(
         modifier = modifier
             .size(size)
             .scale(scale)
+            // Use dpadFocusable for focus handling only, NOT click handling
+            // This avoids dpadFocusable adding its own clickable with defaults
             .dpadFocusable(
-                onClick = onClick,
+                onClick = null, 
                 shape = CircleShape,
                 focusedScale = 1.1f,
                 borderColor = Color.White
             )
             .clip(CircleShape)
+            // Manual click handling to remove ripple (indication = null)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
             .background(Color.Black.copy(alpha = backgroundAlpha)),
         contentAlignment = Alignment.Center
     ) {
@@ -121,21 +133,15 @@ fun PlaybackControls(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Shuffle
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .dpadFocusable(
-                    onClick = onShuffleToggle,
-                    shape = CircleShape,
-                    focusedScale = 1.1f
-                )
-                .background(
-                    if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                    CircleShape
-                )
-                .padding(10.dp), // Padding to scale down icon relative to 48dp box
-            contentAlignment = Alignment.Center
-        ) {
+        // Shuffle - Apple Music style
+        AppleMusicButton(
+            onClick = onShuffleToggle,
+            size = 48.dp,
+            modifier = Modifier.background(
+                if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
+                CircleShape
+            )
+        ) { _ ->
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
@@ -188,21 +194,15 @@ fun PlaybackControls(
         }
 
         // Repeat
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .dpadFocusable(
-                    onClick = onRepeatToggle,
-                    shape = CircleShape,
-                    focusedScale = 1.1f
-                )
-                .background(
-                    if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                    CircleShape
-                )
-                .padding(10.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        // Repeat - Apple Music style
+        AppleMusicButton(
+            onClick = onRepeatToggle,
+            size = 48.dp,
+            modifier = Modifier.background(
+                if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
+                CircleShape
+            )
+        ) { _ ->
             Icon(
                 imageVector = when (repeatMode) {
                     RepeatMode.ONE -> Icons.Default.RepeatOne
