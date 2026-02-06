@@ -37,7 +37,7 @@ fun RingtoneTrimmerDialog(
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Select the part of "${song.title}" to use as ringtone. (Max 30s recommended)",
+                    text = "Select the part of \"${song.title}\" to use as ringtone. (Max 30s recommended)",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
