@@ -114,6 +114,7 @@ data class RoomState(
     @SerialName("is_playing") val isPlaying: Boolean,
     val position: Long, // milliseconds
     @SerialName("last_update") val lastUpdate: Long, // unix timestamp ms
+    val volume: Float = 1.0f,
     val queue: List<TrackInfo> = emptyList()
 )
 
@@ -149,7 +150,9 @@ data class PlaybackActionPayload(
     @SerialName("track_info") val trackInfo: TrackInfo? = null,
     @SerialName("insert_next") val insertNext: Boolean? = null,
     val queue: List<TrackInfo>? = null,
-    @SerialName("queue_title") val queueTitle: String? = null
+    @SerialName("queue_title") val queueTitle: String? = null,
+    val volume: Float? = null,
+    @SerialName("server_time") val serverTime: Long? = null
 )
 
 @Serializable
@@ -291,7 +294,8 @@ data class SyncStatePayload(
     @SerialName("is_playing") val isPlaying: Boolean,
     val position: Long,
     @SerialName("last_update") val lastUpdate: Long,
-    val queue: List<TrackInfo>? = null
+    val queue: List<TrackInfo>? = null,
+    val volume: Float? = null
 )
 
 // Reconnection payloads
