@@ -538,6 +538,40 @@ class MusicPlayer @Inject constructor(
                     isLoading = false
                 )
             }
+            }
+        }
+    }
+
+    /**
+     * Set video quality preference and enforce resolution limits for DASH streams.
+     * Reloads the current song to apply changes immediately.
+     */
+    fun setVideoQuality(quality: VideoQuality) {
+        val currentQuality = _playerState.value.videoQuality
+        if (currentQuality == quality) return
+        
+        _playerState.update { it.copy(videoQuality = quality) }
+        
+        // Update DASH resolution constraints
+        mediaController?.let { player ->
+            val maxResolution = quality.maxResolution
+            // Constrain video size to the selected quality (DASH will adapt up to this limit)
+            val params = player.trackSelectionParameters
+                .buildUpon()
+                .setMaxVideoSize(maxResolution, maxResolution)
+                .build()
+            player.trackSelectionParameters = params
+            android.util.Log.d("MusicPlayer", "Updated track selection: Max video size $maxResolution")
+        }
+        
+        // If in video mode, reload stream to ensure correct quality constraints are applied
+        if (_playerState.value.isVideoMode) {
+            val state = _playerState.value
+            state.currentSong?.let { song ->
+                scope.launch {
+                    resolveAndPlayCurrentItem(song, state.currentIndex, shouldPlay = state.isPlaying)
+                }
+            }
         }
     }
     
@@ -619,20 +653,11 @@ class MusicPlayer @Inject constructor(
                 startAggressiveCaching(cacheKey, streamUrl)
             }
 
-            // Build MediaItem with optional audio URL for dual-stream video
-            // For dual-stream video, we encode both URLs in a special format that the factory can parse
-            // This is because MediaItem extras don't survive IPC between MediaController and MediaSession
-            val finalUri = if (audioStreamUrl != null) {
-                // Encode both video and audio URLs using a separator
-                // Format: "dualstream://video|audio"
-                val encodedVideo = android.util.Base64.encodeToString(streamUrl.toByteArray(), android.util.Base64.NO_WRAP)
-                val encodedAudio = android.util.Base64.encodeToString(audioStreamUrl.toByteArray(), android.util.Base64.NO_WRAP)
-                "dualstream://$encodedVideo|$encodedAudio"
-            } else {
-                streamUrl
-            }
+            // Build MediaItem
+            // Note: For DASH streams (720p+), the streamUrl is the manifest URL which handles both video and audio.
+            val finalUri = streamUrl
             
-            android.util.Log.d("MusicPlayer", "Final URI: ${if (audioStreamUrl != null) "dual-stream (720p+)" else "muxed"}")
+            android.util.Log.d("MusicPlayer", "Final URI: $finalUri")
             
             val mediaItemBuilder = MediaItem.Builder()
                 .setUri(finalUri)
@@ -660,13 +685,13 @@ class MusicPlayer @Inject constructor(
                         
                         controller.replaceMediaItem(index, newMediaItem)
                         
+                        
                         // If we are replacing the currently playing item
                         if (index == controller.currentMediaItemIndex) {
-                             // If resuming from error/re-resolve, restore position
-                             if (controller.playbackState == Player.STATE_IDLE || controller.playbackState == Player.STATE_ENDED) {
-                                  controller.prepare()
-                                  if (oldPos > 0) controller.seekTo(oldPos)
-                             }
+                             controller.prepare()
+                             // Always restore position if valid (handles quality switch and error recovery)
+                             if (oldPos > 0) controller.seekTo(oldPos)
+                             
                              if (shouldPlay) {
                                   controller.play()
                              }

@@ -162,49 +162,24 @@ class YouTubeStreamingService @Inject constructor(
             
             var videoResult: VideoStreamResult? = null
             
-            // Try video-only streams first for higher quality
+            // Try DASH stream first (Native adaptive streaming for 720p/1080p)
             if (targetResolution >= 720) {
                 try {
-                    val videoOnlyStreams = streamExtractor.videoOnlyStreams
-                    android.util.Log.d("YouTubeStreaming", "Available video-only streams: ${videoOnlyStreams.map { it.resolution }}")
-                    
-                    val bestVideoOnlyStream = videoOnlyStreams
-                        .filter { stream ->
-                            val resolutionString = stream.resolution ?: return@filter false
-                            val height = resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
-                            height <= targetResolution && height > 0
-                        }
-                        .maxByOrNull { stream ->
-                            val resolutionString = stream.resolution ?: "0"
-                            resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
-                        }
-                    
-                    if (bestVideoOnlyStream != null) {
-                        val videoOnlyUrl = bestVideoOnlyStream.content
-                        
-                        // Get best audio stream for merging
-                        val audioStreams = streamExtractor.audioStreams
-                        val bestAudioStream = audioStreams.maxByOrNull { it.averageBitrate }
-                        val audioUrl = bestAudioStream?.content
-                        
-                        if (videoOnlyUrl != null && audioUrl != null) {
-                            android.util.Log.d("YouTubeStreaming", "Using video-only stream: ${bestVideoOnlyStream.resolution} + audio: ${bestAudioStream.averageBitrate}kbps")
-                            
-                            // Cache both URLs
-                            streamCache.put(videoCacheKey, CachedStream(videoOnlyUrl, System.currentTimeMillis()))
-                            streamCache.put(audioCacheKey, CachedStream(audioUrl, System.currentTimeMillis()))
-                            
-                            videoResult = VideoStreamResult(
-                                videoUrl = videoOnlyUrl,
-                                audioUrl = audioUrl,
-                                resolution = bestVideoOnlyStream.resolution
-                            )
-                        }
+                    val dashUrl = streamExtractor.dashMpdUrl
+                    if (!dashUrl.isNullOrEmpty()) {
+                        android.util.Log.d("YouTubeStreaming", "Using DASH manifest: $dashUrl")
+                        videoResult = VideoStreamResult(
+                            videoUrl = dashUrl,
+                            audioUrl = null, // DASH handles audio internally
+                            resolution = "Auto (DASH)"
+                        )
                     }
                 } catch (e: Exception) {
-                    android.util.Log.w("YouTubeStreaming", "Failed to get video-only streams, falling back to muxed", e)
+                    android.util.Log.w("YouTubeStreaming", "Failed to get DASH URL", e)
                 }
             }
+            
+            // If DASH not available, try finding best muxed stream (unlikely for high res, but fallback)
             
             // Fallback to muxed streams (video + audio combined) for lower quality or if video-only failed
             if (videoResult == null) {
