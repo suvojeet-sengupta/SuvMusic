@@ -30,15 +30,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.encodeToJsonElement
+
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import okio.ByteString
+import okio.ByteString.Companion.toByteString
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
@@ -228,10 +227,8 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
-    private val json = Json { 
-        ignoreUnknownKeys = true 
-        encodeDefaults = true
-    }
+    // Message Codec
+    private val messageCodec = MessageCodec(MessageFormat.PROTOBUF, compressionEnabled = false)
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
@@ -410,7 +407,12 @@ class ListenTogetherClient @Inject constructor(
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    handleMessage(text)
+                    // Fallback for text messages if any
+                    handleMessage(text.toByteArray())
+                }
+
+                override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                    handleMessage(bytes.toByteArray())
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -665,13 +667,16 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
-    private fun handleMessage(text: String) {
+    private fun handleMessage(data: ByteArray) {
         try {
-            val message = json.decodeFromString<Message>(text)
+            val (msgType, payloadBytes) = messageCodec.decode(data)
             
-            when (message.type) {
+            // Decode specific payload
+            val payloadObj = messageCodec.decodePayload(msgType, payloadBytes, messageCodec.format)
+            
+            when (msgType) {
                 MessageTypes.ROOM_CREATED -> {
-                    val payload = json.decodeFromJsonElement<RoomCreatedPayload>(message.payload!!)
+                    val payload = payloadObj as RoomCreatedPayload
                     _userId.value = payload.userId
                     _role.value = RoomRole.HOST
                     sessionToken = payload.sessionToken
@@ -695,7 +700,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.JOIN_REQUEST -> {
-                    val payload = json.decodeFromJsonElement<JoinRequestPayload>(message.payload!!)
+                    val payload = payloadObj as JoinRequestPayload
                     _pendingJoinRequests.value = _pendingJoinRequests.value + payload
                     log(LogLevel.INFO, "Join request received", "User: ${payload.username}")
                     
@@ -715,7 +720,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.JOIN_APPROVED -> {
-                    val payload = json.decodeFromJsonElement<JoinApprovedPayload>(message.payload!!)
+                    val payload = payloadObj as JoinApprovedPayload
                     _userId.value = payload.userId
                     _role.value = RoomRole.GUEST
                     sessionToken = payload.sessionToken
@@ -731,13 +736,13 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.JOIN_REJECTED -> {
-                    val payload = json.decodeFromJsonElement<JoinRejectedPayload>(message.payload!!)
+                    val payload = payloadObj as JoinRejectedPayload
                     log(LogLevel.WARNING, "Join rejected", payload.reason)
                     scope.launch { _events.emit(ListenTogetherEvent.JoinRejected(payload.reason)) }
                 }
                 
                 MessageTypes.USER_JOINED -> {
-                    val payload = json.decodeFromJsonElement<UserJoinedPayload>(message.payload!!)
+                    val payload = payloadObj as UserJoinedPayload
                     _roomState.value = _roomState.value?.copy(
                         users = _roomState.value!!.users + UserInfo(payload.userId, payload.username, false)
                     )
@@ -752,7 +757,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.USER_LEFT -> {
-                    val payload = json.decodeFromJsonElement<UserLeftPayload>(message.payload!!)
+                    val payload = payloadObj as UserLeftPayload
                     _roomState.value = _roomState.value?.copy(
                         users = _roomState.value!!.users.filter { it.userId != payload.userId }
                     )
@@ -761,7 +766,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.HOST_CHANGED -> {
-                    val payload = json.decodeFromJsonElement<HostChangedPayload>(message.payload!!)
+                    val payload = payloadObj as HostChangedPayload
                     _roomState.value = _roomState.value?.copy(
                         hostId = payload.newHostId,
                         users = _roomState.value!!.users.map { 
@@ -776,7 +781,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.KICKED -> {
-                    val payload = json.decodeFromJsonElement<KickedPayload>(message.payload!!)
+                    val payload = payloadObj as KickedPayload
                     log(LogLevel.WARNING, "Kicked from room", payload.reason)
                     releaseWakeLock()
                     sessionToken = null
@@ -786,7 +791,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.SYNC_PLAYBACK -> {
-                    val payload = json.decodeFromJsonElement<PlaybackActionPayload>(message.payload!!)
+                    val payload = payloadObj as PlaybackActionPayload
                     log(LogLevel.DEBUG, "Playback sync", "Action: ${payload.action}")
                     
                     when (payload.action) {
@@ -820,27 +825,27 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.BUFFER_WAIT -> {
-                    val payload = json.decodeFromJsonElement<BufferWaitPayload>(message.payload!!)
+                    val payload = payloadObj as BufferWaitPayload
                     _bufferingUsers.value = payload.waitingFor
                     log(LogLevel.DEBUG, "Waiting for buffering", "Users: ${payload.waitingFor.size}")
                     scope.launch { _events.emit(ListenTogetherEvent.BufferWait(payload.trackId, payload.waitingFor)) }
                 }
                 
                 MessageTypes.BUFFER_COMPLETE -> {
-                    val payload = json.decodeFromJsonElement<BufferCompletePayload>(message.payload!!)
+                    val payload = payloadObj as BufferCompletePayload
                     _bufferingUsers.value = emptyList()
                     log(LogLevel.INFO, "All users buffered", "Track: ${payload.trackId}")
                     scope.launch { _events.emit(ListenTogetherEvent.BufferComplete(payload.trackId)) }
                 }
                 
                 MessageTypes.SYNC_STATE -> {
-                    val payload = json.decodeFromJsonElement<SyncStatePayload>(message.payload!!)
+                    val payload = payloadObj as SyncStatePayload
                     log(LogLevel.INFO, "Sync state received", "Playing: ${payload.isPlaying}, Position: ${payload.position}")
                     scope.launch { _events.emit(ListenTogetherEvent.SyncStateReceived(payload)) }
                 }
                 
                 MessageTypes.CHAT_MESSAGE -> {
-                    val payload = json.decodeFromJsonElement<ChatMessagePayload>(message.payload!!)
+                    val payload = payloadObj as ChatMessagePayload
                     log(LogLevel.DEBUG, "Chat message", "${payload.username}: ${payload.message}")
                     scope.launch { 
                         _events.emit(ListenTogetherEvent.ChatReceived(
@@ -853,7 +858,7 @@ class ListenTogetherClient @Inject constructor(
                 }
 
                 MessageTypes.SUGGESTION_RECEIVED -> {
-                    val payload = json.decodeFromJsonElement<SuggestionReceivedPayload>(message.payload!!)
+                    val payload = payloadObj as SuggestionReceivedPayload
                     if (_role.value == RoomRole.HOST) {
                         _pendingSuggestions.value = _pendingSuggestions.value + payload
                         log(LogLevel.INFO, "Suggestion received", "${payload.fromUsername}: ${payload.trackInfo.title}")
@@ -862,7 +867,7 @@ class ListenTogetherClient @Inject constructor(
                 }
 
                 MessageTypes.SUGGESTION_APPROVED -> {
-                    val payload = json.decodeFromJsonElement<SuggestionApprovedPayload>(message.payload!!)
+                    val payload = payloadObj as SuggestionApprovedPayload
                     log(LogLevel.INFO, "Suggestion approved", payload.trackInfo.title)
                     
                     suggestionNotifications.remove(payload.suggestionId)?.let { notifId ->
@@ -871,7 +876,7 @@ class ListenTogetherClient @Inject constructor(
                 }
 
                 MessageTypes.SUGGESTION_REJECTED -> {
-                    val payload = json.decodeFromJsonElement<SuggestionRejectedPayload>(message.payload!!)
+                    val payload = payloadObj as SuggestionRejectedPayload
                     log(LogLevel.WARNING, "Suggestion rejected", payload.reason ?: "")
                     
                     suggestionNotifications.remove(payload.suggestionId)?.let { notifId ->
@@ -880,7 +885,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.ERROR -> {
-                    val payload = json.decodeFromJsonElement<ErrorPayload>(message.payload!!)
+                    val payload = payloadObj as ErrorPayload
                     log(LogLevel.ERROR, "Server error", "${payload.code}: ${payload.message}")
                     
                     when (payload.code) {
@@ -906,7 +911,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.RECONNECTED -> {
-                    val payload = json.decodeFromJsonElement<ReconnectedPayload>(message.payload!!)
+                    val payload = payloadObj as ReconnectedPayload
                     _userId.value = payload.userId
                     _role.value = if (payload.isHost) RoomRole.HOST else RoomRole.GUEST
                     _roomState.value = payload.state
@@ -922,7 +927,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.USER_RECONNECTED -> {
-                    val payload = json.decodeFromJsonElement<UserReconnectedPayload>(message.payload!!)
+                    val payload = payloadObj as UserReconnectedPayload
                     _roomState.value = _roomState.value?.copy(
                         users = _roomState.value!!.users.map { user ->
                             if (user.userId == payload.userId) user.copy(isConnected = true) else user
@@ -933,7 +938,7 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.USER_DISCONNECTED -> {
-                    val payload = json.decodeFromJsonElement<UserDisconnectedPayload>(message.payload!!)
+                    val payload = payloadObj as UserDisconnectedPayload
                     _roomState.value = _roomState.value?.copy(
                         users = _roomState.value!!.users.map { user ->
                             if (user.userId == payload.userId) user.copy(isConnected = false) else user
@@ -949,20 +954,13 @@ class ListenTogetherClient @Inject constructor(
     }
 
     private inline fun <reified T> sendMessage(type: String, payload: T?) {
-        val message = if (payload != null) {
-            Message(type, json.encodeToJsonElement(payload))
-        } else {
-            Message(type, null)
-        }
-        
-        val text = json.encodeToString(message)
-        webSocket?.send(text)
+        val bytes = messageCodec.encode(type, payload)
+        webSocket?.send(bytes.toByteString())
     }
     
     private fun sendMessageNoPayload(type: String) {
-        val message = Message(type, null)
-        val text = json.encodeToString(message)
-        webSocket?.send(text)
+        val bytes = messageCodec.encode(type, null)
+        webSocket?.send(bytes.toByteString())
     }
 
     fun createRoom(username: String) {
