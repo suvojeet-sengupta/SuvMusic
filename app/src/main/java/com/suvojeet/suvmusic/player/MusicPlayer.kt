@@ -620,8 +620,22 @@ class MusicPlayer @Inject constructor(
             }
 
             // Build MediaItem with optional audio URL for dual-stream video
+            // For dual-stream video, we encode both URLs in a special format that the factory can parse
+            // This is because MediaItem extras don't survive IPC between MediaController and MediaSession
+            val finalUri = if (audioStreamUrl != null) {
+                // Encode both video and audio URLs using a separator
+                // Format: "dualstream://video|audio"
+                val encodedVideo = android.util.Base64.encodeToString(streamUrl.toByteArray(), android.util.Base64.NO_WRAP)
+                val encodedAudio = android.util.Base64.encodeToString(audioStreamUrl.toByteArray(), android.util.Base64.NO_WRAP)
+                "dualstream://$encodedVideo|$encodedAudio"
+            } else {
+                streamUrl
+            }
+            
+            android.util.Log.d("MusicPlayer", "Final URI: ${if (audioStreamUrl != null) "dual-stream (720p+)" else "muxed"}")
+            
             val mediaItemBuilder = MediaItem.Builder()
-                .setUri(streamUrl)
+                .setUri(finalUri)
                 .setMediaId(song.id)
                 .setCustomCacheKey(cacheKey) // CRITICAL: Stable cache key
                 .setMediaMetadata(
@@ -630,13 +644,6 @@ class MusicPlayer @Inject constructor(
                         .setArtist(song.artist)
                         .setAlbumTitle(song.album)
                         .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
-                        .setExtras(android.os.Bundle().apply {
-                            // Pass audio URL for dual-stream video (720p/1080p)
-                            if (audioStreamUrl != null) {
-                                putString("AUDIO_STREAM_URL", audioStreamUrl)
-                                android.util.Log.d("MusicPlayer", "Adding separate audio stream for merging")
-                            }
-                        })
                         .build()
                 )
             
