@@ -402,6 +402,53 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun playOfflineShuffle() {
+        viewModelScope.launch {
+            try {
+                val downloaded = _uiState.value.downloadedSongs
+                val local = _uiState.value.localSongs
+                val cached = getCachedSongs()
+                
+                val allOffline = (downloaded + local + cached).distinctBy { it.id }
+                if (allOffline.isNotEmpty()) {
+                    val shuffled = allOffline.shuffled()
+                    musicPlayer.playSong(shuffled.first(), shuffled, 0, true)
+                }
+            } catch (e: Exception) { }
+        }
+    }
+
+    private suspend fun getCachedSongs(): List<Song> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val allKeys = cache.keys
+        val allHistory = listeningHistoryDao.getAllHistory()
+        val historyMap = allHistory.associateBy { it.songId }
+        
+        val cachedSongs = mutableListOf<Song>()
+        
+        for (key in allKeys) {
+            val songId = key.removePrefix("audio_").removePrefix("video_").substringBefore("_")
+            val history = historyMap[songId]
+            if (history != null) {
+                cachedSongs.add(Song(
+                    id = history.songId,
+                    title = history.songTitle,
+                    artist = history.artist,
+                    album = history.album ?: "",
+                    duration = history.duration,
+                    thumbnailUrl = history.thumbnailUrl,
+                    source = try { 
+                        com.suvojeet.suvmusic.data.model.SongSource.valueOf(history.source) 
+                    } catch (e: Exception) { 
+                        com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE 
+                    },
+                    localUri = history.localUri?.let { android.net.Uri.parse(it) },
+                    artistId = history.artistId
+                ))
+            }
+        }
+        cachedSongs
+    }
+
     fun setViewMode(mode: LibraryViewMode) {
         _uiState.update { it.copy(viewMode = mode) }
     }

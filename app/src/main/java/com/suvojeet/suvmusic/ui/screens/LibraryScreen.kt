@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.outlined.FileDownload
@@ -158,6 +159,12 @@ fun LibraryScreen(
                                         onPlaylistClick(PlaylistDisplayItem(id = "LM", name = "Liked Songs", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
                                     SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
+                                    SmartPlaylistType.DEVICE_SONGS -> {
+                                        onPlaylistClick(PlaylistDisplayItem(id = "DEVICE_SONGS", name = "Device files", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
+                                    }
+                                    SmartPlaylistType.OFFLINE_SHUFFLE -> {
+                                        viewModel.playOfflineShuffle()
+                                    }
                                     SmartPlaylistType.TOP_50 -> {
                                         onPlaylistClick(PlaylistDisplayItem(id = "TOP_50", name = "My Top 50", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
@@ -196,8 +203,31 @@ fun LibraryScreen(
                         )
                     } else {
                         PlaylistsList(
-                            playlists = uiState.playlists,
+                            uiState = uiState,
                             onPlaylistClick = onPlaylistClick,
+                            onSmartPlaylistClick = { type ->
+                                when (type) {
+                                    SmartPlaylistType.LIKED -> {
+                                        if (uiState.likedSongs.isEmpty()) {
+                                            viewModel.syncLikedSongs()
+                                        }
+                                        onPlaylistClick(PlaylistDisplayItem(id = "LM", name = "Liked Songs", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
+                                    }
+                                    SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
+                                    SmartPlaylistType.DEVICE_SONGS -> {
+                                        onPlaylistClick(PlaylistDisplayItem(id = "DEVICE_SONGS", name = "Device files", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
+                                    }
+                                    SmartPlaylistType.OFFLINE_SHUFFLE -> {
+                                        viewModel.playOfflineShuffle()
+                                    }
+                                    SmartPlaylistType.TOP_50 -> {
+                                        onPlaylistClick(PlaylistDisplayItem(id = "TOP_50", name = "My Top 50", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
+                                    }
+                                    SmartPlaylistType.CACHED -> {
+                                        onPlaylistClick(PlaylistDisplayItem(id = "CACHED_ALL", name = "Cached Songs", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
+                                    }
+                                }
+                            },
                             onMoreClick = { playlist ->
                                 selectedPlaylist = playlist
                                 showPlaylistMenu = true
@@ -511,7 +541,7 @@ fun LibraryControlBar(
 }
 
 enum class SmartPlaylistType {
-    LIKED, DOWNLOADED, TOP_50, CACHED
+    LIKED, DOWNLOADED, TOP_50, CACHED, DEVICE_SONGS, OFFLINE_SHUFFLE
 }
 
 @Composable
@@ -558,6 +588,22 @@ fun PlaylistsGrid(
         }
         item {
              SmartPlaylistCard(
+                title = "Device files",
+                icon = Icons.Default.MusicNote,
+                count = "${uiState.localSongs.size} songs",
+                onClick = { onSmartPlaylistClick(SmartPlaylistType.DEVICE_SONGS) }
+            )
+        }
+        item {
+             SmartPlaylistCard(
+                title = "Offline Music",
+                icon = Icons.Default.Shuffle,
+                count = "Shuffle all",
+                onClick = { onSmartPlaylistClick(SmartPlaylistType.OFFLINE_SHUFFLE) }
+            )
+        }
+        item {
+             SmartPlaylistCard(
                 title = "My top 50",
                 icon = Icons.Default.TrendingUp,
                 count = "${uiState.top50SongCount} songs",
@@ -583,6 +629,41 @@ fun PlaylistsGrid(
     }
 }
 
+@Composable
+fun SmartPlaylistListItem(
+    title: String,
+    icon: ImageVector,
+    count: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+            Text(count, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
 @Composable
 fun SmartPlaylistCard(
@@ -699,8 +780,9 @@ fun GridPlaylistCard(
 
 @Composable
 fun PlaylistsList(
-    playlists: List<PlaylistDisplayItem>,
+    uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onSmartPlaylistClick: (SmartPlaylistType) -> Unit,
     onMoreClick: (PlaylistDisplayItem) -> Unit,
     topBar: @Composable () -> Unit,
     filterChips: @Composable () -> Unit,
@@ -713,7 +795,57 @@ fun PlaylistsList(
          item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
          item { Box(modifier = Modifier.padding(bottom = 8.dp)) { controlBar() } }
          
-         items(playlists) { playlist ->
+         // Smart Playlists
+         item {
+             SmartPlaylistListItem(
+                 title = "Liked",
+                 icon = Icons.Default.FavoriteBorder,
+                 count = "${uiState.likedSongs.size} songs",
+                 onClick = { onSmartPlaylistClick(SmartPlaylistType.LIKED) }
+             )
+         }
+         item {
+             SmartPlaylistListItem(
+                 title = "Downloaded",
+                 icon = Icons.Outlined.FileDownload,
+                 count = "${uiState.downloadedSongs.size} songs",
+                 onClick = { onSmartPlaylistClick(SmartPlaylistType.DOWNLOADED) }
+             )
+         }
+         item {
+             SmartPlaylistListItem(
+                 title = "Device files",
+                 icon = Icons.Default.MusicNote,
+                 count = "${uiState.localSongs.size} songs",
+                 onClick = { onSmartPlaylistClick(SmartPlaylistType.DEVICE_SONGS) }
+             )
+         }
+         item {
+             SmartPlaylistListItem(
+                 title = "Offline Music",
+                 icon = Icons.Default.Shuffle,
+                 count = "Shuffle all",
+                 onClick = { onSmartPlaylistClick(SmartPlaylistType.OFFLINE_SHUFFLE) }
+             )
+         }
+         item {
+             SmartPlaylistListItem(
+                 title = "My top 50",
+                 icon = Icons.Default.TrendingUp,
+                 count = "${uiState.top50SongCount} songs",
+                 onClick = { onSmartPlaylistClick(SmartPlaylistType.TOP_50) }
+             )
+         }
+         item {
+             SmartPlaylistListItem(
+                 title = "Cached",
+                 icon = Icons.Default.Cached,
+                 count = "${uiState.cachedSongCount} songs",
+                 onClick = { onSmartPlaylistClick(SmartPlaylistType.CACHED) }
+             )
+         }
+
+         items(uiState.playlists) { playlist ->
             // Re-use existing list item style or create simplified one
              Row(
                 modifier = Modifier
