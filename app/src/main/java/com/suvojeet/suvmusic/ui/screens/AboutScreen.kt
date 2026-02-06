@@ -188,7 +188,7 @@ fun AboutScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "With support for advanced audio effects like Reverb and Virtualization, alongside high-fidelity streaming, SuvMusic ensures a superior auditory journey tailored for audiophiles.",
+                        text = "With support for high-fidelity streaming and advanced audio normalization, SuvMusic ensures a superior auditory journey tailored for audiophiles.",
                         style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
                         color = onSurfaceVariant
                     )
@@ -233,9 +233,9 @@ fun AboutScreen(
                         accentColor = primaryColor
                     )
                     FeatureRow(
-                        icon = Icons.Default.Bolt,
-                        title = "Audio Effects",
-                        subtitle = "Reverb & Virtualizer support",
+                        icon = Icons.Default.Language,
+                        title = "Spatial Audio",
+                        subtitle = "Audio AR support for headphones",
                         accentColor = primaryColor,
                         showDivider = false
                     )
