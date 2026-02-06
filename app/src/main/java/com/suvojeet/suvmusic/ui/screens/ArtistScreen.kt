@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -329,7 +330,7 @@ fun ArtistScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.cd_back),
-                                tint = Color.White
+                                tint = lerp(Color.White, MaterialTheme.colorScheme.onBackground, headerAlpha)
                             )
                         }
                         
@@ -430,7 +431,7 @@ fun ImmersiveArtistHeader(
                      Text(
                          text = "Verified Artist", // Use string resource in real app if available
                          style = MaterialTheme.typography.labelMedium,
-                         color = Color.White.copy(alpha = 0.9f),
+                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
                          fontWeight = FontWeight.Medium
                      )
                  }
@@ -443,7 +444,7 @@ fun ImmersiveArtistHeader(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-1).sp
                 ),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -453,7 +454,7 @@ fun ImmersiveArtistHeader(
                 Text(
                     text = "${artist.subscribers} subscribers",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -485,13 +486,13 @@ fun ImmersiveArtistHeader(
                     onClick = onShuffle,
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), CircleShape)
                         .clip(CircleShape)
                 ) {
                     Icon(
                          imageVector = Icons.Default.Shuffle,
                          contentDescription = stringResource(R.string.action_shuffle),
-                         tint = Color.White
+                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
@@ -500,13 +501,13 @@ fun ImmersiveArtistHeader(
                     onClick = onStartRadio,
                        modifier = Modifier
                         .size(48.dp)
-                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), CircleShape)
                         .clip(CircleShape)
                 ) {
                      Icon(
                          imageVector = Icons.Default.Radio,
                          contentDescription = stringResource(R.string.action_start_radio),
-                         tint = Color.White
+                         tint = MaterialTheme.colorScheme.onBackground
                      )
                 }
 
@@ -514,9 +515,9 @@ fun ImmersiveArtistHeader(
                  OutlinedButton(
                      onClick = onSubscribe,
                      shape = RoundedCornerShape(50),
-                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)),
                      colors = ButtonDefaults.outlinedButtonColors(
-                         contentColor = Color.White
+                         contentColor = MaterialTheme.colorScheme.onBackground
                      ),
                      modifier = Modifier.height(48.dp)
                  ) {
@@ -524,7 +525,7 @@ fun ImmersiveArtistHeader(
                          CircularProgressIndicator(
                              modifier = Modifier.size(16.dp),
                              strokeWidth = 2.dp,
-                             color = Color.White
+                             color = MaterialTheme.colorScheme.onBackground
                          )
                      } else {
                          Text(
@@ -869,13 +870,13 @@ fun AboutArtistCard(
                  text = "${artist.views ?: "Hundreds of"} monthly listeners", // Mocking data if not available
                  style = MaterialTheme.typography.titleMedium,
                  fontWeight = FontWeight.Bold,
-                 color = Color.White
+                 color = if (artist.thumbnailUrl != null) Color.White else MaterialTheme.colorScheme.onSurface
              )
              Spacer(modifier = Modifier.height(12.dp))
              Text(
                  text = artist.description ?: "",
                  style = MaterialTheme.typography.bodyMedium,
-                 color = Color.White.copy(alpha = 0.8f),
+                 color = if (artist.thumbnailUrl != null) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                  maxLines = 3,
                  overflow = TextOverflow.Ellipsis,
                  lineHeight = 22.sp
