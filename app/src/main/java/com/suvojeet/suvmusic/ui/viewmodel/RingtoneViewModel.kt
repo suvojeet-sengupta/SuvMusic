@@ -7,5 +7,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RingtoneViewModel @Inject constructor(
-    val ringtoneHelper: RingtoneHelper
-) : ViewModel()
+    val ringtoneHelper: RingtoneHelper,
+    private val youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository
+) : ViewModel() {
+    suspend fun getStreamUrl(videoId: String): String? {
+        return youTubeRepository.getStreamUrl(videoId)
+    }
+}
