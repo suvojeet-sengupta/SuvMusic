@@ -97,8 +97,6 @@ fun PlaybackSettingsScreen(
     var showHapticsIntensitySheet by remember { mutableStateOf(false) }
     val hapticsModeSheetState = rememberModalBottomSheetState()
     val hapticsIntensitySheetState = rememberModalBottomSheetState()
-    var showReverbSheet by remember { mutableStateOf(false) }
-    val reverbSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -740,53 +738,6 @@ fun PlaybackSettingsScreen(
                 )
             }
 
-            // Audio Effects
-            PlaybackSectionTitle("Audio Effects")
-
-            ListItem(
-                headlineContent = { Text("Reverb Preset") },
-                supportingContent = { Text(uiState.reverbPreset.label) },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable { showReverbSheet = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Virtualizer (Surround Sound)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "${(uiState.virtualizerStrength / 10)}%",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Slider(
-                    value = uiState.virtualizerStrength.toFloat(),
-                    onValueChange = { viewModel.setVirtualizerStrength(it.toInt()) },
-                    valueRange = 0f..1000f,
-                    steps = 99
-                )
-            }
-            
             // Gestures
             PlaybackSectionTitle("Gestures")
             
@@ -1216,48 +1167,6 @@ fun PlaybackSettingsScreen(
                 }
                 
                 Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-    }
-
-    // Reverb Preset Bottom Sheet
-    if (showReverbSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showReverbSheet = false },
-            sheetState = reverbSheetState
-        ) {
-            Column(modifier = Modifier.padding(16.dp).navigationBarsPadding()) {
-                Text(
-                    text = "Reverb Preset",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                com.suvojeet.suvmusic.data.model.ReverbPreset.entries.forEach { preset ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.setReverbPreset(preset)
-                                scope.launch {
-                                    reverbSheetState.hide()
-                                    showReverbSheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.reverbPreset == preset,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = preset.label,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
             }
         }
     }
