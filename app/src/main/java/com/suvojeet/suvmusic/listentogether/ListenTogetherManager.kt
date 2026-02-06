@@ -769,6 +769,15 @@ class ListenTogetherManager @Inject constructor(
 
     suspend fun getServerUrl() = client.getServerUrl()
     suspend fun setServerUrl(url: String) = client.setServerUrl(url)
+    
+    suspend fun getAutoApproval() = client.getAutoApproval()
+    suspend fun setAutoApproval(enabled: Boolean) = client.setAutoApproval(enabled)
+    
+    suspend fun getSyncVolume() = client.getSyncVolume()
+    suspend fun setSyncVolume(enabled: Boolean) = client.setSyncVolume(enabled)
+    
+    suspend fun getMuteHost() = client.getMuteHost()
+    suspend fun setMuteHost(enabled: Boolean) = client.setMuteHost(enabled)
 
     private var heartbeatJob: Job? = null
     private fun startHeartbeat() {
