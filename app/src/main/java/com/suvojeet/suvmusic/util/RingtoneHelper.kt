@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.ExportException
@@ -77,7 +78,7 @@ class RingtoneHelper @Inject constructor(
             if (downloadedSong?.localUri != null) {
                 onProgress(0.1f, "Using downloaded file...")
                 val uri = downloadedSong.localUri
-                tempFile = File(context.cacheDir, "temp_ringtone_source_${song.id}.m4a")
+                tempFile = File(context.cacheDir, "temp_ringtone_source_${song.id}")
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     tempFile.outputStream().use { output ->
                         input.copyTo(output)
@@ -106,7 +107,7 @@ class RingtoneHelper @Inject constructor(
                 val contentLength = if (length != androidx.media3.common.C.LENGTH_UNSET.toLong()) length else -1L
                 val inputStream = androidx.media3.datasource.DataSourceInputStream(ds, dataSpec)
                 
-                tempFile = File(context.cacheDir, "temp_ringtone_source_${song.id}.m4a")
+                tempFile = File(context.cacheDir, "temp_ringtone_source_${song.id}")
                 tempFile.outputStream().use { outputStream ->
                     val buffer = ByteArray(8192)
                     var bytesRead: Int
@@ -142,9 +143,9 @@ class RingtoneHelper @Inject constructor(
 
             val success = trimAudio(context, tempFile, trimmedFile, startMs, endMs)
             
-            if (!success) {
+            if (!success || !trimmedFile.exists() || trimmedFile.length() == 0L) {
                 withContext(Dispatchers.Main) {
-                    onComplete(false, "Failed to trim audio")
+                    onComplete(false, "Failed to trim audio or output is empty")
                 }
                 return@withContext
             }
@@ -165,6 +166,7 @@ class RingtoneHelper @Inject constructor(
                         put(MediaStore.Audio.Media.IS_ALARM, true)
                         put(MediaStore.Audio.Media.TITLE, song.title + " (Ringtone)")
                         put(MediaStore.Audio.Media.ARTIST, song.artist)
+                        put(MediaStore.Audio.Media.IS_PENDING, 1)
                     }
                     
                     val uri = context.contentResolver.insert(
@@ -177,6 +179,12 @@ class RingtoneHelper @Inject constructor(
                             inputStream.copyTo(outputStream)
                         }
                     }
+
+                    // Release pending status
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
+                    context.contentResolver.update(uri, contentValues, null, null)
+                    
                     uri
                 } else {
                     val ringtonesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES)
@@ -245,7 +253,12 @@ class RingtoneHelper @Inject constructor(
                 )
                 .build()
 
+            val editedMediaItem = EditedMediaItem.Builder(mediaItem)
+                .setRemoveVideo(true)
+                .build()
+
             val transformer = Transformer.Builder(context)
+                .setAudioMimeType(MimeTypes.AUDIO_AAC)
                 .build()
 
             val listener = object : Transformer.Listener {
@@ -261,7 +274,7 @@ class RingtoneHelper @Inject constructor(
 
             transformer.addListener(listener)
             try {
-                transformer.start(mediaItem, outputFile.absolutePath)
+                transformer.start(editedMediaItem, outputFile.absolutePath)
             } catch (e: Exception) {
                 e.printStackTrace()
                 continuation.resume(false)
