@@ -197,6 +197,8 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): String? = streamingService.getVideoStreamUrl(videoId, quality)
 
+    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null) = streamingService.getVideoStreamResult(videoId, quality)
+
     suspend fun getStreamUrlForDownload(videoId: String): String? = streamingService.getStreamUrlForDownload(videoId)
 
     suspend fun getSongDetails(videoId: String): Song? = streamingService.getSongDetails(videoId)
