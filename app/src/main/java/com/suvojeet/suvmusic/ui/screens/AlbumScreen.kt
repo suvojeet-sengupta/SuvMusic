@@ -1,4 +1,5 @@
-package com.suvojeet.suvmusic.ui.screens
+
+import com.suvojeet.suvmusic.ui.components.BounceButton
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -427,14 +428,14 @@ private fun AlbumHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Download Button
-            IconButton(
+            BounceButton(
                 onClick = onDownload,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
-                    )
+                size = 48.dp,
+                shape = CircleShape,
+                modifier = Modifier.background(
+                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    shape = CircleShape
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Download,
@@ -444,14 +445,14 @@ private fun AlbumHeader(
             }
 
             // Save Button (Heart)
-            IconButton(
+            BounceButton(
                 onClick = onToggleSave,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
-                    )
+                size = 48.dp,
+                shape = CircleShape,
+                modifier = Modifier.background(
+                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    shape = CircleShape
+                )
             ) {
                 Icon(
                     imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -461,32 +462,31 @@ private fun AlbumHeader(
             }
             
             // Play Button (Large Central)
-            androidx.compose.material3.FilledIconButton(
+            BounceButton(
                 onClick = onPlayAll,
+                size = 72.dp,
+                shape = androidx.compose.foundation.shape.CircleShape,
                 modifier = Modifier
-                    .size(72.dp)
-                    .shadow(elevation = 12.dp, shape = androidx.compose.foundation.shape.CircleShape, spotColor = MaterialTheme.colorScheme.primary),
-                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                    .shadow(elevation = 12.dp, shape = androidx.compose.foundation.shape.CircleShape, spotColor = MaterialTheme.colorScheme.primary)
+                    .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(36.dp)
                 )
             }
             
             // Share Button
-            IconButton(
+            BounceButton(
                 onClick = onShare,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
-                    )
+                size = 48.dp,
+                shape = CircleShape,
+                modifier = Modifier.background(
+                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    shape = CircleShape
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Share,
@@ -496,14 +496,14 @@ private fun AlbumHeader(
             }
             
             // More Button
-            IconButton(
+            BounceButton(
                 onClick = onMoreClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
-                    )
+                size = 48.dp,
+                shape = CircleShape,
+                modifier = Modifier.background(
+                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    shape = CircleShape
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
