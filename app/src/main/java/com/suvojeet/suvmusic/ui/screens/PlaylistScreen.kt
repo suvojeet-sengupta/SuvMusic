@@ -1,3 +1,4 @@
+package com.suvojeet.suvmusic.ui.screens
 
 import com.suvojeet.suvmusic.ui.components.BounceButton
 
