@@ -125,8 +125,10 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             val result = imageLoader.execute(request)
             val drawable = result.drawable ?: return null
 
-            if (drawable is BitmapDrawable && drawable.bitmap != null && drawable.bitmap.width > 0 && drawable.bitmap.height > 0) {
-                drawable.bitmap
+            if (drawable is BitmapDrawable && drawable.bitmap != null && !drawable.bitmap.isRecycled && drawable.bitmap.width > 0 && drawable.bitmap.height > 0) {
+                // IMPORTANT: Create a copy because Coil manages the original bitmap's lifecycle.
+                // MediaSession may use this bitmap after Coil recycles the original, causing crash.
+                drawable.bitmap.copy(drawable.bitmap.config ?: Bitmap.Config.ARGB_8888, false)
             } else {
                 createFallbackBitmap(drawable)
             }
