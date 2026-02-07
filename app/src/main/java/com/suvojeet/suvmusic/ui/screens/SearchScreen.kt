@@ -70,6 +70,7 @@ import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.data.model.RecentSearchItem
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
@@ -366,7 +367,10 @@ fun SearchScreen(
                             items(uiState.albumResults) { album ->
                                 AlbumSearchListItem(
                                     album = album,
-                                    onClick = { onAlbumClick(album) }
+                                    onClick = { 
+                                        viewModel.addToRecentSearches(album)
+                                        onAlbumClick(album) 
+                                    }
                                 )
                             }
                         }
@@ -374,7 +378,10 @@ fun SearchScreen(
                             items(uiState.playlistResults) { playlist ->
                                 PlaylistSearchListItem(
                                     playlist = playlist,
-                                    onClick = { onPlaylistClick(playlist.id) }
+                                    onClick = { 
+                                        viewModel.addToRecentSearches(playlist)
+                                        onPlaylistClick(playlist.id) 
+                                    }
                                 )
                             }
                         }
@@ -417,7 +424,10 @@ fun SearchScreen(
                                 items(uiState.playlistResults) { playlist ->
                                     PlaylistSearchCard(
                                         playlist = playlist,
-                                        onClick = { onPlaylistClick(playlist.id) }
+                                        onClick = { 
+                                            viewModel.addToRecentSearches(playlist)
+                                            onPlaylistClick(playlist.id) 
+                                        }
                                     )
                                 }
                             }
@@ -442,7 +452,10 @@ fun SearchScreen(
                                 items(uiState.albumResults) { album ->
                                     AlbumSearchCard(
                                         album = album,
-                                        onClick = { onAlbumClick(album) }
+                                        onClick = { 
+                                            viewModel.addToRecentSearches(album)
+                                            onAlbumClick(album) 
+                                        }
                                     )
                                 }
                             }
@@ -516,21 +529,46 @@ fun SearchScreen(
                         }
                     }
                     
-                    items(uiState.recentSearches) { song ->
-                        SearchResultItem(
-                            song = song,
-                            onClick = {
-                                viewModel.addToRecentSearches(song)
-                                onSongClick(uiState.recentSearches, uiState.recentSearches.indexOf(song))
-                            },
-                            onArtistClick = { artistId ->
-                                onArtistClick(artistId)
-                            },
-                            onMoreClick = {
-                                selectedSong = song
-                                showSongMenu = true
+                    items(uiState.recentSearches) { item ->
+                        when (item) {
+                            is RecentSearchItem.SongItem -> {
+                                SearchResultItem(
+                                    song = item.song,
+                                    onClick = {
+                                        viewModel.onRecentSearchClick(item)
+                                        // Filter only songs from recent searches for playback context
+                                        val songList = uiState.recentSearches.mapNotNull { (it as? RecentSearchItem.SongItem)?.song }
+                                        val index = songList.indexOfFirst { it.id == item.song.id }.coerceAtLeast(0)
+                                        onSongClick(songList, index)
+                                    },
+                                    onArtistClick = { artistId ->
+                                        onArtistClick(artistId)
+                                    },
+                                    onMoreClick = {
+                                        selectedSong = item.song
+                                        showSongMenu = true
+                                    }
+                                )
                             }
-                        )
+                            is RecentSearchItem.AlbumItem -> {
+                                AlbumSearchListItem(
+                                    album = item.album,
+                                    onClick = {
+                                        viewModel.onRecentSearchClick(item)
+                                        onAlbumClick(item.album)
+                                    }
+                                )
+                            }
+                            is RecentSearchItem.PlaylistItem -> {
+                                PlaylistSearchListItem(
+                                    playlist = item.playlist,
+                                    onClick = {
+                                        viewModel.onRecentSearchClick(item)
+                                        onPlaylistClick(item.playlist.id)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
                 
