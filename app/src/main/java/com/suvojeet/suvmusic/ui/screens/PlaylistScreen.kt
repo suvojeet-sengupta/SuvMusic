@@ -1,4 +1,5 @@
-package com.suvojeet.suvmusic.ui.screens
+
+import com.suvojeet.suvmusic.ui.components.BounceButton
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
@@ -571,15 +572,14 @@ private fun PlaylistHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Download Button
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .dpadFocusable(onClick = onDownload, shape = CircleShape)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            BounceButton(
+                onClick = onDownload,
+                size = 48.dp,
+                shape = CircleShape,
+                modifier = Modifier.background(
+                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    shape = CircleShape
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Download,
@@ -590,15 +590,14 @@ private fun PlaylistHeader(
 
             // Save Button (Bookmark icon as requested) - Hide for Liked Songs
             if (playlist.id != "LM") {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .dpadFocusable(onClick = onToggleSave, shape = CircleShape)
-                        .background(
-                            color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                            shape = CircleShape
-                        ),
-                     contentAlignment = Alignment.Center
+                BounceButton(
+                    onClick = onToggleSave,
+                    size = 48.dp,
+                    shape = CircleShape,
+                    modifier = Modifier.background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = CircleShape
+                    )
                 ) {
                     Icon(
                         imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -609,17 +608,13 @@ private fun PlaylistHeader(
             }
             
             // Play Button (Large Central)
-            Box(
-                 modifier = Modifier
-                    .size(72.dp)
+            BounceButton(
+                onClick = onPlayAll,
+                size = 72.dp,
+                shape = CircleShape,
+                modifier = Modifier
                     .shadow(elevation = 12.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary)
-                    .dpadFocusable(
-                        onClick = onPlayAll,
-                        shape = CircleShape,
-                        focusedScale = 1.1f
-                    )
-                    .background(MaterialTheme.colorScheme.primary, CircleShape),
-                 contentAlignment = Alignment.Center
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
@@ -630,15 +625,14 @@ private fun PlaylistHeader(
             }
             
             // Share Button
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .dpadFocusable(onClick = onShare, shape = CircleShape)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            BounceButton(
+                onClick = onShare,
+                size = 48.dp,
+                shape = CircleShape,
+                modifier = Modifier.background(
+                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    shape = CircleShape
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Share,
@@ -648,15 +642,14 @@ private fun PlaylistHeader(
             }
             
             // More Button
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .dpadFocusable(onClick = onMoreClick, shape = CircleShape)
-                    .background(
-                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            BounceButton(
+                onClick = onMoreClick,
+                size = 48.dp,
+                shape = CircleShape,
+                modifier = Modifier.background(
+                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    shape = CircleShape
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
