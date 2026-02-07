@@ -7,6 +7,7 @@ import com.suvojeet.suvmusic.data.model.Album
 import com.suvojeet.suvmusic.data.model.Artist
 import com.suvojeet.suvmusic.data.model.BrowseCategory
 import com.suvojeet.suvmusic.data.model.Playlist
+import com.suvojeet.suvmusic.data.model.RecentSearchItem
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
@@ -55,7 +56,7 @@ data class SearchUiState(
     val suggestions: List<String> = emptyList(),
     val browseCategories: List<BrowseCategory> = emptyList(),
     val selectedCategory: BrowseCategory? = null,
-    val recentSearches: List<Song> = emptyList(),
+    val recentSearches: List<RecentSearchItem> = emptyList(),
     val selectedTab: SearchTab = SearchTab.YOUTUBE_MUSIC,
     val showSuggestions: Boolean = false,
     val isLoading: Boolean = false,
@@ -427,7 +428,21 @@ class SearchViewModel @Inject constructor(
     
     fun addToRecentSearches(song: Song) {
         viewModelScope.launch {
-            sessionManager.addRecentSearch(song)
+            sessionManager.addRecentSearch(RecentSearchItem.SongItem(song))
+            loadRecentSearches()
+        }
+    }
+
+    fun addToRecentSearches(album: Album) {
+        viewModelScope.launch {
+            sessionManager.addRecentSearch(RecentSearchItem.AlbumItem(album))
+            loadRecentSearches()
+        }
+    }
+
+    fun addToRecentSearches(playlist: Playlist) {
+        viewModelScope.launch {
+            sessionManager.addRecentSearch(RecentSearchItem.PlaylistItem(playlist))
             loadRecentSearches()
         }
     }
@@ -439,17 +454,22 @@ class SearchViewModel @Inject constructor(
         }
     }
     
-    fun onRecentSearchClick(song: Song) {
-        // Update query to show the song title
+    fun onRecentSearchClick(item: RecentSearchItem) {
+        // Update query to show the title
         _uiState.update { 
             it.copy(
-                query = song.title,
+                query = item.title,
                 isSearchActive = true,
                 showSuggestions = false
             )
         }
         search()
-        search()
+        
+        // Move to top of recent logic is handled by adding it again
+        viewModelScope.launch {
+            sessionManager.addRecentSearch(item)
+            loadRecentSearches()
+        }
     }
 
     fun playNext(song: Song) {

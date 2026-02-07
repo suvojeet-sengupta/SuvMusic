@@ -26,7 +26,9 @@ import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.data.model.HomeSection
 import com.suvojeet.suvmusic.data.model.HomeSectionType
 import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
+import com.suvojeet.suvmusic.data.model.Playlist
 import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.data.model.RecentSearchItem
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.data.model.SongSource
@@ -1299,63 +1301,115 @@ class SessionManager @Inject constructor(
         }
     }
     
-    suspend fun getRecentSearches(): List<Song> = withContext(Dispatchers.IO) {
+    suspend fun getRecentSearches(): List<RecentSearchItem> = withContext(Dispatchers.IO) {
         val json = context.dataStore.data.first()[RECENT_SEARCHES_KEY] ?: return@withContext emptyList()
         withContext(Dispatchers.Default) {
             parseRecentSearchesJson(json)
         }
     }
     
-    val recentSearchesFlow: Flow<List<Song>> = context.dataStore.data.map { preferences ->
+    val recentSearchesFlow: Flow<List<RecentSearchItem>> = context.dataStore.data.map { preferences ->
         val json = preferences[RECENT_SEARCHES_KEY] ?: return@map emptyList()
         parseRecentSearchesJson(json)
     }
     
-    private fun parseRecentSearchesJson(json: String): List<Song> {
+    private fun parseRecentSearchesJson(json: String): List<RecentSearchItem> {
         return try {
             val jsonArray = JSONArray(json)
-            val songs = mutableListOf<Song>()
+            val items = mutableListOf<RecentSearchItem>()
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
-                songs.add(
-                    Song(
-                        id = obj.getString("id"),
-                        title = obj.getString("title"),
-                        artist = obj.getString("artist"),
-                        album = obj.optString("album", ""),
-                        thumbnailUrl = obj.optString("thumbnailUrl", null),
-                        duration = obj.optLong("duration", 0L),
-                        source = try {
-                            SongSource.valueOf(obj.optString("source", "YOUTUBE"))
-                        } catch (e: Exception) {
-                            SongSource.YOUTUBE
-                        }
-                    )
-                )
+                val type = obj.optString("item_type", "SONG") // Default to SONG for backward compatibility
+
+                when (type) {
+                    "SONG" -> {
+                        val song = Song(
+                            id = obj.getString("id"),
+                            title = obj.getString("title"),
+                            artist = obj.getString("artist"),
+                            album = obj.optString("album", ""),
+                            thumbnailUrl = obj.optString("thumbnailUrl", null),
+                            duration = obj.optLong("duration", 0L),
+                            source = try {
+                                SongSource.valueOf(obj.optString("source", "YOUTUBE"))
+                            } catch (e: Exception) {
+                                SongSource.YOUTUBE
+                            }
+                        )
+                        items.add(RecentSearchItem.SongItem(song))
+                    }
+                    "ALBUM" -> {
+                        val album = Album(
+                            id = obj.getString("id"),
+                            title = obj.getString("title"),
+                            artist = obj.getString("artist"),
+                            thumbnailUrl = obj.optString("thumbnailUrl", null),
+                            description = obj.optString("description", null),
+                            year = obj.optString("year", null)
+                        )
+                        items.add(RecentSearchItem.AlbumItem(album))
+                    }
+                    "PLAYLIST" -> {
+                        val playlist = Playlist(
+                            id = obj.getString("id"),
+                            title = obj.getString("title"),
+                            author = obj.getString("author"),
+                            thumbnailUrl = obj.optString("thumbnailUrl", null),
+                            songs = emptyList<Song>(), // Don't persist songs for recent searches
+                            description = obj.optString("description", null)
+                        )
+                        items.add(RecentSearchItem.PlaylistItem(playlist))
+                    }
+                }
             }
-            songs
+            items
         } catch (e: Exception) {
             emptyList()
         }
     }
     
-    suspend fun addRecentSearch(song: Song) {
+    suspend fun addRecentSearch(item: RecentSearchItem) {
         val currentSearches = getRecentSearches().toMutableList()
-        currentSearches.removeAll { it.id == song.id }
-        currentSearches.add(0, song)
+        currentSearches.removeAll { it.id == item.id }
+        currentSearches.add(0, item)
         val trimmed = currentSearches.take(MAX_RECENT_SEARCHES)
         
         val jsonArray = JSONArray()
-        trimmed.forEach { s ->
-            jsonArray.put(JSONObject().apply {
-                put("id", s.id)
-                put("title", s.title)
-                put("artist", s.artist)
-                put("album", s.album ?: "")
-                put("thumbnailUrl", s.thumbnailUrl ?: "")
-                put("duration", s.duration)
-                put("source", s.source.name)
-            })
+        trimmed.forEach { searchItem ->
+            val obj = JSONObject()
+            when (searchItem) {
+                is RecentSearchItem.SongItem -> {
+                    val s = searchItem.song
+                    obj.put("item_type", "SONG")
+                    obj.put("id", s.id)
+                    obj.put("title", s.title)
+                    obj.put("artist", s.artist)
+                    obj.put("album", s.album)
+                    obj.put("thumbnailUrl", s.thumbnailUrl ?: "")
+                    obj.put("duration", s.duration)
+                    obj.put("source", s.source.name)
+                }
+                is RecentSearchItem.AlbumItem -> {
+                    val a = searchItem.album
+                    obj.put("item_type", "ALBUM")
+                    obj.put("id", a.id)
+                    obj.put("title", a.title)
+                    obj.put("artist", a.artist)
+                    obj.put("thumbnailUrl", a.thumbnailUrl ?: "")
+                    obj.put("description", a.description ?: "")
+                    obj.put("year", a.year ?: "")
+                }
+                is RecentSearchItem.PlaylistItem -> {
+                    val p = searchItem.playlist
+                    obj.put("item_type", "PLAYLIST")
+                    obj.put("id", p.id)
+                    obj.put("title", p.title)
+                    obj.put("author", p.author)
+                    obj.put("thumbnailUrl", p.thumbnailUrl ?: "")
+                    obj.put("description", p.description ?: "")
+                }
+            }
+            jsonArray.put(obj)
         }
         
         context.dataStore.edit { preferences ->
