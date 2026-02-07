@@ -125,16 +125,72 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             val result = imageLoader.execute(request)
             val drawable = result.drawable ?: return null
 
-            if (drawable is BitmapDrawable && drawable.bitmap != null && !drawable.bitmap.isRecycled && drawable.bitmap.width > 0 && drawable.bitmap.height > 0) {
-                // IMPORTANT: Create a copy because Coil manages the original bitmap's lifecycle.
-                // MediaSession may use this bitmap after Coil recycles the original, causing crash.
-                drawable.bitmap.copy(drawable.bitmap.config ?: Bitmap.Config.ARGB_8888, false)
-            } else {
-                createFallbackBitmap(drawable)
-            }
+            // Always create a fresh bitmap by drawing to canvas.
+            // This is the safest approach because:
+            // 1. Coil can recycle cached bitmaps at any time (race condition)
+            // 2. bitmap.copy() can fail or return null if bitmap is recycled mid-copy
+            // 3. Drawing to a fresh canvas ensures we own the bitmap entirely
+            createSafeBitmapFromDrawable(drawable)
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * Creates a safe, owned bitmap from any drawable by drawing it to a fresh canvas.
+     * This avoids race conditions with Coil's bitmap recycling.
+     */
+    private fun createSafeBitmapFromDrawable(drawable: Drawable): Bitmap? {
+        return try {
+            val width: Int
+            val height: Int
+
+            if (drawable is BitmapDrawable && drawable.bitmap != null && !drawable.bitmap.isRecycled) {
+                // Try to get dimensions from the bitmap first
+                try {
+                    width = drawable.bitmap.width.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
+                    height = drawable.bitmap.height.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
+                } catch (e: Exception) {
+                    // Bitmap was recycled while checking, use default size
+                    return createPlaceholderBitmap()
+                }
+            } else {
+                width = drawable.intrinsicWidth.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
+                height = drawable.intrinsicHeight.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
+            }
+
+            // Create a completely fresh bitmap that we own
+            val freshBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(freshBitmap)
+
+            try {
+                drawable.setBounds(0, 0, width, height)
+                drawable.draw(canvas)
+            } catch (e: Exception) {
+                // Drawing failed (bitmap recycled during draw), return placeholder
+                freshBitmap.recycle()
+                return createPlaceholderBitmap()
+            }
+
+            // Verify the bitmap is valid before returning
+            if (freshBitmap.isRecycled || freshBitmap.width <= 0 || freshBitmap.height <= 0) {
+                return createPlaceholderBitmap()
+            }
+
+            freshBitmap
+        } catch (e: Exception) {
+            createPlaceholderBitmap()
+        }
+    }
+
+    /**
+     * Creates a simple placeholder bitmap when all else fails.
+     */
+    private fun createPlaceholderBitmap(): Bitmap {
+        val bitmap = Bitmap.createBitmap(DEFAULT_BITMAP_SIZE, DEFAULT_BITMAP_SIZE, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.DKGRAY)
+        return bitmap
     }
 
     private fun getFallbackUris(uri: Uri): List<Uri> {
