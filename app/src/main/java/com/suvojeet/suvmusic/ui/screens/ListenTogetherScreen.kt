@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -165,34 +167,36 @@ fun ListenTogetherScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            if (uiState.isInRoom) {
-                RoomContent(
-                    uiState = uiState,
-                    onLeaveRoom = { viewModel.leaveRoom() },
-                    onCopyCode = { code ->
-                        clipboardManager.setText(AnnotatedString(code))
-                    },
-                    onSync = { viewModel.requestSync() },
-                    viewModel = viewModel,
-                    dominantColors = dominantColors
-                )
-            } else {
-                SetupContent(
-                    username = username,
-                    onUsernameChange = saveUsername,
-                    onCreateRoom = { viewModel.createRoom(username) },
-                    onJoinRoom = { code -> viewModel.joinRoom(code, username) },
-                    connectionState = uiState.connectionState,
-                    serverUrl = serverUrl,
-                    onServerUrlChange = { viewModel.updateServerUrl(it) },
-                    autoApproval = autoApproval,
-                    onAutoApprovalChange = { viewModel.updateAutoApproval(it) },
-                    syncVolume = syncVolume,
-                    onSyncVolumeChange = { viewModel.updateSyncVolume(it) },
-                    muteHost = muteHost,
-                    onMuteHostChange = { viewModel.updateMuteHost(it) },
-                    dominantColors = dominantColors
-                )
+            Box(modifier = Modifier.weight(1f)) {
+                if (uiState.isInRoom) {
+                    RoomContent(
+                        uiState = uiState,
+                        onLeaveRoom = { viewModel.leaveRoom() },
+                        onCopyCode = { code ->
+                            clipboardManager.setText(AnnotatedString(code))
+                        },
+                        onSync = { viewModel.requestSync() },
+                        viewModel = viewModel,
+                        dominantColors = dominantColors
+                    )
+                } else {
+                    SetupContent(
+                        username = username,
+                        onUsernameChange = saveUsername,
+                        onCreateRoom = { viewModel.createRoom(username) },
+                        onJoinRoom = { code -> viewModel.joinRoom(code, username) },
+                        connectionState = uiState.connectionState,
+                        serverUrl = serverUrl,
+                        onServerUrlChange = { viewModel.updateServerUrl(it) },
+                        autoApproval = autoApproval,
+                        onAutoApprovalChange = { viewModel.updateAutoApproval(it) },
+                        syncVolume = syncVolume,
+                        onSyncVolumeChange = { viewModel.updateSyncVolume(it) },
+                        muteHost = muteHost,
+                        onMuteHostChange = { viewModel.updateMuteHost(it) },
+                        dominantColors = dominantColors
+                    )
+                }
             }
         }
     }
@@ -224,7 +228,10 @@ fun SetupContent(
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(bottom = 16.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 16.dp)
     ) {
         Text(
             text = "Listen to music with friends in real-time.",
