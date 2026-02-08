@@ -224,4 +224,5 @@ dependencies {
     implementation(project(":lrclib"))
     implementation(project(":kugou"))
     implementation(project(":newpipe"))
+    implementation(project(":core:model"))
 }

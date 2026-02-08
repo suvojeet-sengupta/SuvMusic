@@ -2,7 +2,7 @@ package com.suvojeet.suvmusic.data.repository.youtube.streaming
 
 import android.util.LruCache
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
@@ -299,7 +299,7 @@ class YouTubeStreamingService @Inject constructor(
                 album = "", // Not available from stream extractor
                 thumbnailUrl = thumbnailUrl,
                 duration = duration,
-                source = com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE
+                source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
             )
         }
     }

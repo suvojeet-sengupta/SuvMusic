@@ -40,11 +40,11 @@ import androidx.compose.material3.surfaceColorAtElevation
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.R
-import com.suvojeet.suvmusic.data.model.Album
-import com.suvojeet.suvmusic.data.model.Artist
-import com.suvojeet.suvmusic.data.model.ArtistPreview
-import com.suvojeet.suvmusic.data.model.Playlist
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.ArtistPreview
+import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
