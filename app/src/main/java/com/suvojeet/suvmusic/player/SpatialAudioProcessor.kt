@@ -37,15 +37,15 @@ class SpatialAudioProcessor @Inject constructor(
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
-        if (!isEnabled) {
-            replaceOutputBuffer(inputBuffer.remaining())
-            outputBuffer!!.put(inputBuffer)
-            outputBuffer!!.flip()
-            return
-        }
-
         val remaining = inputBuffer.remaining()
         if (remaining == 0) return
+
+        if (!isEnabled) {
+            val outBuffer = replaceOutputBuffer(remaining)
+            outBuffer.put(inputBuffer)
+            outBuffer.flip()
+            return
+        }
 
         // Get latest rotation from manager
         azimuth = audioARManager.stereoBalance.value * (Math.PI.toFloat() / 2f) // Map -1..1 to -PI/2..PI/2
