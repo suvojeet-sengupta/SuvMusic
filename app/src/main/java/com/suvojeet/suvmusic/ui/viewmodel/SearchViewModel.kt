@@ -85,7 +85,8 @@ class SearchViewModel @Inject constructor(
     private val localAudioRepository: LocalAudioRepository,
     private val sessionManager: SessionManager,
     private val musicPlayer: MusicPlayer,
-    private val downloadRepository: DownloadRepository
+    private val downloadRepository: DownloadRepository,
+    private val playlistMgmtViewModel: PlaylistManagementViewModel
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -487,7 +488,7 @@ class SearchViewModel @Inject constructor(
     }
     
     fun addToPlaylist(song: Song) {
-        // TODO: Implement add to playlist sheet for Search
+        playlistMgmtViewModel.showAddToPlaylistSheet(song)
     }
 }
 

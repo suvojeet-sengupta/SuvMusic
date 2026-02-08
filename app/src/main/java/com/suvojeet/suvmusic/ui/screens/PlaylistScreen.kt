@@ -84,7 +84,8 @@ fun PlaylistScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
-    viewModel: PlaylistViewModel = hiltViewModel()
+    viewModel: PlaylistViewModel = hiltViewModel(),
+    playlistMgmtViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
@@ -136,11 +137,24 @@ fun PlaylistScreen(
         context.startActivity(shareIntent)
     }
 
+    val shareSong: (Song) -> Unit = { song ->
+        val shareText = "Check out this song: ${song.title} by ${song.artist}\n\nhttps://music.youtube.com/watch?v=${song.id}"
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "Share Song")
+        context.startActivity(shareIntent)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
     ) {
+        // ... (existing blurred background and LazyColumn)
+        
         // Blurred background image - Full screen like Apple Music
         if (playlist?.thumbnailUrl != null) {
             AsyncImage(
@@ -323,26 +337,9 @@ fun PlaylistScreen(
                     onPlayNext = { viewModel.playNext(playlist.songs) },
                     onAddToQueue = { viewModel.addToQueue(playlist.songs) },
                     onAddToPlaylist = { 
-                        // Show add to playlist sheet (we need to trigger it via ViewModel or local state)
-                        // Best way is to use the existing selected song mechanism in ViewModel or a new state for playlist
-                        // Since we are adding multiple songs (the whole playlist), we need a method for that.
-                        // For now, let's assume we want to add the *current* playlist's songs to *another* playlist.
-                        // However, standard flow is usually adding a standard song.
-                        // If the user meant "Add *this* playlist to another", that's rare.
-                        // "add to playlist from playerscreen" -> That refers to the player.
-                        // "make playlist created screen... and add to playlist from playerscreen"
-                        // The TODO here is in MediaMenuBottomSheet for the playlist itself.
-                        // Let's implement it to show the sheet.
-                        viewModel.showAddToPlaylistSheet(playlist.songs.firstOrNull() ?: return@MediaMenuBottomSheet)
-                        // Note: The ViewModel currently supports adding a *single* song. 
-                        // Adding a whole playlist to another is a bulk operation.
-                        // For the purpose of this request, fixing the TODO with the most logical action (add first or show picker) is good.
-                        // But wait, the user said "add to playlist from playerscreen screen 3 dot that too".
-                        // This implies the PlayerScreen feature.
-                        // Let's stick to fixing the TODO with functionality if possible, or leave it if out of scope.
-                        // Actually, let's unimplemented it properly or hide it if not supported.
-                        // Re-reading: "add to playlist from playerscreen".
-                        // I will simply implement the sheet in PlaylistScreen layout to support adding songs *from the list*.
+                        if (playlist.songs.isNotEmpty()) {
+                            playlistMgmtViewModel.showAddToPlaylistSheet(playlist.songs.first())
+                        }
                     },
                     onDownload = { viewModel.downloadPlaylist(playlist) },
                     onShare = { sharePlaylist(playlist) },
@@ -361,25 +358,47 @@ fun PlaylistScreen(
                 song = song,
                 onPlayNext = { viewModel.playNext(song) },
                 onAddToQueue = { viewModel.addToQueue(song) },
-                onAddToPlaylist = { viewModel.addToPlaylist(song) }, // Ensure ViewModel has this
-                onDownload = { viewModel.downloadSong(song) }, // Ensure ViewModel has this
-                onShare = { /* TODO share song */ }
+                onAddToPlaylist = { playlistMgmtViewModel.showAddToPlaylistSheet(song) },
+                onDownload = { viewModel.downloadSong(song) },
+                onShare = { shareSong(song) }
+            )
+        }
+
+        // Global Add to Playlist Sheet
+        val playlistMgmtState by playlistMgmtViewModel.uiState.collectAsState()
+        if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
+            com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
+                song = playlistMgmtState.selectedSong!!,
+                isVisible = playlistMgmtState.showAddToPlaylistSheet,
+                playlists = playlistMgmtState.userPlaylists,
+                isLoading = playlistMgmtState.isLoadingPlaylists,
+                onDismiss = { playlistMgmtViewModel.hideAddToPlaylistSheet() },
+                onAddToPlaylist = { playlistId -> playlistMgmtViewModel.addSongToPlaylist(playlistId) },
+                onCreateNewPlaylist = { playlistMgmtViewModel.showCreatePlaylistDialog() }
             )
         }
 
         // Dialogs
-        if (showCreateDialog) {
+        if (showCreateDialog || playlistMgmtState.showCreatePlaylistDialog) {
             com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog(
-                isVisible = showCreateDialog,
-                isCreating = uiState.isCreating,
-                onDismiss = { showCreateDialog = false },
-                onCreate = { title, desc, isPrivate, syncWithYt ->
-                    viewModel.createPlaylist(title, desc, isPrivate, syncWithYt)
+                isVisible = showCreateDialog || playlistMgmtState.showCreatePlaylistDialog,
+                isCreating = uiState.isCreating || playlistMgmtState.isCreatingPlaylist,
+                onDismiss = { 
                     showCreateDialog = false
+                    playlistMgmtViewModel.hideCreatePlaylistDialog()
+                },
+                onCreate = { title, desc, isPrivate, syncWithYt ->
+                    if (showCreateDialog) {
+                        viewModel.createPlaylist(title, desc, isPrivate, syncWithYt)
+                        showCreateDialog = false
+                    } else {
+                        playlistMgmtViewModel.createPlaylist(title, desc, isPrivate, syncWithYt)
+                    }
                 },
                 isLoggedIn = uiState.isLoggedIn
             )
         }
+
         
         if (showRenameDialog && playlist != null) {
             com.suvojeet.suvmusic.ui.components.RenamePlaylistDialog(
