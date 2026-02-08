@@ -122,6 +122,7 @@ class MusicPlayerService : MediaLibraryService() {
             .build()
             
         val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
+        val isSpatialAudioPreferred = kotlinx.coroutines.runBlocking { sessionManager.isAudioArEnabled() }
         val ignoreAudioFocus = kotlinx.coroutines.runBlocking { sessionManager.isIgnoreAudioFocusDuringCallsEnabled() }
 
         // Configure AudioSink with our native SpatialAudioProcessor
@@ -155,12 +156,21 @@ class MusicPlayerService : MediaLibraryService() {
 
         player.apply {
             pauseAtEndOfMediaItems = false
-            if (isOffloadEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            // Offload MUST be disabled for AudioProcessors to work correctly
+            if (isOffloadEnabled && !isSpatialAudioPreferred && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 trackSelectionParameters = trackSelectionParameters.buildUpon()
                     .setAudioOffloadPreferences(
                         androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
                             .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
                             .setIsGaplessSupportRequired(false)
+                            .build()
+                    )
+                    .build()
+            } else {
+                 trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setAudioOffloadPreferences(
+                        androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                            .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED)
                             .build()
                     )
                     .build()
