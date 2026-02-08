@@ -221,7 +221,7 @@ class MusicPlayerService : MediaLibraryService() {
                  
                  spatialAudioProcessor.setSpatialEnabled(state.audioArEnabled)
                  spatialAudioProcessor.setLimiterConfig(
-                     enabled = state.boostEnabled,
+                     boostEnabled = state.boostEnabled,
                      boostAmount = state.boostAmount,
                      normEnabled = state.normEnabled
                  )
