@@ -20,17 +20,32 @@ class SpatialAudioProcessor @Inject constructor(
     
     private var isSpatialEnabled = false
     private var isLimiterEnabled = false
-    private var isCrossfeedEnabled = true // Enable by default for better headphone experience
+    private var isCrossfeedEnabled = true
 
     fun setSpatialEnabled(enabled: Boolean) {
         if (isSpatialEnabled != enabled) {
             isSpatialEnabled = enabled
             nativeSpatialAudio.setSpatializerEnabled(enabled)
-            // If spatial is enabled, crossfeed should be subtle or off
-            nativeSpatialAudio.setCrossfeedParams(!enabled, 0.15f)
+            updateCrossfeed()
             checkActive()
         }
     }
+
+    fun setCrossfeedEnabled(enabled: Boolean) {
+        if (isCrossfeedEnabled != enabled) {
+            isCrossfeedEnabled = enabled
+            updateCrossfeed()
+            checkActive()
+        }
+    }
+
+    private fun updateCrossfeed() {
+        // Crossfeed is active if enabled AND spatial is off (to avoid double processing)
+        nativeSpatialAudio.setCrossfeedParams(isCrossfeedEnabled && !isSpatialEnabled, 0.15f)
+    }
+    
+    fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
+// ... existing setLimiterConfig ...
     
     fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
         val shouldEnable = boostEnabled || normEnabled
@@ -81,6 +96,16 @@ class SpatialAudioProcessor @Inject constructor(
     override fun queueInput(inputBuffer: ByteBuffer) {
         val remaining = inputBuffer.remaining()
         if (remaining == 0 || !isActive) return
+
+        // SMART BYPASS: If no effects are active, don't even convert or call C++
+        val effectsActive = isSpatialEnabled || isLimiterEnabled || (isCrossfeedEnabled && !isSpatialEnabled)
+        
+        if (!effectsActive) {
+            val outBuffer = replaceOutputBuffer(remaining)
+            outBuffer.put(inputBuffer)
+            outBuffer.flip()
+            return
+        }
 
         // Prepare Float Array for processing
         val floatArray: FloatArray

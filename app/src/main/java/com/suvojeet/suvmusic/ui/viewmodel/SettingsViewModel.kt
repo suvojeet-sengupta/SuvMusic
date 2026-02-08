@@ -107,7 +107,9 @@ data class SettingsUiState(
     val audioArAutoCalibrate: Boolean = true,
     // Preloading
     val nextSongPreloadingEnabled: Boolean = true,
-    val nextSongPreloadDelay: Int = 3 // seconds
+    val nextSongPreloadDelay: Int = 3, // seconds
+    // Crossfeed
+    val crossfeedEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -416,6 +418,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.crossfeedEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(crossfeedEnabled = enabled) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -483,6 +491,7 @@ class SettingsViewModel @Inject constructor(
             val audioArEnabled = sessionManager.isAudioArEnabled()
             val nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled()
             val nextSongPreloadDelay = sessionManager.getNextSongPreloadDelay()
+            val crossfeedEnabled = sessionManager.isCrossfeedEnabled()
 
 
             _uiState.update { 
@@ -548,9 +557,17 @@ class SettingsViewModel @Inject constructor(
                     audioArSensitivity = sessionManager.getAudioArSensitivity(),
                     audioArAutoCalibrate = sessionManager.isAudioArAutoCalibrateEnabled(),
                     nextSongPreloadingEnabled = nextSongPreloadingEnabled,
-                    nextSongPreloadDelay = nextSongPreloadDelay
+                    nextSongPreloadDelay = nextSongPreloadDelay,
+                    crossfeedEnabled = crossfeedEnabled
                 )
             }
+        }
+    }
+
+    fun setCrossfeedEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setCrossfeedEnabled(enabled)
+            _uiState.update { it.copy(crossfeedEnabled = enabled) }
         }
     }
 
