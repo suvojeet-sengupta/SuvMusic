@@ -109,6 +109,17 @@ fun SearchScreen(
     // Accent color for the app (works in both light/dark)
     val accentColor = MaterialTheme.colorScheme.primary
     
+    // Handle SearchEvents
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is com.suvojeet.suvmusic.ui.viewmodel.SearchEvent.ShowAddToPlaylistSheet -> {
+                    playlistViewModel.showAddToPlaylistSheet(event.song)
+                }
+            }
+        }
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()

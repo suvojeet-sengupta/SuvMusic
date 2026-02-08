@@ -28,7 +28,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
+
+sealed class SearchEvent {
+    data class ShowAddToPlaylistSheet(val song: Song) : SearchEvent()
+}
 
 enum class SearchTab {
     YOUTUBE_MUSIC,
@@ -85,12 +92,14 @@ class SearchViewModel @Inject constructor(
     private val localAudioRepository: LocalAudioRepository,
     private val sessionManager: SessionManager,
     private val musicPlayer: MusicPlayer,
-    private val downloadRepository: DownloadRepository,
-    private val playlistMgmtViewModel: PlaylistManagementViewModel
+    private val downloadRepository: DownloadRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<SearchEvent>()
+    val events: SharedFlow<SearchEvent> = _events.asSharedFlow()
     
     // Developer mode - shows JioSaavn tab when enabled
     val isDeveloperMode = sessionManager.developerModeFlow
@@ -488,7 +497,9 @@ class SearchViewModel @Inject constructor(
     }
     
     fun addToPlaylist(song: Song) {
-        playlistMgmtViewModel.showAddToPlaylistSheet(song)
+        viewModelScope.launch {
+            _events.emit(SearchEvent.ShowAddToPlaylistSheet(song))
+        }
     }
 }
 
