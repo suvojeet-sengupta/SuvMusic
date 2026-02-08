@@ -20,11 +20,14 @@ class SpatialAudioProcessor @Inject constructor(
     
     private var isSpatialEnabled = false
     private var isLimiterEnabled = false
+    private var isCrossfeedEnabled = true // Enable by default for better headphone experience
 
     fun setSpatialEnabled(enabled: Boolean) {
         if (isSpatialEnabled != enabled) {
             isSpatialEnabled = enabled
             nativeSpatialAudio.setSpatializerEnabled(enabled)
+            // If spatial is enabled, crossfeed should be subtle or off
+            nativeSpatialAudio.setCrossfeedParams(!enabled, 0.15f)
             checkActive()
         }
     }
@@ -67,6 +70,10 @@ class SpatialAudioProcessor @Inject constructor(
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT && inputAudioFormat.encoding != C.ENCODING_PCM_FLOAT) {
             return AudioFormat.NOT_SET
         }
+        
+        // Initialize Crossfeed (subtle)
+        nativeSpatialAudio.setCrossfeedParams(isCrossfeedEnabled && !isSpatialEnabled, 0.15f)
+
         // Always output 16-bit PCM for maximum compatibility
         return AudioFormat(inputAudioFormat.sampleRate, inputAudioFormat.channelCount, C.ENCODING_PCM_16BIT)
     }

@@ -69,4 +69,12 @@ class NativeSpatialAudio @Inject constructor() {
     }
 
     private external fun nSetLimiterBalance(balance: Float)
+
+    fun setCrossfeedParams(enabled: Boolean, strength: Float) {
+        if (isLibraryLoaded) {
+            nSetCrossfeedParams(enabled, strength)
+        }
+    }
+
+    private external fun nSetCrossfeedParams(enabled: Boolean, strength: Float)
 }
