@@ -851,10 +851,11 @@ class DownloadRepository @Inject constructor(
              Log.d(TAG, "Download complete: saved to $downloadedUri")
 
             // Download high-quality thumbnail if available (same as before)
-            var localThumbnailUrl = song.thumbnailUrl
-            if (!song.thumbnailUrl.isNullOrEmpty() && song.thumbnailUrl.startsWith("http")) {
+            val currentThumbnailUrl = song.thumbnailUrl
+            var localThumbnailUrl = currentThumbnailUrl
+            if (!currentThumbnailUrl.isNullOrEmpty() && currentThumbnailUrl.startsWith("http")) {
                 try {
-                    val highResThumbnailUrl = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
+                    val highResThumbnailUrl = getHighResThumbnailUrl(currentThumbnailUrl, song.id)
                     val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
                     val thumbResponse = downloadClient.newCall(thumbRequest).execute()
                     if (thumbResponse.isSuccessful) {
@@ -1018,10 +1019,11 @@ class DownloadRepository @Inject constructor(
             Log.d(TAG, "Progressive download complete: $finalUri")
             
             // Download thumbnail
-            var localThumbnailUrl = song.thumbnailUrl
-            if (!song.thumbnailUrl.isNullOrEmpty() && song.thumbnailUrl.startsWith("http")) {
+            val currentThumbnailUrl = song.thumbnailUrl
+            var localThumbnailUrl = currentThumbnailUrl
+            if (!currentThumbnailUrl.isNullOrEmpty() && currentThumbnailUrl.startsWith("http")) {
                 try {
-                    val highResThumbnailUrl = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
+                    val highResThumbnailUrl = getHighResThumbnailUrl(currentThumbnailUrl, song.id)
                     val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
                     val thumbResponse = downloadClient.newCall(thumbRequest).execute()
                     if (thumbResponse.isSuccessful) {
