@@ -20,7 +20,7 @@ import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
 import com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService
 import com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
-import com.suvojeet.suvmusic.utils.NetworkMonitor
+import com.suvojeet.suvmusic.util.NetworkMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
