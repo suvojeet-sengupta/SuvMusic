@@ -10,7 +10,71 @@
 #endif
 
 class Spatializer {
-// ... existing Spatializer code ...
+public:
+    Spatializer() : leftDelayBuffer(4096, 0.0f), rightDelayBuffer(4096, 0.0f),
+                    writeIndex(0), headRadius(0.0875f), speedOfSound(343.0f), enabled(false) {}
+
+    void process(float* buffer, int numFrames, float azimuth, float elevation, int sampleRate) {
+        if (!enabled.load(std::memory_order_relaxed)) return;
+
+        // Woodworth ITD model
+        float delayL = (headRadius / speedOfSound) * (sin(azimuth) + azimuth) * sampleRate;
+        float delayR = (headRadius / speedOfSound) * (sin(-azimuth) - azimuth) * sampleRate;
+
+        float gainL = 1.0f;
+        float gainR = 1.0f;
+
+        if (azimuth > 0) {
+            gainL = 1.0f - (0.5f * sin(azimuth));
+        } else {
+            gainR = 1.0f - (0.5f * sin(-azimuth));
+        }
+
+        float elevationGain = cos(elevation);
+        gainL *= elevationGain;
+        gainR *= elevationGain;
+
+        for (int i = 0; i < numFrames; ++i) {
+            float inL = buffer[i * 2];
+            float inR = buffer[i * 2 + 1];
+
+            leftDelayBuffer[writeIndex] = inL;
+            rightDelayBuffer[writeIndex] = inR;
+
+            buffer[i * 2] = readDelay(leftDelayBuffer, writeIndex, delayL) * gainL;
+            buffer[i * 2 + 1] = readDelay(rightDelayBuffer, writeIndex, delayR) * gainR;
+
+            writeIndex = (writeIndex + 1) % 4096;
+        }
+    }
+
+    void reset() {
+        std::fill(leftDelayBuffer.begin(), leftDelayBuffer.end(), 0.0f);
+        std::fill(rightDelayBuffer.begin(), rightDelayBuffer.end(), 0.0f);
+        writeIndex = 0;
+    }
+    
+    void setEnabled(bool e) { enabled.store(e, std::memory_order_relaxed); }
+
+private:
+    std::vector<float> leftDelayBuffer;
+    std::vector<float> rightDelayBuffer;
+    int writeIndex;
+    float headRadius;
+    float speedOfSound;
+    std::atomic<bool> enabled;
+
+    float readDelay(const std::vector<float>& buffer, int currentWriteIndex, float delaySamples) {
+        float readIndex = (float)currentWriteIndex - delaySamples;
+        while (readIndex < 0) readIndex += 4096.0f;
+        while (readIndex >= 4096.0f) readIndex -= 4096.0f;
+
+        int i1 = (int)readIndex;
+        int i2 = (i1 + 1) % 4096;
+        float frac = readIndex - (float)i1;
+
+        return buffer[i1] * (1.0f - frac) + buffer[i2] * frac;
+    }
 };
 
 class Crossfeed {
