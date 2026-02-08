@@ -572,13 +572,14 @@ private fun CollageArtwork(
 @Composable
 private fun ArtworkTile(song: Song, modifier: Modifier = Modifier) {
     Box(modifier = modifier.aspectRatio(1f)) {
-        if (song.thumbnailUrl != null) {
-            val imageModel = if (song.thumbnailUrl.startsWith("file://")) {
-                android.net.Uri.parse(song.thumbnailUrl)
-            } else if (song.thumbnailUrl.startsWith("/")) {
-                java.io.File(song.thumbnailUrl)
+        val thumbnailUrl = song.thumbnailUrl
+        if (thumbnailUrl != null) {
+            val imageModel = if (thumbnailUrl.startsWith("file://")) {
+                android.net.Uri.parse(thumbnailUrl)
+            } else if (thumbnailUrl.startsWith("/")) {
+                java.io.File(thumbnailUrl)
             } else {
-                song.thumbnailUrl
+                thumbnailUrl
             }
             AsyncImage(
                 model = imageModel,
@@ -624,13 +625,14 @@ private fun SingleArtwork(
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        if (song.thumbnailUrl != null) {
-            val imageModel = if (song.thumbnailUrl.startsWith("file://")) {
-                android.net.Uri.parse(song.thumbnailUrl)
-            } else if (song.thumbnailUrl.startsWith("/")) {
-                java.io.File(song.thumbnailUrl)
+        val thumbnailUrl = song.thumbnailUrl
+        if (thumbnailUrl != null) {
+            val imageModel = if (thumbnailUrl.startsWith("file://")) {
+                android.net.Uri.parse(thumbnailUrl)
+            } else if (thumbnailUrl.startsWith("/")) {
+                java.io.File(thumbnailUrl)
             } else {
-                song.thumbnailUrl
+                thumbnailUrl
             }
             AsyncImage(
                 model = imageModel,
@@ -763,13 +765,14 @@ private fun DownloadedSongCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (song.thumbnailUrl != null) {
-                    val imageModel = if (song.thumbnailUrl.startsWith("file://")) {
-                        android.net.Uri.parse(song.thumbnailUrl)
-                    } else if (song.thumbnailUrl.startsWith("/")) {
-                        java.io.File(song.thumbnailUrl)
+                val thumbnailUrl = song.thumbnailUrl
+                if (thumbnailUrl != null) {
+                    val imageModel = if (thumbnailUrl.startsWith("file://")) {
+                        android.net.Uri.parse(thumbnailUrl)
+                    } else if (thumbnailUrl.startsWith("/")) {
+                        java.io.File(thumbnailUrl)
                     } else {
-                        song.thumbnailUrl
+                        thumbnailUrl
                     }
                     AsyncImage(
                         model = imageModel,
