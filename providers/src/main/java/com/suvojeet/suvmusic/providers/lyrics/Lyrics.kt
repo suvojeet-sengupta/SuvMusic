@@ -14,7 +14,8 @@ enum class LyricsProviderType(val displayName: String) {
     YOUTUBE("YouTube (Captions)"),
     BETTER_LYRICS("Better Lyrics (Apple Music)"),
     SIMP_MUSIC("SimpMusic"),
-    KUGOU("Kugou")
+    KUGOU("Kugou"),
+    LOCAL("Local File")
 }
 
 data class LyricsLine(

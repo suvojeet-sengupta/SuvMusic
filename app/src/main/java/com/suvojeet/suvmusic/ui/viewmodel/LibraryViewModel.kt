@@ -186,6 +186,13 @@ class LibraryViewModel @Inject constructor(
 
                 // Load library playlists
                 if (sessionManager.isLoggedIn()) {
+                    // Optimization: Show cached playlists immediately to prevent UI blocking/delay
+                    val cachedPlaylists = sessionManager.getCachedLibraryPlaylistsSync()
+                    if (cachedPlaylists.isNotEmpty()) {
+                        _uiState.update { it.copy(playlists = cachedPlaylists) }
+                    }
+
+                    // Then fetch fresh data from network
                     val playlists = youTubeRepository.getUserPlaylists()
                     _uiState.update { it.copy(playlists = playlists) }
 
