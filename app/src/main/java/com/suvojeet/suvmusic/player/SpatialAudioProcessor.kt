@@ -75,9 +75,23 @@ class SpatialAudioProcessor @Inject constructor(
         if (remaining == 0 || !isActive) return
 
         if (!isSpatialEnabled && !isLimiterEnabled) {
-            val outBuffer = replaceOutputBuffer(remaining)
-            outBuffer.put(inputBuffer)
-            outBuffer.flip()
+            // Passthrough logic needs to handle format conversion if input is 16-bit but we promised Float output
+            if (inputAudioFormat.encoding == C.ENCODING_PCM_16BIT) {
+                // Convert to Float for consistent output format
+                val sampleCount = remaining / 2
+                val outBuffer = replaceOutputBuffer(sampleCount * 4)
+                
+                for (i in 0 until sampleCount) {
+                    val sample16 = inputBuffer.short
+                    outBuffer.putFloat(sample16 / 32768f)
+                }
+                outBuffer.flip()
+            } else {
+                // Already Float, just copy
+                val outBuffer = replaceOutputBuffer(remaining)
+                outBuffer.put(inputBuffer)
+                outBuffer.flip()
+            }
             return
         }
 
@@ -93,19 +107,36 @@ class SpatialAudioProcessor @Inject constructor(
              nativeSpatialAudio.setLimiterBalance(currentBalance)
         }
         
-        // Convert input to float array for native processing
-        // Note: inputBuffer is likely PCM_FLOAT because of onConfigure return value
-        val floatCount = remaining / 4
-        val floatArray = FloatArray(floatCount)
-        inputBuffer.asFloatBuffer().get(floatArray)
+        // Prepare Float Array
+        val floatArray: FloatArray
+        if (inputAudioFormat.encoding == C.ENCODING_PCM_16BIT) {
+            val sampleCount = remaining / 2
+            floatArray = FloatArray(sampleCount)
+            for (i in 0 until sampleCount) {
+                floatArray[i] = inputBuffer.short / 32768f
+            }
+        } else {
+            val sampleCount = remaining / 4
+            floatArray = FloatArray(sampleCount)
+            inputBuffer.asFloatBuffer().get(floatArray)
+            // Move position of inputBuffer (asFloatBuffer doesn't affect original buffer pos automatically? 
+            // actually asFloatBuffer().get() advances the float buffer, but not the byte buffer? 
+            // documentation says: "The new buffer's position will be zero, its capacity and its limit will be the number of bytes remaining in this buffer divided by four".
+            // It shares content.
+            // We need to advance inputBuffer manually? Or just inputBuffer.position(inputBuffer.limit())?
+            // "The position of this buffer is not changed by this method." (asFloatBuffer)
+            // But getting from the view...
+            // Safest to just set position to limit after reading.
+            inputBuffer.position(inputBuffer.position() + remaining)
+        }
 
         // Native process
         nativeSpatialAudio.process(floatArray, azimuth, elevation, inputAudioFormat.sampleRate)
 
         // Write back to output
-        val outBuffer = replaceOutputBuffer(remaining)
+        val outBuffer = replaceOutputBuffer(floatArray.size * 4)
         outBuffer.asFloatBuffer().put(floatArray)
-        outBuffer.limit(remaining)
+        outBuffer.limit(floatArray.size * 4)
         outBuffer.position(0)
     }
 }
