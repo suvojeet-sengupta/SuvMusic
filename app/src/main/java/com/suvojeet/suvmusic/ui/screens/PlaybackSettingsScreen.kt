@@ -132,6 +132,8 @@ fun PlaybackSettingsScreen(
             }
         )
     }
+
+    if (showAudioArInfo) {
         AlertDialog(
             onDismissRequest = { showAudioArInfo = false },
             title = { 
