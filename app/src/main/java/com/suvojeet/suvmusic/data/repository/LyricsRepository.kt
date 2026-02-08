@@ -36,6 +36,7 @@ class LyricsRepository @Inject constructor(
     private val simpMusicLyricsProvider: SimpMusicLyricsProvider,
     private val kuGouLyricsProvider: KuGouLyricsProvider,
     private val lrcLibLyricsProvider: LrcLibLyricsProvider,
+    private val localLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LocalLyricsProvider,
     private val sessionManager: SessionManager
 ) {
     private val cache = LruCache<String, Lyrics>(MAX_CACHE_SIZE)
@@ -91,6 +92,21 @@ class LyricsRepository @Inject constructor(
         }
         
         // AUTO Mode: Priority Order
+        
+        // 0. Check Local Lyrics (Highest Priority)
+        val localLyricsText = localLyricsProvider.getLyrics(song)
+        if (localLyricsText != null) {
+            val lines = parseLrcLyrics(localLyricsText)
+            val lyrics = Lyrics(
+                lines = lines,
+                sourceCredit = "Local File",
+                isSynced = lines.any { it.startTimeMs > 0 },
+                provider = LyricsProviderType.LOCAL
+            )
+            cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lyrics)
+            cache.put(getCacheKey(song.id, LyricsProviderType.LOCAL), lyrics)
+            return@withContext lyrics
+        }
         
         // 1. Try external providers (BetterLyrics, SimpMusic)
         for (provider in getLyricsProviders()) {
@@ -173,6 +189,17 @@ class LyricsRepository @Inject constructor(
     // Fetch from a specific provider
     private suspend fun fetchFromProvider(song: Song, providerType: LyricsProviderType): Lyrics? {
         val result = when (providerType) {
+            LyricsProviderType.LOCAL -> {
+                localLyricsProvider.getLyrics(song)?.let { text ->
+                    val lines = parseLrcLyrics(text)
+                    Lyrics(
+                        lines = lines,
+                        sourceCredit = "Local File",
+                        isSynced = lines.any { it.startTimeMs > 0 },
+                        provider = LyricsProviderType.LOCAL
+                    )
+                }
+            }
             LyricsProviderType.BETTER_LYRICS -> {
                 if (sessionManager.doesEnableBetterLyrics()) {
                     fetchExternalLyrics(betterLyricsProvider, song, LyricsProviderType.BETTER_LYRICS)
