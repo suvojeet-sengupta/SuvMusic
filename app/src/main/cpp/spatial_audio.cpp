@@ -10,102 +10,122 @@
 #endif
 
 class Spatializer {
+// ... existing Spatializer code ...
+};
+
+class Crossfeed {
 public:
-    Spatializer() : leftDelayBuffer(4096, 0.0f), rightDelayBuffer(4096, 0.0f),
-                    writeIndex(0), headRadius(0.0875f), speedOfSound(343.0f), enabled(false) {}
+    Crossfeed() : enabled(false), strength(0.3f), sampleRate(44100) {
+        delayBufferL.resize(128, 0.0f);
+        delayBufferR.resize(128, 0.0f);
+        reset();
+    }
 
-    void process(float* buffer, int numFrames, float azimuth, float elevation, int sampleRate) {
+    void setParams(bool enabled, float strength) {
+        this->enabled.store(enabled, std::memory_order_relaxed);
+        this->strength.store(strength, std::memory_order_relaxed);
+    }
+
+    void process(float* buffer, int numFrames, int sr) {
         if (!enabled.load(std::memory_order_relaxed)) return;
-
-        // Woodworth ITD model
-        // Delay = (r/c) * (sin(theta) + theta)
-        float thetaL = azimuth + M_PI / 2.0f;
-        float thetaR = azimuth - M_PI / 2.0f;
-
-        float delayL = (headRadius / speedOfSound) * (sin(azimuth) + azimuth) * sampleRate;
-        float delayR = (headRadius / speedOfSound) * (sin(-azimuth) - azimuth) * sampleRate;
-
-        // ILD and Head Shadowing factors
-        float gainL = 1.0f;
-        float gainR = 1.0f;
-
-        // Simple head shadowing: attenuate the ear that is facing away
-        if (azimuth > 0) { // Source is on the right
-            gainL = 1.0f - (0.5f * sin(azimuth));
-        } else { // Source is on the left
-            gainR = 1.0f - (0.5f * sin(-azimuth));
+        
+        if (sr != sampleRate) {
+            sampleRate = sr;
+            reset();
         }
 
-        // Elevation effect (basic gain reduction)
-        float elevationGain = cos(elevation);
-        gainL *= elevationGain;
-        gainR *= elevationGain;
+        float localStrength = strength.load(std::memory_order_relaxed);
+        // Delay for ~300 microseconds (standard for crossfeed)
+        float delaySamples = (300.0f / 1000000.0f) * (float)sampleRate;
+        
+        // Simple 1st order Low Pass Filter coeffs (~700Hz)
+        float cutoff = 700.0f;
+        float x = exp(-2.0f * M_PI * cutoff / (float)sampleRate);
+        float a0 = 1.0f - x;
+        float b1 = x;
 
         for (int i = 0; i < numFrames; ++i) {
             float inL = buffer[i * 2];
             float inR = buffer[i * 2 + 1];
 
-            // Update delay buffers
-            leftDelayBuffer[writeIndex] = inL;
-            rightDelayBuffer[writeIndex] = inR;
+            // 1. Update Delay Buffers
+            delayBufferL[writeIndex] = inL;
+            delayBufferR[writeIndex] = inR;
 
-            // Read with fractional delay (linear interpolation)
-            buffer[i * 2] = readDelay(leftDelayBuffer, writeIndex, delayL) * gainL;
-            buffer[i * 2 + 1] = readDelay(rightDelayBuffer, writeIndex, delayR) * gainR;
+            // 2. Read Delayed Samples
+            float delayedL = readDelay(delayBufferL, delaySamples);
+            float delayedR = readDelay(delayBufferR, delaySamples);
 
-            writeIndex = (writeIndex + 1) % 4096;
+            // 3. Low Pass Filter the delayed "cross" signal
+            lpL = a0 * delayedL + b1 * lpL;
+            lpR = a0 * delayedR + b1 * lpR;
+
+            // 4. Mix Crossfeed (attenuate main to keep volume consistent)
+            // L_out = L_main + (R_cross * strength)
+            buffer[i * 2] = (inL * (1.0f - localStrength * 0.5f)) + (lpR * localStrength);
+            buffer[i * 2 + 1] = (inR * (1.0f - localStrength * 0.5f)) + (lpL * localStrength);
+
+            writeIndex = (writeIndex + 1) % 128;
         }
     }
 
     void reset() {
-        std::fill(leftDelayBuffer.begin(), leftDelayBuffer.end(), 0.0f);
-        std::fill(rightDelayBuffer.begin(), rightDelayBuffer.end(), 0.0f);
+        std::fill(delayBufferL.begin(), delayBufferL.end(), 0.0f);
+        std::fill(delayBufferR.begin(), delayBufferR.end(), 0.0f);
+        lpL = 0.0f;
+        lpR = 0.0f;
         writeIndex = 0;
     }
-    
-    void setEnabled(bool e) { enabled.store(e, std::memory_order_relaxed); }
 
 private:
-    std::vector<float> leftDelayBuffer;
-    std::vector<float> rightDelayBuffer;
-    int writeIndex;
-    float headRadius;
-    float speedOfSound;
     std::atomic<bool> enabled;
+    std::atomic<float> strength;
+    int sampleRate;
+    std::vector<float> delayBufferL;
+    std::vector<float> delayBufferR;
+    int writeIndex = 0;
+    float lpL = 0.0f, lpR = 0.0f; // Low pass states
 
-    float readDelay(const std::vector<float>& buffer, int currentWriteIndex, float delaySamples) {
-        float readIndex = (float)currentWriteIndex - delaySamples;
-        while (readIndex < 0) readIndex += 4096.0f;
-        while (readIndex >= 4096.0f) readIndex -= 4096.0f;
-
-        int i1 = (int)readIndex;
-        int i2 = (i1 + 1) % 4096;
-        float frac = readIndex - (float)i1;
-
+    float readDelay(const std::vector<float>& buffer, float delay) {
+        float rIndex = (float)writeIndex - delay;
+        if (rIndex < 0) rIndex += 128.0f;
+        int i1 = (int)rIndex;
+        int i2 = (i1 + 1) % 128;
+        float frac = rIndex - (float)i1;
         return buffer[i1] * (1.0f - frac) + buffer[i2] * frac;
     }
 };
 
 static Spatializer spatializer;
 static Limiter limiter;
+static Crossfeed crossfeed;
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcess(JNIEnv *env, jobject thiz,
                                                             jfloatArray buffer, jfloat azimuth,
                                                             jfloat elevation, jint sample_rate) {
-    jfloat* data = env->GetFloatArrayElements(buffer, nullptr);
+    jfloat* data = (jfloat*)env->GetPrimitiveArrayCritical(buffer, nullptr);
     jsize len = env->GetArrayLength(buffer);
 
     if (data != nullptr) {
-        // 1. Spatial Audio (if enabled inside class)
+        // 1. Crossfeed (Subtle headphone correction)
+        crossfeed.process(data, len / 2, sample_rate);
+
+        // 2. Spatial Audio (Positioning)
         spatializer.process(data, len / 2, azimuth, elevation, sample_rate);
         
-        // 2. Limiter / Volume Boost (if enabled inside class)
-        limiter.process(data, len / 2, 2, sample_rate); // Assuming Stereo (2 channels)
+        // 3. Limiter / Volume Boost
+        limiter.process(data, len / 2, 2, sample_rate);
 
-        env->ReleaseFloatArrayElements(buffer, data, 0);
+        env->ReleasePrimitiveArrayCritical(buffer, data, 0);
     }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetCrossfeedParams(JNIEnv *env, jobject thiz, jboolean enabled, jfloat strength) {
+    crossfeed.setParams(enabled, strength);
 }
 
 extern "C"
