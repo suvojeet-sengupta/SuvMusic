@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.ui.utils
+package com.suvojeet.suvmusic.util
 
 import android.content.Context
 import android.graphics.Canvas
