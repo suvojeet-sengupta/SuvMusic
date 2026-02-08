@@ -253,6 +253,8 @@ fun SuvMusicApp(
     val mainViewModel: MainViewModel = hiltViewModel()
     val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    
     // Optimized states to reduce recompositions
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle() // Still needed for some components
@@ -504,7 +506,7 @@ fun SuvMusicApp(
                     onClick = { 
                         showWelcomeDialog = false
                          // Mark onboarding as complete and stay on Home
-                        playerViewModel.viewModelScope.launch {
+                        scope.launch {
                             sessionManager.setOnboardingCompleted(true)
                         }
                     },
