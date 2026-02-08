@@ -92,9 +92,9 @@ fun SongInfoSection(
                 color = dominantColors.accent,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = if (song?.artistId != null) {
-                   Modifier.clickable { onArtistClick(song.artistId) }
-                } else Modifier
+                modifier = song?.artistId?.let { artistId ->
+                   Modifier.clickable { onArtistClick(artistId) }
+                } ?: Modifier
             )
 
             // Audio Quality Badge - Apple Music style

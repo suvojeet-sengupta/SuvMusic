@@ -157,9 +157,10 @@ private fun DiscographyAlbumCard(
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        if (album.year != null) {
+        val year = album.year
+        if (year != null) {
             Text(
-                text = album.year,
+                text = year,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

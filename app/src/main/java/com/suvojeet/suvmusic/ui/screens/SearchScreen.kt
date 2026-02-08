@@ -717,9 +717,10 @@ fun ArtistSearchListItem(
                 fontWeight = FontWeight.Medium
             )
             
-            if (artist.subscribers != null) {
+            val subscribers = artist.subscribers
+            if (subscribers != null) {
                 Text(
-                    text = artist.subscribers,
+                    text = subscribers,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -896,14 +897,15 @@ private fun SearchResultItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                val artistId = song.artistId
                 Text(
                     text = song.artist,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (song.artistId != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (artistId != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = if (song.artistId != null) {
-                        Modifier.clickable { onArtistClick(song.artistId) }
+                    modifier = if (artistId != null) {
+                        Modifier.clickable { onArtistClick(artistId) }
                     } else {
                         Modifier
                     }
@@ -986,9 +988,10 @@ private fun ArtistSearchCard(
         )
         
         // Subscriber count
-        if (artist.subscribers != null) {
+        val subscribers = artist.subscribers
+        if (subscribers != null) {
             Text(
-                text = artist.subscribers,
+                text = subscribers,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1

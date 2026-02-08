@@ -75,11 +75,11 @@ class RingtoneHelper @Inject constructor(
             val downloadedSong = downloadRepository.downloadedSongs.value.find { it.id == song.id }
             var tempFile: File? = null
             
-            if (downloadedSong?.localUri != null) {
+            val localUri = downloadedSong?.localUri
+            if (localUri != null) {
                 onProgress(0.1f, "Using downloaded file...")
-                val uri = downloadedSong.localUri
                 tempFile = File(context.cacheDir, "temp_ringtone_source_${song.id}")
-                context.contentResolver.openInputStream(uri)?.use { input ->
+                context.contentResolver.openInputStream(localUri)?.use { input ->
                     tempFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
@@ -313,10 +313,10 @@ class RingtoneHelper @Inject constructor(
             var contentLength: Long = -1L
             var dataSource: androidx.media3.datasource.DataSource? = null
 
-            if (downloadedSong?.localUri != null) {
+            val localUri = downloadedSong?.localUri
+            if (localUri != null) {
                 onProgress(0.1f, "Using downloaded file...")
-                val uri = downloadedSong.localUri
-                inputStream = context.contentResolver.openInputStream(uri) ?: run {
+                inputStream = context.contentResolver.openInputStream(localUri) ?: run {
                     withContext(Dispatchers.Main) {
                         onComplete(false, "Could not open downloaded file")
                     }

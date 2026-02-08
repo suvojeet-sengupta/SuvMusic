@@ -427,9 +427,10 @@ private fun AlbumHeader(
         )
         
         // Description (if available)
-        if (!album.description.isNullOrBlank()) {
+        val description = album.description
+        if (!description.isNullOrBlank()) {
             Text(
-                text = album.description,
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = secondaryContentColor.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
