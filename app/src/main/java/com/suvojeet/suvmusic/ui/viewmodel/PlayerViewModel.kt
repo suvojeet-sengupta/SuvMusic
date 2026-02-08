@@ -374,6 +374,8 @@ class PlayerViewModel @Inject constructor(
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0) {
         // Reset radio base so Autoplay adapts to this new song
         radioBaseSongId = null
+        _isRadioMode.value = false
+        musicPlayer.updateRadioMode(false)
         musicPlayer.playSong(song, queue, startIndex)
     }
     
@@ -528,6 +530,7 @@ class PlayerViewModel @Inject constructor(
     fun startRadio(song: Song) {
         viewModelScope.launch {
             _isRadioMode.value = true
+            musicPlayer.updateRadioMode(true)
             radioBaseSongId = song.id
             
             // Play immediately with just the selected song
@@ -536,15 +539,18 @@ class PlayerViewModel @Inject constructor(
             try {
                 val radioSongs = mutableListOf<Song>()
                 
-                // Try YT Music recommendations first (works best when logged in)
+                // 1. Try YT Music recommendations first (works best when logged in)
                 if (song.source == SongSource.YOUTUBE || song.source == SongSource.DOWNLOADED) {
                     val relatedSongs = youTubeRepository.getRelatedSongs(song.id)
                     if (relatedSongs.isNotEmpty()) {
-                        radioSongs.addAll(relatedSongs.take(30))
+                        // De-duplicate and filter current song
+                        val filtered = relatedSongs.filter { it.id != song.id }
+                            .distinctBy { it.id }
+                        radioSongs.addAll(filtered.take(30))
                     }
                 }
                 
-                // If not enough songs, use local recommendation engine
+                // 2. If not enough songs or not a YouTube song, use local recommendation engine
                 if (radioSongs.size < 10) {
                     val localRecommendations = recommendationEngine.getPersonalizedRecommendations(30)
                     // Filter out songs already in queue (currently just the playing song)
@@ -556,12 +562,15 @@ class PlayerViewModel @Inject constructor(
                     radioSongs.addAll(newSongs)
                 }
                 
-                // Filter out the current song if it appears in recommendations to avoid immediate duplicate
-                val songsToAdd = radioSongs.filter { it.id != song.id }
+                // 3. Last resort fallback: trending songs
+                if (radioSongs.isEmpty()) {
+                    val fallback = youTubeRepository.search("trending music", YouTubeRepository.FILTER_SONGS)
+                    radioSongs.addAll(fallback.filter { it.id != song.id }.take(10))
+                }
                 
                 // Add recommendations to queue
-                if (songsToAdd.isNotEmpty()) {
-                    musicPlayer.addToQueue(songsToAdd)
+                if (radioSongs.isNotEmpty()) {
+                    musicPlayer.addToQueue(radioSongs)
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error starting radio", e)
@@ -576,15 +585,19 @@ class PlayerViewModel @Inject constructor(
      */
     private fun observeQueuePositionForAutoplay() {
         viewModelScope.launch {
-            playerState
-                .map { Triple(it.currentIndex, it.queue.size, it.isAutoplayEnabled) }
-                .distinctUntilChanged()
-                .collect { (currentIndex, queueSize, isAutoplayEnabled) ->
-                    // When autoplay is enabled and we're within 3 songs of the end, load more
-                    if (isAutoplayEnabled && queueSize > 0 && currentIndex >= queueSize - 3) {
-                        loadMoreAutoplaySongs()
-                    }
+            combine(
+                playerState.map { Triple(it.currentIndex, it.queue.size, it.isAutoplayEnabled) }.distinctUntilChanged(),
+                _isRadioMode
+            ) { triple, radioMode ->
+                val (currentIndex, queueSize, isAutoplayEnabled) = triple
+                Pair(triple, radioMode)
+            }.collect { (triple, radioMode) ->
+                val (currentIndex, queueSize, isAutoplayEnabled) = triple
+                // When autoplay is enabled OR radio mode is on, and we're within 3 songs of the end, load more
+                if ((isAutoplayEnabled || radioMode) && queueSize > 0 && currentIndex >= queueSize - 3) {
+                    loadMoreAutoplaySongs()
                 }
+            }
         }
     }
     
@@ -593,12 +606,15 @@ class PlayerViewModel @Inject constructor(
      * Called automatically when near end of queue (infinite scroll) or when autoplay needs more songs.
      */
     fun loadMoreAutoplaySongs() {
-        val isAutoplayEnabled = playerState.value.isAutoplayEnabled
+        val state = playerState.value
+        val isAutoplayEnabled = state.isAutoplayEnabled
+        val radioMode = _isRadioMode.value
+        
         // Allow loading if radio mode OR autoplay is enabled
-        if (!_isRadioMode.value && !isAutoplayEnabled) return
+        if (!radioMode && !isAutoplayEnabled) return
         if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
         
-        val currentSong = playerState.value.currentSong ?: return
+        val currentSong = state.currentSong ?: return
         var baseSongId = radioBaseSongId ?: currentSong.id
         
         viewModelScope.launch {
@@ -650,6 +666,7 @@ class PlayerViewModel @Inject constructor(
      */
     fun stopRadio() {
         _isRadioMode.value = false
+        musicPlayer.updateRadioMode(false)
         radioBaseSongId = null
     }
     
