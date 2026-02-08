@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
