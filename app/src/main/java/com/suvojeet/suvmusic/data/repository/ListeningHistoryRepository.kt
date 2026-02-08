@@ -1,8 +1,8 @@
 package com.suvojeet.suvmusic.data.repository
 
-import com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao
-import com.suvojeet.suvmusic.data.local.dao.ArtistStats
-import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
+import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
+import com.suvojeet.suvmusic.core.data.local.dao.ArtistStats
+import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
 import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
