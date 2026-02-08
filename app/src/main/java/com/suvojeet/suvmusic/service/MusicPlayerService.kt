@@ -100,14 +100,10 @@ class MusicPlayerService : MediaLibraryService() {
         exceptionHandler
     )
     
-    private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
-    private var dynamicsProcessing: android.media.audiofx.DynamicsProcessing? = null
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
     
     // Audio AR & Effects state
     private var isSpatialAudioActive = false
-    private var currentGlobalGainDb = 0f
-    private var currentBalance = 0f
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -177,9 +173,7 @@ class MusicPlayerService : MediaLibraryService() {
             }
             addListener(object : androidx.media3.common.Player.Listener {
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                    if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
-                        setupAudioNormalization(audioSessionId)
-                    }
+                    // Audio normalization now handled by C++ processor, no session attachment needed
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -224,13 +218,12 @@ class MusicPlayerService : MediaLibraryService() {
                 )
             }.collect { state ->
                  isSpatialAudioActive = state.audioArEnabled
-                 spatialAudioProcessor.setEnabled(state.audioArEnabled)
-                 updateAudioEffects(
-                     state.normEnabled, 
-                     state.boostEnabled, 
-                     state.boostAmount, 
-                     state.audioArEnabled, 
-                     animate = true
+                 
+                 spatialAudioProcessor.setSpatialEnabled(state.audioArEnabled)
+                 spatialAudioProcessor.setLimiterConfig(
+                     enabled = state.boostEnabled,
+                     boostAmount = state.boostAmount,
+                     normEnabled = state.normEnabled
                  )
             }
         }
@@ -248,14 +241,8 @@ class MusicPlayerService : MediaLibraryService() {
             }
         }
         
-        // Audio AR Monitoring
-        serviceScope.launch {
-            audioARManager.stereoBalance.collect { balance ->
-                currentBalance = balance
-                applyGains()
-            }
-        }
-
+        // Audio AR Monitoring - Balance handled by SpatialAudioProcessor directly
+        
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -531,30 +518,6 @@ class MusicPlayerService : MediaLibraryService() {
         }
     }
 
-    private  var audioEffectsJob: kotlinx.coroutines.Job? = null
-
-    private fun setupAudioNormalization(sessionId: Int) {
-        serviceScope.launch {
-            val normEnabled = sessionManager.isVolumeNormalizationEnabled()
-            val boostEnabled = sessionManager.isVolumeBoostEnabled()
-            val boostAmount = sessionManager.getVolumeBoostAmount()
-            val audioArEnabled = sessionManager.isAudioArEnabled()
-
-            if (normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled) {
-                // Determine if we need to create/reset effects for the new session
-                // For new session, we apply instantly (no fade) to avoid dips at track start
-                updateAudioEffects(
-                    normEnabled, 
-                    boostEnabled, 
-                    boostAmount, 
-                    audioArEnabled, 
-                    animate = false, 
-                    forcedSessionId = sessionId
-                )
-            }
-        }
-    }
-
     private fun startSponsorBlockMonitoring() {
         sponsorBlockJob?.cancel()
         sponsorBlockJob = serviceScope.launch {
@@ -574,169 +537,6 @@ class MusicPlayerService : MediaLibraryService() {
         }
     }
 
-    private fun updateAudioEffects(
-        normEnabled: Boolean, 
-        boostEnabled: Boolean, 
-        boostAmount: Int, 
-        audioArEnabled: Boolean,
-        animate: Boolean, 
-        forcedSessionId: Int? = null
-    ) {
-        audioEffectsJob?.cancel()
-        audioEffectsJob = serviceScope.launch {
-            try {
-                val player = mediaLibrarySession?.player as? ExoPlayer
-                val sessionId = forcedSessionId ?: player?.audioSessionId ?: C.AUDIO_SESSION_ID_UNSET
-                
-                if (sessionId == C.AUDIO_SESSION_ID_UNSET) return@launch
-
-                val shouldEnable = normEnabled || (boostEnabled && boostAmount > 0) || audioArEnabled
-                
-                // Calculate Target Gain in dB
-                var targetGainDb = 0f
-                if (normEnabled) targetGainDb += 5.5f
-                if (boostEnabled) targetGainDb += (boostAmount / 100f) * 15f
-
-                if (shouldEnable) {
-                    // Create effects if they don't exist
-                    if (loudnessEnhancer == null && dynamicsProcessing == null) {
-                        createAudioEffects(sessionId)
-                    }
-
-                    currentGlobalGainDb = targetGainDb
-                    applyGains()
-                } else {
-                    releaseAudioEffects()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("MusicPlayerService", "Error updating audio effects", e)
-            }
-        }
-    }
-
-    private fun createAudioEffects(sessionId: Int) {
-        releaseAudioEffects() // Ensure clean state
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                // API 28+: DynamicsProcessing (Limiter + Pre-Gain)
-                val config = android.media.audiofx.DynamicsProcessing.Config.Builder(
-                    android.media.audiofx.DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
-                    2, // Assume stereo
-                    false, 0, // preEq
-                    false, 0, // mbc
-                    false, 0, // postEq
-                    true      // limiter
-                )
-                .setPreferredFrameDuration(10.0f)
-                .build()
-
-                dynamicsProcessing = android.media.audiofx.DynamicsProcessing(0, sessionId, config)
-
-                dynamicsProcessing?.apply {
-                    // Set Limiter Config (Fixed)
-                    val limiterConfig = android.media.audiofx.DynamicsProcessing.Limiter(
-                        true,   // inUse
-                        true,   // enabled
-                        0,      // linkGroup
-                        10.0f,  // attackTimeMs
-                        200.0f, // releaseTimeMs
-                        4.0f,   // ratio
-                        -3.0f,  // thresholdDb
-                        0.0f    // postGainDb
-                    )
-                    setLimiterAllChannelsTo(limiterConfig)
-                    enabled = true
-                }
-            } else {
-                // API < 28: LoudnessEnhancer
-                loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
-                loudnessEnhancer?.enabled = true
-            }
-
-        } catch (e: Exception) {
-            android.util.Log.e("MusicPlayerService", "Error creating audio effects", e)
-        }
-    }
-
-    private fun setEffectGain(gainDb: Float) {
-        currentGlobalGainDb = gainDb
-        applyGains()
-    }
-
-    private fun applyGains() {
-        try {
-            // If Spatial Audio is active, the C++ processor handles balance and 3D positioning
-            // We only need to apply the global gain here.
-            if (isSpatialAudioActive) {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                    dynamicsProcessing?.apply {
-                        setInputGainbyChannel(0, currentGlobalGainDb)
-                        setInputGainbyChannel(1, currentGlobalGainDb)
-                    }
-                } else {
-                    loudnessEnhancer?.apply {
-                        val targetmB = (currentGlobalGainDb * 100).toInt()
-                        setTargetGain(targetmB)
-                    }
-                }
-                return
-            }
-
-            val balance = currentBalance
-            
-            // Linear factors (0..1)
-            val leftFactor = if (balance > 0) 1f - balance else 1f
-            val rightFactor = if (balance < 0) 1f + balance else 1f
-            
-            // Frequency Occlusion Logic (Simple version for Atmos-like feel)
-            // The ear "further" away gets a slight gain reduction beyond linear panning
-            // and potentially a low-pass (though that requires per-channel EQ, which DynamicsProcessing supports)
-            
-            // Convert attenuation to dB: 20 * log10(factor)
-            val leftPanDb = if (leftFactor <= 0.001f) -100f else (20 * kotlin.math.log10(leftFactor))
-            val rightPanDb = if (rightFactor <= 0.001f) -100f else (20 * kotlin.math.log10(rightFactor))
-            
-            // Occlusion: If turning right (balance < 0 in our logic? No, let's re-verify)
-            // Balance -1 (Looking Right) -> Left Pan -100dB? 
-            // WAIT: AudioARManager says: Turning Head Right (Positive Delta) -> Balance Left (-1)
-            // So if Balance is negative, we are turning RIGHT, source is on the LEFT.
-            // Right ear is "further" -> Occlude Right.
-            
-            val occlusionDb = if (abs(balance) > 0.5f) -3f * (abs(balance) - 0.5f) * 2f else 0f
-            
-            val finalLeftDb = currentGlobalGainDb + leftPanDb + (if (balance > 0) occlusionDb else 0f)
-            val finalRightDb = currentGlobalGainDb + rightPanDb + (if (balance < 0) occlusionDb else 0f)
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                dynamicsProcessing?.apply {
-                    setInputGainbyChannel(0, finalLeftDb)
-                    setInputGainbyChannel(1, finalRightDb)
-                }
-            } else {
-                loudnessEnhancer?.apply {
-                    val targetmB = (currentGlobalGainDb * 100).toInt()
-                    setTargetGain(targetmB)
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("MusicPlayerService", "Error setting effect gain", e)
-        }
-    }
-
-    private fun releaseAudioEffects() {
-        try {
-            loudnessEnhancer?.enabled = false
-            loudnessEnhancer?.release()
-            loudnessEnhancer = null
-            
-            dynamicsProcessing?.enabled = false
-            dynamicsProcessing?.release()
-            dynamicsProcessing = null
-        } catch (e: Exception) {
-            android.util.Log.e("MusicPlayerService", "Error releasing audio effects", e)
-        }
-    }
-
     override fun onDestroy() {
         serviceScope.cancel() // Cancel scope
         sponsorBlockJob?.cancel()
@@ -745,7 +545,6 @@ class MusicPlayerService : MediaLibraryService() {
         } catch (e: Exception) {
             // Ignore if not registered
         }
-        releaseAudioEffects()
         
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         notificationManager.cancel(NOTIFICATION_ID_SLEEP_TIMER)
