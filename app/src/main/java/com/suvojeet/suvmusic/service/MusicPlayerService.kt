@@ -17,6 +17,7 @@ import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import org.json.JSONArray
 import com.google.common.collect.ImmutableList
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
@@ -409,8 +410,8 @@ class MusicPlayerService : MediaLibraryService() {
             override fun onPlaybackResumption(
                 mediaSession: MediaSession,
                 controller: MediaSession.ControllerInfo
-            ): com.google.common.util.concurrent.ListenableFuture<MediaSession.MediaItemsWithIndex> {
-                val future = com.google.common.util.concurrent.SettableFuture.create<MediaSession.MediaItemsWithIndex>()
+            ): com.google.common.util.concurrent.ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+                val future = com.google.common.util.concurrent.SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
                 serviceScope.launch {
                     try {
                         val lastState = sessionManager.getLastPlaybackState()
@@ -437,7 +438,7 @@ class MusicPlayerService : MediaLibraryService() {
                             
                             if (mediaItems.isNotEmpty()) {
                                 val index = lastState.index.coerceIn(0, mediaItems.size - 1)
-                                future.set(MediaSession.MediaItemsWithIndex(mediaItems, index, lastState.position))
+                                future.set(MediaSession.MediaItemsWithStartPosition(mediaItems, index, lastState.position))
                             } else {
                                 future.setException(UnsupportedOperationException("No media items found in last state"))
                             }
