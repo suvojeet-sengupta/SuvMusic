@@ -17,20 +17,28 @@ public:
     void process(float* buffer, int numFrames, float azimuth, float elevation, int sampleRate) {
         if (!enabled.load(std::memory_order_relaxed)) return;
 
-        // Woodworth ITD model
-        float delayL = (headRadius / speedOfSound) * (sin(azimuth) + azimuth) * sampleRate;
-        float delayR = (headRadius / speedOfSound) * (sin(-azimuth) - azimuth) * sampleRate;
+        // Correct Woodworth ITD model (magnitude only)
+        // Delay = (r/c) * (sin|theta| + |theta|)
+        float absAzimuth = fabsf(azimuth);
+        float itdSamples = (headRadius / speedOfSound) * (sinf(absAzimuth) + absAzimuth) * (float)sampleRate;
 
+        // Determine which ear to delay
+        // If azimuth > 0 (Source on Right), Left ear is delayed
+        // If azimuth < 0 (Source on Left), Right ear is delayed
+        float delayL = (azimuth > 0.0f) ? itdSamples : 0.0f;
+        float delayR = (azimuth < 0.0f) ? itdSamples : 0.0f;
+
+        // ILD (Interaural Level Difference) - Head Shadowing
         float gainL = 1.0f;
         float gainR = 1.0f;
-
-        if (azimuth > 0) {
-            gainL = 1.0f - (0.5f * sin(azimuth));
-        } else {
-            gainR = 1.0f - (0.5f * sin(-azimuth));
+        if (azimuth > 0.0f) {
+            gainL = 1.0f - (0.6f * sinf(absAzimuth));
+        } else if (azimuth < 0.0f) {
+            gainR = 1.0f - (0.6f * sinf(absAzimuth));
         }
 
-        float elevationGain = cos(elevation);
+        // Elevation effect
+        float elevationGain = cosf(elevation);
         gainL *= elevationGain;
         gainR *= elevationGain;
 
@@ -41,6 +49,7 @@ public:
             leftDelayBuffer[writeIndex] = inL;
             rightDelayBuffer[writeIndex] = inR;
 
+            // Apply correct positive delays
             buffer[i * 2] = readDelay(leftDelayBuffer, writeIndex, delayL) * gainL;
             buffer[i * 2 + 1] = readDelay(rightDelayBuffer, writeIndex, delayR) * gainR;
 
