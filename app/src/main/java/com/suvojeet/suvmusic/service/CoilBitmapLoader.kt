@@ -63,9 +63,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             
             // If all else fails, return a default placeholder
             try {
-                val placeholder = Bitmap.createBitmap(DEFAULT_BITMAP_SIZE, DEFAULT_BITMAP_SIZE, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(placeholder)
-                canvas.drawColor(android.graphics.Color.DKGRAY) 
+                val placeholder = createPlaceholderBitmap()
                 future.set(placeholder)
             } catch (e: Exception) {
                 future.setException(e)
@@ -138,26 +136,39 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
     /**
      * Creates a safe, owned bitmap from any drawable by drawing it to a fresh canvas.
-     * This avoids race conditions with Coil's bitmap recycling.
+     * This avoids race conditions with Coil's bitmap recycling and ensures the size
+     * is within safe limits for MediaSession metadata.
      */
     private fun createSafeBitmapFromDrawable(drawable: Drawable): Bitmap? {
         return try {
-            val width: Int
-            val height: Int
+            var width: Int
+            var height: Int
 
             if (drawable is BitmapDrawable && drawable.bitmap != null && !drawable.bitmap.isRecycled) {
-                // Try to get dimensions from the bitmap first
-                try {
-                    width = drawable.bitmap.width.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
-                    height = drawable.bitmap.height.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
-                } catch (e: Exception) {
-                    // Bitmap was recycled while checking, use default size
-                    return createPlaceholderBitmap()
-                }
+                width = drawable.bitmap.width
+                height = drawable.bitmap.height
             } else {
                 width = drawable.intrinsicWidth.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
                 height = drawable.intrinsicHeight.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
             }
+
+            // Limit maximum dimension to DEFAULT_BITMAP_SIZE (512px)
+            // This prevents MediaMetadata$Builder.scaleBitmap from being called by the system
+            // which is often where the "recycled source" crash occurs.
+            if (width > DEFAULT_BITMAP_SIZE || height > DEFAULT_BITMAP_SIZE) {
+                val ratio = width.toFloat() / height.toFloat()
+                if (width > height) {
+                    width = DEFAULT_BITMAP_SIZE
+                    height = (DEFAULT_BITMAP_SIZE / ratio).toInt()
+                } else {
+                    height = DEFAULT_BITMAP_SIZE
+                    width = (DEFAULT_BITMAP_SIZE * ratio).toInt()
+                }
+            }
+            
+            // Ensure positive dimensions
+            width = width.coerceAtLeast(1)
+            height = height.coerceAtLeast(1)
 
             // Create a completely fresh bitmap that we own
             val freshBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -168,7 +179,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 drawable.draw(canvas)
             } catch (e: Exception) {
                 // Drawing failed (bitmap recycled during draw), return placeholder
-                freshBitmap.recycle()
+                if (!freshBitmap.isRecycled) freshBitmap.recycle()
                 return createPlaceholderBitmap()
             }
 
