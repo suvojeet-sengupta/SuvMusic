@@ -20,7 +20,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
-import coil.ImageLoader
+import coil.imageLoader
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.SessionManager
@@ -324,7 +324,7 @@ class DynamicIslandService : Service() {
         val artworkExpandedView = view.findViewById<ImageView>(R.id.ivArtworkExpanded)
         
         song.thumbnailUrl?.let { url ->
-            val imageLoader = ImageLoader(this)
+            // Use singleton ImageLoader via extension function (Coil)
             val request = ImageRequest.Builder(this)
                 .data(url)
                 .target { drawable ->
@@ -332,7 +332,7 @@ class DynamicIslandService : Service() {
                     artworkExpandedView?.setImageDrawable(drawable)
                 }
                 .build()
-            imageLoader.enqueue(request)
+            this.imageLoader.enqueue(request)
         }
     }
     
