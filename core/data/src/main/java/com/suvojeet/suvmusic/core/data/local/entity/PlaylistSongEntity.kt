@@ -17,5 +17,6 @@ data class PlaylistSongEntity(
     val thumbnailUrl: String?,
     val duration: Long,
     val source: String,
+    val localUri: String? = null,
     val order: Int
 )
