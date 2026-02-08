@@ -219,6 +219,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(project(":providers"))
+    implementation(project(":core:data"))
+    implementation(project(":core:domain"))
+    implementation(project(":core:ui"))
     implementation(project(":lastfm"))
     implementation(project(":simpmusic"))
     implementation(project(":lrclib"))
