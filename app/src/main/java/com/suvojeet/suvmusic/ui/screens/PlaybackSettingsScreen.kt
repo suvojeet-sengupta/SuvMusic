@@ -104,8 +104,34 @@ fun PlaybackSettingsScreen(
     var showGaplessInfo by remember { mutableStateOf(false) }
     var showHistorySyncInfo by remember { mutableStateOf(false) }
     var showAudioArInfo by remember { mutableStateOf(false) }
+    var showCrossfeedInfo by remember { mutableStateOf(false) }
 
-    if (showAudioArInfo) {
+    if (showCrossfeedInfo) {
+        AlertDialog(
+            onDismissRequest = { showCrossfeedInfo = false },
+            title = { 
+                Text(
+                    "What is Crossfeed?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = {
+                Text(
+                    "Crossfeed makes headphone listening more natural by subtly blending the left and right channels.\n\n" +
+                    "• Reduces Fatigue: Mimics how we hear sound from speakers, reducing the 'inside-the-head' feeling.\n" +
+                    "• Natural Stereo: Moves the soundstage slightly in front of you.\n\n" +
+                    "Note: This is automatically disabled when Spatial Audio is active.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showCrossfeedInfo = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
         AlertDialog(
             onDismissRequest = { showAudioArInfo = false },
             title = { 
@@ -365,6 +391,42 @@ fun PlaybackSettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable { showDownloadQualitySheet = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
+                headlineContent = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Headphone Crossfeed")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { showCrossfeedInfo = true },
+                            modifier = Modifier.height(24.dp).width(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.height(16.dp).width(16.dp)
+                            )
+                        }
+                    }
+                },
+                supportingContent = { 
+                    Text("More natural stereo imaging for headphones") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.crossfeedEnabled,
+                        onCheckedChange = { viewModel.setCrossfeedEnabled(it) }
+                    )
+                },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
