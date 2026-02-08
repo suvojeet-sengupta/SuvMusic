@@ -45,9 +45,6 @@ class SpatialAudioProcessor @Inject constructor(
     }
     
     fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
-// ... existing setLimiterConfig ...
-    
-    fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
         val shouldEnable = boostEnabled || normEnabled
         
         if (shouldEnable) {
