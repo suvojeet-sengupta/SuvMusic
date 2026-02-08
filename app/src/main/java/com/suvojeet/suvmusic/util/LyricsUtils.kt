@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.utils
+package com.suvojeet.suvmusic.util
 
 import com.suvojeet.suvmusic.providers.lyrics.LyricsLine
 import java.util.regex.Pattern

@@ -76,7 +76,7 @@ import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
-import com.suvojeet.suvmusic.utils.dpadFocusable
+import com.suvojeet.suvmusic.util.dpadFocusable
 
 @Composable
 fun PlaylistScreen(

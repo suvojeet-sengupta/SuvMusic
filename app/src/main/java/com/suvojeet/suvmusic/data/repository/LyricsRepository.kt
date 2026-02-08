@@ -277,7 +277,7 @@ class LyricsRepository @Inject constructor(
     }
 
     private fun parseLrcLyrics(lrcContent: String): List<LyricsLine> {
-        return com.suvojeet.suvmusic.utils.LyricsUtils.parseLyrics(lrcContent)
+        return com.suvojeet.suvmusic.util.LyricsUtils.parseLyrics(lrcContent)
     }
 
     companion object {

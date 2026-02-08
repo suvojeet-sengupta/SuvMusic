@@ -31,8 +31,8 @@ import com.suvojeet.suvmusic.data.model.HomeSection
 import com.suvojeet.suvmusic.data.model.Song
 import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
-import com.suvojeet.suvmusic.utils.ImageUtils
-import com.suvojeet.suvmusic.utils.dpadFocusable
+import com.suvojeet.suvmusic.util.ImageUtils
+import com.suvojeet.suvmusic.util.dpadFocusable
 import java.util.Calendar
 
 /**
