@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.ui.utils.LyricsStyle
+import com.suvojeet.suvmusic.util.LyricsStyle
 
 @Composable
 fun DynamicLyricsBackground(
