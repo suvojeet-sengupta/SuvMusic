@@ -1105,8 +1105,8 @@ class MusicPlayer @Inject constructor(
             // End of queue logic
              if (state.repeatMode == RepeatMode.ALL) {
                  playSong(queue[0], queue, 0)
-             } else if (state.isAutoplayEnabled) {
-                 // Infinite Autoplay: The ViewModel automatically loads more songs when nearing the end.
+             } else if (state.isAutoplayEnabled || state.isRadioMode) {
+                 // Infinite Autoplay/Radio: The ViewModel automatically loads more songs when nearing the end.
                  // Check if queue has grown (new songs added by autoplay observer)
                  scope.launch {
                      delay(500) // Brief delay to allow autoplay to add songs
@@ -1212,6 +1212,10 @@ class MusicPlayer @Inject constructor(
     
     fun toggleAutoplay() {
         _playerState.update { it.copy(isAutoplayEnabled = !it.isAutoplayEnabled) }
+    }
+    
+    fun updateRadioMode(isRadioMode: Boolean) {
+        _playerState.update { it.copy(isRadioMode = isRadioMode) }
     }
     
     /**

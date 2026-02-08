@@ -29,7 +29,8 @@ data class PlayerState(
     val audioCodec: String? = null, // e.g., "opus", "aac", "mp3"
     val audioBitrate: Int? = null, // in kbps, e.g., 256
     val dominantColor: Int = -16777216, // Black/Dark default
-    val videoNotFound: Boolean = false // Flag for video stream failures
+    val videoNotFound: Boolean = false, // Flag for video stream failures
+    val isRadioMode: Boolean = false // Radio mode flag
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f

@@ -345,7 +345,7 @@ fun SearchScreen(
                                     song = song,
                                     onClick = {
                                         viewModel.addToRecentSearches(song)
-                                        onSongClick(uiState.results, index)
+                                        onSongClick(listOf(song), 0)
                                     },
                                     onArtistClick = { artistId -> onArtistClick(artistId) },
                                     onMoreClick = {
@@ -476,7 +476,7 @@ fun SearchScreen(
                                 song = song,
                                 onClick = {
                                     viewModel.addToRecentSearches(song)
-                                    onSongClick(uiState.results, index)
+                                    onSongClick(listOf(song), 0)
                                 },
                                 onArtistClick = { artistId ->
                                     onArtistClick(artistId)
@@ -536,10 +536,7 @@ fun SearchScreen(
                                     song = item.song,
                                     onClick = {
                                         viewModel.onRecentSearchClick(item)
-                                        // Filter only songs from recent searches for playback context
-                                        val songList = uiState.recentSearches.mapNotNull { (it as? RecentSearchItem.SongItem)?.song }
-                                        val index = songList.indexOfFirst { it.id == item.song.id }.coerceAtLeast(0)
-                                        onSongClick(songList, index)
+                                        onSongClick(listOf(item.song), 0)
                                     },
                                     onArtistClick = { artistId ->
                                         onArtistClick(artistId)
