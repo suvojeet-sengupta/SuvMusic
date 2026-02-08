@@ -116,6 +116,7 @@ object AppModule {
         simpMusicLyricsProvider: com.suvojeet.suvmusic.simpmusic.SimpMusicLyricsProvider,
         kuGouLyricsProvider: com.suvojeet.suvmusic.kugou.KuGouLyricsProvider,
         lrcLibLyricsProvider: com.suvojeet.suvmusic.lrclib.LrcLibLyricsProvider,
+        localLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LocalLyricsProvider,
         sessionManager: SessionManager
     ): com.suvojeet.suvmusic.data.repository.LyricsRepository {
         return com.suvojeet.suvmusic.data.repository.LyricsRepository(
@@ -127,6 +128,7 @@ object AppModule {
             simpMusicLyricsProvider,
             kuGouLyricsProvider,
             lrcLibLyricsProvider,
+            localLyricsProvider,
             sessionManager
         )
     }
