@@ -1,7 +1,7 @@
-package com.suvojeet.suvmusic.data.local.dao
+package com.suvojeet.suvmusic.core.data.local.dao
 
 import androidx.room.*
-import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
+import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
 import kotlinx.coroutines.flow.Flow
 
 /**

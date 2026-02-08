@@ -11,7 +11,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.suvojeet.suvmusic.MainActivity
 import com.suvojeet.suvmusic.R
-import com.suvojeet.suvmusic.data.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
