@@ -17,14 +17,48 @@ class SpatialAudioProcessor @Inject constructor(
 
     private var azimuth = 0f
     private var elevation = 0f
-    private var isEnabled = false
+    
+    private var isSpatialEnabled = false
+    private var isLimiterEnabled = false
 
-    fun setEnabled(enabled: Boolean) {
-        if (isEnabled != enabled) {
-            isEnabled = enabled
-            if (!enabled) {
-                nativeSpatialAudio.reset()
-            }
+    fun setSpatialEnabled(enabled: Boolean) {
+        if (isSpatialEnabled != enabled) {
+            isSpatialEnabled = enabled
+            nativeSpatialAudio.setSpatializerEnabled(enabled)
+            checkActive()
+        }
+    }
+    
+    fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
+        val shouldEnable = boostEnabled || normEnabled
+        
+        if (shouldEnable) {
+             var makeupGainDb = 0f
+             if (normEnabled) makeupGainDb += 5.5f
+             if (boostEnabled && boostAmount > 0) {
+                 makeupGainDb += (boostAmount / 100f) * 15f
+             }
+             
+             // Hard limiter params for protection
+             val thresholdDb = -0.1f
+             val ratio = 20.0f
+             val attackMs = 5.0f
+             val releaseMs = 50.0f
+             
+             nativeSpatialAudio.setLimiterParams(thresholdDb, ratio, attackMs, releaseMs, makeupGainDb)
+        }
+        
+        if (isLimiterEnabled != shouldEnable) {
+            isLimiterEnabled = shouldEnable
+            nativeSpatialAudio.setLimiterEnabled(shouldEnable)
+            checkActive()
+        }
+    }
+    
+    private fun checkActive() {
+        if (!isSpatialEnabled && !isLimiterEnabled) {
+            // If both off, maybe reset?
+            // nativeSpatialAudio.reset() // Optional, keeps buffers clear
         }
     }
 
@@ -40,7 +74,7 @@ class SpatialAudioProcessor @Inject constructor(
         val remaining = inputBuffer.remaining()
         if (remaining == 0 || !isActive) return
 
-        if (!isEnabled) {
+        if (!isSpatialEnabled && !isLimiterEnabled) {
             val outBuffer = replaceOutputBuffer(remaining)
             outBuffer.put(inputBuffer)
             outBuffer.flip()
@@ -48,7 +82,16 @@ class SpatialAudioProcessor @Inject constructor(
         }
 
         // Get latest rotation from manager
-        azimuth = audioARManager.stereoBalance.value * (Math.PI.toFloat() / 2f) // Map -1..1 to -PI/2..PI/2
+        val currentBalance = audioARManager.stereoBalance.value
+        
+        if (isSpatialEnabled) {
+             azimuth = currentBalance * (Math.PI.toFloat() / 2f) // Map -1..1 to -PI/2..PI/2
+             nativeSpatialAudio.setLimiterBalance(0f)
+        } else {
+             azimuth = 0f
+             elevation = 0f
+             nativeSpatialAudio.setLimiterBalance(currentBalance)
+        }
         
         // Convert input to float array for native processing
         // Note: inputBuffer is likely PCM_FLOAT because of onConfigure return value

@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include "limiter.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -10,9 +11,11 @@
 class Spatializer {
 public:
     Spatializer() : leftDelayBuffer(4096, 0.0f), rightDelayBuffer(4096, 0.0f),
-                    writeIndex(0), headRadius(0.0875f), speedOfSound(343.0f) {}
+                    writeIndex(0), headRadius(0.0875f), speedOfSound(343.0f), enabled(false) {}
 
     void process(float* buffer, int numFrames, float azimuth, float elevation, int sampleRate) {
+        if (!enabled) return;
+
         // Woodworth ITD model
         // Delay = (r/c) * (sin(theta) + theta)
         float thetaL = azimuth + M_PI / 2.0f;
@@ -58,6 +61,8 @@ public:
         std::fill(rightDelayBuffer.begin(), rightDelayBuffer.end(), 0.0f);
         writeIndex = 0;
     }
+    
+    void setEnabled(bool e) { enabled = e; }
 
 private:
     std::vector<float> leftDelayBuffer;
@@ -65,6 +70,7 @@ private:
     int writeIndex;
     float headRadius;
     float speedOfSound;
+    bool enabled;
 
     float readDelay(const std::vector<float>& buffer, int currentWriteIndex, float delaySamples) {
         float readIndex = (float)currentWriteIndex - delaySamples;
@@ -80,6 +86,7 @@ private:
 };
 
 static Spatializer spatializer;
+static Limiter limiter;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -90,7 +97,12 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcess(JNIEnv *env, jobje
     jsize len = env->GetArrayLength(buffer);
 
     if (data != nullptr) {
+        // 1. Spatial Audio (if enabled inside class)
         spatializer.process(data, len / 2, azimuth, elevation, sample_rate);
+        
+        // 2. Limiter / Volume Boost (if enabled inside class)
+        limiter.process(data, len / 2, 2, sample_rate); // Assuming Stereo (2 channels)
+
         env->ReleaseFloatArrayElements(buffer, data, 0);
     }
 }
@@ -99,4 +111,32 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nReset(JNIEnv *env, jobject thiz) {
     spatializer.reset();
+    limiter.reset();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetSpatializerEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
+    spatializer.setEnabled(enabled);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetLimiterEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
+    limiter.setEnabled(enabled);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetLimiterParams(JNIEnv *env, jobject thiz, 
+                                                                       jfloat thresholdDb, jfloat ratio, 
+                                                                       jfloat attackMs, jfloat releaseMs, 
+                                                                       jfloat makeupGainDb) {
+    limiter.setParams(thresholdDb, ratio, attackMs, releaseMs, makeupGainDb);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetLimiterBalance(JNIEnv *env, jobject thiz, jfloat balance) {
+    limiter.setBalance(balance);
 }
