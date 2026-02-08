@@ -83,7 +83,7 @@ static Spatializer spatializer;
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_process(JNIEnv *env, jobject thiz,
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcess(JNIEnv *env, jobject thiz,
                                                             jfloatArray buffer, jfloat azimuth,
                                                             jfloat elevation, jint sample_rate) {
     jfloat* data = env->GetFloatArrayElements(buffer, nullptr);
@@ -97,6 +97,6 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_process(JNIEnv *env, jobjec
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_reset(JNIEnv *env, jobject thiz) {
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nReset(JNIEnv *env, jobject thiz) {
     spatializer.reset();
 }

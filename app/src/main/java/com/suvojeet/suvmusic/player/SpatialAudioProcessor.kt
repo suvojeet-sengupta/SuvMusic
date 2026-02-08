@@ -29,16 +29,16 @@ class SpatialAudioProcessor @Inject constructor(
     }
 
     override fun onConfigure(inputAudioFormat: AudioFormat): AudioFormat {
-        if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT && inputAudioFormat.encoding != C.ENCODING_PCM_FLOAT) {
+        // Only support Float for now to avoid manual conversion overhead
+        if (inputAudioFormat.encoding != C.ENCODING_PCM_FLOAT) {
             return AudioFormat.NOT_SET
         }
-        // We prefer Float processing for better quality and easier math
-        return AudioFormat(inputAudioFormat.sampleRate, inputAudioFormat.channelCount, C.ENCODING_PCM_FLOAT)
+        return inputAudioFormat
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
         val remaining = inputBuffer.remaining()
-        if (remaining == 0) return
+        if (remaining == 0 || !isActive) return
 
         if (!isEnabled) {
             val outBuffer = replaceOutputBuffer(remaining)
