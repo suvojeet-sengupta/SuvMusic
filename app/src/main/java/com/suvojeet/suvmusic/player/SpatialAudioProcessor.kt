@@ -29,11 +29,11 @@ class SpatialAudioProcessor @Inject constructor(
     }
 
     override fun onConfigure(inputAudioFormat: AudioFormat): AudioFormat {
-        // Only support Float for now to avoid manual conversion overhead
-        if (inputAudioFormat.encoding != C.ENCODING_PCM_FLOAT) {
+        // Accept both 16-bit and Float, but always output Float for high-quality C++ processing
+        if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT && inputAudioFormat.encoding != C.ENCODING_PCM_FLOAT) {
             return AudioFormat.NOT_SET
         }
-        return inputAudioFormat
+        return AudioFormat(inputAudioFormat.sampleRate, inputAudioFormat.channelCount, C.ENCODING_PCM_FLOAT)
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
