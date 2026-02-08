@@ -526,15 +526,22 @@ class PlayerViewModel @Inject constructor(
      * Start a radio based on the given song.
      * Uses YT Music recommendations when logged in, local history-based recommendations when not.
      * Creates an endless queue that auto-loads more songs as you near the end.
+     * @param song The seed song for the radio.
+     * @param initialQueue Optional list of songs to start with (e.g. search results).
      */
-    fun startRadio(song: Song) {
+    fun startRadio(song: Song, initialQueue: List<Song>? = null) {
         viewModelScope.launch {
             _isRadioMode.value = true
             musicPlayer.updateRadioMode(true)
             radioBaseSongId = song.id
             
-            // Play immediately with just the selected song
-            musicPlayer.playSong(song)
+            // Play immediately with provided queue or just the selected song
+            if (initialQueue != null && initialQueue.isNotEmpty()) {
+                val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                musicPlayer.playSong(song, initialQueue, index)
+            } else {
+                musicPlayer.playSong(song)
+            }
             
             try {
                 val radioSongs = mutableListOf<Song>()

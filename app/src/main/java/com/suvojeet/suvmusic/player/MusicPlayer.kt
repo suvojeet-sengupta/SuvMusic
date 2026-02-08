@@ -370,6 +370,7 @@ class MusicPlayer @Inject constructor(
                     )
                 }
                 
+                val previousSong = _playerState.value.currentSong
                 _playerState.update { 
                     it.copy(
                         currentSong = song,
@@ -403,11 +404,10 @@ class MusicPlayer @Inject constructor(
                         }
 
                         // Track previous song if it was playing
-                        val prevSong = _playerState.value.currentSong
-                        if (prevSong != null && currentSongStartTime > 0) {
+                        if (previousSong != null && currentSongStartTime > 0) {
                             val listenDuration = System.currentTimeMillis() - currentSongStartTime
-                            val wasSkipped = listenDuration < (prevSong.duration * 0.5) // Skipped if < 50% listened
-                            listeningHistoryRepository.recordPlay(prevSong, listenDuration, wasSkipped)
+                            val wasSkipped = listenDuration < (previousSong.duration * 0.5) // Skipped if < 50% listened
+                            listeningHistoryRepository.recordPlay(previousSong, listenDuration, wasSkipped)
                         }
                         
                         // Start tracking new song
@@ -481,7 +481,11 @@ class MusicPlayer @Inject constructor(
             val isNetworkError = cause is java.net.UnknownHostException || cause is java.net.SocketTimeoutException
             val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED
             
-            if (isexpiredUrl || isNetworkError || isDecoderError) {
+            // Placeholder Check: If current URI is a YouTube watch URL, it will fail and MUST be resolved
+            val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
+            val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+
+            if (isexpiredUrl || isNetworkError || isDecoderError || isYouTubePlaceholder) {
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
