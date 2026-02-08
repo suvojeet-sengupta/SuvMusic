@@ -49,7 +49,7 @@ class PlaylistViewModel @Inject constructor(
     private val localAudioRepository: com.suvojeet.suvmusic.data.repository.LocalAudioRepository,
     private val libraryRepository: LibraryRepository,
     private val cache: androidx.media3.datasource.cache.Cache,
-    private val listeningHistoryDao: com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao,
+    private val listeningHistoryDao: com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
