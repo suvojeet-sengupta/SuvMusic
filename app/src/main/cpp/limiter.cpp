@@ -3,7 +3,7 @@
 Limiter::Limiter() : enabled(false), threshold(1.0f), ratio(1.0f), 
                      attackCoeff(0.0f), releaseCoeff(0.0f), makeupGain(1.0f),
                      delayWriteIndex(0), delayLength(0), envelope(0.0f),
-                     attackMs_(0.1f), releaseMs_(100.0f), currentSampleRate(0), balance(0.0f) {
+                     currentGain(1.0f), attackMs_(0.1f), releaseMs_(100.0f), currentSampleRate(0), balance(0.0f) {
     setParams(-0.1f, 20.0f, 0.1f, 100.0f, 0.0f);
 }
 
@@ -90,18 +90,23 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
             envelope = releaseCoeff * envelope + (1.0f - releaseCoeff) * maxAbsInput;
         }
         
-        // 3. Calculate gain reduction
-        float gain = 1.0f;
+        // 3. Calculate target gain reduction
+        float targetGain = 1.0f;
         if (envelope > localThreshold) {
             float envDb = 20.0f * log10(envelope + 1e-6f);
             float threshDb = 20.0f * log10(localThreshold + 1e-6f);
             float excessDb = envDb - threshDb;
             
             float reductionDb = excessDb * (1.0f / localRatio - 1.0f);
-            gain = pow(10.0f, reductionDb / 20.0f);
+            targetGain = pow(10.0f, reductionDb / 20.0f);
         }
+
+        // 4. Smooth the gain change to prevent crackling (zipper noise)
+        // Using a 1ms smoothing time constant
+        float smoothingCoeff = 0.95f; 
+        currentGain = smoothingCoeff * currentGain + (1.0f - smoothingCoeff) * targetGain;
         
-        // 4. Apply Look-ahead Delay and Gain
+        // 5. Apply Look-ahead Delay and Smoothed Gain
         for (int ch = 0; ch < safeChannels; ++ch) {
             float inputSample = inputFrame[ch];
 
@@ -110,8 +115,8 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
             float delayedSample = delayBuffer[writePos];
             delayBuffer[writePos] = inputSample;
             
-            // Output = Delayed * Gain
-            float outputSample = delayedSample * gain;
+            // Output = Delayed * Smoothed Gain
+            float outputSample = delayedSample * currentGain;
             
             // Hard Clamping to prevent any overflow/distortion
             if (outputSample > 1.0f) outputSample = 1.0f;
@@ -134,6 +139,7 @@ void Limiter::setEnabled(bool enabled) {
 
 void Limiter::reset() {
     envelope = 0.0f;
+    currentGain = 1.0f;
     std::fill(delayBuffer.begin(), delayBuffer.end(), 0.0f);
     delayWriteIndex = 0;
 }

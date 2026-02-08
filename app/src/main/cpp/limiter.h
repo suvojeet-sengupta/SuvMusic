@@ -34,6 +34,7 @@ private:
     int delayLength; // In frames
     
     float envelope;
+    float currentGain;
     
     // Constants
     const float LOOKAHEAD_MS = 5.0f; // 5ms lookahead
