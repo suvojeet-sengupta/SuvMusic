@@ -256,7 +256,8 @@ fun NavGraph(
         composable(Destination.Search.route) {
             SearchScreen(
                 onSongClick = { songs, index -> 
-                    onStartRadio(songs[index])
+                    onPlaySong(songs, index)
+                    navController.navigate(Destination.Player.route)
                 },
                 onArtistClick = { artistId ->
                     navController.navigate(Destination.Artist(artistId).route)
@@ -670,7 +671,10 @@ fun NavGraph(
         ) { backStackEntry ->
             com.suvojeet.suvmusic.ui.screens.ArtistScreen(
                 onBackClick = { navController.popBackStack() },
-                onSongClick = { onPlaySong(listOf(it), 0) },
+                onSongClick = { songs, index -> 
+                    onPlaySong(songs, index)
+                    navController.navigate(Destination.Player.route)
+                },
                 onAlbumClick = { album -> 
                     navController.navigate(
                         Destination.Album(
