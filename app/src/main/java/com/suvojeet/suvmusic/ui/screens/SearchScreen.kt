@@ -623,13 +623,13 @@ fun SearchScreen(
                 onPlayNext = { viewModel.playNext(selectedSong!!) },
                 onAddToQueue = { viewModel.addToQueue(selectedSong!!) },
                 onAddToPlaylist = { 
-                    playlistViewModel.showAddToPlaylistSheet(selectedSong!!)
+                    viewModel.addToPlaylist(selectedSong!!)
                 },
                 onDownload = { viewModel.downloadSong(selectedSong!!) },
                 onShare = {
                     val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this song: ${selectedSong!!.title} by ${selectedSong!!.artist}")
+                        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this song: ${selectedSong!!.title} by ${selectedSong!!.artist}\n\nhttps://music.youtube.com/watch?v=${selectedSong!!.id}")
                     }
                     context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Song"))
                 },
@@ -640,15 +640,15 @@ fun SearchScreen(
             )
         }
         
-        // Observe Playlist ViewModel state for Add to Playlist Sheet
-        val playlistUiState by playlistViewModel.uiState.collectAsState()
+        // Observe Playlist Management state for Add to Playlist Sheet
+        val playlistMgmtState by playlistViewModel.uiState.collectAsState()
         
-        if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {
+        if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
             AddToPlaylistSheet(
-                song = playlistUiState.selectedSong!!,
-                isVisible = playlistUiState.showAddToPlaylistSheet,
-                playlists = playlistUiState.userPlaylists,
-                isLoading = playlistUiState.isLoadingPlaylists,
+                song = playlistMgmtState.selectedSong!!,
+                isVisible = playlistMgmtState.showAddToPlaylistSheet,
+                playlists = playlistMgmtState.userPlaylists,
+                isLoading = playlistMgmtState.isLoadingPlaylists,
                 onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
                 onAddToPlaylist = { playlistId ->
                     playlistViewModel.addSongToPlaylist(playlistId)
@@ -659,15 +659,11 @@ fun SearchScreen(
             )
         }
         
-        // Also handle Create Playlist Dialog if it is triggered
-        if (playlistUiState.showCreatePlaylistDialog) {
-             // We need to implement the dialog here or ensure it's handled. 
-             // LibraryScreen has CreatePlaylistDialog. SearchScreen might need it too?
-             // Or we just don't support creating new playlist from search directly yet unless we add the component.
-             // Let's add the component.
+        // Create Playlist Dialog
+        if (playlistMgmtState.showCreatePlaylistDialog) {
              com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog(
-                isVisible = playlistUiState.showCreatePlaylistDialog,
-                isCreating = playlistUiState.isCreatingPlaylist,
+                isVisible = playlistMgmtState.showCreatePlaylistDialog,
+                isCreating = playlistMgmtState.isCreatingPlaylist,
                 onDismiss = { playlistViewModel.hideCreatePlaylistDialog() },
                 onCreate = { title, description, isPrivate, syncWithYt ->
                     playlistViewModel.createPlaylist(title, description, isPrivate, syncWithYt)
