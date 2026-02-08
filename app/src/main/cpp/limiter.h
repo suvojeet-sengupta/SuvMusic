@@ -4,6 +4,8 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <mutex>
+#include <atomic>
 
 class Limiter {
 public:
@@ -18,7 +20,8 @@ public:
     void reset();
 
 private:
-    bool enabled;
+    std::mutex mtx;
+    std::atomic<bool> enabled;
     float threshold; // Linear
     float ratio;
     float attackCoeff;
