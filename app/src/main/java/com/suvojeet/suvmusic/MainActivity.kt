@@ -29,12 +29,12 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -166,10 +166,10 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             val sessionManager = remember { SessionManager(this) }
-            val themeMode by sessionManager.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
-            val dynamicColor by sessionManager.dynamicColorFlow.collectAsState(initial = true)
-            val appTheme by sessionManager.appThemeFlow.collectAsState(initial = AppTheme.DEFAULT)
-            val pureBlackEnabled by sessionManager.pureBlackEnabledFlow.collectAsState(initial = false)
+            val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+            val dynamicColor by sessionManager.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true)
+            val appTheme by sessionManager.appThemeFlow.collectAsStateWithLifecycle(initialValue = AppTheme.DEFAULT)
+            val pureBlackEnabled by sessionManager.pureBlackEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
             val systemDarkTheme = isSystemInDarkTheme()
             
             val darkTheme = when (themeMode) {
@@ -340,26 +340,26 @@ fun SuvMusicApp(
     val snackbarHostState = remember { SnackbarHostState() }
     
     // Collect volume slider enabled preference
-    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
-    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 1f)
+    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 1f)
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val mainViewModel: MainViewModel = hiltViewModel()
-    val mainUiState by mainViewModel.uiState.collectAsState()
+    val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     
     // Optimized states to reduce recompositions
-    val playbackInfo by playerViewModel.playbackInfo.collectAsState(initial = com.suvojeet.suvmusic.data.model.PlayerState())
-    val playerState by playerViewModel.playerState.collectAsState() // Still needed for some components
+    val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
+    val playerState by playerViewModel.playerState.collectAsStateWithLifecycle() // Still needed for some components
     
-    val lyrics by playerViewModel.lyricsState.collectAsState()
-    val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
-    val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsState()
+    val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle()
+    val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle()
+    val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle()
     
-    val comments by playerViewModel.commentsState.collectAsState()
-    val isFetchingComments by playerViewModel.isFetchingComments.collectAsState()
-    val isPostingComment by playerViewModel.isPostingComment.collectAsState()
-    val isLoadingMoreComments by playerViewModel.isLoadingMoreComments.collectAsState()
+    val comments by playerViewModel.commentsState.collectAsStateWithLifecycle()
+    val isFetchingComments by playerViewModel.isFetchingComments.collectAsStateWithLifecycle()
+    val isPostingComment by playerViewModel.isPostingComment.collectAsStateWithLifecycle()
+    val isLoadingMoreComments by playerViewModel.isLoadingMoreComments.collectAsStateWithLifecycle()
     
     // Track if song is playing for Activity-level volume interception
     // Use playbackInfo (stable) to avoid recomposing the whole app shell on progress updates
@@ -441,7 +441,7 @@ fun SuvMusicApp(
     }
     
     // Monitor network connectivity
-    val isConnected by networkMonitor.isConnected.collectAsState(initial = networkMonitor.isCurrentlyConnected())
+    val isConnected by networkMonitor.isConnected.collectAsStateWithLifecycle(initialValue = networkMonitor.isCurrentlyConnected())
     
     // Show snackbar when offline for 30 seconds
     LaunchedEffect(isConnected) {
@@ -457,13 +457,13 @@ fun SuvMusicApp(
     }
     
     // Sleep Timer
-    val sleepTimerOption by playerViewModel.sleepTimerOption.collectAsState()
-    val sleepTimerRemainingMs by playerViewModel.sleepTimerRemainingMs.collectAsState()
+    val sleepTimerOption by playerViewModel.sleepTimerOption.collectAsStateWithLifecycle()
+    val sleepTimerRemainingMs by playerViewModel.sleepTimerRemainingMs.collectAsStateWithLifecycle()
     
     // Radio Mode
-    val isRadioMode by playerViewModel.isRadioMode.collectAsState()
-    val isLoadingMoreSongs by playerViewModel.isLoadingMoreSongs.collectAsState()
-    val isMiniPlayerDismissed by playerViewModel.isMiniPlayerDismissed.collectAsState()
+    val isRadioMode by playerViewModel.isRadioMode.collectAsStateWithLifecycle()
+    val isLoadingMoreSongs by playerViewModel.isLoadingMoreSongs.collectAsStateWithLifecycle()
+    val isMiniPlayerDismissed by playerViewModel.isMiniPlayerDismissed.collectAsStateWithLifecycle()
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -539,7 +539,7 @@ fun SuvMusicApp(
 
     
     // Welcome Dialog State
-    val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsState(initial = true) // Start assuming true to avoid flicker if already done
+    val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsStateWithLifecycle(initialValue = true) // Start assuming true to avoid flicker if already done
     var showWelcomeDialog by remember { mutableStateOf(false) }
     
     // Check actual onboarding status on launch
@@ -626,7 +626,7 @@ fun SuvMusicApp(
 
                             
                             // Bottom navigation
-                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
+                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.9f)
                             
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,
@@ -722,7 +722,7 @@ fun SuvMusicApp(
                         volumeKeyEvents = volumeKeyEvents,
                         downloadRepository = downloadRepository,
                         selectedLyricsProvider = selectedLyricsProvider,
-                        enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsState().value,
+                        enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
                         onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                         startDestination = Destination.Home.route, // Always start at Home
                         sharedTransitionScope = this@SharedTransitionLayout,

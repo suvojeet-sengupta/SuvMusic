@@ -16,6 +16,7 @@ import retrofit2.http.Query
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 data class SponsorSegment(
@@ -46,6 +47,10 @@ class SponsorBlockRepository @Inject constructor(
     private var lastVideoId: String? = null
     private var lastSkippedSegmentUuid: String? = null
     private var isEnabled: Boolean = true
+    
+    // Cache for enabled categories to avoid runBlocking
+    private var enabledCategories: Set<String> = emptySet()
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
 
     init {
         val retrofit = Retrofit.Builder()
@@ -54,6 +59,13 @@ class SponsorBlockRepository @Inject constructor(
             .build()
 
         api = retrofit.create(SponsorBlockApi::class.java)
+        
+        // Monitor enabled categories changes
+        scope.launch {
+            sessionManager.sponsorBlockCategoriesFlow.collect {
+                enabledCategories = it
+            }
+        }
     }
 
     fun setEnabled(enabled: Boolean) {
@@ -100,11 +112,13 @@ class SponsorBlockRepository @Inject constructor(
 
         val segments = _currentSegments.value
         if (segments.isEmpty()) return null
-        val enabledCategories = runBlocking { sessionManager.getEnabledSponsorCategories() }
+        
+        // Use cached categories - no blocking
+        val currentEnabledCategories = enabledCategories
 
         for (segment in segments) {
             // Only skip if this specific category is enabled by the user
-            if (enabledCategories.contains(segment.category)) {
+            if (currentEnabledCategories.contains(segment.category)) {
                 if (currentSeconds >= segment.start && currentSeconds < segment.end) {
                     if (lastSkippedSegmentUuid == segment.uuid && abs(currentSeconds - segment.start) < 2.0) {
                         continue
