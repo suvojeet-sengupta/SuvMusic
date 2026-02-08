@@ -70,10 +70,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import androidx.media3.datasource.cache.Cache
 import javax.inject.Inject
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -91,12 +88,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer
-
-    @Inject
-    lateinit var playerCache: Cache
-    
-    @Inject
-    lateinit var lastFmRepository: com.suvojeet.suvmusic.lastfm.LastFmRepository
 
     private lateinit var audioManager: AudioManager
     
@@ -123,46 +114,6 @@ class MainActivity : ComponentActivity() {
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
         requestPermissions()
-
-        // Check for player cache auto-clear
-        lifecycleScope.launch(Dispatchers.IO) {
-            val intervalDays = sessionManager.getPlayerCacheAutoClearInterval()
-            if (intervalDays > 0) {
-                val lastCleared = sessionManager.getLastCacheClearedTimestamp()
-                val intervalMillis = intervalDays * 24 * 60 * 60 * 1000L
-                if (System.currentTimeMillis() - lastCleared > intervalMillis) {
-                    try {
-                        // Clear all cached resources
-                        playerCache.keys.forEach { key ->
-                            playerCache.removeResource(key)
-                        }
-                        sessionManager.updateLastCacheClearedTimestamp()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-        }
-        
-        // Handle deep link from intent
-        val deepLinkUrl = intent?.data?.toString()
-        if (intent?.data?.scheme == "suvmusic" && intent?.data?.host == "lastfm-auth") {
-            val token = intent?.data?.getQueryParameter("token")
-            if (token != null) {
-                lifecycleScope.launch {
-                    val result = lastFmRepository.fetchSession(token)
-                    result.onSuccess { auth ->
-                        sessionManager.setLastFmSession(auth.session.key, auth.session.name)
-                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${auth.session.name}", android.widget.Toast.LENGTH_SHORT).show()
-                    }.onFailure {
-                        android.widget.Toast.makeText(this@MainActivity, "Failed to connect to Last.fm", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-        
-        // Handle audio file from external app
-        val audioFileUri = extractAudioUri(intent)
         
         setContent {
             val sessionManager = remember { SessionManager(this) }
@@ -185,8 +136,7 @@ class MainActivity : ComponentActivity() {
                 pureBlack = pureBlackEnabled
             ) {
                 SuvMusicApp(
-                    initialDeepLink = if (audioFileUri == null) deepLinkUrl else null,
-                    initialAudioUri = audioFileUri,
+                    intent = intent,
                     networkMonitor = networkMonitor,
                     audioManager = audioManager,
                     volumeKeyEvents = _volumeKeyEvents,
@@ -245,25 +195,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        
-        // Handle Last.fm Auth
-        if (intent?.data?.scheme == "suvmusic" && intent?.data?.host == "lastfm-auth") {
-            val token = intent?.data?.getQueryParameter("token")
-            if (token != null) {
-                lifecycleScope.launch {
-                    val result = lastFmRepository.fetchSession(token)
-                    result.onSuccess { auth ->
-                        sessionManager.setLastFmSession(auth.session.key, auth.session.name)
-                        android.widget.Toast.makeText(this@MainActivity, "Connected to Last.fm as ${auth.session.name}", android.widget.Toast.LENGTH_SHORT).show()
-                    }.onFailure {
-                        android.widget.Toast.makeText(this@MainActivity, "Failed to connect to Last.fm", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-        
-        // Deep links are handled in SuvMusicApp composable via LaunchedEffect
-        // Don't call recreate() as it wipes all state including HomeScreen data
     }
     
     private fun requestPermissions() {
@@ -326,8 +257,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SuvMusicApp(
-    initialDeepLink: String? = null,
-    initialAudioUri: android.net.Uri? = null,
+    intent: Intent? = null,
     networkMonitor: NetworkMonitor,
     audioManager: AudioManager,
     volumeKeyEvents: SharedFlow<Unit>? = null,
@@ -371,6 +301,36 @@ fun SuvMusicApp(
     // Sync volume slider enabled state to Activity
     LaunchedEffect(volumeSliderEnabled) {
         onVolumeSliderEnabledChanged(volumeSliderEnabled)
+    }
+
+    // Handle intent changes
+    LaunchedEffect(intent) {
+        if (intent != null) {
+            if (intent.action == Intent.ACTION_VIEW && intent.type?.startsWith("audio/") == true) {
+                mainViewModel.handleAudioIntent(intent.data)
+            } else {
+                mainViewModel.handleDeepLink(intent.data)
+            }
+        }
+    }
+
+    // Handle MainEvents (Navigation, Toasts)
+    LaunchedEffect(Unit) {
+        mainViewModel.events.collect { event ->
+            when (event) {
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.PlayFromDeepLink -> {
+                    playerViewModel.playFromDeepLink(event.videoId)
+                    navController.navigate(Destination.Player.route)
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.PlayFromLocalUri -> {
+                    playerViewModel.playFromLocalUri(context, event.uri)
+                    navController.navigate(Destination.Player.route)
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.ShowToast -> {
+                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     // Dialog State for Restricted HQ Audio
@@ -470,29 +430,12 @@ fun SuvMusicApp(
     
     var currentDestination by remember { mutableStateOf<Destination>(Destination.Home) }
     
-    // Handle deep link on first composition
-    var deepLinkHandled by remember { mutableStateOf(false) }
+    // Restore Playback only if no deep link handled
     var restoreAttempted by remember { mutableStateOf(false) }
     
-    LaunchedEffect(initialDeepLink, initialAudioUri) {
-        if (initialAudioUri != null && !deepLinkHandled) {
-            // Handle audio file from external app
-            deepLinkHandled = true
-            playerViewModel.playFromLocalUri(context, initialAudioUri)
-            navController.navigate(Destination.Player.route)
-        } else if (initialDeepLink != null && !deepLinkHandled) {
-            deepLinkHandled = true
-            val videoId = extractVideoId(initialDeepLink)
-            if (videoId != null) {
-                // Create a song from the video ID and play it
-                playerViewModel.playFromDeepLink(videoId)
-                // Navigate to player screen
-                navController.navigate(Destination.Player.route)
-            }
-        } else if (!restoreAttempted && initialDeepLink == null && initialAudioUri == null) {
+    LaunchedEffect(Unit) {
+        if (!restoreAttempted && intent?.data == null) {
             restoreAttempted = true
-            // Only restore if no song is currently playing (i.e., app was force-stopped/crashed)
-            // If app is running normally in background, currentSong will not be null
             if (playerState.currentSong == null) {
                 playerViewModel.restoreLastPlayback()
             }
@@ -805,85 +748,4 @@ fun SuvMusicApp(
         }
     }
 }
-}
-
-/**
- * Extracts video ID from various YouTube/YouTube Music URL formats.
- * Supports:
- * - https://music.youtube.com/watch?v=VIDEO_ID
- * - https://www.youtube.com/watch?v=VIDEO_ID
- * - https://youtu.be/VIDEO_ID
- * - https://youtube.com/shorts/VIDEO_ID
- */
-private fun extractVideoId(url: String): String? {
-    return try {
-        when {
-            // SuvMusic custom URL: suvmusic://play?id=VIDEO_ID
-            url.startsWith("suvmusic://play") -> {
-                val uri = android.net.Uri.parse(url)
-                uri.getQueryParameter("id")
-            }
-            // youtu.be/VIDEO_ID format
-            url.contains("youtu.be/") -> {
-                url.substringAfter("youtu.be/").substringBefore("?").substringBefore("&")
-            }
-            // youtube.com/shorts/VIDEO_ID format
-            url.contains("/shorts/") -> {
-                url.substringAfter("/shorts/").substringBefore("?").substringBefore("&")
-            }
-            // Standard watch?v= format
-            url.contains("v=") -> {
-                url.substringAfter("v=").substringBefore("&").substringBefore("#")
-            }
-            else -> null
-        }?.takeIf { it.isNotBlank() }
-    } catch (e: Exception) {
-        null
-    }
-}
-
-/**
- * Check if the intent is an audio file intent from external app.
- */
-private fun isAudioFileIntent(intent: Intent?): Boolean {
-    if (intent == null) return false
-    val action = intent.action
-    val type = intent.type
-    
-    return action == Intent.ACTION_VIEW && type?.startsWith("audio/") == true
-}
-
-/**
- * Extract audio file URI from an intent.
- */
-private fun extractAudioUri(intent: Intent?): android.net.Uri? {
-    if (!isAudioFileIntent(intent)) return null
-    return intent?.data
-}
-
-/**
- * Extract song ID from SuvMusic custom URL (suvmusic://play?id=VIDEO_ID)
- */
-private fun extractSuvMusicId(url: String?): String? {
-    if (url == null) return null
-    return try {
-        when {
-            url.startsWith("suvmusic://play") -> {
-                // Extract id parameter from suvmusic://play?id=VIDEO_ID
-                val uri = android.net.Uri.parse(url)
-                uri.getQueryParameter("id")
-            }
-            else -> null
-        }
-    } catch (e: Exception) {
-        null
-    }
-}
-
-/**
- * Generate a SuvMusic share URL for a song.
- * Format: suvmusic://play?id=VIDEO_ID
- */
-fun generateSuvMusicShareUrl(songId: String): String {
-    return "suvmusic://play?id=$songId"
 }

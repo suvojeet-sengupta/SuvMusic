@@ -23,20 +23,40 @@ import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
+import androidx.media3.datasource.cache.Cache
+import com.suvojeet.suvmusic.lastfm.LastFmRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import javax.inject.Inject
+
+sealed class MainEvent {
+    data class PlayFromDeepLink(val videoId: String) : MainEvent()
+    data class PlayFromLocalUri(val uri: Uri) : MainEvent()
+    data class ShowToast(val message: String) : MainEvent()
+}
+
 data class MainUiState(
     val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = ""
 )
 
 @HiltViewModel
-class MainViewModel @Inject constructor(
+class MainViewModel @OptIn(androidx.media3.common.util.UnstableApi::class)
+@Inject constructor(
     private val updateRepository: UpdateRepository,
     private val sessionManager: SessionManager,
+    private val lastFmRepository: LastFmRepository,
+    private val playerCache: Cache,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<MainEvent>()
+    val events: SharedFlow<MainEvent> = _events.asSharedFlow()
 
     private var downloadJob: Job? = null
     private var downloadedApkFile: File? = null
@@ -47,6 +67,96 @@ class MainViewModel @Inject constructor(
         
         // Auto-check for updates on app startup
         checkForUpdates()
+        
+        // Auto-clear cache if needed
+        checkAndClearCache()
+    }
+
+    @OptIn(androidx.media3.common.util.UnstableApi::class)
+    private fun checkAndClearCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val intervalDays = sessionManager.getPlayerCacheAutoClearInterval()
+            if (intervalDays > 0) {
+                val lastCleared = sessionManager.getLastCacheClearedTimestamp()
+                val intervalMillis = intervalDays * 24 * 60 * 60 * 1000L
+                if (System.currentTimeMillis() - lastCleared > intervalMillis) {
+                    try {
+                        playerCache.keys.forEach { key ->
+                            playerCache.removeResource(key)
+                        }
+                        sessionManager.updateLastCacheClearedTimestamp()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    fun handleDeepLink(uri: Uri?) {
+        if (uri == null) return
+        
+        viewModelScope.launch {
+            when {
+                uri.scheme == "suvmusic" && uri.host == "lastfm-auth" -> {
+                    val token = uri.getQueryParameter("token")
+                    if (token != null) {
+                        lastFmRepository.fetchSession(token)
+                            .onSuccess { auth ->
+                                sessionManager.setLastFmSession(auth.session.key, auth.session.name)
+                                _events.emit(MainEvent.ShowToast("Connected to Last.fm as ${auth.session.name}"))
+                            }.onFailure {
+                                _events.emit(MainEvent.ShowToast("Failed to connect to Last.fm"))
+                            }
+                    }
+                }
+                uri.scheme == "suvmusic" && uri.host == "play" -> {
+                    val id = uri.getQueryParameter("id")
+                    if (id != null) {
+                        _events.emit(MainEvent.PlayFromDeepLink(id))
+                    }
+                }
+                // Handle YouTube links
+                isYouTubeLink(uri) -> {
+                    val videoId = extractVideoId(uri)
+                    if (videoId != null) {
+                        _events.emit(MainEvent.PlayFromDeepLink(videoId))
+                    }
+                }
+            }
+        }
+    }
+
+    fun handleAudioIntent(uri: Uri?) {
+        if (uri == null) return
+        viewModelScope.launch {
+            _events.emit(MainEvent.PlayFromLocalUri(uri))
+        }
+    }
+
+    private fun isYouTubeLink(uri: Uri): Boolean {
+        val host = uri.host ?: return false
+        return host.contains("youtube.com") || host.contains("youtu.be") || host.contains("music.youtube.com")
+    }
+
+    private fun extractVideoId(uri: Uri): String? {
+        return try {
+            val url = uri.toString()
+            when {
+                url.contains("youtu.be/") -> {
+                    url.substringAfter("youtu.be/").substringBefore("?").substringBefore("&")
+                }
+                url.contains("/shorts/") -> {
+                    url.substringAfter("/shorts/").substringBefore("?").substringBefore("&")
+                }
+                url.contains("v=") -> {
+                    uri.getQueryParameter("v")
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun checkForUpdates() {
