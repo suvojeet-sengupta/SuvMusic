@@ -8,6 +8,7 @@ Limiter::Limiter() : enabled(false), threshold(1.0f), ratio(1.0f),
 }
 
 void Limiter::setParams(float thresholdDb, float ratio, float attackMs, float releaseMs, float makeupGainDb) {
+    std::lock_guard<std::mutex> lock(mtx);
     this->threshold = pow(10.0f, thresholdDb / 20.0f);
     this->ratio = ratio;
     this->makeupGain = pow(10.0f, makeupGainDb / 20.0f);
@@ -17,11 +18,25 @@ void Limiter::setParams(float thresholdDb, float ratio, float attackMs, float re
 }
 
 void Limiter::setBalance(float balance) {
+    std::lock_guard<std::mutex> lock(mtx);
     this->balance = std::max(-1.0f, std::min(1.0f, balance));
 }
 
 void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleRate) {
-    if (!enabled) return;
+    if (!enabled.load(std::memory_order_relaxed)) return;
+
+    // Local copies of parameters to minimize lock time
+    float localThreshold, localRatio, localMakeupGain, localBalance;
+    float localAttackMs, localReleaseMs;
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        localThreshold = threshold;
+        localRatio = ratio;
+        localMakeupGain = makeupGain;
+        localBalance = balance;
+        localAttackMs = attackMs_;
+        localReleaseMs = releaseMs_;
+    }
 
     if (sampleRate != currentSampleRate) {
         currentSampleRate = sampleRate;
@@ -30,8 +45,8 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
         delayWriteIndex = 0;
         
         // Recalculate coeffs
-        float attackSamples = attackMs_ * sampleRate / 1000.0f;
-        float releaseSamples = releaseMs_ * sampleRate / 1000.0f;
+        float attackSamples = localAttackMs * sampleRate / 1000.0f;
+        float releaseSamples = localReleaseMs * sampleRate / 1000.0f;
         
         if (attackSamples < 1.0f) attackCoeff = 0.0f; 
         else attackCoeff = exp(-1.0f / attackSamples);
@@ -43,22 +58,21 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
     // Calculate balance gains
     float balGainL = 1.0f;
     float balGainR = 1.0f;
-    if (balance > 0.0f) { // Right bias, attenuate Left
-        balGainL = 1.0f - balance;
-    } else if (balance < 0.0f) { // Left bias, attenuate Right
-        balGainR = 1.0f + balance;
+    if (localBalance > 0.0f) { // Right bias, attenuate Left
+        balGainL = 1.0f - localBalance;
+    } else if (localBalance < 0.0f) { // Left bias, attenuate Right
+        balGainR = 1.0f + localBalance;
     }
 
     for (int i = 0; i < numFrames; ++i) {
         float maxAbsInput = 0.0f;
         
-        // 1. Find max amplitude in current frame (after makeup gain application logic check)
-        // We apply makeup gain (Input Gain/Volume Boost) BEFORE detection if we want to limit the boosted signal.
-        
-        float inputFrame[numChannels];
+        // Use a fixed-size array to avoid heap allocation in the loop
+        float inputFrame[8]; // Support up to 8 channels
+        int safeChannels = std::min(numChannels, 8);
 
-        for (int ch = 0; ch < numChannels; ++ch) {
-            float val = buffer[i * numChannels + ch] * makeupGain;
+        for (int ch = 0; ch < safeChannels; ++ch) {
+            float val = buffer[i * numChannels + ch] * localMakeupGain;
             
             // Apply Balance
             if (ch == 0) val *= balGainL;
@@ -78,17 +92,17 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
         
         // 3. Calculate gain reduction
         float gain = 1.0f;
-        if (envelope > threshold) {
+        if (envelope > localThreshold) {
             float envDb = 20.0f * log10(envelope + 1e-6f);
-            float threshDb = 20.0f * log10(threshold + 1e-6f);
+            float threshDb = 20.0f * log10(localThreshold + 1e-6f);
             float excessDb = envDb - threshDb;
             
-            float reductionDb = excessDb * (1.0f / ratio - 1.0f);
+            float reductionDb = excessDb * (1.0f / localRatio - 1.0f);
             gain = pow(10.0f, reductionDb / 20.0f);
         }
         
         // 4. Apply Look-ahead Delay and Gain
-        for (int ch = 0; ch < numChannels; ++ch) {
+        for (int ch = 0; ch < safeChannels; ++ch) {
             float inputSample = inputFrame[ch];
 
             // Write to delay buffer
@@ -106,7 +120,7 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
 }
 
 void Limiter::setEnabled(bool enabled) {
-    this->enabled = enabled;
+    this->enabled.store(enabled, std::memory_order_relaxed);
     if (!enabled) {
         reset();
     }

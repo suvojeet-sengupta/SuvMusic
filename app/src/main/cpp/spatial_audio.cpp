@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <atomic>
 #include "limiter.h"
 
 #ifndef M_PI
@@ -14,7 +15,7 @@ public:
                     writeIndex(0), headRadius(0.0875f), speedOfSound(343.0f), enabled(false) {}
 
     void process(float* buffer, int numFrames, float azimuth, float elevation, int sampleRate) {
-        if (!enabled) return;
+        if (!enabled.load(std::memory_order_relaxed)) return;
 
         // Woodworth ITD model
         // Delay = (r/c) * (sin(theta) + theta)
@@ -62,7 +63,7 @@ public:
         writeIndex = 0;
     }
     
-    void setEnabled(bool e) { enabled = e; }
+    void setEnabled(bool e) { enabled.store(e, std::memory_order_relaxed); }
 
 private:
     std::vector<float> leftDelayBuffer;
@@ -70,7 +71,7 @@ private:
     int writeIndex;
     float headRadius;
     float speedOfSound;
-    bool enabled;
+    std::atomic<bool> enabled;
 
     float readDelay(const std::vector<float>& buffer, int currentWriteIndex, float delaySamples) {
         float readIndex = (float)currentWriteIndex - delaySamples;
