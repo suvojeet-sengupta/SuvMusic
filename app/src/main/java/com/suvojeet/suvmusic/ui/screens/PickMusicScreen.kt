@@ -39,8 +39,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.data.model.Artist
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.PickMusicUiState
 import com.suvojeet.suvmusic.ui.viewmodel.PickMusicViewModel
 

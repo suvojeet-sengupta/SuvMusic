@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.model
+package com.suvojeet.suvmusic.core.model
 
 /**
  * Represents a playlist display item.
