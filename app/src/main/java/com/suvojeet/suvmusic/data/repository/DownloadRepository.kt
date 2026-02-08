@@ -10,8 +10,8 @@ import android.util.Log
 import androidx.core.net.toUri
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.service.DownloadService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -1411,7 +1411,7 @@ class DownloadRepository @Inject constructor(
     }
 
 
-    fun downloadAlbum(album: com.suvojeet.suvmusic.data.model.Album) {
+    fun downloadAlbum(album: com.suvojeet.suvmusic.core.model.Album) {
         val songsToDownload = album.songs.map { song ->
             song.copy(
                 customFolderPath = album.title,
@@ -1423,7 +1423,7 @@ class DownloadRepository @Inject constructor(
         downloadSongs(songsToDownload)
     }
 
-    fun downloadPlaylist(playlist: com.suvojeet.suvmusic.data.model.Playlist) {
+    fun downloadPlaylist(playlist: com.suvojeet.suvmusic.core.model.Playlist) {
         val songsToDownload = playlist.songs.map { song ->
             song.copy(
                 customFolderPath = playlist.title,

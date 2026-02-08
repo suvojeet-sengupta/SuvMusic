@@ -26,11 +26,11 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.util.ImageUtils
-import com.suvojeet.suvmusic.data.model.Album
+import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.data.model.HomeSection
-import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.core.model.Song
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
@@ -109,7 +109,7 @@ fun VerticalListSection(
                              thumbnailUrl = item.playlist.thumbnailUrl,
                              album = "Playlist",
                              duration = 0L,
-                             source = com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE
+                             source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                         )
                          MusicCard(
                             song = tempSong,
@@ -125,7 +125,7 @@ fun VerticalListSection(
                              thumbnailUrl = item.album.thumbnailUrl,
                              album = item.album.year ?: "Album",
                              duration = 0L,
-                             source = com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE
+                             source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                         )
                         MusicCard(
                             song = tempSong,
@@ -201,7 +201,7 @@ fun LargeCardWithListSection(
                         is HomeItem.PlaylistItem -> {
                              // Simplified rendering for list items if not Song
                              MusicCard(
-                                song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE),
+                                song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
                                 onClick = { onPlaylistClick(item.playlist) },
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)
@@ -209,7 +209,7 @@ fun LargeCardWithListSection(
                         }
                          is HomeItem.AlbumItem -> {
                              MusicCard(
-                                song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE),
+                                song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
                                 onClick = { onAlbumClick(item.album) },
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)

@@ -66,10 +66,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.data.model.Album
-import com.suvojeet.suvmusic.data.model.Artist
-import com.suvojeet.suvmusic.data.model.Playlist
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.model.RecentSearchItem
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel

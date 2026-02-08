@@ -83,4 +83,6 @@ dependencies {
     
     // Jsoup (if needed, e.g. for scraping)
     implementation(libs.jsoup)
+
+    api(project(":core:model"))
 }

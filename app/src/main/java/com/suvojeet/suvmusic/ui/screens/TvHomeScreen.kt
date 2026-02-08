@@ -28,7 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.data.model.HomeSection
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
 import com.suvojeet.suvmusic.util.ImageUtils
@@ -42,8 +42,8 @@ import java.util.Calendar
 @Composable
 fun TvHomeScreen(
     onSongClick: (List<Song>, Int) -> Unit,
-    onPlaylistClick: (com.suvojeet.suvmusic.data.model.PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (com.suvojeet.suvmusic.data.model.Album) -> Unit,
+    onPlaylistClick: (com.suvojeet.suvmusic.core.model.PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (com.suvojeet.suvmusic.core.model.Album) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -306,8 +306,8 @@ private fun TvQuickAccessCard(
 private fun TvHorizontalSection(
     section: HomeSection,
     onSongClick: (List<Song>, Int) -> Unit,
-    onPlaylistClick: (com.suvojeet.suvmusic.data.model.PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (com.suvojeet.suvmusic.data.model.Album) -> Unit
+    onPlaylistClick: (com.suvojeet.suvmusic.core.model.PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (com.suvojeet.suvmusic.core.model.Album) -> Unit
 ) {
     TvSectionTitle(section.title)
     
@@ -369,7 +369,7 @@ private fun TvSongCard(song: Song, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TvPlaylistCard(playlist: com.suvojeet.suvmusic.data.model.PlaylistDisplayItem, onClick: () -> Unit) {
+private fun TvPlaylistCard(playlist: com.suvojeet.suvmusic.core.model.PlaylistDisplayItem, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(200.dp)
@@ -407,7 +407,7 @@ private fun TvPlaylistCard(playlist: com.suvojeet.suvmusic.data.model.PlaylistDi
 }
 
 @Composable
-private fun TvAlbumCard(album: com.suvojeet.suvmusic.data.model.Album, onClick: () -> Unit) {
+private fun TvAlbumCard(album: com.suvojeet.suvmusic.core.model.Album, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(200.dp)

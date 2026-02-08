@@ -44,7 +44,7 @@ import com.suvojeet.suvmusic.data.model.PlayerState
 
 @Composable
 fun FloatingPillMiniPlayer(
-    song: com.suvojeet.suvmusic.data.model.Song,
+    song: com.suvojeet.suvmusic.core.model.Song,
     playerState: PlayerState,
     dominantColors: DominantColors,
     modifier: Modifier = Modifier,

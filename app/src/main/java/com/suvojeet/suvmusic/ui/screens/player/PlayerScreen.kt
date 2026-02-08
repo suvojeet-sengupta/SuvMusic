@@ -298,7 +298,7 @@ fun PlayerScreen(
     var showLyrics by remember { mutableStateOf(false) }
     var showCommentsSheet by remember { mutableStateOf(false) }
     var showActionsSheet by remember { mutableStateOf(false) }
-    var selectedSongForMenu by remember { mutableStateOf<com.suvojeet.suvmusic.data.model.Song?>(null) }
+    var selectedSongForMenu by remember { mutableStateOf<com.suvojeet.suvmusic.core.model.Song?>(null) }
     var showInfoSheet by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showOutputDeviceSheet by remember { mutableStateOf(false) }
@@ -639,7 +639,7 @@ fun PlayerScreen(
                                     onCastClick = { showOutputDeviceSheet = true },
                                     onQueueClick = { showQueue = true },
                                     dominantColors = dominantColors,
-                                    isYouTubeSong = song?.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE,
+                                    isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                                     isVideoMode = playerState.isVideoMode,
                                     onVideoToggle = onToggleVideoMode
                                 )
@@ -831,7 +831,7 @@ fun PlayerScreen(
                                 onCastClick = { showOutputDeviceSheet = true },
                                 onQueueClick = { showQueue = true },
                                 dominantColors = dominantColors,
-                                isYouTubeSong = song?.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE,
+                                isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                                 isVideoMode = playerState.isVideoMode,
                                 onVideoToggle = onToggleVideoMode
                             )

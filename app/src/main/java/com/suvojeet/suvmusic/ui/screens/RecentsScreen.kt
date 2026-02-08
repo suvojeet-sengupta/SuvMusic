@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat

@@ -28,7 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientStart
 

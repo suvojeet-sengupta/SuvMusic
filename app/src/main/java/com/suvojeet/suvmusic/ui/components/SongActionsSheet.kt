@@ -55,7 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 
 /**
  * Song actions bottom sheet with options like Pin, Download, Add to Playlist, etc.
@@ -108,7 +108,7 @@ fun SongActionsSheet(
             append("\n")
             
             // Clickable link first
-            if (song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
+            if (song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
                 val query = "${song.title} ${song.artist}".replace(" ", "+")
                 append("https://www.google.com/search?q=$query")
             } else {

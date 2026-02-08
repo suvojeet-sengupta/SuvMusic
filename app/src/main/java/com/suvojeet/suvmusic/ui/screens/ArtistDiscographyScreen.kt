@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.suvojeet.suvmusic.data.model.Album
+import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
 

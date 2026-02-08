@@ -2,9 +2,9 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.suvojeet.suvmusic.data.model.Playlist
-import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository

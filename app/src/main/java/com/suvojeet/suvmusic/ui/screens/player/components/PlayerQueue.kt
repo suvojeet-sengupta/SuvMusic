@@ -49,7 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.RepeatMode
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
 import androidx.compose.foundation.ExperimentalFoundationApi

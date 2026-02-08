@@ -3,8 +3,8 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.suvojeet.suvmusic.data.model.Playlist
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
@@ -28,7 +28,7 @@ data class PlaylistUiState(
     val deleteSuccess: Boolean = false,
     val isLoggedIn: Boolean = false,
     val isSaved: Boolean = false,
-    val userPlaylists: List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> = emptyList(),
+    val userPlaylists: List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem> = emptyList(),
     val isLoadingPlaylists: Boolean = false,
     val showAddToPlaylistSheet: Boolean = false,
     val showCreatePlaylistDialog: Boolean = false,
@@ -251,7 +251,7 @@ class PlaylistViewModel @Inject constructor(
                 } else {
                     // Create Local Playlist
                     val id = "local_" + java.util.UUID.randomUUID().toString()
-                    val playlist = com.suvojeet.suvmusic.data.model.Playlist(
+                    val playlist = com.suvojeet.suvmusic.core.model.Playlist(
                         id = id, 
                         title = title, 
                         author = "You", 
@@ -411,9 +411,9 @@ class PlaylistViewModel @Inject constructor(
                     duration = history.duration,
                     thumbnailUrl = history.thumbnailUrl,
                     source = try { 
-                        com.suvojeet.suvmusic.data.model.SongSource.valueOf(history.source) 
+                        com.suvojeet.suvmusic.core.model.SongSource.valueOf(history.source) 
                     } catch (e: Exception) { 
-                        com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE 
+                        com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE 
                     },
                     localUri = history.localUri?.let { android.net.Uri.parse(it) },
                     artistId = history.artistId

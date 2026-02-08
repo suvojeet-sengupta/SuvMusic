@@ -83,9 +83,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.suvojeet.suvmusic.data.model.Album
-import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet
 import com.suvojeet.suvmusic.ui.components.MusicCard

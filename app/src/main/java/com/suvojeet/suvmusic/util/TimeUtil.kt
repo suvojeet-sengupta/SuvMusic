@@ -1,6 +1,6 @@
 package com.suvojeet.suvmusic.util
 
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import java.util.concurrent.TimeUnit
 
 object TimeUtil {

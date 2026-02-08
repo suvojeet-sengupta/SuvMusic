@@ -21,7 +21,7 @@ import org.json.JSONArray
 import com.google.common.collect.ImmutableList
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
-import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.MainActivity
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
@@ -420,7 +420,7 @@ class MusicPlayerService : MediaLibraryService() {
                             val mediaItems = mutableListOf<MediaItem>()
                             for (i in 0 until jsonArray.length()) {
                                 val obj = jsonArray.getJSONObject(i)
-                                val song = com.suvojeet.suvmusic.data.model.Song(
+                                val song = com.suvojeet.suvmusic.core.model.Song(
                                     id = obj.getString("id"),
                                     title = obj.getString("title"),
                                     artist = obj.getString("artist"),
@@ -428,9 +428,9 @@ class MusicPlayerService : MediaLibraryService() {
                                     thumbnailUrl = obj.optString("thumbnailUrl", ""),
                                     duration = obj.optLong("duration", 0L),
                                     source = try {
-                                        com.suvojeet.suvmusic.data.model.SongSource.valueOf(obj.optString("source", "YOUTUBE"))
+                                        com.suvojeet.suvmusic.core.model.SongSource.valueOf(obj.optString("source", "YOUTUBE"))
                                     } catch (e: Exception) {
-                                        com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE
+                                        com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                                     }
                                 )
                                 mediaItems.add(createPlayableMediaItem(song))
@@ -726,7 +726,7 @@ class MusicPlayerService : MediaLibraryService() {
             .build()
     }
 
-    private fun createPlayableMediaItem(song: com.suvojeet.suvmusic.data.model.Song): MediaItem {
+    private fun createPlayableMediaItem(song: com.suvojeet.suvmusic.core.model.Song): MediaItem {
         // Use correct properties based on Song model
         val artworkUri = if (!song.thumbnailUrl.isNullOrEmpty()) {
             Uri.parse(song.thumbnailUrl)

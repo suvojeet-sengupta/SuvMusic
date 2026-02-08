@@ -44,8 +44,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.data.model.HomeItem
-import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
@@ -61,7 +61,7 @@ import java.util.Calendar
 fun HomeScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (com.suvojeet.suvmusic.data.model.Album) -> Unit,
+    onAlbumClick: (com.suvojeet.suvmusic.core.model.Album) -> Unit,
     onRecentsClick: () -> Unit = {},
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},

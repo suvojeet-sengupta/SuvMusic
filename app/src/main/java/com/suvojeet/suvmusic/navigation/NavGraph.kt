@@ -12,9 +12,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.Artist
-import com.suvojeet.suvmusic.data.model.Album
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.ui.screens.AboutScreen
 import com.suvojeet.suvmusic.ui.screens.HowItWorksScreen

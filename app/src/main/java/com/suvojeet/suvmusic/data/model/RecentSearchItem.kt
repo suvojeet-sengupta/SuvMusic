@@ -1,4 +1,5 @@
 package com.suvojeet.suvmusic.data.model
+import com.suvojeet.suvmusic.core.model.*
 
 sealed class RecentSearchItem {
     abstract val id: String
