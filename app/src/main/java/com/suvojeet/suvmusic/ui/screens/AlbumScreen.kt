@@ -74,7 +74,8 @@ fun AlbumScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
-    viewModel: AlbumViewModel = hiltViewModel()
+    viewModel: AlbumViewModel = hiltViewModel(),
+    playlistViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
@@ -228,7 +229,12 @@ fun AlbumScreen(
                         onStartRadio = { onShufflePlay(album.songs) },
                         onPlayNext = { viewModel.playNext(album.songs) },
                         onAddToQueue = { viewModel.addToQueue(album.songs) },
-                        onAddToPlaylist = { /* TODO: Show add to playlist dialog */ },
+                        onAddToPlaylist = { 
+                             selectedSong = album.songs.firstOrNull()
+                             if (selectedSong != null) {
+                                 playlistViewModel.showAddToPlaylistSheet(selectedSong!!)
+                             }
+                        },
                         onDownload = { viewModel.downloadAlbum(album) },
                         onShare = { shareAlbum(album) }
                     )
@@ -243,9 +249,45 @@ fun AlbumScreen(
                         song = song,
                         onPlayNext = { viewModel.playNext(listOf(song)) },
                         onAddToQueue = { viewModel.addToQueue(listOf(song)) },
-                        onAddToPlaylist = { /* TODO */ },
+                        onAddToPlaylist = { playlistViewModel.showAddToPlaylistSheet(song) },
                         onDownload = { viewModel.downloadAlbum(album) }, // Using album download for now as context is album
-                        onShare = { /* TODO share song */ }
+                        onShare = { 
+                            val shareText = "Check out this song: ${song.title} by ${song.artist}\n\nhttps://music.youtube.com/watch?v=${song.id}"
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Song")
+                            context.startActivity(shareIntent)
+                        }
+                    )
+                }
+
+                // Global Add to Playlist Sheet
+                val playlistMgmtState by playlistViewModel.uiState.collectAsState()
+                if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
+                    com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
+                        song = playlistMgmtState.selectedSong!!,
+                        isVisible = playlistMgmtState.showAddToPlaylistSheet,
+                        playlists = playlistMgmtState.userPlaylists,
+                        isLoading = playlistMgmtState.isLoadingPlaylists,
+                        onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+                        onAddToPlaylist = { playlistId -> playlistViewModel.addSongToPlaylist(playlistId) },
+                        onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() }
+                    )
+                }
+
+                // Create Playlist Dialog
+                if (playlistMgmtState.showCreatePlaylistDialog) {
+                    com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog(
+                        isVisible = playlistMgmtState.showCreatePlaylistDialog,
+                        isCreating = playlistMgmtState.isCreatingPlaylist,
+                        onDismiss = { playlistViewModel.hideCreatePlaylistDialog() },
+                        onCreate = { title, desc, isPrivate, syncWithYt ->
+                            playlistViewModel.createPlaylist(title, desc, isPrivate, syncWithYt)
+                        },
+                        isLoggedIn = true // Assume logged in for now or get from session
                     )
                 }
             }
