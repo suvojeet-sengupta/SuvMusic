@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.ui.utils
+package com.suvojeet.suvmusic.util
 
 sealed class LyricsStyle {
     object Standard : LyricsStyle()

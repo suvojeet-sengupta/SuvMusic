@@ -64,8 +64,8 @@ import androidx.compose.material.icons.filled.FormatAlignLeft
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import com.suvojeet.suvmusic.ui.utils.LyricsPdfGenerator
-import com.suvojeet.suvmusic.ui.utils.MoodDetector
+import com.suvojeet.suvmusic.util.LyricsPdfGenerator
+import com.suvojeet.suvmusic.util.MoodDetector
 import com.suvojeet.suvmusic.ui.components.DynamicLyricsBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
