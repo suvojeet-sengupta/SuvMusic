@@ -86,7 +86,16 @@ class MusicPlayerService : MediaLibraryService() {
     // Cache for Home Sections to handle "SECTION_Index" lookup
     private var cachedHomeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList()
 
-    private val serviceScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+    private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.e("MusicPlayerService", "Coroutine exception", throwable)
+    }
+
+    private val serviceScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.Dispatchers.Main + 
+        kotlinx.coroutines.SupervisorJob() + 
+        exceptionHandler
+    )
+    
     private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
     private var dynamicsProcessing: android.media.audiofx.DynamicsProcessing? = null
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
@@ -100,11 +109,11 @@ class MusicPlayerService : MediaLibraryService() {
         super.onCreate()
         
         // Ultra-fast buffer for instant playback
-        // Increased min buffer for Android Auto stability
+        // Optimized buffer for background stability and lower memory usage
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(5_000, 50_000, 2000, 3_000)
+            .setBufferDurationsMs(2_000, 15_000, 1_500, 2_000)
             .setPrioritizeTimeOverSizeThresholds(true)
-            .setBackBuffer(30_000, true)
+            .setBackBuffer(5_000, true)
             .build()
             
         val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
@@ -122,6 +131,7 @@ class MusicPlayerService : MediaLibraryService() {
                 !ignoreAudioFocus
             )
             .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
         player.apply {
