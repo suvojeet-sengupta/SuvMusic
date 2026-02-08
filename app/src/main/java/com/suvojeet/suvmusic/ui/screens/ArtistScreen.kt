@@ -53,7 +53,7 @@ import kotlin.math.min
 @Composable
 fun ArtistScreen(
     onBackClick: () -> Unit,
-    onSongClick: (Song) -> Unit,
+    onSongClick: (List<Song>, Int) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onSeeAllAlbumsClick: () -> Unit,
     onSeeAllSinglesClick: () -> Unit,
@@ -112,12 +112,13 @@ fun ArtistScreen(
                             artist = artist,
                             onPlayAll = {
                                 if (artist.songs.isNotEmpty()) {
-                                    onSongClick(artist.songs.first())
+                                    onSongClick(artist.songs, 0)
                                 }
                             },
                             onShuffle = {
                                 if (artist.songs.isNotEmpty()) {
-                                    onSongClick(artist.songs.random())
+                                    val randomIndex = artist.songs.indices.random()
+                                    onSongClick(artist.songs, randomIndex)
                                 }
                             },
                             onSubscribe = viewModel::toggleSubscribe,
@@ -157,7 +158,7 @@ fun ArtistScreen(
                             TopSongRow(
                                 index = index + 1,
                                 song = song,
-                                onClick = { onSongClick(song) }
+                                onClick = { onSongClick(artist.songs, index) }
                             )
                         }
                     }
@@ -227,10 +228,10 @@ fun ArtistScreen(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(artist.videos) { video ->
+                                itemsIndexed(artist.videos) { index, video ->
                                     ArtistVideoCard(
                                         video = video,
-                                        onClick = { onSongClick(video) } // Assuming video plays like a song
+                                        onClick = { onSongClick(artist.videos, index) } // Assuming video plays like a song
                                     )
                                 }
                             }
