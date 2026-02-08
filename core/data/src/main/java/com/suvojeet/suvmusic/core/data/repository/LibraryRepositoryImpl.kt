@@ -1,9 +1,13 @@
-package com.suvojeet.suvmusic.data.repository
+package com.suvojeet.suvmusic.core.data.repository
 
-import com.suvojeet.suvmusic.data.local.dao.LibraryDao
-import com.suvojeet.suvmusic.data.local.entity.LibraryEntity
-import com.suvojeet.suvmusic.data.local.entity.PlaylistSongEntity
+import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
+import com.suvojeet.suvmusic.core.data.local.entity.LibraryEntity
+import com.suvojeet.suvmusic.core.data.local.entity.PlaylistSongEntity
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.LibraryItem
+import com.suvojeet.suvmusic.core.model.LibraryItemType
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
@@ -13,10 +17,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class LibraryRepository @Inject constructor(
+class LibraryRepositoryImpl @Inject constructor(
     private val libraryDao: LibraryDao
-) {
-    suspend fun savePlaylist(playlist: Playlist) {
+) : LibraryRepository {
+
+    override suspend fun savePlaylist(playlist: Playlist) {
         val entity = LibraryEntity(
             id = playlist.id,
             title = playlist.title,
@@ -26,13 +31,12 @@ class LibraryRepository @Inject constructor(
         )
         libraryDao.insertItem(entity)
         
-        // Also cache songs if present
         if (playlist.songs.isNotEmpty()) {
             savePlaylistSongs(playlist.id, playlist.songs)
         }
     }
 
-    suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>) {
+    override suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>) {
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
                 playlistId = playlistId,
@@ -50,7 +54,7 @@ class LibraryRepository @Inject constructor(
         libraryDao.insertPlaylistSongs(entities)
     }
 
-    suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) {
+    override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) {
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
                 playlistId = playlistId,
@@ -67,7 +71,7 @@ class LibraryRepository @Inject constructor(
         libraryDao.insertPlaylistSongs(entities)
     }
 
-    suspend fun getCachedPlaylistSongs(playlistId: String): List<Song> {
+    override suspend fun getCachedPlaylistSongs(playlistId: String): List<Song> {
         return libraryDao.getPlaylistSongs(playlistId).map { entity ->
             Song(
                 id = entity.songId,
@@ -81,7 +85,7 @@ class LibraryRepository @Inject constructor(
         }
     }
 
-    fun getCachedPlaylistSongsFlow(playlistId: String): Flow<List<Song>> {
+    override fun getCachedPlaylistSongsFlow(playlistId: String): Flow<List<Song>> {
         return libraryDao.getPlaylistSongsFlow(playlistId).map { entities ->
             entities.map { entity ->
                 Song(
@@ -97,21 +101,21 @@ class LibraryRepository @Inject constructor(
         }
     }
 
-    suspend fun removePlaylist(playlistId: String) {
+    override suspend fun removePlaylist(playlistId: String) {
         libraryDao.deleteItem(playlistId)
         libraryDao.deletePlaylistSongs(playlistId)
     }
 
-    suspend fun removeSongFromPlaylist(playlistId: String, songId: String) {
+    override suspend fun removeSongFromPlaylist(playlistId: String, songId: String) {
         libraryDao.deleteSongFromPlaylist(playlistId, songId)
     }
 
-    suspend fun addSongToPlaylist(playlistId: String, song: Song) {
+    override suspend fun addSongToPlaylist(playlistId: String, song: Song) {
         val currentSongs = getCachedPlaylistSongs(playlistId)
         appendPlaylistSongs(playlistId, listOf(song), currentSongs.size)
     }
 
-    suspend fun saveAlbum(album: Album) {
+    override suspend fun saveAlbum(album: Album) {
         val entity = LibraryEntity(
             id = album.id,
             title = album.title,
@@ -122,29 +126,35 @@ class LibraryRepository @Inject constructor(
         libraryDao.insertItem(entity)
     }
 
-    suspend fun removeAlbum(albumId: String) {
+    override suspend fun removeAlbum(albumId: String) {
         libraryDao.deleteItem(albumId)
     }
 
-    fun isPlaylistSaved(playlistId: String): Flow<Boolean> {
+    override fun isPlaylistSaved(playlistId: String): Flow<Boolean> {
         return libraryDao.isItemSavedFlow(playlistId)
     }
 
-    fun isAlbumSaved(albumId: String): Flow<Boolean> {
+    override fun isAlbumSaved(albumId: String): Flow<Boolean> {
         return libraryDao.isItemSavedFlow(albumId)
     }
 
-    suspend fun getPlaylistById(id: String): LibraryEntity? = libraryDao.getItem(id)
-
-    fun getSavedPlaylists(): Flow<List<LibraryEntity>> {
-        return libraryDao.getItemsByType("PLAYLIST")
+    override suspend fun getPlaylistById(id: String): LibraryItem? {
+        return libraryDao.getItem(id)?.toDomainModel()
     }
 
-    fun getSavedAlbums(): Flow<List<LibraryEntity>> {
-        return libraryDao.getItemsByType("ALBUM")
+    override fun getSavedPlaylists(): Flow<List<LibraryItem>> {
+        return libraryDao.getItemsByType("PLAYLIST").map { list ->
+            list.map { it.toDomainModel() }
+        }
     }
 
-    suspend fun saveArtist(artist: com.suvojeet.suvmusic.core.model.Artist) {
+    override fun getSavedAlbums(): Flow<List<LibraryItem>> {
+        return libraryDao.getItemsByType("ALBUM").map { list ->
+            list.map { it.toDomainModel() }
+        }
+    }
+
+    override suspend fun saveArtist(artist: Artist) {
         val entity = LibraryEntity(
             id = artist.id,
             title = artist.name,
@@ -155,15 +165,28 @@ class LibraryRepository @Inject constructor(
         libraryDao.insertItem(entity)
     }
 
-    suspend fun removeArtist(artistId: String) {
+    override suspend fun removeArtist(artistId: String) {
         libraryDao.deleteItem(artistId)
     }
 
-    fun getSavedArtists(): Flow<List<LibraryEntity>> {
-        return libraryDao.getItemsByType("ARTIST")
+    override fun getSavedArtists(): Flow<List<LibraryItem>> {
+        return libraryDao.getItemsByType("ARTIST").map { list ->
+            list.map { it.toDomainModel() }
+        }
     }
 
-    fun isArtistSaved(artistId: String): Flow<Boolean> {
+    override fun isArtistSaved(artistId: String): Flow<Boolean> {
         return libraryDao.isItemSavedFlow(artistId)
+    }
+    
+    private fun LibraryEntity.toDomainModel(): LibraryItem {
+        return LibraryItem(
+            id = id,
+            title = title,
+            subtitle = subtitle,
+            thumbnailUrl = thumbnailUrl,
+            type = try { LibraryItemType.valueOf(type) } catch(e: Exception) { LibraryItemType.UNKNOWN },
+            timestamp = timestamp
+        )
     }
 }

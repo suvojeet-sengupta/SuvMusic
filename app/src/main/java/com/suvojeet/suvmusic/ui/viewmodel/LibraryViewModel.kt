@@ -12,7 +12,7 @@ import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
-import com.suvojeet.suvmusic.data.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer

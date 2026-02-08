@@ -17,7 +17,7 @@ import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
-import com.suvojeet.suvmusic.data.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
 import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
 import com.suvojeet.suvmusic.data.repository.SponsorSegment

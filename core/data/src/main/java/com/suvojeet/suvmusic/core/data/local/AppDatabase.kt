@@ -1,12 +1,12 @@
-package com.suvojeet.suvmusic.data.local
+package com.suvojeet.suvmusic.core.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao
-import com.suvojeet.suvmusic.data.local.dao.LibraryDao
-import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
-import com.suvojeet.suvmusic.data.local.entity.LibraryEntity
-import com.suvojeet.suvmusic.data.local.entity.PlaylistSongEntity
+import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
+import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
+import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
+import com.suvojeet.suvmusic.core.data.local.entity.LibraryEntity
+import com.suvojeet.suvmusic.core.data.local.entity.PlaylistSongEntity
 
 /**
  * Main Room database for the app.

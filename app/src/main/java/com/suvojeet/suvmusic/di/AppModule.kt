@@ -8,6 +8,10 @@ import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.core.data.local.AppDatabase
+import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
+import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,7 +41,7 @@ object AppModule {
         streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService,
         searchService: com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService,
         networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor,
-        libraryRepository: com.suvojeet.suvmusic.data.repository.LibraryRepository
+        libraryRepository: LibraryRepository
     ): YouTubeRepository {
         return YouTubeRepository(sessionManager, jsonParser, apiClient, streamingService, searchService, networkMonitor, libraryRepository)
     }
@@ -83,10 +87,10 @@ object AppModule {
     @Singleton
     fun provideAppDatabase(
         @ApplicationContext context: Context
-    ): com.suvojeet.suvmusic.data.local.AppDatabase {
+    ): AppDatabase {
         return androidx.room.Room.databaseBuilder(
             context,
-            com.suvojeet.suvmusic.data.local.AppDatabase::class.java,
+            AppDatabase::class.java,
             "suvmusic_database"
         )
         .fallbackToDestructiveMigration() // For now, recreate DB on schema changes
@@ -96,16 +100,16 @@ object AppModule {
     @Provides
     @Singleton
     fun provideListeningHistoryDao(
-        database: com.suvojeet.suvmusic.data.local.AppDatabase
-    ): com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao {
+        database: AppDatabase
+    ): ListeningHistoryDao {
         return database.listeningHistoryDao()
     }
 
     @Provides
     @Singleton
     fun provideLibraryDao(
-        database: com.suvojeet.suvmusic.data.local.AppDatabase
-    ): com.suvojeet.suvmusic.data.local.dao.LibraryDao {
+        database: AppDatabase
+    ): LibraryDao {
         return database.libraryDao()
     }
     

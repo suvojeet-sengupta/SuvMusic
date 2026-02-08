@@ -6,7 +6,7 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import java.util.UUID
 import dagger.hilt.android.lifecycle.HiltViewModel

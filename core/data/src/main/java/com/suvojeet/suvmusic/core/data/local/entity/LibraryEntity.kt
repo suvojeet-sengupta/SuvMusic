@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.local.entity
+package com.suvojeet.suvmusic.core.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
