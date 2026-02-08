@@ -21,6 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import com.suvojeet.suvmusic.util.encodeUrl
 import com.suvojeet.suvmusic.data.SessionManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
  * Repository for fetching lyrics from multiple providers.
@@ -28,7 +29,7 @@ import com.suvojeet.suvmusic.data.SessionManager
  */
 @Singleton
 class LyricsRepository @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient,
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
