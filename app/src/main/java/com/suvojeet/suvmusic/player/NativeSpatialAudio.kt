@@ -37,4 +37,36 @@ class NativeSpatialAudio @Inject constructor() {
     }
 
     private external fun nReset()
+
+    fun setSpatializerEnabled(enabled: Boolean) {
+        if (isLibraryLoaded) {
+            nSetSpatializerEnabled(enabled)
+        }
+    }
+
+    private external fun nSetSpatializerEnabled(enabled: Boolean)
+
+    fun setLimiterEnabled(enabled: Boolean) {
+        if (isLibraryLoaded) {
+            nSetLimiterEnabled(enabled)
+        }
+    }
+
+    private external fun nSetLimiterEnabled(enabled: Boolean)
+
+    fun setLimiterParams(thresholdDb: Float, ratio: Float, attackMs: Float, releaseMs: Float, makeupGainDb: Float) {
+        if (isLibraryLoaded) {
+            nSetLimiterParams(thresholdDb, ratio, attackMs, releaseMs, makeupGainDb)
+        }
+    }
+
+    private external fun nSetLimiterParams(thresholdDb: Float, ratio: Float, attackMs: Float, releaseMs: Float, makeupGainDb: Float)
+
+    fun setLimiterBalance(balance: Float) {
+        if (isLibraryLoaded) {
+            nSetLimiterBalance(balance)
+        }
+    }
+
+    private external fun nSetLimiterBalance(balance: Float)
 }
