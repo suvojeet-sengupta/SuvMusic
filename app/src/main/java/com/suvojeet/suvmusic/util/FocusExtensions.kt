@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.utils
+package com.suvojeet.suvmusic.util
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

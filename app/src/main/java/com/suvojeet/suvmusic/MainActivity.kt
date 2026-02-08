@@ -61,7 +61,7 @@ import com.suvojeet.suvmusic.data.model.UpdateState
 import com.suvojeet.suvmusic.ui.components.UpdateAvailableDialog
 import com.suvojeet.suvmusic.ui.components.DownloadProgressDialog
 import com.suvojeet.suvmusic.ui.components.UpdateErrorDialog
-import com.suvojeet.suvmusic.utils.NetworkMonitor
+import com.suvojeet.suvmusic.util.NetworkMonitor
 import com.suvojeet.suvmusic.service.DynamicIslandService
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.material.icons.filled.Lock
@@ -550,7 +550,7 @@ fun SuvMusicApp(
     }
     
     // Check for TV Mode
-    val isTv = remember { com.suvojeet.suvmusic.utils.TvUtils.isTv(context) }
+    val isTv = remember { com.suvojeet.suvmusic.util.TvUtils.isTv(context) }
 
     if (showWelcomeDialog) {
         androidx.compose.material3.AlertDialog(
