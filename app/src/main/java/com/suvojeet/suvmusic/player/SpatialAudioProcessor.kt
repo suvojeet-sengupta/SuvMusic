@@ -42,7 +42,7 @@ class SpatialAudioProcessor @Inject constructor(
              // Hard limiter params for protection
              val thresholdDb = -0.1f
              val ratio = 20.0f
-             val attackMs = 5.0f
+             val attackMs = 0.1f
              val releaseMs = 50.0f
              
              nativeSpatialAudio.setLimiterParams(thresholdDb, ratio, attackMs, releaseMs, makeupGainDb)

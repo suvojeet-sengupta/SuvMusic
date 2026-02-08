@@ -3,8 +3,8 @@
 Limiter::Limiter() : enabled(false), threshold(1.0f), ratio(1.0f), 
                      attackCoeff(0.0f), releaseCoeff(0.0f), makeupGain(1.0f),
                      delayWriteIndex(0), delayLength(0), envelope(0.0f),
-                     attackMs_(10.0f), releaseMs_(100.0f), currentSampleRate(0), balance(0.0f) {
-    setParams(-0.1f, 20.0f, 10.0f, 100.0f, 0.0f);
+                     attackMs_(0.1f), releaseMs_(100.0f), currentSampleRate(0), balance(0.0f) {
+    setParams(-0.1f, 20.0f, 0.1f, 100.0f, 0.0f);
 }
 
 void Limiter::setParams(float thresholdDb, float ratio, float attackMs, float releaseMs, float makeupGainDb) {
@@ -111,7 +111,13 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
             delayBuffer[writePos] = inputSample;
             
             // Output = Delayed * Gain
-            buffer[i * numChannels + ch] = delayedSample * gain;
+            float outputSample = delayedSample * gain;
+            
+            // Hard Clamping to prevent any overflow/distortion
+            if (outputSample > 1.0f) outputSample = 1.0f;
+            else if (outputSample < -1.0f) outputSample = -1.0f;
+
+            buffer[i * numChannels + ch] = outputSample;
         }
         
         delayWriteIndex++;
