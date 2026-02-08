@@ -345,7 +345,7 @@ fun SearchScreen(
                                     song = song,
                                     onClick = {
                                         viewModel.addToRecentSearches(song)
-                                        onSongClick(listOf(song), 0)
+                                        onSongClick(uiState.results, index)
                                     },
                                     onArtistClick = { artistId -> onArtistClick(artistId) },
                                     onMoreClick = {
@@ -476,7 +476,7 @@ fun SearchScreen(
                                 song = song,
                                 onClick = {
                                     viewModel.addToRecentSearches(song)
-                                    onSongClick(listOf(song), 0)
+                                    onSongClick(uiState.results, index)
                                 },
                                 onArtistClick = { artistId ->
                                     onArtistClick(artistId)
