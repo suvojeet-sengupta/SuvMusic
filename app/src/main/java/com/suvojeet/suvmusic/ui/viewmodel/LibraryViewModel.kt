@@ -90,7 +90,7 @@ class LibraryViewModel @Inject constructor(
     private val musicPlayer: MusicPlayer,
     private val workManager: androidx.work.WorkManager,
     private val cache: androidx.media3.datasource.cache.Cache,
-    private val listeningHistoryDao: com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao
+    private val listeningHistoryDao: com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LibraryUiState())
