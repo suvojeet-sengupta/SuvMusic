@@ -2,8 +2,8 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.suvojeet.suvmusic.data.local.dao.ArtistStats
-import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
+import com.suvojeet.suvmusic.core.data.local.dao.ArtistStats
+import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

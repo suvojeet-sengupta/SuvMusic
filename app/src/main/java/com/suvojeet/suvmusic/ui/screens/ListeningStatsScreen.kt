@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.suvojeet.suvmusic.data.local.dao.ArtistStats
-import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
+import com.suvojeet.suvmusic.core.data.local.dao.ArtistStats
+import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
 import com.suvojeet.suvmusic.ui.viewmodel.DailyListening
 import com.suvojeet.suvmusic.ui.viewmodel.ListeningStatsUiState
 import com.suvojeet.suvmusic.ui.viewmodel.ListeningStatsViewModel

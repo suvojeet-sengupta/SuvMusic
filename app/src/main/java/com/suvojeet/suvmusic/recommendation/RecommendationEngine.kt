@@ -12,7 +12,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class RecommendationEngine @Inject constructor(
-    private val listeningHistoryDao: ListeningHistoryDao,
+    private val listeningHistoryDao: com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao,
     private val youTubeRepository: YouTubeRepository
 ) {
     
