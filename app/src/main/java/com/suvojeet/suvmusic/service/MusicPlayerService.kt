@@ -405,6 +405,51 @@ class MusicPlayerService : MediaLibraryService() {
                  }
                  return updatedMediaItemsFuture
             }
+
+            override fun onPlaybackResumption(
+                mediaSession: MediaSession,
+                controller: MediaSession.ControllerInfo
+            ): com.google.common.util.concurrent.ListenableFuture<MediaSession.MediaItemsWithIndex> {
+                val future = com.google.common.util.concurrent.SettableFuture.create<MediaSession.MediaItemsWithIndex>()
+                serviceScope.launch {
+                    try {
+                        val lastState = sessionManager.getLastPlaybackState()
+                        if (lastState != null) {
+                            val jsonArray = JSONArray(lastState.queueJson)
+                            val mediaItems = mutableListOf<MediaItem>()
+                            for (i in 0 until jsonArray.length()) {
+                                val obj = jsonArray.getJSONObject(i)
+                                val song = com.suvojeet.suvmusic.data.model.Song(
+                                    id = obj.getString("id"),
+                                    title = obj.getString("title"),
+                                    artist = obj.getString("artist"),
+                                    album = obj.optString("album", ""),
+                                    thumbnailUrl = obj.optString("thumbnailUrl", ""),
+                                    duration = obj.optLong("duration", 0L),
+                                    source = try {
+                                        com.suvojeet.suvmusic.data.model.SongSource.valueOf(obj.optString("source", "YOUTUBE"))
+                                    } catch (e: Exception) {
+                                        com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE
+                                    }
+                                )
+                                mediaItems.add(createPlayableMediaItem(song))
+                            }
+                            
+                            if (mediaItems.isNotEmpty()) {
+                                val index = lastState.index.coerceIn(0, mediaItems.size - 1)
+                                future.set(MediaSession.MediaItemsWithIndex(mediaItems, index, lastState.position))
+                            } else {
+                                future.setException(UnsupportedOperationException("No media items found in last state"))
+                            }
+                        } else {
+                            future.setException(UnsupportedOperationException("No last playback state found"))
+                        }
+                    } catch (e: Exception) {
+                        future.setException(e)
+                    }
+                }
+                return future
+            }
         })
         .setSessionActivity(sessionActivityPendingIntent)
         .setBitmapLoader(CoilBitmapLoader(this))
