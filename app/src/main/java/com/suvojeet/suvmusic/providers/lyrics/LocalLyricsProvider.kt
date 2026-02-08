@@ -5,11 +5,12 @@ import android.net.Uri
 import android.provider.MediaStore
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
 
 class LocalLyricsProvider @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) {
     val name = "Local Storage"
 
