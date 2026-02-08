@@ -1,6 +1,6 @@
 package com.suvojeet.suvmusic.recommendation
 
-import com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao
+import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.flow.first
