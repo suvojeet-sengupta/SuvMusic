@@ -827,8 +827,9 @@ fun AboutArtistCard(
              .clip(RoundedCornerShape(16.dp))
      ) {
          // Background Image (dimmed)
-         if (artist.thumbnailUrl != null) {
-              val highResThumbnail = artist.thumbnailUrl.replace(Regex("w\\d+-h\\d+"), "w800-h800")
+         val thumbnailUrl = artist.thumbnailUrl
+         if (thumbnailUrl != null) {
+              val highResThumbnail = thumbnailUrl.replace(Regex("w\\d+-h\\d+"), "w800-h800")
               AsyncImage(
                   model = ImageRequest.Builder(LocalContext.current)
                       .data(highResThumbnail)
