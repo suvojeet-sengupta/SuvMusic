@@ -22,7 +22,7 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "suvmusic_db"
+            "suvmusic_database"
         )
         .fallbackToDestructiveMigration()
         .build()

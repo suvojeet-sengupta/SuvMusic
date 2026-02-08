@@ -8,9 +8,6 @@ import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
-import com.suvojeet.suvmusic.core.data.local.AppDatabase
-import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
-import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import dagger.Module
 import dagger.Provides
@@ -81,36 +78,6 @@ object AppModule {
         gson: Gson
     ): JioSaavnRepository {
         return JioSaavnRepository(okHttpClient, gson)
-    }
-    
-    @Provides
-    @Singleton
-    fun provideAppDatabase(
-        @ApplicationContext context: Context
-    ): AppDatabase {
-        return androidx.room.Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "suvmusic_database"
-        )
-        .fallbackToDestructiveMigration() // For now, recreate DB on schema changes
-        .build()
-    }
-    
-    @Provides
-    @Singleton
-    fun provideListeningHistoryDao(
-        database: AppDatabase
-    ): ListeningHistoryDao {
-        return database.listeningHistoryDao()
-    }
-
-    @Provides
-    @Singleton
-    fun provideLibraryDao(
-        database: AppDatabase
-    ): LibraryDao {
-        return database.libraryDao()
     }
     
     @Provides
