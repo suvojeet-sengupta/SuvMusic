@@ -180,6 +180,9 @@ class SessionManager @Inject constructor(
         // Next Song Preloading
         private val NEXT_SONG_PRELOADING_ENABLED_KEY = booleanPreferencesKey("next_song_preloading_enabled")
         private val NEXT_SONG_PRELOAD_DELAY_KEY = intPreferencesKey("next_song_preload_delay")
+
+        // Crossfeed
+        private val CROSSFEED_ENABLED_KEY = booleanPreferencesKey("crossfeed_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -864,6 +867,21 @@ class SessionManager @Inject constructor(
     suspend fun setNextSongPreloadDelay(seconds: Int) {
         context.dataStore.edit { preferences ->
             preferences[NEXT_SONG_PRELOAD_DELAY_KEY] = seconds
+        }
+    }
+
+    // --- Crossfeed ---
+
+    suspend fun isCrossfeedEnabled(): Boolean =
+        context.dataStore.data.first()[CROSSFEED_ENABLED_KEY] ?: true
+
+    val crossfeedEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[CROSSFEED_ENABLED_KEY] ?: true
+    }
+
+    suspend fun setCrossfeedEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[CROSSFEED_ENABLED_KEY] = enabled
         }
     }
 
