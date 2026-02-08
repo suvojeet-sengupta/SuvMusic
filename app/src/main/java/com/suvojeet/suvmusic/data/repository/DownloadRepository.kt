@@ -47,7 +47,7 @@ class DownloadRepository @Inject constructor(
     }
     
     private val gson = com.google.gson.GsonBuilder()
-        .registerTypeAdapter(Uri::class.java, com.suvojeet.suvmusic.utils.UriTypeAdapter())
+        .registerTypeAdapter(Uri::class.java, com.suvojeet.suvmusic.util.UriTypeAdapter())
         .create()
     private val downloadsMetaFile = File(context.filesDir, "downloads_meta.json")
     

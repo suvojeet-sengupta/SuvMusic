@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.utils
+package com.suvojeet.suvmusic.util
 
 object ImageUtils {
     private val W_H_REGEX = Regex("""w\d+-h\d+""")

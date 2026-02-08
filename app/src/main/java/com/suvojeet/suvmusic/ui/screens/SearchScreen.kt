@@ -82,7 +82,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
-import com.suvojeet.suvmusic.utils.dpadFocusable
+import com.suvojeet.suvmusic.util.dpadFocusable
 
 /**
  * Apple Music-inspired search screen with recent searches, suggestions, and inline results.

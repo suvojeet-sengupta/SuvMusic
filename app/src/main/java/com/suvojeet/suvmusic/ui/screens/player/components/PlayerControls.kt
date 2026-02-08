@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
-import com.suvojeet.suvmusic.utils.dpadFocusable
+import com.suvojeet.suvmusic.util.dpadFocusable
 
 /**
  * Custom skip previous icon (double left triangles) like Apple Music

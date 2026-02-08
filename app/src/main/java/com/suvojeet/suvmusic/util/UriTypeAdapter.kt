@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.utils
+package com.suvojeet.suvmusic.util
 
 import android.net.Uri
 import com.google.gson.TypeAdapter

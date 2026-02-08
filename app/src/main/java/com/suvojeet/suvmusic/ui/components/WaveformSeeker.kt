@@ -65,7 +65,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.KeyEventType
-import com.suvojeet.suvmusic.utils.dpadFocusable
+import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlin.random.Random
 
 /**
