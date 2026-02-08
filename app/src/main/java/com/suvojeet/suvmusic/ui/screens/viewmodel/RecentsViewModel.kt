@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
-import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted

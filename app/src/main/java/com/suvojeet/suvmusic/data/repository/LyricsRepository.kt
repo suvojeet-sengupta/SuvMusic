@@ -5,8 +5,8 @@ import android.util.LruCache
 import com.google.gson.JsonParser
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.providers.lyrics.LyricsLine
-import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.providers.lyrics.BetterLyricsProvider
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProvider
 import com.suvojeet.suvmusic.simpmusic.SimpMusicLyricsProvider

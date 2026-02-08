@@ -12,8 +12,8 @@ import com.suvojeet.suvmusic.data.model.Comment
 import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.PlayerState
-import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
@@ -471,7 +471,7 @@ class PlayerViewModel @Inject constructor(
                 } else {
                     // Create Local Playlist from Queue
                     val id = "local_q_" + java.util.UUID.randomUUID().toString()
-                    val playlist = com.suvojeet.suvmusic.data.model.Playlist(
+                    val playlist = com.suvojeet.suvmusic.core.model.Playlist(
                         id = id,
                         title = title,
                         author = "You",

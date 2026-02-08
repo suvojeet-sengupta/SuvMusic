@@ -3,7 +3,7 @@ package com.suvojeet.suvmusic.data.repository
 import com.suvojeet.suvmusic.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.data.local.dao.ArtistStats
 import com.suvojeet.suvmusic.data.local.entity.ListeningHistory
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -77,11 +77,11 @@ class ListeningHistoryRepository @Inject constructor(
                 isLiked = false,
                 artistId = song.artistId,
                 source = when (song.source) {
-                    com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YOUTUBE"
-                    com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE_MUSIC -> "YOUTUBE"
-                    com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "JIOSAAVN"
-                    com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "LOCAL"
-                    com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> "DOWNLOADED"
+                    com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YOUTUBE"
+                    com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE_MUSIC -> "YOUTUBE"
+                    com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "JIOSAAVN"
+                    com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "LOCAL"
+                    com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> "DOWNLOADED"
                 },
                 album = song.album,
                 duration = song.duration,

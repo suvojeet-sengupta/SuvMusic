@@ -6,10 +6,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.SuvMusicApplication
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.Album
-import com.suvojeet.suvmusic.data.model.Artist
-import com.suvojeet.suvmusic.data.model.PlaylistDisplayItem
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LibraryRepository
@@ -271,7 +271,7 @@ class LibraryViewModel @Inject constructor(
                 } else {
                     // Create Local Playlist
                     val id = "local_" + java.util.UUID.randomUUID().toString()
-                    val playlist = com.suvojeet.suvmusic.data.model.Playlist(
+                    val playlist = com.suvojeet.suvmusic.core.model.Playlist(
                         id = id, 
                         title = title, 
                         author = "You", 
@@ -437,9 +437,9 @@ class LibraryViewModel @Inject constructor(
                     duration = history.duration,
                     thumbnailUrl = history.thumbnailUrl,
                     source = try { 
-                        com.suvojeet.suvmusic.data.model.SongSource.valueOf(history.source) 
+                        com.suvojeet.suvmusic.core.model.SongSource.valueOf(history.source) 
                     } catch (e: Exception) { 
-                        com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE 
+                        com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE 
                     },
                     localUri = history.localUri?.let { android.net.Uri.parse(it) },
                     artistId = history.artistId

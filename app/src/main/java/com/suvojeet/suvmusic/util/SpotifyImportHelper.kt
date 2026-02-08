@@ -3,7 +3,7 @@ package com.suvojeet.suvmusic.util
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.suvojeet.suvmusic.data.model.ImportResult
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

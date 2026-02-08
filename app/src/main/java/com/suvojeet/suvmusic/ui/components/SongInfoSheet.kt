@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import javax.inject.Inject
 import androidx.compose.runtime.LaunchedEffect
@@ -250,10 +250,10 @@ fun SongInfoSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val sourceBadge = when (song.source) {
-                            com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YOUTUBE"
-                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "HQ AUDIO"
-                            com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "LOCAL"
-                            com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> "OFFLINE"
+                            com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YOUTUBE"
+                            com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ AUDIO"
+                            com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "LOCAL"
+                            com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> "OFFLINE"
                             else -> "UNKNOWN"
                         }
                         
@@ -430,16 +430,16 @@ fun SongInfoSheet(
                                 label = "Source",
                                 value = when {
                                     // For downloaded songs, show original source + Downloaded suffix
-                                    song.source == com.suvojeet.suvmusic.data.model.SongSource.DOWNLOADED -> {
+                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> {
                                         when (song.originalSource) {
-                                            com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "HQ Audio (Downloaded)"
-                                            com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YouTube (Downloaded)"
+                                            com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ Audio (Downloaded)"
+                                            com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YouTube (Downloaded)"
                                             else -> "Downloaded"
                                         }
                                     }
-                                    song.source == com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE -> "YouTube Music"
-                                    song.source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN -> "HQ Audio (Streaming)"
-                                    song.source == com.suvojeet.suvmusic.data.model.SongSource.LOCAL -> "Local Storage"
+                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YouTube Music"
+                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ Audio (Streaming)"
+                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "Local Storage"
                                     else -> "Unknown"
                                 }
                             )
@@ -729,7 +729,7 @@ class SongInfoViewModel @Inject constructor(
     
     private var lastArtistString: String? = null
     
-    fun fetchArtistCredits(artistString: String, source: com.suvojeet.suvmusic.data.model.SongSource = com.suvojeet.suvmusic.data.model.SongSource.YOUTUBE) {
+    fun fetchArtistCredits(artistString: String, source: com.suvojeet.suvmusic.core.model.SongSource = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
         // Avoid refetching if same artist string
         if (artistString == lastArtistString && _artistCredits.value.isNotEmpty()) return
         lastArtistString = artistString
@@ -751,7 +751,7 @@ class SongInfoViewModel @Inject constructor(
             // Then fetch thumbnails for each artist
             val updatedCredits = artistNames.map { name ->
                 try {
-                    val searchResults = if (source == com.suvojeet.suvmusic.data.model.SongSource.JIOSAAVN) {
+                    val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
                         jioSaavnRepository.searchArtists(name)
                     } else {
                         youTubeRepository.searchArtists(name)

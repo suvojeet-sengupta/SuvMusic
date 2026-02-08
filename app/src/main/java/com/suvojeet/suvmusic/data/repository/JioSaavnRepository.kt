@@ -3,8 +3,8 @@ package com.suvojeet.suvmusic.data.repository
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.suvojeet.suvmusic.data.model.Playlist
-import com.suvojeet.suvmusic.data.model.Song
+import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.util.SecureConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -89,7 +89,7 @@ class JioSaavnRepository @Inject constructor(
     /**
      * Search for artists on JioSaavn.
      */
-    suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.data.model.Artist> = withContext(Dispatchers.IO) {
+    suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.core.model.Artist> = withContext(Dispatchers.IO) {
         try {
             val url = "$BASE_URL?__call=search.getArtistResults&_format=json&n=5&q=${query.encodeUrl()}"
             val response = makeRequest(url)
@@ -102,7 +102,7 @@ class JioSaavnRepository @Inject constructor(
                 val name = artist.get("name")?.asString ?: artist.get("title")?.asString ?: ""
                 val image = artist.get("image")?.asString?.toHighResImage()
                 
-                com.suvojeet.suvmusic.data.model.Artist(
+                com.suvojeet.suvmusic.core.model.Artist(
                     id = id,
                     name = name.decodeHtml(),
                     thumbnailUrl = image
@@ -117,7 +117,7 @@ class JioSaavnRepository @Inject constructor(
     /**
      * Get artist details by ID.
      */
-    suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.data.model.Artist? = withContext(Dispatchers.IO) {
+    suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.core.model.Artist? = withContext(Dispatchers.IO) {
         try {
             // Try fetching artist details using webapi.get
             // JioSaavn uses a "token" (which is the ID we get from search) or a permalink
@@ -142,10 +142,10 @@ class JioSaavnRepository @Inject constructor(
                 val albumImage = obj.get("image")?.asString?.toHighResImage()
                 val year = obj.get("year")?.asString
                 
-                com.suvojeet.suvmusic.data.model.Album(albumId, title.decodeHtml(), name.decodeHtml(), albumImage, year)
+                com.suvojeet.suvmusic.core.model.Album(albumId, title.decodeHtml(), name.decodeHtml(), albumImage, year)
             } ?: emptyList()
             
-            com.suvojeet.suvmusic.data.model.Artist(
+            com.suvojeet.suvmusic.core.model.Artist(
                 id = artistId,
                 name = name.decodeHtml(),
                 thumbnailUrl = image,
@@ -359,7 +359,7 @@ class JioSaavnRepository @Inject constructor(
                             val year = obj.get("year")?.asString
                             
                             com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
-                                com.suvojeet.suvmusic.data.model.Album(id, title.decodeHtml(), artist.decodeHtml(), image, year)
+                                com.suvojeet.suvmusic.core.model.Album(id, title.decodeHtml(), artist.decodeHtml(), image, year)
                             )
                         }
                         "playlist" -> {
@@ -369,7 +369,7 @@ class JioSaavnRepository @Inject constructor(
                             val count = obj.get("song_count")?.asInt ?: obj.get("count")?.asInt ?: 0
                             
                             com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn", image, count)
+                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn", image, count)
                             )
                         }
                         "chart" -> {
@@ -379,7 +379,7 @@ class JioSaavnRepository @Inject constructor(
                             val count = obj.get("count")?.asInt ?: 0
                             
                             com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn Chart", image, count)
+                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn Chart", image, count)
                             )
                         }
                         "radio_station" -> {
@@ -388,7 +388,7 @@ class JioSaavnRepository @Inject constructor(
                             val image = obj.get("image")?.asString?.toHighResImage()
                             
                             com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.data.model.PlaylistDisplayItem("radio_$id", title.decodeHtml(), "", "Radio", image, 0)
+                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem("radio_$id", title.decodeHtml(), "", "Radio", image, 0)
                             )
                         }
                         "artist" -> {
@@ -396,7 +396,7 @@ class JioSaavnRepository @Inject constructor(
                             val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
                             val image = obj.get("image")?.asString?.toHighResImage()
                              com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(
-                                com.suvojeet.suvmusic.data.model.Artist(id, title.decodeHtml(), image)
+                                com.suvojeet.suvmusic.core.model.Artist(id, title.decodeHtml(), image)
                             )
                         }
                         else -> null
@@ -502,7 +502,7 @@ class JioSaavnRepository @Inject constructor(
                         val songCount = chartObj.get("count")?.asInt ?: chartObj.get("songs_count")?.asInt ?: 0
                         
                         com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
-                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                            com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(
                                 id = chartId,
                                 name = title.decodeHtml(),
                                 url = "",
@@ -545,7 +545,7 @@ class JioSaavnRepository @Inject constructor(
                         val year = albumObj.get("year")?.asString
                         
                         com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
-                            com.suvojeet.suvmusic.data.model.Album(
+                            com.suvojeet.suvmusic.core.model.Album(
                                 id = albumId,
                                 title = title.decodeHtml(),
                                 artist = artist.decodeHtml(),
@@ -612,7 +612,7 @@ class JioSaavnRepository @Inject constructor(
                         val songCount = plObj.get("count")?.asInt ?: plObj.get("songs_count")?.asInt ?: 0
                         
                         com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
-                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                            com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(
                                 id = plId,
                                 name = name.decodeHtml(),
                                 url = "",
@@ -649,7 +649,7 @@ class JioSaavnRepository @Inject constructor(
                         val image = artistObj.get("image")?.asString?.toHighResImage()
                         
                         com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(
-                            com.suvojeet.suvmusic.data.model.Artist(
+                            com.suvojeet.suvmusic.core.model.Artist(
                                 id = artistId,
                                 name = name.decodeHtml(),
                                 thumbnailUrl = image
@@ -689,7 +689,7 @@ class JioSaavnRepository @Inject constructor(
                         val year = albumObj.get("year")?.asString
                         
                         com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(
-                            com.suvojeet.suvmusic.data.model.Album(
+                            com.suvojeet.suvmusic.core.model.Album(
                                 id = albumId,
                                 title = title.decodeHtml(),
                                 artist = artist.decodeHtml(),
@@ -728,7 +728,7 @@ class JioSaavnRepository @Inject constructor(
                         val image = radioObj.get("image")?.asString?.toHighResImage()
                         
                         com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(
-                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                            com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(
                                 id = "radio_$radioId",
                                 name = name.decodeHtml(),
                                 url = "",
@@ -754,8 +754,8 @@ class JioSaavnRepository @Inject constructor(
     /**
      * Get featured/trending playlists from JioSaavn for the library.
      */
-    suspend fun getFeaturedPlaylists(): List<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
-        val playlists = mutableListOf<com.suvojeet.suvmusic.data.model.PlaylistDisplayItem>()
+    suspend fun getFeaturedPlaylists(): List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+        val playlists = mutableListOf<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem>()
         
         try {
             // Fetch top charts/featured playlists
@@ -783,7 +783,7 @@ class JioSaavnRepository @Inject constructor(
                 
                 if (plId != null) {
                     playlists.add(
-                        com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                        com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(
                             id = plId,
                             name = name.decodeHtml(),
                             url = "",
@@ -812,7 +812,7 @@ class JioSaavnRepository @Inject constructor(
                         val songCount = plObj.get("count")?.asInt ?: 0
                         
                         playlists.add(
-                            com.suvojeet.suvmusic.data.model.PlaylistDisplayItem(
+                            com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(
                                 id = plId,
                                 name = name.decodeHtml(),
                                 url = "",
@@ -951,7 +951,7 @@ class JioSaavnRepository @Inject constructor(
                     val artist = obj.get("music")?.asString ?: "" // 'music' key usually holds artist in autocomplete
                     val year = obj.get("year")?.asString
                     
-                    com.suvojeet.suvmusic.data.model.Album(id, title.decodeHtml(), artist.decodeHtml(), image, year)
+                    com.suvojeet.suvmusic.core.model.Album(id, title.decodeHtml(), artist.decodeHtml(), image, year)
                 }
             } else emptyList()
             
@@ -963,7 +963,7 @@ class JioSaavnRepository @Inject constructor(
                     val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
                     val image = obj.get("image")?.asString?.toHighResImage()
                     
-                    com.suvojeet.suvmusic.data.model.Artist(id, title.decodeHtml(), image)
+                    com.suvojeet.suvmusic.core.model.Artist(id, title.decodeHtml(), image)
                 }
             } else emptyList()
             
@@ -997,7 +997,7 @@ class JioSaavnRepository @Inject constructor(
 
 data class SearchResults(
     val songs: List<Song> = emptyList(),
-    val albums: List<com.suvojeet.suvmusic.data.model.Album> = emptyList(),
-    val artists: List<com.suvojeet.suvmusic.data.model.Artist> = emptyList(),
+    val albums: List<com.suvojeet.suvmusic.core.model.Album> = emptyList(),
+    val artists: List<com.suvojeet.suvmusic.core.model.Artist> = emptyList(),
     val playlists: List<Playlist> = emptyList()
 )

@@ -184,7 +184,7 @@ fun MiniPlayer(
 
 @Composable
 private fun StandardMiniPlayer(
-    song: com.suvojeet.suvmusic.data.model.Song,
+    song: com.suvojeet.suvmusic.core.model.Song,
     playerState: PlayerState,
     dominantColors: DominantColors,
     modifier: Modifier = Modifier,

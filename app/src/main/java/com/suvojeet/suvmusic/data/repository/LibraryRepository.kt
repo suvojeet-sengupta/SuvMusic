@@ -3,10 +3,10 @@ package com.suvojeet.suvmusic.data.repository
 import com.suvojeet.suvmusic.data.local.dao.LibraryDao
 import com.suvojeet.suvmusic.data.local.entity.LibraryEntity
 import com.suvojeet.suvmusic.data.local.entity.PlaylistSongEntity
-import com.suvojeet.suvmusic.data.model.Album
-import com.suvojeet.suvmusic.data.model.Playlist
-import com.suvojeet.suvmusic.data.model.Song
-import com.suvojeet.suvmusic.data.model.SongSource
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.SongSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -144,7 +144,7 @@ class LibraryRepository @Inject constructor(
         return libraryDao.getItemsByType("ALBUM")
     }
 
-    suspend fun saveArtist(artist: com.suvojeet.suvmusic.data.model.Artist) {
+    suspend fun saveArtist(artist: com.suvojeet.suvmusic.core.model.Artist) {
         val entity = LibraryEntity(
             id = artist.id,
             title = artist.name,
