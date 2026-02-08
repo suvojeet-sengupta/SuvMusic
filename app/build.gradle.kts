@@ -90,6 +90,15 @@ android {
         compose = true
         buildConfig = true
     }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
+    ndkVersion = "25.2.9519653" // Standard NDK version for stability
 }
 
 kotlin {

@@ -70,6 +70,9 @@ class MusicPlayerService : MediaLibraryService() {
     lateinit var audioARManager: com.suvojeet.suvmusic.player.AudioARManager
 
     @Inject
+    lateinit var spatialAudioProcessor: com.suvojeet.suvmusic.player.SpatialAudioProcessor
+
+    @Inject
     lateinit var sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager
 
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -102,6 +105,7 @@ class MusicPlayerService : MediaLibraryService() {
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
     
     // Audio AR & Effects state
+    private var isSpatialAudioActive = false
     private var currentGlobalGainDb = 0f
     private var currentBalance = 0f
 
@@ -120,8 +124,22 @@ class MusicPlayerService : MediaLibraryService() {
         val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
         val ignoreAudioFocus = kotlinx.coroutines.runBlocking { sessionManager.isIgnoreAudioFocusDuringCallsEnabled() }
 
+        // Configure AudioSink with our native SpatialAudioProcessor
+        val audioSink = androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(this)
+            .setAudioProcessors(arrayOf(spatialAudioProcessor))
+            .build()
+
+        val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean
+            ): androidx.media3.exoplayer.audio.AudioSink {
+                return audioSink
+            }
+        }
         
-        val player = ExoPlayer.Builder(this)
+        val player = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory))
             .setLoadControl(loadControl)
             .setAudioAttributes(
@@ -195,6 +213,8 @@ class MusicPlayerService : MediaLibraryService() {
                     audioArEnabled = args[3] as Boolean
                 )
             }.collect { state ->
+                 isSpatialAudioActive = state.audioArEnabled
+                 spatialAudioProcessor.setEnabled(state.audioArEnabled)
                  updateAudioEffects(
                      state.normEnabled, 
                      state.boostEnabled, 
@@ -635,6 +655,23 @@ class MusicPlayerService : MediaLibraryService() {
 
     private fun applyGains() {
         try {
+            // If Spatial Audio is active, the C++ processor handles balance and 3D positioning
+            // We only need to apply the global gain here.
+            if (isSpatialAudioActive) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    dynamicsProcessing?.apply {
+                        setInputGainbyChannel(0, currentGlobalGainDb)
+                        setInputGainbyChannel(1, currentGlobalGainDb)
+                    }
+                } else {
+                    loudnessEnhancer?.apply {
+                        val targetmB = (currentGlobalGainDb * 100).toInt()
+                        setTargetGain(targetmB)
+                    }
+                }
+                return
+            }
+
             val balance = currentBalance
             
             // Linear factors (0..1)
