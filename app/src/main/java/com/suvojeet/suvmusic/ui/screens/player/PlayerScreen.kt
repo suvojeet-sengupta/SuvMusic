@@ -304,6 +304,7 @@ fun PlayerScreen(
     var showOutputDeviceSheet by remember { mutableStateOf(false) }
     var showPlaybackSpeedSheet by remember { mutableStateOf(false) }
     var showListenTogetherSheet by remember { mutableStateOf(false) }
+    var showEqualizerSheet by remember { mutableStateOf(false) }
 
     // Ringtone states
     var showRingtoneTrimmer by remember { mutableStateOf(false) }
@@ -1022,6 +1023,10 @@ fun PlayerScreen(
                 onPlaybackSpeed = {
                     showPlaybackSpeedSheet = true
                 },
+                onEqualizerClick = {
+                    showActionsSheet = false
+                    showEqualizerSheet = true
+                },
                 currentSpeed = playerState.playbackSpeed,
                 onMoveUp = if (showQueue && playerState.queue.indexOf(menuSong) > 0) {
                     { playerViewModel.moveQueueItem(playerState.queue.indexOf(menuSong), playerState.queue.indexOf(menuSong) - 1) }
@@ -1176,6 +1181,15 @@ fun PlayerScreen(
                 onApply = { speed, pitch ->
                     onSetPlaybackParameters(speed, pitch)
                 }
+            )
+            
+            // Equalizer Sheet
+            com.suvojeet.suvmusic.ui.components.EqualizerSheet(
+                isVisible = showEqualizerSheet,
+                onDismiss = { showEqualizerSheet = false },
+                dominantColor = dominantColors.primary,
+                onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
+                onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) }
             )
             
             // Listen Together Sheet
