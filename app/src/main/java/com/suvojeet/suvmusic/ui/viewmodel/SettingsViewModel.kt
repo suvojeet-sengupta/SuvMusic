@@ -109,7 +109,10 @@ data class SettingsUiState(
     val nextSongPreloadingEnabled: Boolean = true,
     val nextSongPreloadDelay: Int = 3, // seconds
     // Crossfeed
-    val crossfeedEnabled: Boolean = true
+    val crossfeedEnabled: Boolean = true,
+    // Equalizer
+    val eqEnabled: Boolean = false,
+    val eqBands: FloatArray = FloatArray(10) { 0f }
 )
 
 @HiltViewModel
@@ -424,6 +427,18 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.eqEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(eqEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.eqBandsFlow.collect { bands ->
+                _uiState.update { it.copy(eqBands = bands) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -492,6 +507,8 @@ class SettingsViewModel @Inject constructor(
             val nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled()
             val nextSongPreloadDelay = sessionManager.getNextSongPreloadDelay()
             val crossfeedEnabled = sessionManager.isCrossfeedEnabled()
+            val eqEnabled = sessionManager.isEqEnabled()
+            val eqBands = sessionManager.getEqBands()
 
 
             _uiState.update { 
@@ -558,7 +575,9 @@ class SettingsViewModel @Inject constructor(
                     audioArAutoCalibrate = sessionManager.isAudioArAutoCalibrateEnabled(),
                     nextSongPreloadingEnabled = nextSongPreloadingEnabled,
                     nextSongPreloadDelay = nextSongPreloadDelay,
-                    crossfeedEnabled = crossfeedEnabled
+                    crossfeedEnabled = crossfeedEnabled,
+                    eqEnabled = eqEnabled,
+                    eqBands = eqBands
                 )
             }
         }
@@ -568,6 +587,24 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setCrossfeedEnabled(enabled)
             _uiState.update { it.copy(crossfeedEnabled = enabled) }
+        }
+    }
+
+    fun setEqEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setEqEnabled(enabled)
+            _uiState.update { it.copy(eqEnabled = enabled) }
+        }
+    }
+
+    fun setEqBandGain(index: Int, gain: Float) {
+        viewModelScope.launch {
+            sessionManager.setEqBand(index, gain)
+            val currentBands = _uiState.value.eqBands.copyOf()
+            if (index in currentBands.indices) {
+                currentBands[index] = gain
+                _uiState.update { it.copy(eqBands = currentBands) }
+            }
         }
     }
 
