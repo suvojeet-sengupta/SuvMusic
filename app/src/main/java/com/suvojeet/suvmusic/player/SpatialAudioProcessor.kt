@@ -44,6 +44,14 @@ class SpatialAudioProcessor @Inject constructor(
         nativeSpatialAudio.setCrossfeedParams(isCrossfeedEnabled && !isSpatialEnabled, 0.15f)
     }
     
+    fun setEqEnabled(enabled: Boolean) {
+        nativeSpatialAudio.setEqEnabled(enabled)
+    }
+    
+    fun setEqBand(bandIndex: Int, gainDb: Float) {
+        nativeSpatialAudio.setEqBand(bandIndex, gainDb)
+    }
+    
     fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
         val shouldEnable = boostEnabled || normEnabled
         

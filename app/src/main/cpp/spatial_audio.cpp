@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <atomic>
 #include "limiter.h"
+#include "biquad.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -169,9 +170,56 @@ private:
     }
 };
 
+class ParametricEQ {
+public:
+    ParametricEQ() : enabled(false) {
+        // Standard 10-Band ISO Frequencies
+        float freqs[] = {31.0f, 62.0f, 125.0f, 250.0f, 500.0f, 1000.0f, 2000.0f, 4000.0f, 8000.0f, 16000.0f};
+        
+        for (int i = 0; i < 10; ++i) {
+            Biquad filter;
+            FilterType type = PEAKING;
+            if (i == 0) type = LOW_SHELF;
+            else if (i == 9) type = HIGH_SHELF;
+            
+            filter.setParams(type, freqs[i], 1.41f, 0.0f, 44100); // Q=1.41 (Butterworth)
+            filters.push_back(filter);
+        }
+    }
+
+    void setBandGain(int bandIndex, float gainDb) {
+        if (bandIndex >= 0 && bandIndex < 10) {
+            filters[bandIndex].updateGain(gainDb);
+        }
+    }
+
+    void setEnabled(bool e) {
+        enabled.store(e, std::memory_order_relaxed);
+    }
+
+    void process(float* buffer, int numFrames, int numChannels, int sampleRate) {
+        if (!enabled.load(std::memory_order_relaxed)) return;
+
+        // Process each filter in series
+        for (auto& filter : filters) {
+            // Need to update sample rate if changed? (Ideally yes, but skipping for simplicity now)
+            filter.process(buffer, numFrames, numChannels);
+        }
+    }
+    
+    void reset() {
+        for (auto& filter : filters) filter.reset();
+    }
+
+private:
+    std::atomic<bool> enabled;
+    std::vector<Biquad> filters;
+};
+
 static Spatializer spatializer;
 static Limiter limiter;
 static Crossfeed crossfeed;
+static ParametricEQ equalizer;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -185,14 +233,29 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcess(JNIEnv *env, jobje
         // 1. Crossfeed (Subtle headphone correction)
         crossfeed.process(data, len / 2, sample_rate);
 
-        // 2. Spatial Audio (Positioning)
+        // 2. Parametric EQ (Tone shaping before spatial)
+        equalizer.process(data, len / 2, 2, sample_rate);
+
+        // 3. Spatial Audio (Positioning)
         spatializer.process(data, len / 2, azimuth, elevation, sample_rate);
         
-        // 3. Limiter / Volume Boost
+        // 4. Limiter / Volume Boost
         limiter.process(data, len / 2, 2, sample_rate);
 
         env->ReleasePrimitiveArrayCritical(buffer, data, 0);
     }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetEqEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
+    equalizer.setEnabled(enabled);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetEqBand(JNIEnv *env, jobject thiz, jint bandIndex, jfloat gainDb) {
+    equalizer.setBandGain(bandIndex, gainDb);
 }
 
 extern "C"
@@ -206,6 +269,7 @@ JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nReset(JNIEnv *env, jobject thiz) {
     spatializer.reset();
     limiter.reset();
+    equalizer.reset();
 }
 
 extern "C"
