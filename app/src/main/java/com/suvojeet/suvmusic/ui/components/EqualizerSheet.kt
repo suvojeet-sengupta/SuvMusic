@@ -85,7 +85,7 @@ fun EqualizerSheet(
                     Text(
                         text = "Equalizer",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = dominantColor,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -161,8 +161,8 @@ fun EqualizerSheet(
                                 colors = SliderDefaults.colors(
                                     thumbColor = dominantColor,
                                     activeTrackColor = dominantColor,
-                                    activeTickColor = Color.White.copy(alpha = 0.5f),
-                                    inactiveTrackColor = dominantColor.copy(alpha = 0.2f),
+                                    activeTickColor = Color.Transparent,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     disabledThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     disabledActiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                 ),
@@ -194,8 +194,8 @@ fun EqualizerSheet(
                             text = frequencies[index],
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isEnabled) dominantColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                            fontWeight = FontWeight.Medium,
+                            color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
                     }
                 }
