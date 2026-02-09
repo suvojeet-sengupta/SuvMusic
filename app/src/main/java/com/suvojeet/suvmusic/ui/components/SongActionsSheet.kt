@@ -298,7 +298,7 @@ fun SongActionsSheet(
                 )
 
                 ActionItem(
-                    icon = Icons.Filled.GraphicEq, // Using GraphicEq icon for Equalizer
+                    icon = Icons.Default.Equalizer, // Using standard Equalizer icon
                     title = "Equalizer",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
                     textColor = contentColor,
