@@ -85,6 +85,7 @@ fun EqualizerSheet(
                     Text(
                         text = "Equalizer",
                         style = MaterialTheme.typography.headlineSmall,
+                        color = dominantColor,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -94,17 +95,34 @@ fun EqualizerSheet(
                     )
                 }
                 
-                Switch(
-                    checked = isEnabled,
-                    onCheckedChange = { 
-                        isEnabled = it
-                        onEnabledChange(it)
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = dominantColor,
-                        checkedTrackColor = dominantColor.copy(alpha = 0.5f)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            for (i in 0 until 10) {
+                                onBandChange(i, 0f)
+                            }
+                        },
+                        enabled = isEnabled
+                    ) {
+                        Text("Reset", color = if (isEnabled) dominantColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Switch(
+                        checked = isEnabled,
+                        onCheckedChange = { 
+                            isEnabled = it
+                            onEnabledChange(it)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = dominantColor,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     )
-                )
+                }
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -143,7 +161,8 @@ fun EqualizerSheet(
                                 colors = SliderDefaults.colors(
                                     thumbColor = dominantColor,
                                     activeTrackColor = dominantColor,
-                                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    activeTickColor = Color.White.copy(alpha = 0.5f),
+                                    inactiveTrackColor = dominantColor.copy(alpha = 0.2f),
                                     disabledThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     disabledActiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                 ),
@@ -175,7 +194,8 @@ fun EqualizerSheet(
                             text = frequencies[index],
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
-                            color = if (isEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                            fontWeight = FontWeight.Bold,
+                            color = if (isEnabled) dominantColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                         )
                     }
                 }
