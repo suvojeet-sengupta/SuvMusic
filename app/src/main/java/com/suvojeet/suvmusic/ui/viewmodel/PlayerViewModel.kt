@@ -1103,12 +1103,21 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun setEqEnabled(enabled: Boolean) {
-        spatialAudioProcessor.setEqEnabled(enabled)
+        viewModelScope.launch {
+            sessionManager.setEqEnabled(enabled)
+            spatialAudioProcessor.setEqEnabled(enabled)
+        }
     }
     
     fun setEqBandGain(bandIndex: Int, gainDb: Float) {
-        spatialAudioProcessor.setEqBand(bandIndex, gainDb)
+        viewModelScope.launch {
+            sessionManager.setEqBand(bandIndex, gainDb)
+            spatialAudioProcessor.setEqBand(bandIndex, gainDb)
+        }
     }
+
+    fun getEqEnabled(): Flow<Boolean> = sessionManager.eqEnabledFlow
+    fun getEqBands(): Flow<FloatArray> = sessionManager.eqBandsFlow
 
     override fun onCleared() {
         super.onCleared()

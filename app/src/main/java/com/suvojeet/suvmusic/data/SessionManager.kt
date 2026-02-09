@@ -183,6 +183,10 @@ class SessionManager @Inject constructor(
 
         // Crossfeed
         private val CROSSFEED_ENABLED_KEY = booleanPreferencesKey("crossfeed_enabled")
+
+        // Equalizer
+        private val EQ_ENABLED_KEY = booleanPreferencesKey("eq_enabled")
+        private val EQ_BANDS_KEY = stringPreferencesKey("eq_bands") // Store as comma-separated floats
     }
     
     // --- Developer Mode (Hidden) ---
@@ -882,6 +886,50 @@ class SessionManager @Inject constructor(
     suspend fun setCrossfeedEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[CROSSFEED_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- Equalizer ---
+
+    suspend fun isEqEnabled(): Boolean =
+        context.dataStore.data.first()[EQ_ENABLED_KEY] ?: false
+
+    val eqEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[EQ_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setEqEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[EQ_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun getEqBands(): FloatArray {
+        val bandsStr = context.dataStore.data.first()[EQ_BANDS_KEY] ?: return FloatArray(10) { 0f }
+        return try {
+            bandsStr.split(",").map { it.toFloat() }.toFloatArray()
+        } catch (e: Exception) {
+            FloatArray(10) { 0f }
+        }
+    }
+
+    val eqBandsFlow: Flow<FloatArray> = context.dataStore.data.map { preferences ->
+        val bandsStr = preferences[EQ_BANDS_KEY] ?: return@map FloatArray(10) { 0f }
+        try {
+            bandsStr.split(",").map { it.toFloat() }.toFloatArray()
+        } catch (e: Exception) {
+            FloatArray(10) { 0f }
+        }
+    }
+
+    suspend fun setEqBand(index: Int, gain: Float) {
+        val currentBands = getEqBands()
+        if (index in currentBands.indices) {
+            currentBands[index] = gain
+            val bandsStr = currentBands.joinToString(",")
+            context.dataStore.edit { preferences ->
+                preferences[EQ_BANDS_KEY] = bandsStr
+            }
         }
     }
 
