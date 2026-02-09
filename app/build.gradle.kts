@@ -98,7 +98,7 @@ android {
         }
     }
 
-    ndkVersion = "25.2.9519653" // Standard NDK version for stability
+    ndkVersion = "28.0.12433566" // Using NDK 28
 }
 
 kotlin {
