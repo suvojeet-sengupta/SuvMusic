@@ -201,6 +201,9 @@ fun PlayerScreen(
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsState(initial = 26f)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsState(initial = false)
     
+    val eqEnabled by playerViewModel.getEqEnabled().collectAsState(initial = false)
+    val eqBands by playerViewModel.getEqBands().collectAsState(initial = FloatArray(10) { 0f })
+    
     // Keep Screen On Logic
     DisposableEffect(keepScreenOn) {
         val window = (context as? Activity)?.window
@@ -1189,7 +1192,9 @@ fun PlayerScreen(
                 onDismiss = { showEqualizerSheet = false },
                 dominantColor = dominantColors.primary,
                 onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
-                onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) }
+                onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) },
+                initialEnabled = eqEnabled,
+                initialBands = eqBands
             )
             
             // Listen Together Sheet
