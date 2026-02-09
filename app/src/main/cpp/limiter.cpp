@@ -116,11 +116,30 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
             delayBuffer[writePos] = inputSample;
             
             // Output = Delayed * Smoothed Gain
-            float outputSample = delayedSample * currentGain;
+            float rawOutput = delayedSample * currentGain;
             
-            // Hard Clamping to prevent any overflow/distortion
-            if (outputSample > 1.0f) outputSample = 1.0f;
-            else if (outputSample < -1.0f) outputSample = -1.0f;
+            // Soft Clipping / Analog Saturation
+            // Adds warmth and protects against harsh digital clipping
+            // Formula: x / (1 + |x|) gives a very soft curve, but we want it harder near 1.0
+            // We'll use a Pade approximation of tanh for speed and warmth:
+            // f(x) = x * ( 27 + x*x ) / ( 27 + 9*x*x ) -> for small x
+            // But simpler safety soft-clip:
+            
+            float outputSample;
+            if (rawOutput < -1.5f) {
+                outputSample = -1.0f;
+            } else if (rawOutput > 1.5f) {
+                outputSample = 1.0f;
+            } else {
+                // Cubic soft-clipper (Common in guitar pedals/tube sims)
+                // Smoothly saturates between -1.0 and 1.0
+                // For input up to 1.5, it limits gracefully.
+                outputSample = rawOutput - (0.1481f * rawOutput * rawOutput * rawOutput);
+                
+                // Hard clamp the result to be absolutely safe
+                if (outputSample > 1.0f) outputSample = 1.0f;
+                if (outputSample < -1.0f) outputSample = -1.0f;
+            }
 
             buffer[i * numChannels + ch] = outputSample;
         }
