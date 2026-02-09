@@ -77,4 +77,20 @@ class NativeSpatialAudio @Inject constructor() {
     }
 
     private external fun nSetCrossfeedParams(enabled: Boolean, strength: Float)
+
+    fun setEqEnabled(enabled: Boolean) {
+        if (isLibraryLoaded) {
+            nSetEqEnabled(enabled)
+        }
+    }
+
+    private external fun nSetEqEnabled(enabled: Boolean)
+
+    fun setEqBand(bandIndex: Int, gainDb: Float) {
+        if (isLibraryLoaded) {
+            nSetEqBand(bandIndex, gainDb)
+        }
+    }
+
+    private external fun nSetEqBand(bandIndex: Int, gainDb: Float)
 }

@@ -61,6 +61,7 @@ class PlayerViewModel @Inject constructor(
     private val sponsorBlockRepository: SponsorBlockRepository,
     private val discordManager: DiscordManager,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
+    private val spatialAudioProcessor: com.suvojeet.suvmusic.player.SpatialAudioProcessor,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     
@@ -1099,6 +1100,14 @@ class PlayerViewModel @Inject constructor(
     
     fun updateDominantColor(color: Int) {
         musicPlayer.updateDominantColor(color)
+    }
+    
+    fun setEqEnabled(enabled: Boolean) {
+        spatialAudioProcessor.setEqEnabled(enabled)
+    }
+    
+    fun setEqBandGain(bandIndex: Int, gainDb: Float) {
+        spatialAudioProcessor.setEqBand(bandIndex, gainDb)
     }
 
     override fun onCleared() {
