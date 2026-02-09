@@ -93,4 +93,18 @@ class NativeSpatialAudio @Inject constructor() {
     }
 
     private external fun nSetEqBand(bandIndex: Int, gainDb: Float)
+
+    /**
+     * Extracts waveform data from a file using high-performance Memory-Mapped IO (mmap).
+     * @param filePath Path to the local file.
+     * @param numPoints Number of points to return in the waveform.
+     * @return FloatArray of peak amplitudes.
+     */
+    fun extractWaveform(filePath: String, numPoints: Int): FloatArray? {
+        return if (isLibraryLoaded) {
+            nExtractWaveform(filePath, numPoints)
+        } else null
+    }
+
+    private external fun nExtractWaveform(filePath: String, numPoints: Int): FloatArray?
 }
