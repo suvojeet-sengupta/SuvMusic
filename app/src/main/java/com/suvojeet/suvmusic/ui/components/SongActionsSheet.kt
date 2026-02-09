@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -298,7 +299,7 @@ fun SongActionsSheet(
                 )
 
                 ActionItem(
-                    icon = Icons.Default.Equalizer, // Using standard Equalizer icon
+                    icon = Icons.Default.Tune, // Using Tune icon for Equalizer
                     title = "Equalizer",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
                     textColor = contentColor,
