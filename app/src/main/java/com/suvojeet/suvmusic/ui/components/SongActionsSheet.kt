@@ -83,6 +83,7 @@ fun SongActionsSheet(
     onStartRadio: () -> Unit = {},
     onListenTogether: () -> Unit = {},
     onPlaybackSpeed: () -> Unit = {},
+    onEqualizerClick: () -> Unit = {},
     currentSpeed: Float = 1.0f,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
@@ -294,6 +295,14 @@ fun SongActionsSheet(
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
                     textColor = contentColor,
                     onClick = { handleAction { onPlaybackSpeed() } }
+                )
+
+                ActionItem(
+                    icon = Icons.Filled.GraphicEq, // Using GraphicEq icon for Equalizer
+                    title = "Equalizer",
+                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
+                    textColor = contentColor,
+                    onClick = { handleAction { onEqualizerClick() } }
                 )
 
                 ActionItem(
