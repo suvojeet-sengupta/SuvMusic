@@ -585,76 +585,89 @@ fun SuvMusicApp(
                         modifier = Modifier
                             .fillMaxSize()
                             .weight(1f)
+                    ) {
+                    // NavGraph content with its own bottom padding for the nav bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
                             .padding(
                                 bottom = if (showBottomNav && !isTv) innerPadding.calculateBottomPadding() else 0.dp
-                                // We don't apply top padding here as it might be handled by screens or scaffolds inside
-                                // But for TV, we might need some padding if rail is taking space
                             )
                     ) {
+                        NavGraph(
+                            navController = navController,
+                            playbackInfo = playbackInfo,
+                            playerState = playerState,
+                            sessionManager = sessionManager,
+                            onPlaySong = { songs, index ->
+                                if (songs.isNotEmpty() && index in songs.indices) {
+                                    playerViewModel.playSong(songs[index], songs, index)
+                                }
+                            },
+                            onPlayPause = { playerViewModel.togglePlayPause() },
+                            onSeekTo = { playerViewModel.seekTo(it) },
+                            onNext = { playerViewModel.seekToNext() },
+                            onPrevious = { playerViewModel.seekToPrevious() },
+                            onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
+                            onLikeCurrentSong = { playerViewModel.likeCurrentSong() },
+                            onDislikeCurrentSong = { playerViewModel.dislikeCurrentSong() },
+                            onShuffleToggle = { playerViewModel.toggleShuffle() },
+                            onRepeatToggle = { playerViewModel.toggleRepeat() },
+                            onToggleAutoplay = { playerViewModel.toggleAutoplay() },
+                            onToggleVideoMode = { playerViewModel.toggleVideoMode() },
+                            onDismissVideoError = { playerViewModel.dismissVideoError() },
+                            onStartRadio = { song, initialQueue ->
+                                val targetSong = song ?: playbackInfo.currentSong
+                                targetSong?.let { 
+                                    playerViewModel.startRadio(it, initialQueue)
+                                }
+                            },
+                            onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
+                            isRadioMode = isRadioMode,
+                            isLoadingMoreSongs = isLoadingMoreSongs,
+                            onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
+                            onRefreshDevices = { playerViewModel.refreshDevices() },
+                            player = playerViewModel.getPlayer(),
+                            lyrics = lyrics,
+                            isFetchingLyrics = isFetchingLyrics,
+                            comments = comments,
+                            isFetchingComments = isFetchingComments,
+                            isLoggedIn = playerViewModel.isLoggedIn(),
+                            isPostingComment = isPostingComment,
+                            onPostComment = { commentText -> playerViewModel.postComment(commentText) },
+                            isLoadingMoreComments = isLoadingMoreComments,
+                            onLoadMoreComments = { playerViewModel.loadMoreComments() },
+                            sleepTimerOption = sleepTimerOption,
+                            sleepTimerRemainingMs = sleepTimerRemainingMs,
+                            onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
+                            onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
+                            volumeKeyEvents = volumeKeyEvents,
+                            downloadRepository = downloadRepository,
+                            selectedLyricsProvider = selectedLyricsProvider,
+                            enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
+                            onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
+                            startDestination = Destination.Home.route, // Always start at Home
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            isTv = isTv
+                        )
+                    }
 
-                    NavGraph(
-                        navController = navController,
-                        playbackInfo = playbackInfo,
-                        playerState = playerState,
-                        sessionManager = sessionManager,
-                        onPlaySong = { songs, index ->
-                            if (songs.isNotEmpty() && index in songs.indices) {
-                                playerViewModel.playSong(songs[index], songs, index)
-                            }
-                        },
-                        onPlayPause = { playerViewModel.togglePlayPause() },
-                        onSeekTo = { playerViewModel.seekTo(it) },
-                        onNext = { playerViewModel.seekToNext() },
-                        onPrevious = { playerViewModel.seekToPrevious() },
-                        onDownloadCurrentSong = { playerViewModel.downloadCurrentSong() },
-                        onLikeCurrentSong = { playerViewModel.likeCurrentSong() },
-                        onDislikeCurrentSong = { playerViewModel.dislikeCurrentSong() },
-                        onShuffleToggle = { playerViewModel.toggleShuffle() },
-                        onRepeatToggle = { playerViewModel.toggleRepeat() },
-                        onToggleAutoplay = { playerViewModel.toggleAutoplay() },
-                        onToggleVideoMode = { playerViewModel.toggleVideoMode() },
-                        onDismissVideoError = { playerViewModel.dismissVideoError() },
-                        onStartRadio = { song, initialQueue ->
-                            val targetSong = song ?: playbackInfo.currentSong
-                            targetSong?.let { 
-                                playerViewModel.startRadio(it, initialQueue)
-                            }
-                        },
-                        onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
-                        isRadioMode = isRadioMode,
-                        isLoadingMoreSongs = isLoadingMoreSongs,
-                        onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
-                        onRefreshDevices = { playerViewModel.refreshDevices() },
-                        player = playerViewModel.getPlayer(),
-                        lyrics = lyrics,
-                        isFetchingLyrics = isFetchingLyrics,
-                        comments = comments,
-                        isFetchingComments = isFetchingComments,
-                        isLoggedIn = playerViewModel.isLoggedIn(),
-                        isPostingComment = isPostingComment,
-                        onPostComment = { commentText -> playerViewModel.postComment(commentText) },
-                        isLoadingMoreComments = isLoadingMoreComments,
-                        onLoadMoreComments = { playerViewModel.loadMoreComments() },
-                        sleepTimerOption = sleepTimerOption,
-                        sleepTimerRemainingMs = sleepTimerRemainingMs,
-                        onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
-                        onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
-                        volumeKeyEvents = volumeKeyEvents,
-                        downloadRepository = downloadRepository,
-                        selectedLyricsProvider = selectedLyricsProvider,
-                        enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
-                        onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
-                        startDestination = Destination.Home.route, // Always start at Home
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        isTv = isTv
-                    )
+                    // MiniPlayer overlay — positioned independently from NavGraph padding.
+                    // Freeze the bottom offset during exit animation so it doesn't jump
+                    // when the Scaffold removes the bottom nav bar.
+                    var stableMiniPlayerBottom by remember { mutableStateOf(0.dp) }
+                    val currentNavBottom = innerPadding.calculateBottomPadding()
+                    if (showMiniPlayer) {
+                        stableMiniPlayerBottom = currentNavBottom
+                    }
 
-                    // MiniPlayer floating content overlay
                     androidx.compose.animation.AnimatedVisibility(
                         visible = showMiniPlayer,
                         enter = fadeIn(),
                         exit = fadeOut(),
-                        modifier = Modifier.align(Alignment.BottomCenter)
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = stableMiniPlayerBottom)
                     ) {
                         MiniPlayer(
                             playerState = playerState,
