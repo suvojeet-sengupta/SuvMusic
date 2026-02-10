@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
+import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -168,12 +169,22 @@ fun AlbumArtwork(
     val currentOnSwipeLeft by rememberUpdatedState(onSwipeLeft)
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
 
-    // Build the shared element modifier if both scopes are available
+    // Build the shared bounds modifier with spring-based BoundsTransform
+    // for smooth YT Music-style zoom morph
+    val artworkBoundsTransform = BoundsTransform { _, _ ->
+        spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        )
+    }
+
     val sharedElementModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && songId != null) {
         with(sharedTransitionScope) {
-            Modifier.sharedElement(
+            Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(songId)),
-                animatedVisibilityScope = animatedVisibilityScope
+                animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = artworkBoundsTransform,
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
             )
         }
     } else {
