@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -48,6 +49,7 @@ import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
+import com.suvojeet.suvmusic.ui.utils.animateEnter
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
 import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.util.dpadFocusable
@@ -66,18 +68,24 @@ fun HomeScreen(
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
+    currentSong: Song? = null,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val backgroundColor = MaterialTheme.colorScheme.background
+    
+    // Dynamic Background Colors
+    val dominantColors = com.suvojeet.suvmusic.ui.components.rememberDominantColors(
+        imageUrl = currentSong?.thumbnailUrl ?: uiState.recommendations.firstOrNull()?.thumbnailUrl
+    )
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
+        modifier = Modifier.fillMaxSize()
     ) {
-
+        // fluid mesh gradient background
+        com.suvojeet.suvmusic.ui.components.MeshGradientBackground(
+            dominantColors = dominantColors
+        )
 
         // Content
         when {
@@ -101,7 +109,9 @@ fun HomeScreen(
                         // Greeting & Profile Header
                         item {
                             ProfileHeader(
-                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                                modifier = Modifier
+                                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+                                    .animateEnter(index = 0),
                                 onRecentsClick = onRecentsClick
                             )
                         }
@@ -110,7 +120,8 @@ fun HomeScreen(
                         item {
                             MoodChipsSection(
                                 selectedMood = uiState.selectedMood,
-                                onMoodSelected = viewModel::onMoodSelected
+                                onMoodSelected = viewModel::onMoodSelected,
+                                modifier = Modifier.animateEnter(index = 1)
                             )
                         }
 
@@ -118,7 +129,8 @@ fun HomeScreen(
                         if (uiState.recommendedArtists.isNotEmpty()) {
                             item {
                                 RecommendedArtistsSection(
-                                    artists = uiState.recommendedArtists
+                                    artists = uiState.recommendedArtists,
+                                    modifier = Modifier.animateEnter(index = 2)
                                 )
                             }
                         }
@@ -127,7 +139,8 @@ fun HomeScreen(
                         if (uiState.recommendedTracks.isNotEmpty()) {
                             item {
                                 RecommendedTracksSection(
-                                    tracks = uiState.recommendedTracks
+                                    tracks = uiState.recommendedTracks,
+                                    modifier = Modifier.animateEnter(index = 3)
                                 )
                             }
                         }
@@ -139,20 +152,25 @@ fun HomeScreen(
                                     items = uiState.recommendations.take(6),
                                     onItemClick = { song ->
                                         onSongClick(uiState.recommendations, uiState.recommendations.indexOf(song))
-                                    }
+                                    },
+                                    modifier = Modifier.animateEnter(index = 4)
                                 )
                             }
                         }
 
                         // Sections Loop
-                        items(uiState.homeSections) { section ->
+                        itemsIndexed(uiState.homeSections) { index, section ->
+                            // Offset index by 5 for static items above
+                            val enterModifier = Modifier.animateEnter(index = index + 5)
+                            
                             when (section.type) {
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList -> {
                                     com.suvojeet.suvmusic.ui.components.LargeCardWithListSection(
                                         section = section,
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick
+                                        onAlbumClick = onAlbumClick,
+                                        modifier = enterModifier
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.Grid -> {
@@ -160,7 +178,8 @@ fun HomeScreen(
                                         section = section,
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick
+                                        onAlbumClick = onAlbumClick,
+                                        modifier = enterModifier
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList -> {
@@ -168,19 +187,17 @@ fun HomeScreen(
                                         section = section,
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick
+                                        onAlbumClick = onAlbumClick,
+                                        modifier = enterModifier
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel -> {
-                                    // Custom implementation for unified styling inside HomeScreen or component usage
-                                    // We can just use the component or inline if we want to restyle strictly 
-                                    // But typically HorizontalCarouselSection uses standard cards.
-                                    // Let's ensure the cards used inside are "MediumSongCard" which we will restyle below.
                                     com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
                                         section = section,
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick
+                                        onAlbumClick = onAlbumClick,
+                                        modifier = enterModifier
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel -> {
@@ -192,13 +209,15 @@ fun HomeScreen(
                                         onStartRadio = onStartRadio,
                                         onSavePlaylist = { playlist ->
                                             android.widget.Toast.makeText(context, "Saved ${playlist.name} to Library", android.widget.Toast.LENGTH_SHORT).show()
-                                        }
+                                        },
+                                        modifier = enterModifier
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid -> {
                                     com.suvojeet.suvmusic.ui.components.ExploreGridSection(
                                         section = section,
-                                        onExploreItemClick = onExploreClick
+                                        onExploreItemClick = onExploreClick,
+                                        modifier = enterModifier
                                     )
                                 }
                             }
@@ -236,10 +255,11 @@ fun HomeScreen(
 @Composable
 fun QuickAccessGrid(
     items: List<Song>,
+    modifier: Modifier = Modifier,
     onItemClick: (Song) -> Unit
 ) {
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Create rows of 2
@@ -731,11 +751,12 @@ private fun AppFooter(modifier: Modifier = Modifier) {
 @Composable
 fun RecommendedArtistsSection(
     artists: List<com.suvojeet.suvmusic.lastfm.RecommendedArtist>,
+    modifier: Modifier = Modifier,
     onArtistClick: (String) -> Unit = {}
 ) {
     if (artists.isEmpty()) return
 
-    Column(modifier = Modifier.padding(vertical = 16.dp)) {
+    Column(modifier = modifier.padding(vertical = 16.dp)) {
         HomeSectionHeader(title = "Recommended Artists")
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -753,11 +774,12 @@ fun RecommendedArtistsSection(
 @Composable
 fun RecommendedTracksSection(
     tracks: List<com.suvojeet.suvmusic.lastfm.RecommendedTrack>,
+    modifier: Modifier = Modifier,
     onTrackClick: (com.suvojeet.suvmusic.lastfm.RecommendedTrack) -> Unit = {}
 ) {
     if (tracks.isEmpty()) return
 
-    Column(modifier = Modifier.padding(vertical = 16.dp)) {
+    Column(modifier = modifier.padding(vertical = 16.dp)) {
         HomeSectionHeader(title = "Recommended Tracks")
         Spacer(modifier = Modifier.height(16.dp))
         

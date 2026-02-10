@@ -23,7 +23,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun MoodChipsSection(
     selectedMood: String?,
-    onMoodSelected: (String) -> Unit
+    onMoodSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val moods = listOf(
         "Sleep", "Relax", "Sad", "Romance", 
@@ -31,7 +32,7 @@ fun MoodChipsSection(
     )
     
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
