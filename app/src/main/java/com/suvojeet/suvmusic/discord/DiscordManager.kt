@@ -119,12 +119,18 @@ class DiscordManager @Inject constructor(
             } else {
                  artist to title
             }
+            
+            val formattedImageUrl = when {
+                imageUrl.isNullOrBlank() -> null
+                imageUrl.startsWith("http") -> imageUrl
+                else -> "https:$imageUrl"
+            }
 
             discordRPC?.updateActivity(
                 name = "SuvMusic",
                 state = finalState,
                 details = finalDetails,
-                imageUrl = "https:$imageUrl", // Ensure https prefix if needed, mostly cover art utils handle this.
+                imageUrl = formattedImageUrl,
                 largeText = "Listening to $title",
                 startTime = startTime,
                 // endTime = if (duration > 0) startTime + duration else null
@@ -139,11 +145,17 @@ class DiscordManager @Inject constructor(
                  artist to "$title (Paused)"
             }
 
+            val formattedImageUrl = when {
+                imageUrl.isNullOrBlank() -> null
+                imageUrl.startsWith("http") -> imageUrl
+                else -> "https:$imageUrl"
+            }
+
              discordRPC?.updateActivity(
                 name = "SuvMusic",
                 state = finalState,
                 details = finalDetails,
-                imageUrl = "https:$imageUrl",
+                imageUrl = formattedImageUrl,
                 largeText = "Paused: $title"
             )
         }
