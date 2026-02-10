@@ -51,6 +51,12 @@ class SpatialAudioProcessor @Inject constructor(
     fun setEqBand(bandIndex: Int, gainDb: Float) {
         nativeSpatialAudio.setEqBand(bandIndex, gainDb)
     }
+
+    fun resetEqBands() {
+        for (i in 0 until 10) {
+            nativeSpatialAudio.setEqBand(i, 0f)
+        }
+    }
     
     fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
         val shouldEnable = boostEnabled || normEnabled
