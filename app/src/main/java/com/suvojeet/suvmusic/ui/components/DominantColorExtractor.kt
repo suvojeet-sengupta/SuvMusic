@@ -164,7 +164,7 @@ private fun extractColorsFromBitmap(bitmap: Bitmap, isDarkTheme: Boolean = true)
     // Create accent color (saturated version) - works for both themes
     val hsl = FloatArray(3)
     ColorUtils.RGBToHSL(avgR, avgG, avgB, hsl)
-    hsl[1] = minOf(1f, hsl[1] * 1.5f) // Boost saturation
+    hsl[1] = minOf(1f, hsl[1] * 1.2f) // Reduced boost (was 1.5f)
     hsl[2] = if (isDarkTheme) 0.6f else 0.5f // Slightly darker accent for light theme
     val accentInt = ColorUtils.HSLToColor(hsl)
     val accent = Color(accentInt)

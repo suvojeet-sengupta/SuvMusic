@@ -27,7 +27,7 @@ object WaveformStyle {
         val height = size.height
         val centerY = height / 2
         val barWidth = width / waveAmplitudes.size
-        val maxBarHeight = height * 0.8f
+        val maxBarHeight = height * 0.5f // Reduced height
         val progressX = progress * width
         
         // Draw unplayed track line
@@ -47,7 +47,7 @@ object WaveformStyle {
                 val animatedAmplitude = if (isPlaying) {
                     val phase = (wavePhase + index * 12) % 360
                     val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
-                    amplitude * (0.7f + wave * 0.3f)
+                    amplitude * (0.85f + wave * 0.15f) // Reduced wiggle (was 0.3f)
                 } else {
                     amplitude
                 }
