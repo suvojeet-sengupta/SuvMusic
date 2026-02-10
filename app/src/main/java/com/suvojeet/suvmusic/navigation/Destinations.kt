@@ -15,7 +15,6 @@ sealed class Destination(val route: String) {
     data object SeekbarStyleSettings : Destination("seekbar_style_settings")
     data object ArtworkSizeSettings : Destination("artwork_size_settings")
     data object Recents : Destination("recents")
-    data object Player : Destination("player")
     data object YouTubeLogin : Destination("youtube_login")
     data object LastFmLogin : Destination("last_fm_login")
     data object About : Destination("about")
