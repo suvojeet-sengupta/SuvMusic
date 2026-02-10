@@ -1,5 +1,9 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -51,7 +55,9 @@ fun HorizontalCarouselSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     Column(
         modifier = modifier,
@@ -69,7 +75,9 @@ fun HorizontalCarouselSection(
                     onSongClick = onSongClick, 
                     onPlaylistClick = onPlaylistClick, 
                     onAlbumClick = onAlbumClick,
-                    sectionItems = section.items
+                    sectionItems = section.items,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
                 )
             }
         }
@@ -82,7 +90,9 @@ fun VerticalListSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     Column(
         modifier = modifier,
@@ -98,14 +108,16 @@ fun VerticalListSection(
                 // Using MusicCard for vertical list look
                 when (item) {
                     is HomeItem.SongItem -> {
-                        MusicCard(
+                         MusicCard(
                             song = item.song,
                             onClick = {
                                 val songs = section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
                                 val index = songs.indexOf(item.song)
                                 if (index != -1) onSongClick(songs, index)
                             },
-                             backgroundColor = Color.Transparent
+                             backgroundColor = Color.Transparent,
+                             sharedTransitionScope = sharedTransitionScope,
+                             animatedVisibilityScope = animatedVisibilityScope
                         )
                     }
                     is HomeItem.PlaylistItem -> {
@@ -154,7 +166,9 @@ fun LargeCardWithListSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     if (section.items.isEmpty()) return
     
@@ -185,7 +199,9 @@ fun LargeCardWithListSection(
                     onSongClick = onSongClick,
                     onPlaylistClick = onPlaylistClick,
                     onAlbumClick = onAlbumClick,
-                    sectionItems = section.items
+                    sectionItems = section.items,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
                  )
             }
             
@@ -207,7 +223,9 @@ fun LargeCardWithListSection(
                                     if (index != -1) onSongClick(songs, index)
                                 },
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
-                                modifier = Modifier.height(60.dp)
+                                modifier = Modifier.height(60.dp),
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope
                             )
                         }
                         is HomeItem.PlaylistItem -> {
@@ -241,7 +259,9 @@ fun GridSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     Column(
         modifier = modifier,
@@ -267,7 +287,9 @@ fun GridSection(
                     onSongClick = onSongClick, 
                     onPlaylistClick = onPlaylistClick, 
                     onAlbumClick = onAlbumClick,
-                     sectionItems = section.items
+                     sectionItems = section.items,
+                     sharedTransitionScope = sharedTransitionScope,
+                     animatedVisibilityScope = animatedVisibilityScope
                 )
             }
         }
@@ -275,13 +297,16 @@ fun GridSection(
 }
 
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeItemCardLarge(
     item: HomeItem,
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    sectionItems: List<HomeItem>
+    sectionItems: List<HomeItem>,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val context = LocalContext.current
     
@@ -313,6 +338,23 @@ fun HomeItemCardLarge(
                 }
             }
     ) {
+         val artworkSharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+             val songId = when (item) {
+                 is HomeItem.SongItem -> item.song.id
+                 is HomeItem.PlaylistItem -> item.playlist.id
+                 is HomeItem.AlbumItem -> item.album.id
+                 else -> ""
+             }
+             if (songId.isNotEmpty()) {
+                 with(sharedTransitionScope) {
+                     Modifier.sharedElement(
+                         sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(songId)),
+                         animatedVisibilityScope = animatedVisibilityScope
+                     )
+                 }
+             } else Modifier
+         } else Modifier
+
          AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(highResThumbnail)
@@ -320,7 +362,7 @@ fun HomeItemCardLarge(
                 .size(544)
                 .build(),
             contentDescription = title,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().then(artworkSharedModifier),
             contentScale = ContentScale.Crop
         )
         
