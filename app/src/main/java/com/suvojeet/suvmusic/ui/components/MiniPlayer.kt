@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 
@@ -223,11 +224,20 @@ private fun StandardMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Album Art
+                val artworkBoundsTransform = BoundsTransform { _, _ ->
+                    spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                }
+
                 val artworkSharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
                     with(sharedTransitionScope) {
-                        Modifier.sharedElement(
+                        Modifier.sharedBounds(
                             sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(song.id)),
-                            animatedVisibilityScope = animatedVisibilityScope
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = artworkBoundsTransform,
+                            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
                         )
                     }
                 } else {

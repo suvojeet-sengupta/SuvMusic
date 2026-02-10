@@ -490,18 +490,18 @@ fun NavGraph(
         composable(
             route = Destination.Player.route,
             enterTransition = {
-                // Fade in only — shared element handles the artwork morph
-                fadeIn(animationSpec = tween(350))
+                // Slow fade lets the shared bounds zoom morph be the hero animation
+                fadeIn(animationSpec = tween(400))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(300))
+                fadeOut(animationSpec = tween(400))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(300))
+                fadeIn(animationSpec = tween(400))
             },
             popExitTransition = {
-                // Fade out only — shared element handles the artwork morph back
-                fadeOut(animationSpec = tween(350))
+                // Slow fade lets the shared bounds zoom morph back smoothly
+                fadeOut(animationSpec = tween(400))
             }
         ) {
             PlayerScreen(
