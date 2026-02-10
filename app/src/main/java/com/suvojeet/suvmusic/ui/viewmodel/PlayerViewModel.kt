@@ -135,9 +135,13 @@ class PlayerViewModel @Inject constructor(
     private val _isMiniPlayerDismissed = MutableStateFlow(false)
     val isMiniPlayerDismissed: StateFlow<Boolean> = _isMiniPlayerDismissed.asStateFlow()
 
-    // Fullscreen State
+    // Fullscreen State (Video)
     private val _isFullScreen = MutableStateFlow(false)
     val isFullScreen: StateFlow<Boolean> = _isFullScreen.asStateFlow()
+    
+    // Player Sheet Expansion State
+    private val _isPlayerExpanded = MutableStateFlow(false)
+    val isPlayerExpanded: StateFlow<Boolean> = _isPlayerExpanded.asStateFlow()
     
     private var radioBaseSongId: String? = null
 
@@ -377,8 +381,10 @@ class PlayerViewModel @Inject constructor(
         // Reset radio base so Autoplay adapts to this new song
         radioBaseSongId = null
         _isRadioMode.value = false
+        _isRadioMode.value = false
         musicPlayer.updateRadioMode(false)
         musicPlayer.playSong(song, queue, startIndex)
+        expandPlayer() // Auto-expand when playing a new song
     }
     
     fun playNext(song: Song) {
@@ -504,6 +510,15 @@ class PlayerViewModel @Inject constructor(
     
     fun setFullScreen(isFullScreen: Boolean) {
         _isFullScreen.value = isFullScreen
+    }
+    
+    fun expandPlayer() {
+        _isPlayerExpanded.value = true
+        _isMiniPlayerDismissed.value = false
+    }
+    
+    fun collapsePlayer() {
+        _isPlayerExpanded.value = false
     }
 
     fun dismissVideoError() {

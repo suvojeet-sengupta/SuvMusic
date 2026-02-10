@@ -1,8 +1,5 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
-import androidx.compose.animation.BoundsTransform
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
 
 import androidx.compose.animation.animateColorAsState
@@ -94,7 +91,6 @@ enum class ArtworkSize(val fraction: Float, val label: String) {
     LARGE(0.85f, "Large")
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AlbumArtwork(
     imageUrl: String?,
@@ -109,8 +105,6 @@ fun AlbumArtwork(
     onDoubleTapLeft: () -> Unit = {},
     onDoubleTapRight: () -> Unit = {},
     songId: String? = null,
-    sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -169,34 +163,11 @@ fun AlbumArtwork(
     val currentOnSwipeLeft by rememberUpdatedState(onSwipeLeft)
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
 
-    // Build the shared bounds modifier with spring-based BoundsTransform
-    // for smooth YT Music-style zoom morph
-    val artworkBoundsTransform = BoundsTransform { _, _ ->
-        spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        )
-    }
-
-    val sharedElementModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null && songId != null) {
-        with(sharedTransitionScope) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(songId)),
-                animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = artworkBoundsTransform,
-                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
-            )
-        }
-    } else {
-        Modifier
-    }
-
-    BoxWithConstraints {
-        val isWideLayout = maxWidth > 500.dp
+    BoxWithConstraints(modifier = modifier) {
+        val isWideLayout = maxWidth > maxHeight
 
         Box(
-            modifier = modifier
-                .then(sharedElementModifier)
+            modifier = Modifier
                 .then(
                     if (isWideLayout) {
                         Modifier.fillMaxHeight(artworkSize.fraction).aspectRatio(1f)

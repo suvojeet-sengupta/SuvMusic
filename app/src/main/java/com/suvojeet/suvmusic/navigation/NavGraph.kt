@@ -92,7 +92,6 @@ fun NavGraph(
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: String = Destination.Home.route,
-    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
     isTv: Boolean = false
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -111,14 +110,10 @@ fun NavGraph(
             fadeOut(animationSpec = tween(300))
         },
         popEnterTransition = {
-            if (initialState.destination.route == Destination.Player.route) {
-                fadeIn(animationSpec = tween(300))
-            } else {
-                fadeIn(animationSpec = tween(300)) + slideIntoContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = tween(300)
-                )
-            }
+             fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+                 towards = AnimatedContentTransitionScope.SlideDirection.End,
+                 animationSpec = tween(300)
+             )
         },
         popExitTransition = {
             fadeOut(animationSpec = tween(300))
@@ -182,9 +177,7 @@ fun NavGraph(
                     onCreateMixClick = {
                         navController.navigate(Destination.PickMusic.route)
                     },
-                    currentSong = playbackInfo.currentSong,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = this
+                    currentSong = playbackInfo.currentSong
                 )
             }
         }
@@ -289,7 +282,6 @@ fun NavGraph(
             LibraryScreen(
                 onSongClick = { songs, index -> 
                     onPlaySong(songs, index)
-                    navController.navigate(Destination.Player.route)
                 },
                 onHistoryClick = {
                     navController.navigate(Destination.Recents.route)
@@ -470,10 +462,7 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() },
                 onMixCreated = { songs ->
                     if (songs.isNotEmpty()) {
-                        // Play the mixed playlist
                          onPlaySong(songs, 0)
-                         // Navigate to player
-                         navController.navigate(Destination.Player.route)
                     } else {
                          navController.popBackStack()
                     }
@@ -487,96 +476,6 @@ fun NavGraph(
             )
         }
         
-        composable(
-            route = Destination.Player.route,
-            enterTransition = {
-                // Slow fade lets the shared bounds zoom morph be the hero animation
-                fadeIn(animationSpec = tween(400))
-            },
-            exitTransition = {
-                fadeOut(animationSpec = tween(400))
-            },
-            popEnterTransition = {
-                fadeIn(animationSpec = tween(400))
-            },
-            popExitTransition = {
-                // Slow fade lets the shared bounds zoom morph back smoothly
-                fadeOut(animationSpec = tween(400))
-            }
-        ) {
-            PlayerScreen(
-                playbackInfo = playbackInfo,
-                playerState = playerState,
-                onPlayPause = onPlayPause,
-                onSeekTo = onSeekTo,
-                onNext = onNext,
-                onPrevious = onPrevious,
-                onBack = { navController.popBackStack() },
-                onDownload = onDownloadCurrentSong,
-                onToggleLike = onLikeCurrentSong,
-                onToggleDislike = onDislikeCurrentSong,
-                onShuffleToggle = onShuffleToggle,
-                onRepeatToggle = onRepeatToggle,
-                onToggleAutoplay = onToggleAutoplay,
-                onToggleVideoMode = onToggleVideoMode,
-                onDismissVideoError = onDismissVideoError,
-                onStartRadio = { onStartRadio(null, null) },
-                onLoadMoreRadioSongs = onLoadMoreRadioSongs,
-                isRadioMode = isRadioMode,
-                isLoadingMoreSongs = isLoadingMoreSongs,
-                player = player,
-                onPlayFromQueue = { index ->
-                    if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
-                        onPlaySong(playerState.queue, index)
-                    }
-                },
-                onSwitchDevice = onSwitchDevice,
-                onRefreshDevices = onRefreshDevices,
-                lyrics = lyrics,
-                isFetchingLyrics = isFetchingLyrics,
-                comments = comments,
-                isFetchingComments = isFetchingComments,
-                isLoggedIn = isLoggedIn,
-                isPostingComment = isPostingComment,
-                onPostComment = onPostComment,
-                isLoadingMoreComments = isLoadingMoreComments,
-                onLoadMoreComments = onLoadMoreComments,
-                sleepTimerOption = sleepTimerOption,
-                sleepTimerRemainingMs = sleepTimerRemainingMs,
-                onSetSleepTimer = onSetSleepTimer,
-                volumeKeyEvents = volumeKeyEvents,
-                onSetPlaybackParameters = onSetPlaybackParameters,
-                onArtistClick = { artistId ->
-                    navController.navigate(Destination.Artist(artistId).route) {
-                        launchSingleTop = true
-                    }
-                    // Close player if we are navigating away? Or usually player stays open?
-                    // Standard behavior is to navigate "under" the player or close the player sheet. 
-                    // Since PlayerScreen here seems to be a full screen route (Destination.Player), 
-                    // we are navigating internally. 
-                    // However, standard Compose Navigation pushes to stack.
-                    // The transition for Player is slideUp/slideDown.
-                    // If we navigate to Artist, it might look weird if Player slides down.
-                    // But Destination.Artist will push on top.
-                },
-                onAlbumClick = { albumId ->
-                    navController.navigate(
-                        Destination.Album(
-                            albumId = albumId,
-                            name = null,
-                            thumbnailUrl = null
-                        ).route
-                    ) {
-                        launchSingleTop = true
-                    }
-                },
-                selectedLyricsProvider = selectedLyricsProvider,
-                enabledLyricsProviders = enabledLyricsProviders,
-                onLyricsProviderChange = onLyricsProviderChange,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = this
-            )
-        }
         
         composable(Destination.YouTubeLogin.route) {
             YouTubeLoginScreen(
@@ -667,7 +566,6 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> 
                     onPlaySong(songs, index)
-                    navController.navigate(Destination.Player.route)
                 },
                 onAlbumClick = { album -> 
                     navController.navigate(

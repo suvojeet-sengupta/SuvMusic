@@ -12,7 +12,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
@@ -43,6 +42,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.navigation.compose.rememberNavController
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppTheme
@@ -50,7 +53,7 @@ import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.navigation.NavGraph
 import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
-import com.suvojeet.suvmusic.ui.components.MiniPlayer
+import com.suvojeet.suvmusic.ui.components.player.ExpandablePlayerSheet
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
 import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
@@ -257,7 +260,8 @@ fun SuvMusicApp(
     
     // Optimized states to reduce recompositions
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
-    val playerState by playerViewModel.playerState.collectAsStateWithLifecycle() // Still needed for some components
+    val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
+    val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
     
     val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle()
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle()
@@ -297,11 +301,9 @@ fun SuvMusicApp(
             when (event) {
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.PlayFromDeepLink -> {
                     playerViewModel.playFromDeepLink(event.videoId)
-                    navController.navigate(Destination.Player.route)
                 }
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.PlayFromLocalUri -> {
                     playerViewModel.playFromLocalUri(context, event.uri)
-                    navController.navigate(Destination.Player.route)
                 }
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.ShowToast -> {
                     android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
@@ -442,11 +444,17 @@ fun SuvMusicApp(
         }
     }
     
-    // Don't show MiniPlayer on Player screen itself or if explicitly dismissed
-    val showMiniPlayer = currentRoute != Destination.Player.route && !isMiniPlayerDismissed
     
-    // Don't show global volume indicator on PlayerScreen (it has its own)
-    val showGlobalVolumeIndicator = currentRoute != Destination.Player.route && hasSong
+    // Don't show MiniPlayer on Player screen itself or if explicitly dismissed
+    // With bottom sheet, "Player screen" is just the expanded state.
+    // We hide the sheet if the current route is one where we don't want player (e.g. login?)
+    // or if dismissed.
+    val showMiniPlayer = !isMiniPlayerDismissed && currentRoute != Destination.YouTubeLogin.route
+    
+    // Don't show global volume indicator on PlayerScreen (it has its own) - 
+    // For now, simpler to just show it if we have a song, unless we are in expanded state?
+    // Let's keep it simple: show if song Playing
+    val showGlobalVolumeIndicator = hasSong
     
     // Default colors for non-player screens
     val defaultDominantColors = DominantColors(
@@ -526,9 +534,7 @@ fun SuvMusicApp(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
-        androidx.compose.animation.SharedTransitionLayout {
+        Box(modifier = Modifier.fillMaxSize()) {
              Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 snackbarHost = {
@@ -565,6 +571,10 @@ fun SuvMusicApp(
                     }
                 }
             ) { innerPadding ->
+                // Make innerPadding available to children
+                // We need to pass the bottom padding to the ExpandablePlayerSheet so it sits above the nav bar
+                val currentBottomPadding = innerPadding.calculateBottomPadding()
+
                 Row(modifier = Modifier.fillMaxSize()) {
                     if (isTv && showBottomNav) {
                         com.suvojeet.suvmusic.ui.components.TvNavigationRail(
@@ -587,11 +597,14 @@ fun SuvMusicApp(
                             .weight(1f)
                     ) {
                     // NavGraph content with its own bottom padding for the nav bar
+                    // We add EXTRA padding for the mini player (64dp) if it's visible
+                    val miniPlayerHeight = if (showMiniPlayer) 64.dp else 0.dp
+                    
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(
-                                bottom = if (showBottomNav && !isTv) innerPadding.calculateBottomPadding() else 0.dp
+                                bottom = if (showBottomNav && !isTv) currentBottomPadding + miniPlayerHeight else miniPlayerHeight
                             )
                     ) {
                         NavGraph(
@@ -647,48 +660,100 @@ fun SuvMusicApp(
                             enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
                             onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                             startDestination = Destination.Home.route, // Always start at Home
-                            sharedTransitionScope = this@SharedTransitionLayout,
+                            // Removed sharedTransitionScope
                             isTv = isTv
                         )
                     }
 
-                    // MiniPlayer overlay — positioned independently from NavGraph padding.
-                    // Freeze the bottom offset during exit animation so it doesn't jump
-                    // when the Scaffold removes the bottom nav bar.
-                    var stableMiniPlayerBottom by remember { mutableStateOf(0.dp) }
-                    val currentNavBottom = innerPadding.calculateBottomPadding()
-                    if (showMiniPlayer) {
-                        stableMiniPlayerBottom = currentNavBottom
-                    }
 
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = showMiniPlayer,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = stableMiniPlayerBottom)
-                    ) {
-                        MiniPlayer(
-                            playerState = playerState,
-                            onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                            onNextClick = { playerViewModel.seekToNext() },
-                            onPreviousClick = { playerViewModel.seekToPrevious() },
-                            onPlayerClick = { navController.navigate(Destination.Player.route) },
-                            onLikeClick = { playerViewModel.likeCurrentSong() },
-                            modifier = Modifier,
-                            onCloseClick = if (currentRoute != Destination.Home.route && currentRoute != Destination.Player.route) {
-                                { playerViewModel.dismissMiniPlayer() }
-                            } else null,
-                            alpha = miniPlayerAlpha,
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this
-                        )
-                    }
                 }
             }
         }
-        
+
+    // Expandable Player Sheet - Overlay
+    // Sits above Scaffold, aligned to bottom
+    if (showMiniPlayer) {
+        val density = LocalDensity.current
+        val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val bottomPaddingPx = with(density) { navBarPadding.toPx() }
+
+        ExpandablePlayerSheet(
+            playerState = playerState,
+            dominantColors = defaultDominantColors, 
+            onPlayPause = { playerViewModel.togglePlayPause() },
+            onNext = { playerViewModel.seekToNext() },
+            onPrevious = { playerViewModel.seekToPrevious() },
+            bottomPadding = bottomPaddingPx,
+            isExpanded = isPlayerExpanded,
+            onExpandChange = { expanded ->
+                if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
+            },
+            modifier = Modifier.align(Alignment.BottomCenter),
+            expandedContent = { onCollapse ->
+                com.suvojeet.suvmusic.ui.screens.player.PlayerScreen(
+                    playbackInfo = playbackInfo,
+                    playerState = playerState,
+                    onPlayPause = { playerViewModel.togglePlayPause() },
+                    onSeekTo = { playerViewModel.seekTo(it) },
+                    onNext = { playerViewModel.seekToNext() },
+                    onPrevious = { playerViewModel.seekToPrevious() },
+                    onBack = onCollapse,
+                    onDownload = { playerViewModel.downloadCurrentSong() },
+                    onToggleLike = { playerViewModel.likeCurrentSong() },
+                    onToggleDislike = { playerViewModel.dislikeCurrentSong() },
+                    onShuffleToggle = { playerViewModel.toggleShuffle() },
+                    onRepeatToggle = { playerViewModel.toggleRepeat() },
+                    onToggleAutoplay = { playerViewModel.toggleAutoplay() },
+                    onToggleVideoMode = { playerViewModel.toggleVideoMode() },
+                    onDismissVideoError = { playerViewModel.dismissVideoError() },
+                    onStartRadio = { 
+                         playbackInfo.currentSong?.let { 
+                             playerViewModel.startRadio(it, null)
+                         }
+                    },
+                    onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
+                    isRadioMode = isRadioMode,
+                    isLoadingMoreSongs = isLoadingMoreSongs,
+                    player = playerViewModel.getPlayer(),
+                    onPlayFromQueue = { index ->
+                        if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
+                            playerViewModel.playSong(playerState.queue[index], playerState.queue, index)
+                        }
+                    },
+                    onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
+                    onRefreshDevices = { playerViewModel.refreshDevices() },
+                    onArtistClick = { artistId ->
+                        onCollapse()
+                        navController.navigate(Destination.Artist(artistId).route)
+                    },
+                    onAlbumClick = { albumId ->
+                        onCollapse()
+                        navController.navigate(Destination.Album(albumId = albumId, name = null, thumbnailUrl = null).route)
+                    },
+                    onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
+                    lyrics = lyrics,
+                    isFetchingLyrics = isFetchingLyrics,
+                    comments = comments,
+                    isFetchingComments = isFetchingComments,
+                    isLoggedIn = playerViewModel.isLoggedIn(),
+                    isPostingComment = isPostingComment,
+                    onPostComment = { commentText -> playerViewModel.postComment(commentText) },
+                    isLoadingMoreComments = isLoadingMoreComments,
+                    onLoadMoreComments = { playerViewModel.loadMoreComments() },
+                    selectedLyricsProvider = selectedLyricsProvider,
+                    enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
+                    onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
+                    sleepTimerOption = sleepTimerOption,
+                    sleepTimerRemainingMs = sleepTimerRemainingMs,
+                    onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
+                    playlistViewModel = hiltViewModel(),
+                    ringtoneViewModel = hiltViewModel(),
+                    playerViewModel = playerViewModel,
+                    volumeKeyEvents = volumeKeyEvents
+                )
+             }
+        )
+    }    
         // Global Volume Indicator (shows on all screens except PlayerScreen when song is playing)
         if (showGlobalVolumeIndicator && volumeSliderEnabled) {
             VolumeIndicator(
@@ -737,5 +802,4 @@ fun SuvMusicApp(
             else -> {}
         }
     }
-}
 }
