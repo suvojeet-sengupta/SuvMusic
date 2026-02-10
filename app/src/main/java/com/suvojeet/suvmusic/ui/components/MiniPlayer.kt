@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import kotlin.math.roundToInt
 
 /**
@@ -161,7 +162,9 @@ fun MiniPlayer(
                 onLikeClick = onLikeClick,
                 isLiked = playerState.isLiked,
                 progress = animatedProgress,
-                alpha = alpha
+                alpha = alpha,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         } else {
             StandardMiniPlayer(
@@ -174,7 +177,9 @@ fun MiniPlayer(
                 onNextClick = onNextClick,
                 onPlayerClick = onPlayerClick,
                 onCloseClick = onCloseClick,
-                progress = animatedProgress
+                progress = animatedProgress,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
     }
@@ -182,6 +187,7 @@ fun MiniPlayer(
 
 
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun StandardMiniPlayer(
     song: com.suvojeet.suvmusic.core.model.Song,
@@ -193,7 +199,9 @@ private fun StandardMiniPlayer(
     onNextClick: () -> Unit,
     onPlayerClick: () -> Unit,
     onCloseClick: (() -> Unit)?,
-    progress: Float
+    progress: Float,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
 ) {
     val cornerRadius = 14.dp
     val playerShape = RoundedCornerShape(cornerRadius)
@@ -219,9 +227,21 @@ private fun StandardMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Album Art
+                val artworkSharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                    with(sharedTransitionScope) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(song.id)),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                    }
+                } else {
+                    Modifier
+                }
+
                 Box(
                     modifier = Modifier
                         .size(42.dp)
+                        .then(artworkSharedModifier)
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center

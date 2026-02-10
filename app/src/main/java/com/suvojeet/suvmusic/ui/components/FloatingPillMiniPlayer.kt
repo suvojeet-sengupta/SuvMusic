@@ -1,5 +1,9 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -41,7 +45,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun FloatingPillMiniPlayer(
     song: com.suvojeet.suvmusic.core.model.Song,
@@ -56,7 +62,9 @@ fun FloatingPillMiniPlayer(
     onLikeClick: () -> Unit,
     isLiked: Boolean,
     progress: Float,
-    alpha: Float = 1f
+    alpha: Float = 1f,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     Surface(
         modifier = modifier
@@ -97,10 +105,22 @@ fun FloatingPillMiniPlayer(
                 )
                 
                 // Album Art (Clipped Circle)
+                val artworkSharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                    with(sharedTransitionScope) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(song.id)),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                    }
+                } else {
+                    Modifier
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(5.dp) // Space for progress
+                        .then(artworkSharedModifier)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center

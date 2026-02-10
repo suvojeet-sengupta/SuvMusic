@@ -521,6 +521,9 @@ fun PlayerScreen(
                                     onDoubleTapRight = {
                                         handleDoubleTapSeek(true)
                                     },
+                                    songId = song?.id,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
                                     modifier = artworkModifier
                                 )
                             }
@@ -756,6 +759,9 @@ fun PlayerScreen(
                                     onDoubleTapRight = {
                                         handleDoubleTapSeek(true)
                                     },
+                                    songId = song?.id,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
                                     modifier = artworkModifier
                                 )
                             }
