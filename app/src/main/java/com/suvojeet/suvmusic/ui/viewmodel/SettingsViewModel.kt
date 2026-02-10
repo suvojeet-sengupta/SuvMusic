@@ -608,6 +608,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun resetEqBands() {
+        viewModelScope.launch {
+            sessionManager.resetEqBands()
+            _uiState.update { it.copy(eqBands = FloatArray(10) { 0f }) }
+        }
+    }
+
     fun getLastFmAuthUrl(): String {
         return lastFmRepository.getAuthUrl()
     }

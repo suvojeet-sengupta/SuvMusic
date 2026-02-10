@@ -933,6 +933,14 @@ class SessionManager @Inject constructor(
         }
     }
 
+    suspend fun resetEqBands() {
+        val resetBands = FloatArray(10) { 0f }
+        val bandsStr = resetBands.joinToString(",")
+        context.dataStore.edit { preferences ->
+            preferences[EQ_BANDS_KEY] = bandsStr
+        }
+    }
+
 
     // --- Privacy Mode ---
 
