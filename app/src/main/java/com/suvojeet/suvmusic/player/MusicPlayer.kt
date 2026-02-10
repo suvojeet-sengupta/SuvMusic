@@ -101,6 +101,10 @@ class MusicPlayer @Inject constructor(
     
     private var deviceReceiver: android.content.BroadcastReceiver? = null
     
+    // Error recovery retry tracking to prevent infinite loops
+    private var errorRetryCount = 0
+    private var errorRetrySongId: String? = null
+    
     // Configurable Preloading
     private var nextSongPreloadingEnabled = true
     private var nextSongPreloadDelay = 3
@@ -326,7 +330,9 @@ class MusicPlayer @Inject constructor(
             _playerState.update { 
                 it.copy(
                     isLoading = playbackState == Player.STATE_BUFFERING,
-                    error = null
+                    // Bug Fix: Only clear errors on STATE_READY, not during STATE_BUFFERING
+                    // which would wipe errors set by onPlayerError before user sees them
+                    error = if (playbackState == Player.STATE_READY) null else it.error
                 )
             }
             
@@ -334,6 +340,38 @@ class MusicPlayer @Inject constructor(
                 startPositionUpdates()
                 // Update audio format info when playback is ready
                 updateAudioFormatInfo()
+            }
+            
+            // Bug Fix: Handle STATE_ENDED — ExoPlayer stopped because the current item
+            // finished or failed to play (e.g. unresolved placeholder URI).
+            // Without this, playback silently dies when songs have placeholder URIs.
+            if (playbackState == Player.STATE_ENDED) {
+                val controller = mediaController ?: return
+                val state = _playerState.value
+                val currentIndex = controller.currentMediaItemIndex
+                val queueSize = state.queue.size
+                
+                if (currentIndex < queueSize - 1) {
+                    // More songs in queue — player couldn't auto-transition (bad URI)
+                    val nextIndex = currentIndex + 1
+                    val nextSong = state.queue.getOrNull(nextIndex)
+                    if (nextSong != null) {
+                        scope.launch {
+                            controller.seekTo(nextIndex, 0L)
+                            resolveAndPlayCurrentItem(nextSong, nextIndex, shouldPlay = true)
+                        }
+                    }
+                } else if (state.repeatMode == RepeatMode.ALL && queueSize > 0) {
+                    // Wrap around to beginning of queue
+                    val firstSong = state.queue.firstOrNull()
+                    if (firstSong != null) {
+                        scope.launch {
+                            controller.seekTo(0, 0L)
+                            resolveAndPlayCurrentItem(firstSong, 0, shouldPlay = true)
+                        }
+                    }
+                }
+                // RepeatMode.OFF at end of queue — playback stops naturally (correct)
             }
         }
         
@@ -369,6 +407,10 @@ class MusicPlayer @Inject constructor(
                         source = SongSource.YOUTUBE // Assume YouTube as default for external
                     )
                 }
+                
+                // Reset error retry state on successful transition
+                errorRetryCount = 0
+                errorRetrySongId = null
                 
                 val previousSong = _playerState.value.currentSong
                 _playerState.update { 
@@ -490,7 +532,26 @@ class MusicPlayer @Inject constructor(
                 val currentSong = _playerState.value.currentSong
                 
                 if (currentSong != null && currentSong.source != SongSource.LOCAL && currentSong.source != SongSource.DOWNLOADED) {
-                    android.util.Log.d("MusicPlayer", "Attempting to recover from playback error for: ${currentSong.id}")
+                    
+                    // Bug Fix: Track retry count per song to prevent infinite error loops
+                    if (currentSong.id == errorRetrySongId) {
+                        errorRetryCount++
+                    } else {
+                        errorRetrySongId = currentSong.id
+                        errorRetryCount = 1
+                    }
+                    
+                    if (errorRetryCount > 3) {
+                        // Max retries exhausted — skip to next song to avoid infinite loop
+                        android.util.Log.w("MusicPlayer", "Max retries (3) reached for ${currentSong.id}, skipping")
+                        _playerState.update { it.copy(error = "Skipping unplayable song", isLoading = false) }
+                        errorRetryCount = 0
+                        errorRetrySongId = null
+                        seekToNext()
+                        return
+                    }
+                    
+                    android.util.Log.d("MusicPlayer", "Attempting recovery (attempt $errorRetryCount/3) for: ${currentSong.id}")
                     
                     scope.launch {
                         // Fallback logic: If in Video Mode, switch to Audio Mode first
@@ -509,8 +570,8 @@ class MusicPlayer @Inject constructor(
                              _playerState.update { it.copy(isLoading = true, error = null) }
                         }
 
-                        // Wait a bit before retrying
-                        delay(1000)
+                        // Wait a bit before retrying (exponential backoff)
+                        delay(1000L * errorRetryCount)
                         
                         // Resume from last position
                         val resumePosition = _playerState.value.currentPosition
@@ -520,7 +581,6 @@ class MusicPlayer @Inject constructor(
                              resolveAndPlayCurrentItem(currentSong, _playerState.value.currentIndex, shouldPlay = true)
                              
                              // Seek to previous position once ready
-                             // We'll trust the player updates to handle seeking, but we can hint it here
                              mediaController?.seekTo(resumePosition)
                         } catch (e: Exception) {
                             // Recovery failed
@@ -786,7 +846,11 @@ class MusicPlayer @Inject constructor(
                         if (duration > 0 && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
-                                val nextIndex = state.currentIndex + 1
+                                // Bug Fix: Handle RepeatMode.ALL wrap-around for gapless transition
+                                var nextIndex = state.currentIndex + 1
+                                if (nextIndex >= state.queue.size && state.repeatMode == RepeatMode.ALL) {
+                                    nextIndex = 0
+                                }
                                 if (nextIndex < state.queue.size && state.queue.getOrNull(nextIndex)?.id == preloadedNextSongId) {
                                     // Transition to next song immediately
                                     controller.seekToNextMediaItem()
@@ -957,10 +1021,10 @@ class MusicPlayer @Inject constructor(
                     )
                     .build()
                 
-                // Replace the placeholder media item with resolved one
+                // Bug Fix: Use replaceMediaItem instead of remove+add to avoid
+                // triggering a spurious media item transition event
                 try {
-                    controller.removeMediaItem(index)
-                    controller.addMediaItem(index, newMediaItem)
+                    controller.replaceMediaItem(index, newMediaItem)
                 } catch (e: Exception) {
                    // Index might have changed or race condition
                 }
@@ -1024,9 +1088,12 @@ class MusicPlayer @Inject constructor(
                             kotlinx.coroutines.delay(500)
                             jioSaavnRepository.getStreamUrl(song.id)
                         }
-                        ?: ""
+                        // Bug Fix: Use placeholder URI instead of empty string.
+                        // Empty string causes ExoPlayer to fail silently with a decode error.
+                        // Placeholder URI is detected by onMediaItemTransition as needing resolution.
+                        ?: "https://placeholder.invalid/${song.id}"
                 } else {
-                    song.streamUrl ?: ""
+                    song.streamUrl ?: "https://placeholder.invalid/${song.id}"
                 }
             }
             else -> {
@@ -1035,7 +1102,7 @@ class MusicPlayer @Inject constructor(
                         val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
                             resolvedVideoIds.put(song.id, it) 
                         }
-                        youTubeRepository.getVideoStreamUrl(videoId) ?: ""
+                        youTubeRepository.getVideoStreamUrl(videoId) ?: "https://placeholder.invalid/${song.id}"
                     } else {
                         // Retry once if first attempt fails
                         youTubeRepository.getStreamUrl(song.id)
@@ -1043,7 +1110,8 @@ class MusicPlayer @Inject constructor(
                                 kotlinx.coroutines.delay(500)
                                 youTubeRepository.getStreamUrl(song.id)
                             }
-                            ?: ""
+                            // Bug Fix: Use placeholder URI instead of empty string
+                            ?: "https://placeholder.invalid/${song.id}"
                     }
                 } else {
                     "https://youtube.com/watch?v=${song.id}"
@@ -1112,21 +1180,25 @@ class MusicPlayer @Inject constructor(
              } else if (state.isAutoplayEnabled || state.isRadioMode) {
                  // Infinite Autoplay/Radio: The ViewModel automatically loads more songs when nearing the end.
                  // Check if queue has grown (new songs added by autoplay observer)
+                 val originalQueueSize = queue.size
                  scope.launch {
                      delay(500) // Brief delay to allow autoplay to add songs
                      val updatedState = _playerState.value
                      val updatedQueue = updatedState.queue
                      val updatedIndex = updatedState.currentIndex
                      
-                     // If queue has more songs now, play the next one
-                     if (updatedIndex + 1 < updatedQueue.size) {
-                         playSong(updatedQueue[updatedIndex + 1], updatedQueue, updatedIndex + 1)
-                     } else if (updatedQueue.size > queue.size) {
+                     // Bug Fix: Check for new songs first (queue grew via autoplay),
+                     // then fall back to checking updatedIndex+1.
+                     // Old logic checked updatedIndex+1 first which could miss new songs
+                     // since updatedIndex hadn't advanced yet.
+                     if (updatedQueue.size > originalQueueSize) {
                          // New songs were added, play the first new one
-                         val newSongIndex = queue.size
+                         val newSongIndex = originalQueueSize
                          if (newSongIndex < updatedQueue.size) {
                              playSong(updatedQueue[newSongIndex], updatedQueue, newSongIndex)
                          }
+                     } else if (updatedIndex + 1 < updatedQueue.size) {
+                         playSong(updatedQueue[updatedIndex + 1], updatedQueue, updatedIndex + 1)
                      }
                      // If still no new songs, playback naturally stops (rare edge case)
                  }
