@@ -490,26 +490,18 @@ fun NavGraph(
         composable(
             route = Destination.Player.route,
             enterTransition = {
-                // Slide up from bottom when opening
-                slideIntoContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = tween(300)
-                )
+                // Fade in only — shared element handles the artwork morph
+                fadeIn(animationSpec = tween(350))
             },
             exitTransition = {
-                // Fade out when navigating away (not back)
                 fadeOut(animationSpec = tween(300))
             },
             popEnterTransition = {
-                // Fade in when returning to player
                 fadeIn(animationSpec = tween(300))
             },
             popExitTransition = {
-                // Slide down to bottom when closing (back)
-                slideOutOfContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
-                    animationSpec = tween(300)
-                )
+                // Fade out only — shared element handles the artwork morph back
+                fadeOut(animationSpec = tween(350))
             }
         ) {
             PlayerScreen(
