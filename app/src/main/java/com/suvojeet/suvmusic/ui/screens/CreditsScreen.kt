@@ -82,6 +82,21 @@ fun CreditsScreen(
                 )
             }
 
+            // --- Native Performance ---
+            item {
+                SectionHeader("Native Performance")
+                LibraryCard(
+                    name = "C++ Audio Processing",
+                    description = "High-performance native code used for spatial audio processing and ultra-fast waveform extraction via mmap.",
+                    isSpecial = true,
+                    onClick = {
+                        // Internal reference or general C++ NDK link
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://developer.android.com/ndk"))
+                        context.startActivity(intent)
+                    }
+                )
+            }
+
             // --- Special Thanks ---
             item {
                 SectionHeader("Special Thanks")
