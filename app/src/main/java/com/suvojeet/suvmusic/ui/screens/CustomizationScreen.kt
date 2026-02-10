@@ -127,11 +127,11 @@ fun CustomizationScreen(
     val scope = rememberCoroutineScope()
     
     // Style Selection Dialog/Sheet
-    var showStyleSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showMiniPlayerStyleSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
     
-    if (showStyleSheet) {
+    if (showMiniPlayerStyleSheet) {
         androidx.compose.material3.ModalBottomSheet(
-            onDismissRequest = { showStyleSheet = false },
+            onDismissRequest = { showMiniPlayerStyleSheet = false },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
              Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -156,7 +156,7 @@ fun CustomizationScreen(
                             .clickable {
                                 scope.launch {
                                     sessionManager.setMiniPlayerStyle(style)
-                                    showStyleSheet = false
+                                    showMiniPlayerStyleSheet = false
                                 }
                             },
                         colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -263,7 +263,7 @@ fun CustomizationScreen(
                             title = "Mini Player Style",
                             subtitle = currentMiniPlayerStyle.label,
                             icon = Icons.Default.MusicNote, // Or a better style icon
-                            onClick = { showStyleSheet = true }
+                            onClick = { showMiniPlayerStyleSheet = true }
                         )
                     }
                 }
