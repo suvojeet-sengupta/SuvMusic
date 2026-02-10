@@ -42,6 +42,7 @@ fun EqualizerSheet(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onBandChange: (Int, Float) -> Unit,
+    onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
     dominantColor: Color,
     initialEnabled: Boolean,
@@ -97,11 +98,7 @@ fun EqualizerSheet(
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.TextButton(
-                        onClick = {
-                            for (i in 0 until 10) {
-                                onBandChange(i, 0f)
-                            }
-                        },
+                        onClick = onReset,
                         enabled = isEnabled
                     ) {
                         Text("Reset", color = if (isEnabled) dominantColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))

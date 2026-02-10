@@ -1117,6 +1117,13 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun resetEqBands() {
+        viewModelScope.launch {
+            sessionManager.resetEqBands()
+            spatialAudioProcessor.resetEqBands()
+        }
+    }
+
     fun getEqEnabled(): Flow<Boolean> = sessionManager.eqEnabledFlow
     fun getEqBands(): Flow<FloatArray> = sessionManager.eqBandsFlow
 
