@@ -1,9 +1,5 @@
 package com.suvojeet.suvmusic.ui.components
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -84,7 +80,6 @@ private fun getHighResThumbnail(url: String?): Any? {
  * Beautiful music card with glassmorphism effect.
  * Used for displaying songs in lists and grids.
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MusicCard(
     song: Song,
@@ -94,9 +89,7 @@ fun MusicCard(
     modifier: Modifier = Modifier,
     backgroundColor: Color? = null,
     textColor: Color? = null,
-    subTextColor: Color? = null,
-    sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null
+    subTextColor: Color? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -137,21 +130,11 @@ fun MusicCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Album Art
-            val artworkSharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                with(sharedTransitionScope) {
-                    Modifier.sharedElement(
-                        sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(song.id)),
-                        animatedVisibilityScope = animatedVisibilityScope
-                    )
-                }
-            } else {
-                Modifier
-            }
+
 
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .then(artworkSharedModifier)
                     .clip(AlbumArtShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
@@ -258,14 +241,11 @@ fun MusicCard(
 /**
  * Compact music card for horizontal lists.
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CompactMusicCard(
     song: Song,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val highResThumbnail = getHighResThumbnail(song.thumbnailUrl)
@@ -279,21 +259,11 @@ fun CompactMusicCard(
     ) {
         Column {
             // Album Art
-            val artworkSharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                with(sharedTransitionScope) {
-                    Modifier.sharedElement(
-                        sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(song.id)),
-                        animatedVisibilityScope = animatedVisibilityScope
-                    )
-                }
-            } else {
-                Modifier
-            }
+
 
             Box(
                 modifier = Modifier
                     .size(140.dp)
-                    .then(artworkSharedModifier)
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center

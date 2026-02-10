@@ -1,8 +1,5 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -72,8 +69,6 @@ fun HomeScreen(
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
     currentSong: Song? = null,
-    sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -176,8 +171,6 @@ fun HomeScreen(
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
                                         modifier = enterModifier,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.Grid -> {
@@ -187,8 +180,6 @@ fun HomeScreen(
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
                                         modifier = enterModifier,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList -> {
@@ -198,8 +189,6 @@ fun HomeScreen(
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
                                         modifier = enterModifier,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel -> {
@@ -209,8 +198,6 @@ fun HomeScreen(
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
                                         modifier = enterModifier,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel -> {
