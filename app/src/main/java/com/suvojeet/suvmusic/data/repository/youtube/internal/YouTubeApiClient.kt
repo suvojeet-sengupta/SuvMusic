@@ -21,8 +21,10 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch authenticated YouTube Music internal API.
      * @param endpoint Either a browseId (e.g., "FEmusic_home") or endpoint path (e.g., "account/account_menu")
+     * @param hl Host language (e.g., "en", "hi")
+     * @param gl Geolocation (e.g., "US", "IN")
      */
-    fun fetchInternalApi(endpoint: String): String {
+    fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val isBrowse = !endpoint.contains("/")
         
@@ -39,8 +41,8 @@ class YouTubeApiClient @Inject constructor(
                 "client": {
                     "clientName": "WEB_REMIX",
                     "clientVersion": "1.20230102.01.00",
-                    "hl": "en",
-                    "gl": "US"
+                    "hl": "$hl",
+                    "gl": "$gl"
                 }
             }
         """.trimIndent()
@@ -71,7 +73,7 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch continuation data for paginated results.
      */
-    fun fetchInternalApiWithContinuation(continuationToken: String): String {
+    fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = "en", gl: String = "US"): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
@@ -81,8 +83,8 @@ class YouTubeApiClient @Inject constructor(
                     "client": {
                         "clientName": "WEB_REMIX",
                         "clientVersion": "1.20230102.01.00",
-                        "hl": "en",
-                        "gl": "US"
+                        "hl": "$hl",
+                        "gl": "$gl"
                     }
                 }
             }
@@ -108,7 +110,7 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch with browse parameters (for category browsing).
      */
-    fun fetchInternalApiWithParams(browseId: String, params: String): String {
+    fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
@@ -118,8 +120,8 @@ class YouTubeApiClient @Inject constructor(
                     "client": {
                         "clientName": "WEB_REMIX",
                         "clientVersion": "1.20230102.01.00",
-                        "hl": "en",
-                        "gl": "US"
+                        "hl": "$hl",
+                        "gl": "$gl"
                     }
                 },
                 "browseId": "$browseId",
@@ -148,7 +150,7 @@ class YouTubeApiClient @Inject constructor(
      * Fetch public YouTube Music API without authentication.
      * Used for charts, trending, and public browse content.
      */
-    fun fetchPublicApi(browseId: String): String {
+    fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "IN"): String {
         val url = "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false"
         
         val jsonBody = """
@@ -157,8 +159,8 @@ class YouTubeApiClient @Inject constructor(
                     "client": {
                         "clientName": "WEB_REMIX",
                         "clientVersion": "1.20240101.01.00",
-                        "hl": "en",
-                        "gl": "IN"
+                        "hl": "$hl",
+                        "gl": "$gl"
                     }
                 },
                 "browseId": "$browseId"

@@ -62,6 +62,25 @@ class YouTubeRepository @Inject constructor(
         const val FILTER_ALBUMS = "music_albums"
         const val FILTER_PLAYLISTS = "music_playlists"
         const val FILTER_ARTISTS = "music_artists"
+
+        /**
+         * Map language names to YouTube Music ISO codes (hl).
+         */
+        fun getLanguageCode(languageName: String): String {
+            return when (languageName.lowercase()) {
+                "hindi" -> "hi"
+                "bengali" -> "bn"
+                "punjabi" -> "pa"
+                "tamil" -> "ta"
+                "telugu" -> "te"
+                "malayalam" -> "ml"
+                "spanish" -> "es"
+                "korean" -> "ko"
+                "japanese" -> "ja"
+                "english" -> "en"
+                else -> "en"
+            }
+        }
     }
 
     fun isOnline(): Boolean = networkMonitor.isCurrentlyConnected()
@@ -255,10 +274,14 @@ class YouTubeRepository @Inject constructor(
     suspend fun getRecommendations(): List<Song> = withContext(Dispatchers.IO) {
         if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
         if (!sessionManager.isLoggedIn()) {
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
             return@withContext search("trending music 2024", FILTER_SONGS)
         }
         try {
-            val jsonResponse = fetchInternalApi("FEmusic_home")
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+            val jsonResponse = fetchInternalApi("FEmusic_home", hl = hl)
             
             // Try to find "Quick picks" or "Listen again" section specifically for the home grid
             val sections = parseHomeSectionsFromInternalJson(jsonResponse)
@@ -312,8 +335,11 @@ class YouTubeRepository @Inject constructor(
             val sections = mutableListOf<HomeSection>()
             
             // 1. Try fetching public trending/charts (works without auth)
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+            
             try {
-                val chartsResponse = fetchPublicApi("FEmusic_charts")
+                val chartsResponse = fetchPublicApi("FEmusic_charts", hl = hl)
                 if (chartsResponse.isNotEmpty()) {
                     sections.addAll(parseChartsSectionsFromJson(chartsResponse))
                 }
@@ -323,7 +349,7 @@ class YouTubeRepository @Inject constructor(
             
             // 2. Try fetching public home browse (may work without auth for some content)
             try {
-                val homeResponse = fetchPublicApi("FEmusic_home")
+                val homeResponse = fetchPublicApi("FEmusic_home", hl = hl)
                 if (homeResponse.isNotEmpty()) {
                     val homeSections = parseHomeSectionsFromInternalJson(homeResponse)
                     sections.addAll(homeSections)
@@ -338,7 +364,6 @@ class YouTubeRepository @Inject constructor(
             }
             
             // 4. Fallback: Rich content via search for non-logged in users
-            val preferredLanguages = sessionManager.getPreferredLanguages()
             
             // Define all available sections with their associated languages
             val allSections = listOf(
@@ -395,15 +420,18 @@ class YouTubeRepository @Inject constructor(
             val sections = mutableListOf<HomeSection>()
             
             // 1. Fetch Trending/Charts first to put at top
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+            
             try {
-                val chartsResponse = fetchInternalApi("FEmusic_charts")
+                val chartsResponse = fetchInternalApi("FEmusic_charts", hl = hl)
                 sections.addAll(parseChartsSectionsFromJson(chartsResponse))
             } catch (e: Exception) {
                 // Charts failed, continue to home
             }
 
             // 2. Fetch Home personalized sections
-            val homeResponse = fetchInternalApi("FEmusic_home")
+            val homeResponse = fetchInternalApi("FEmusic_home", hl = hl)
             sections.addAll(parseHomeSectionsFromInternalJson(homeResponse))
             
             // 3. Handle Pagination (Continuations) to get MORE sections
@@ -413,7 +441,7 @@ class YouTubeRepository @Inject constructor(
             
             while (continuationToken != null && attempts < 3) {
                 try {
-                    val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                    val continuationResponse = fetchInternalApiWithContinuation(continuationToken, hl = hl)
                     if (continuationResponse.isNotEmpty()) {
                         val newSections = parseHomeSectionsFromInternalJson(continuationResponse)
                         sections.addAll(newSections)
@@ -529,8 +557,8 @@ class YouTubeRepository @Inject constructor(
 
     private fun extractContinuationToken(json: JSONObject): String? = jsonParser.extractContinuationToken(json)
 
-    private fun fetchInternalApiWithContinuation(continuationToken: String): String =
-        apiClient.fetchInternalApiWithContinuation(continuationToken)
+    private fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = "en", gl: String = "US"): String =
+        apiClient.fetchInternalApiWithContinuation(continuationToken, hl = hl, gl = gl)
 
     private fun parseChartsSectionsFromJson(json: String): List<HomeSection> {
         val sections = mutableListOf<HomeSection>()
@@ -604,7 +632,9 @@ class YouTubeRepository @Inject constructor(
 
         if (sessionManager.isLoggedIn()) {
             try {
-                val jsonResponse = fetchInternalApi("FEmusic_liked_playlists")
+                val preferredLanguages = sessionManager.getPreferredLanguages()
+                val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+                val jsonResponse = fetchInternalApi("FEmusic_liked_playlists", hl = hl)
                 val ytPlaylists = parsePlaylistsFromInternalJson(jsonResponse)
                 playlists.addAll(ytPlaylists)
                 
@@ -659,7 +689,10 @@ class YouTubeRepository @Inject constructor(
             // Clear existing Liked Songs
             libraryRepository.removePlaylist("LM")
             
-            val initialResponse = fetchInternalApi("FEmusic_liked_videos")
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+            
+            val initialResponse = fetchInternalApi("FEmusic_liked_videos", hl = hl)
             val initialSongs = parseSongsFromInternalJson(initialResponse)
             var totalSongsAdded = 0
             
@@ -687,7 +720,7 @@ class YouTubeRepository @Inject constructor(
 
                     while (continuationToken != null && pageCount < maxPages) {
                         try {
-                            val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                            val continuationResponse = fetchInternalApiWithContinuation(continuationToken, hl = hl)
                             if (continuationResponse.isNotEmpty()) {
                                 val newSongs = parseSongsFromInternalJson(continuationResponse)
                                 if (newSongs.isEmpty()) break
@@ -740,8 +773,11 @@ class YouTubeRepository @Inject constructor(
             // Use internal API for Liked Music if logged in
             if (sessionManager.isLoggedIn()) {
                 try {
+                    val preferredLanguages = sessionManager.getPreferredLanguages()
+                    val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+                    
                     val songs = mutableListOf<Song>()
-                    var json = fetchInternalApi("FEmusic_liked_videos")
+                    var json = fetchInternalApi("FEmusic_liked_videos", hl = hl)
                     songs.addAll(parseSongsFromInternalJson(json))
                     
                     // Add Pagination for your likes
@@ -749,7 +785,7 @@ class YouTubeRepository @Inject constructor(
                     var continuationToken = extractContinuationToken(currentJson)
                     var pageCount = 0
                     while (continuationToken != null && pageCount < 200) { // Limit to 20000 songs
-                        val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                        val continuationResponse = fetchInternalApiWithContinuation(continuationToken, hl = hl)
                         if (continuationResponse.isEmpty()) break
                         val newSongs = parseSongsFromInternalJson(continuationResponse)
                         if (newSongs.isEmpty()) break
@@ -789,7 +825,10 @@ class YouTubeRepository @Inject constructor(
             if (sessionManager.isLoggedIn()) {
                 try {
                     // Supermix is based on recommendations
-                    val json = fetchInternalApi("FEmusic_home")
+                    val preferredLanguages = sessionManager.getPreferredLanguages()
+                    val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+                    
+                    val json = fetchInternalApi("FEmusic_home", hl = hl)
                     val songs = parseSongsFromInternalJson(json)
                     if (songs.isNotEmpty()) {
                         val playlist = Playlist(
@@ -1158,8 +1197,8 @@ class YouTubeRepository @Inject constructor(
     }
 
 
-    private fun fetchInternalApiWithParams(browseId: String, params: String): String =
-        apiClient.fetchInternalApiWithParams(browseId, params)
+    private fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String =
+        apiClient.fetchInternalApiWithParams(browseId, params, hl = hl, gl = gl)
 
     private fun parseMoodsAndGenresFromJson(json: String): List<com.suvojeet.suvmusic.data.model.BrowseCategory> {
         val categories = mutableListOf<com.suvojeet.suvmusic.data.model.BrowseCategory>()
@@ -2021,9 +2060,9 @@ class YouTubeRepository @Inject constructor(
     // Internal API Helpers (Delegated to YouTubeApiClient)
     // ============================================================================================
 
-    private fun fetchInternalApi(endpoint: String): String = apiClient.fetchInternalApi(endpoint)
+    private fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchInternalApi(endpoint, hl = hl, gl = gl)
 
-    private fun fetchPublicApi(browseId: String): String = apiClient.fetchPublicApi(browseId)
+    private fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchPublicApi(browseId, hl = hl, gl = gl)
 
     private fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean =
         apiClient.performAuthenticatedAction(endpoint, innerBody)
