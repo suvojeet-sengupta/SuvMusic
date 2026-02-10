@@ -182,7 +182,9 @@ fun NavGraph(
                     onCreateMixClick = {
                         navController.navigate(Destination.PickMusic.route)
                     },
-                    currentSong = playbackInfo.currentSong
+                    currentSong = playbackInfo.currentSong,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = this
                 )
             }
         }
