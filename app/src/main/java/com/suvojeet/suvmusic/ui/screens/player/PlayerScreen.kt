@@ -1,9 +1,5 @@
 package com.suvojeet.suvmusic.ui.screens.player
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -117,6 +113,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import kotlin.math.roundToInt
 
 /**
@@ -172,9 +173,7 @@ fun PlayerScreen(
     ringtoneViewModel: RingtoneViewModel = hiltViewModel(),
     playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
     onToggleDislike: () -> Unit = { playerViewModel.dislikeCurrentSong() },
-    volumeKeyEvents: SharedFlow<Unit>? = null,
-    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
-    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
+    volumeKeyEvents: SharedFlow<Unit>? = null
 ) {
 
     val song = playbackInfo.currentSong
@@ -343,11 +342,7 @@ fun PlayerScreen(
         }
     }
 
-    // Swipe to dismiss variables
-    val offsetY = remember { Animatable(0f) }
     val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
-    val screenHeightPx = with(LocalDensity.current) { screenHeight.toPx() }
 
 
 
@@ -398,57 +393,13 @@ fun PlayerScreen(
         }
     }
 
-    val sharedModifier = Modifier
-
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            // Detect vertical drag on the entire screen container
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = {
-                        coroutineScope.launch {
-                            // Threshold to dismiss: 20% of screen height
-                            if (offsetY.value > screenHeightPx * 0.20f) {
-                                // Animate off screen (200ms)
-                                offsetY.animateTo(
-                                    targetValue = screenHeightPx,
-                                    animationSpec = tween(durationMillis = 200)
-                                )
-                                onBack()
-                            } else {
-                                // Snap back to top
-                                offsetY.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                                )
-                            }
-                        }
-                    },
-                    onDragCancel = {
-                        coroutineScope.launch {
-                            offsetY.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring()
-                            )
-                        }
-                    },
-                    onVerticalDrag = { change, dragAmount ->
-                        change.consume()
-                        val newOffset = (offsetY.value + dragAmount).coerceAtLeast(0f)
-                        coroutineScope.launch {
-                            offsetY.snapTo(newOffset)
-                        }
-                    }
-                )
-            }
-            .then(sharedModifier)
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Background Layer with Fade Out effect
+        // Background Layer
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .alpha(1f - (offsetY.value / screenHeightPx).coerceIn(0f, 1f))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -460,12 +411,9 @@ fun PlayerScreen(
                 )
         )
 
-
-        // Main Content Layer that moves with drag
+        // Main Content Layer
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset { IntOffset(x = 0, y = offsetY.value.roundToInt()) }
+            modifier = Modifier.fillMaxSize()
         ) {
             // Main Player Content - Use BoxWithConstraints for dynamic adaptive layout
             // This responds to floating windows and resizing on tablets
@@ -522,8 +470,6 @@ fun PlayerScreen(
                                         handleDoubleTapSeek(true)
                                     },
                                     songId = song?.id,
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope,
                                     modifier = artworkModifier
                                 )
                             }
@@ -760,8 +706,6 @@ fun PlayerScreen(
                                         handleDoubleTapSeek(true)
                                     },
                                     songId = song?.id,
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope,
                                     modifier = artworkModifier
                                 )
                             }

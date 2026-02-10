@@ -1,8 +1,5 @@
 package com.suvojeet.suvmusic.ui.components
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,16 +29,13 @@ import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeItemCard(
     item: HomeItem,
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    sectionItems: List<HomeItem>,
-    sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null
+    sectionItems: List<HomeItem>
 ) {
     when (item) {
         is HomeItem.SongItem -> {
@@ -53,8 +47,6 @@ fun HomeItemCard(
                     val index = songs.indexOf(item.song)
                     if (index != -1) onSongClick(songs, index)
                 },
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope
             )
         }
         is HomeItem.PlaylistItem -> {
@@ -150,13 +142,10 @@ fun PlaylistDisplayCard(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediumSongCard(
     song: Song,
-    onClick: () -> Unit,
-    sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null
+    onClick: () -> Unit
 ) {
     val context = LocalContext.current
     
@@ -168,19 +157,10 @@ fun MediumSongCard(
             .width(160.dp)
             .bounceClick(onClick = onClick)
     ) {
-        val artworkSharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-            with(sharedTransitionScope) {
-                Modifier.sharedElement(
-                    sharedContentState = rememberSharedContentState(key = SharedTransitionKeys.playerArtwork(song.id)),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-            }
-        } else {
-            Modifier
-        }
+
 
         Box(
-            modifier = Modifier.size(160.dp).then(artworkSharedModifier)
+            modifier = Modifier.size(160.dp)
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
