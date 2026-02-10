@@ -181,7 +181,8 @@ fun NavGraph(
                     onStartRadio = { onStartRadio(null, null) },
                     onCreateMixClick = {
                         navController.navigate(Destination.PickMusic.route)
-                    }
+                    },
+                    currentSong = playbackInfo.currentSong
                 )
             }
         }

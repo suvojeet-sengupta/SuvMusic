@@ -50,9 +50,13 @@ fun HorizontalCarouselSection(
     section: HomeSection,
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (Album) -> Unit
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         HomeSectionHeader(title = section.title)
         
         LazyRow(
@@ -77,9 +81,13 @@ fun VerticalListSection(
     section: HomeSection,
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (Album) -> Unit
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         HomeSectionHeader(title = section.title)
         
         Column(
@@ -145,14 +153,18 @@ fun LargeCardWithListSection(
     section: HomeSection,
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (Album) -> Unit
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (section.items.isEmpty()) return
     
     val firstItem = section.items.first()
     val otherItems = section.items.drop(1).take(3)
     
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         HomeSectionHeader(title = section.title)
         
         Row(
@@ -228,9 +240,13 @@ fun GridSection(
     section: HomeSection,
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (Album) -> Unit
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         HomeSectionHeader(title = section.title)
         
         // Use a LazyHorizontalGrid for grid feel but horizontally scrolling
@@ -350,9 +366,13 @@ fun CommunityCarouselSection(
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onStartRadio: () -> Unit = {},
-    onSavePlaylist: (PlaylistDisplayItem) -> Unit = {}
+    onSavePlaylist: (PlaylistDisplayItem) -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         HomeSectionHeader(title = section.title)
         
         LazyRow(
@@ -543,9 +563,13 @@ fun CommunityPlaylistCard(
 @Composable
 fun ExploreGridSection(
     section: HomeSection,
-    onExploreItemClick: (String, String) -> Unit // browseId, title
+    onExploreItemClick: (String, String) -> Unit, // browseId, title
+    modifier: Modifier = Modifier
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         HomeSectionHeader(title = section.title)
         
         Column(
