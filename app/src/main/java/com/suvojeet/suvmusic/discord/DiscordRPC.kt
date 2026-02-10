@@ -301,7 +301,7 @@ class DiscordRPC(
                     type = type, // Listening
                     timestamps = Timestamps(startTime, endTime),
                     assets = Assets(
-                        largeImage = "mp:external/discord/https/$imageUrl", // Kizzy trick? Usually needs application asset or working external link
+                        largeImage = imageUrl, // Use direct URL, client often handles it if valid or proxy might be needed but mp: prefix is unreliable
                         // NOTE: For external images to work without an app ID, we ideally need a proxy or they might not show up.
                         // Standard Discord RPC requires an Application ID and uploaded assets or specific external URL capability.
                         // Assuming 'mp:external' works or we might need to rely on generic icons if not using a specific App ID.

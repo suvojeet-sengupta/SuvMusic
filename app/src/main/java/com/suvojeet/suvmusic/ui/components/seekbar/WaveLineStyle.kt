@@ -29,8 +29,8 @@ object WaveLineStyle {
         val height = size.height
         val centerY = height / 2
         val progressX = progress * width
-        val amplitude = height * 0.3f
-        val frequency = 0.03f
+        val amplitude = height * 0.15f // Reduced height (was 0.3f)
+        val frequency = 0.045f // Slightly tighter frequency (was 0.03f)
         val phase = wavePhase * (Math.PI.toFloat() / 180f)
         
         // Unplayed path - Straight line
@@ -41,7 +41,7 @@ object WaveLineStyle {
         
         drawPath(
             path = unplayedPath,
-            color = inactiveColor.copy(alpha = 0.3f), // Reduced opacity for track
+            color = inactiveColor.copy(alpha = 0.3f),
             style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
         )
         
@@ -50,7 +50,7 @@ object WaveLineStyle {
             moveTo(0f, centerY)
             var x = 0f
             while (x <= progressX) {
-                val waveAmp = if (isPlaying) amplitude else amplitude * 0.5f
+                val waveAmp = if (isPlaying) amplitude else amplitude * 0.4f
                 val y = centerY + sin(x * frequency + (if (isPlaying) phase else 0f)) * waveAmp
                 lineTo(x, y.toFloat())
                 x += 2f
@@ -59,9 +59,7 @@ object WaveLineStyle {
         
         drawPath(
             path = playedPath,
-            brush = Brush.horizontalGradient(
-                colors = listOf(GradientStart, GradientMiddle, GradientEnd)
-            ),
+            color = activeColor, // Use album art color instead of hardcoded gradient
             style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
         )
         
@@ -72,9 +70,7 @@ object WaveLineStyle {
             center = Offset(progressX, centerY)
         )
         drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(GradientStart, GradientEnd)
-            ),
+            color = activeColor, // Use album art color for inner circle
             radius = 7.dp.toPx(),
             center = Offset(progressX, centerY)
         )
