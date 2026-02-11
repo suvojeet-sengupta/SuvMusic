@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -103,9 +105,9 @@ fun ExpandablePlayerSheet(
         if (expansion.value != target) {
             expansion.animateTo(
                 targetValue = target,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
+                animationSpec = tween(
+                    durationMillis = 350,
+                    easing = FastOutSlowInEasing
                 )
             )
         }
@@ -138,15 +140,14 @@ fun ExpandablePlayerSheet(
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragEnd = {
-                        val targetValue = if (expansion.value > 0.5f) 1f else 0f
+                        val targetValue = if (expansion.value > 0.4f) 1f else 0f
                         
                         coroutineScope.launch {
-                             // Snap to target visually then update state
                              expansion.animateTo(
                                 targetValue = targetValue,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMedium
+                                animationSpec = tween(
+                                    durationMillis = 250,
+                                    easing = FastOutSlowInEasing
                                 )
                             )
                             onExpandChange(targetValue == 1f)
@@ -154,12 +155,12 @@ fun ExpandablePlayerSheet(
                     },
                     onDragCancel = {
                         coroutineScope.launch {
-                            val targetValue = if (expansion.value > 0.5f) 1f else 0f
+                            val targetValue = if (expansion.value > 0.4f) 1f else 0f
                             expansion.animateTo(
                                 targetValue = targetValue,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMedium
+                                animationSpec = tween(
+                                    durationMillis = 250,
+                                    easing = FastOutSlowInEasing
                                 )
                             )
                             onExpandChange(targetValue == 1f)
@@ -194,11 +195,12 @@ fun ExpandablePlayerSheet(
                     coroutineScope.launch {
                         expansion.animateTo(
                             targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
+                            animationSpec = tween(
+                                durationMillis = 350,
+                                easing = FastOutSlowInEasing
                             )
                         )
+                        onExpandChange(true)
                     }
                 },
                 modifier = Modifier
@@ -225,11 +227,12 @@ fun ExpandablePlayerSheet(
                     coroutineScope.launch {
                         expansion.animateTo(
                             targetValue = 0f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium
+                            animationSpec = tween(
+                                durationMillis = 300,
+                                easing = FastOutSlowInEasing
                             )
                         )
+                        onExpandChange(false)
                     }
                 }
             }
@@ -257,11 +260,23 @@ private fun CollapsedMiniPlayer(
             .padding(horizontal = 8.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onTap),
-        color = dominantColors.primary.copy(alpha = 0.95f),
+        color = Color.Transparent,
         shape = RoundedCornerShape(14.dp),
         tonalElevation = 4.dp,
         shadowElevation = 8.dp
     ) {
+        // Gradient background using dominant colors
+        Box(
+            modifier = Modifier
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            dominantColors.primary,
+                            dominantColors.secondary
+                        )
+                    )
+                )
+        ) {
         Column {
             Row(
                 modifier = Modifier
@@ -357,6 +372,7 @@ private fun CollapsedMiniPlayer(
                 color = dominantColors.accent,
                 strokeCap = StrokeCap.Round
             )
+        }
         }
     }
 }
