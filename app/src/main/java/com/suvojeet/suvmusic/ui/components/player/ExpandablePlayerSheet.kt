@@ -137,48 +137,7 @@ fun ExpandablePlayerSheet(
         modifier = modifier
             .fillMaxWidth()
             .height(panelHeightDp)
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = {
-                        val targetValue = if (expansion.value > 0.4f) 1f else 0f
-                        
-                        coroutineScope.launch {
-                             expansion.animateTo(
-                                targetValue = targetValue,
-                                animationSpec = tween(
-                                    durationMillis = 250,
-                                    easing = FastOutSlowInEasing
-                                )
-                            )
-                            onExpandChange(targetValue == 1f)
-                        }
-                    },
-                    onDragCancel = {
-                        coroutineScope.launch {
-                            val targetValue = if (expansion.value > 0.4f) 1f else 0f
-                            expansion.animateTo(
-                                targetValue = targetValue,
-                                animationSpec = tween(
-                                    durationMillis = 250,
-                                    easing = FastOutSlowInEasing
-                                )
-                            )
-                            onExpandChange(targetValue == 1f)
-                        }
-                    },
-                    onVerticalDrag = { change, dragAmount ->
-                        change.consume()
-                        // Dragging UP (negative dragAmount) → expanding → increase expansion
-                        // Dragging DOWN (positive dragAmount) → collapsing → decrease expansion
-                        val delta = -dragAmount / dragRange
-                        coroutineScope.launch {
-                            expansion.snapTo(
-                                (expansion.value + delta).coerceIn(0f, 1f)
-                            )
-                        }
-                    }
-                )
-            }
+            // Removed pointerInput from here to allow clicks to pass through to Nav Bar in the transparent area
     ) {
         // ── Collapsed Mini Player Row ──
         // Visible when expansion < ~0.4, fades out as expansion increases
@@ -209,6 +168,47 @@ fun ExpandablePlayerSheet(
                      .alpha(miniPlayerAlpha)
                      .align(Alignment.TopCenter) // Align to top, leaving bottom padding area empty
                      .zIndex(if (isExpanded) 0f else 1f)
+                     // Add gesture detection to MiniPlayer
+                     .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                val targetValue = if (expansion.value > 0.4f) 1f else 0f
+                                
+                                coroutineScope.launch {
+                                     expansion.animateTo(
+                                        targetValue = targetValue,
+                                        animationSpec = tween(
+                                            durationMillis = 250,
+                                            easing = FastOutSlowInEasing
+                                        )
+                                    )
+                                    onExpandChange(targetValue == 1f)
+                                }
+                            },
+                            onDragCancel = {
+                                coroutineScope.launch {
+                                    val targetValue = if (expansion.value > 0.4f) 1f else 0f
+                                    expansion.animateTo(
+                                        targetValue = targetValue,
+                                        animationSpec = tween(
+                                            durationMillis = 250,
+                                            easing = FastOutSlowInEasing
+                                        )
+                                    )
+                                    onExpandChange(targetValue == 1f)
+                                }
+                            },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                val delta = -dragAmount / dragRange
+                                coroutineScope.launch {
+                                    expansion.snapTo(
+                                        (expansion.value + delta).coerceIn(0f, 1f)
+                                    )
+                                }
+                            }
+                        )
+                    }
              )
         }
 
@@ -221,6 +221,47 @@ fun ExpandablePlayerSheet(
                     .fillMaxSize()
                     .alpha(fullPlayerAlpha)
                     .zIndex(if (isExpanded) 1f else 0f)
+                    // Add gesture detection to Full Player
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                val targetValue = if (expansion.value > 0.6f) 1f else 0f // Slightly harder to collapse by accident
+                                
+                                coroutineScope.launch {
+                                     expansion.animateTo(
+                                        targetValue = targetValue,
+                                        animationSpec = tween(
+                                            durationMillis = 250,
+                                            easing = FastOutSlowInEasing
+                                        )
+                                    )
+                                    onExpandChange(targetValue == 1f)
+                                }
+                            },
+                            onDragCancel = {
+                                coroutineScope.launch {
+                                    val targetValue = if (expansion.value > 0.6f) 1f else 0f
+                                    expansion.animateTo(
+                                        targetValue = targetValue,
+                                        animationSpec = tween(
+                                            durationMillis = 250,
+                                            easing = FastOutSlowInEasing
+                                        )
+                                    )
+                                    onExpandChange(targetValue == 1f)
+                                }
+                            },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                val delta = -dragAmount / dragRange
+                                coroutineScope.launch {
+                                    expansion.snapTo(
+                                        (expansion.value + delta).coerceIn(0f, 1f)
+                                    )
+                                }
+                            }
+                        )
+                    }
             ) {
                 expandedContent {
                     // onCollapse callback
