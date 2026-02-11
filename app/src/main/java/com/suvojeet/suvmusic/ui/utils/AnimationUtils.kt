@@ -18,22 +18,22 @@ import androidx.compose.ui.graphics.graphicsLayer
  */
 fun Modifier.animateEnter(
     index: Int,
-    delayPerItem: Int = 30, // Faster stagger
-    slideDistance: Float = 50f
+    delayPerItem: Int = 15, // Faster stagger
+    slideDistance: Float = 30f // Reduced distance for snappier feel
 ): Modifier = composed {
     val visibleState = remember { MutableTransitionState(false).apply { targetState = true } }
     val transition = rememberTransition(visibleState, label = "enter_transition")
     
     val alpha by transition.animateFloat(
         transitionSpec = {
-            tween(durationMillis = 250, delayMillis = index * delayPerItem) // Faster fade in
+            tween(durationMillis = 180, delayMillis = index * delayPerItem) // Faster fade in
         },
         label = "alpha"
     ) { visible -> if (visible) 1f else 0f }
     
     val translationY by transition.animateFloat(
         transitionSpec = {
-            tween(durationMillis = 250, delayMillis = index * delayPerItem)
+            tween(durationMillis = 180, delayMillis = index * delayPerItem)
         },
         label = "translationY"
     ) { visible -> if (visible) 0f else slideDistance }
