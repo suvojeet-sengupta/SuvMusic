@@ -55,6 +55,7 @@ import com.suvojeet.suvmusic.navigation.NavGraph
 import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
 import com.suvojeet.suvmusic.ui.components.player.ExpandablePlayerSheet
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
 import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
@@ -456,8 +457,15 @@ fun SuvMusicApp(
     // Let's keep it simple: show if song Playing
     val showGlobalVolumeIndicator = hasSong
     
-    // Default colors for non-player screens
-    val defaultDominantColors = DominantColors(
+    // Extract dominant colors from current song's album art
+    val isAppInDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val songDominantColors = rememberDominantColors(
+        imageUrl = playbackInfo.currentSong?.thumbnailUrl,
+        isDarkTheme = isAppInDarkTheme
+    )
+    
+    // Fallback colors for non-player screens (volume indicator etc.)
+    val defaultDominantColors = if (playbackInfo.currentSong != null) songDominantColors else DominantColors(
         primary = androidx.compose.material3.MaterialTheme.colorScheme.primary,
         secondary = androidx.compose.material3.MaterialTheme.colorScheme.secondary,
         accent = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
