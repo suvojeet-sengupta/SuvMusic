@@ -517,14 +517,14 @@ private fun CreditItem(
     canCopy: Boolean = false
 ) {
     val context = LocalContext.current
-    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboard.current
     
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = canCopy) {
                 if (canCopy) {
-                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(value))
+                    clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText(label, value)))
                     android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }

@@ -65,7 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -91,7 +91,7 @@ fun ListenTogetherScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     
     val savedUsername by viewModel.savedUsername.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
@@ -173,7 +173,7 @@ fun ListenTogetherScreen(
                         uiState = uiState,
                         onLeaveRoom = { viewModel.leaveRoom() },
                         onCopyCode = { code ->
-                            clipboardManager.setText(AnnotatedString(code))
+                            clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText("Room Code", code)))
                         },
                         onSync = { viewModel.requestSync() },
                         viewModel = viewModel,

@@ -935,9 +935,9 @@ class YouTubeRepository @Inject constructor(
             // Get playlist metadata with proper method calls
             val playlistName = try { playlistExtractor.getName() } catch (e: Exception) { null }
             val uploaderName = try { playlistExtractor.getUploaderName() } catch (e: Exception) { null }
-            val description = try { (playlistExtractor as? org.schabi.newpipe.extractor.playlist.PlaylistExtractor)?.description?.content } catch (e: Exception) { null }
+            val description = try { (playlistExtractor as org.schabi.newpipe.extractor.playlist.PlaylistExtractor).description?.content } catch (e: Exception) { null }
             val thumbnailUrl = try { 
-                playlistExtractor.thumbnails?.lastOrNull()?.url 
+                playlistExtractor.thumbnails.lastOrNull()?.url 
             } catch (e: Exception) { null }
             
             val songs = mutableListOf<Song>()
@@ -948,7 +948,7 @@ class YouTubeRepository @Inject constructor(
                     .filterIsInstance<StreamInfoItem>()
                     .mapNotNull { item ->
                         val videoId = extractVideoId(item.url)
-                        val itemThumbnail = item.thumbnails?.lastOrNull()?.url
+                        val itemThumbnail = item.thumbnails.lastOrNull()?.url
                             ?: "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
                         
                         Song.fromYouTube(
@@ -1435,7 +1435,7 @@ class YouTubeRepository @Inject constructor(
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
-            val responseBody = response.body?.string() ?: return@withContext null
+            val responseBody = response.body.string() ?: return@withContext null
             
             // Parse the response to get playlist ID
             val jsonResponse = JSONObject(responseBody)
@@ -1701,7 +1701,7 @@ class YouTubeRepository @Inject constructor(
             val nextResponse = okHttpClient.newCall(nextRequest).execute()
             if (!nextResponse.isSuccessful) return@withContext null
             
-            val nextJson = JSONObject(nextResponse.body?.string() ?: return@withContext null)
+            val nextJson = JSONObject(nextResponse.body.string() ?: return@withContext null)
             val lyricsBrowseId = extractLyricsBrowseId(nextJson) ?: return@withContext null
             
             // 2. Fetch the Lyrics using the browse ID
@@ -1732,7 +1732,7 @@ class YouTubeRepository @Inject constructor(
             val browseResponse = okHttpClient.newCall(browseRequest).execute()
             if (!browseResponse.isSuccessful) return@withContext null
              
-            val browseJson = JSONObject(browseResponse.body?.string() ?: return@withContext null)
+            val browseJson = JSONObject(browseResponse.body.string() ?: return@withContext null)
             parseLyricsFromBrowse(browseJson)
             
         } catch (e: Exception) {
@@ -1758,8 +1758,8 @@ class YouTubeRepository @Inject constructor(
                 Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
-                    authorThumbnailUrl = item.uploaderAvatars?.firstOrNull()?.url,
-                    text = item.commentText?.content ?: "",
+                    authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
+                    text = item.commentText.content ?: "",
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
                     replyCount = 0
@@ -1786,8 +1786,8 @@ class YouTubeRepository @Inject constructor(
                 Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
-                    authorThumbnailUrl = item.uploaderAvatars?.firstOrNull()?.url,
-                    text = item.commentText?.content ?: "",
+                    authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
+                    text = item.commentText.content ?: "",
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
                     replyCount = 0
@@ -2708,7 +2708,7 @@ class YouTubeRepository @Inject constructor(
             val browseId = browseEndpoint?.optString("browseId") ?: continue
             
             // Skip if not artist
-            if (browseEndpoint.optString("browseEndpointContextSupportedConfigs")?.contains("MUSIC_PAGE_TYPE_ARTIST") != true &&
+            if (browseEndpoint.optString("browseEndpointContextSupportedConfigs").contains("MUSIC_PAGE_TYPE_ARTIST") != true &&
                 !browseId.startsWith("UC")) continue
 
             val name = getRunText(item.optJSONObject("title")) ?: "Unknown"
