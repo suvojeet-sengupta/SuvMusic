@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Radio
@@ -242,7 +243,7 @@ fun SongActionsSheet(
                 )
 
                 ActionItem(
-                    icon = Icons.Default.PlaylistAdd,
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                     title = "Add to a Playlist...",
                     iconTint = contentColor,
                     textColor = contentColor,

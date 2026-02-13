@@ -19,7 +19,7 @@ import androidx.compose.material.icons.filled.AddToQueue
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.HorizontalDivider
@@ -142,7 +142,7 @@ fun SongMenuBottomSheet(
                 )
 
                 MenuActionItem(
-                    icon = Icons.Default.PlaylistAdd,
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                     title = "Add to playlist",
                     subtitle = "Add to one of your playlists",
                     onClick = { onAddToPlaylist(); onDismiss() }

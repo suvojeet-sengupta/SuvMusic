@@ -40,14 +40,14 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -531,7 +531,7 @@ fun LibraryControlBar(
                 modifier = Modifier.size(24.dp)
             ) {
                 Icon(
-                    imageVector = if (viewMode == LibraryViewMode.GRID) Icons.Default.List else Icons.Default.GridView,
+                    imageVector = if (viewMode == LibraryViewMode.GRID) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
                     contentDescription = "Toggle View",
                     tint = MaterialTheme.colorScheme.onSurface
                 )
@@ -605,7 +605,7 @@ fun PlaylistsGrid(
         item {
              SmartPlaylistCard(
                 title = "My top 50",
-                icon = Icons.Default.TrendingUp,
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
                 count = "${uiState.top50SongCount} songs",
                 onClick = { onSmartPlaylistClick(SmartPlaylistType.TOP_50) }
             )

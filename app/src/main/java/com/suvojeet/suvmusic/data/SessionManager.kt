@@ -12,9 +12,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import androidx.security.crypto.MasterKey
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.core.model.Artist
@@ -62,14 +61,16 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  */
 @Singleton
 class SessionManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
-    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
     
     private val encryptedPrefs = EncryptedSharedPreferences.create(
-        "suvmusic_secure_session",
-        masterKeyAlias,
         context,
+        "suvmusic_secure_session",
+        masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
@@ -1422,7 +1423,7 @@ class SessionManager @Inject constructor(
                             title = obj.getString("title"),
                             artist = obj.getString("artist"),
                             album = obj.optString("album", ""),
-                            thumbnailUrl = obj.optString("thumbnailUrl", null),
+                            thumbnailUrl = obj.optString("thumbnailUrl").takeIf { it.isNotEmpty() },
                             duration = obj.optLong("duration", 0L),
                             source = try {
                                 SongSource.valueOf(obj.optString("source", "YOUTUBE"))
@@ -1437,9 +1438,9 @@ class SessionManager @Inject constructor(
                             id = obj.getString("id"),
                             title = obj.getString("title"),
                             artist = obj.getString("artist"),
-                            thumbnailUrl = obj.optString("thumbnailUrl", null),
-                            description = obj.optString("description", null),
-                            year = obj.optString("year", null)
+                            thumbnailUrl = obj.optString("thumbnailUrl").takeIf { it.isNotEmpty() },
+                            description = obj.optString("description").takeIf { it.isNotEmpty() },
+                            year = obj.optString("year").takeIf { it.isNotEmpty() }
                         )
                         items.add(RecentSearchItem.AlbumItem(album))
                     }
@@ -1448,9 +1449,9 @@ class SessionManager @Inject constructor(
                             id = obj.getString("id"),
                             title = obj.getString("title"),
                             author = obj.getString("author"),
-                            thumbnailUrl = obj.optString("thumbnailUrl", null),
+                            thumbnailUrl = obj.optString("thumbnailUrl").takeIf { it.isNotEmpty() },
                             songs = emptyList<Song>(), // Don't persist songs for recent searches
-                            description = obj.optString("description", null)
+                            description = obj.optString("description").takeIf { it.isNotEmpty() }
                         )
                         items.add(RecentSearchItem.PlaylistItem(playlist))
                     }
