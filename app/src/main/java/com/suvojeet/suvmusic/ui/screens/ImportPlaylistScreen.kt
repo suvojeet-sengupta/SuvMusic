@@ -22,7 +22,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -122,11 +122,11 @@ fun ImportPlaylistScreen(
 @Composable
 private fun InputView(onImport: (String) -> Unit) {
     var url by remember { mutableStateOf("") }
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     
     // Auto-paste if valid link in clipboard (only once on appearing)
     LaunchedEffect(Unit) {
-        val clipText = clipboardManager.getText()?.text
+        val clipText = clipboard.getClipEntry()?.clipData?.getItemAt(0)?.text?.toString()
         if (clipText != null && clipText.contains("spotify.com/playlist") && url.isEmpty()) {
             url = clipText
         }
@@ -181,7 +181,7 @@ private fun InputView(onImport: (String) -> Unit) {
                     }
                 } else {
                     IconButton(onClick = {
-                        val clipText = clipboardManager.getText()?.text
+                        val clipText = clipboard.getClipEntry()?.clipData?.getItemAt(0)?.text?.toString()
                         if (clipText != null) url = clipText
                     }) {
                         Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste")
