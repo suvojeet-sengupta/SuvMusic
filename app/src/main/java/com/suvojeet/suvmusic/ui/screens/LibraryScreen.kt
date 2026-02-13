@@ -831,7 +831,7 @@ fun PlaylistsList(
          item {
              SmartPlaylistListItem(
                  title = "My top 50",
-                 icon = Icons.Default.TrendingUp,
+                 icon = Icons.AutoMirrored.Filled.TrendingUp,
                  count = "${uiState.top50SongCount} songs",
                  onClick = { onSmartPlaylistClick(SmartPlaylistType.TOP_50) }
              )
