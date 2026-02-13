@@ -92,6 +92,7 @@ fun ListenTogetherScreen(
     val uiState by viewModel.uiState.collectAsState()
     
     val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     
     val savedUsername by viewModel.savedUsername.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
@@ -173,7 +174,9 @@ fun ListenTogetherScreen(
                         uiState = uiState,
                         onLeaveRoom = { viewModel.leaveRoom() },
                         onCopyCode = { code ->
-                            clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText("Room Code", code)))
+                            scope.launch {
+                                clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText("Room Code", code)))
+                            }
                         },
                         onSync = { viewModel.requestSync() },
                         viewModel = viewModel,

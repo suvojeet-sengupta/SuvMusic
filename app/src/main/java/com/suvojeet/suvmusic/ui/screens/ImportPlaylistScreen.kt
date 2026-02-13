@@ -123,6 +123,7 @@ fun ImportPlaylistScreen(
 private fun InputView(onImport: (String) -> Unit) {
     var url by remember { mutableStateOf("") }
     val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     
     // Auto-paste if valid link in clipboard (only once on appearing)
     LaunchedEffect(Unit) {
@@ -181,8 +182,10 @@ private fun InputView(onImport: (String) -> Unit) {
                     }
                 } else {
                     IconButton(onClick = {
-                        val clipText = clipboard.getClipEntry()?.clipData?.getItemAt(0)?.text?.toString()
-                        if (clipText != null) url = clipText
+                        scope.launch {
+                            val clipText = clipboard.getClipEntry()?.clipData?.getItemAt(0)?.text?.toString()
+                            if (clipText != null) url = clipText
+                        }
                     }) {
                         Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste")
                     }
