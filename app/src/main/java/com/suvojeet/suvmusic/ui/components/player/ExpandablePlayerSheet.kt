@@ -306,14 +306,14 @@ private fun CollapsedMiniPlayer(
         tonalElevation = 4.dp,
         shadowElevation = 8.dp
     ) {
-        // Gradient background using dominant colors
+        // Gradient background using dominant colors with transparency
         Box(
             modifier = Modifier
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            dominantColors.primary,
-                            dominantColors.secondary
+                            dominantColors.primary.copy(alpha = 0.85f),
+                            dominantColors.secondary.copy(alpha = 0.85f)
                         )
                     )
                 )
