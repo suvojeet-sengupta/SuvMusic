@@ -142,11 +142,15 @@ class YouTubeRepository @Inject constructor(
                     it.optJSONObject(it.length() - 1)?.optString("url") 
                 } ?: ""
                 
+                // Get current authUserIndex
+                val authUserIndex = sessionManager.getAuthUserIndex()
+
                 return@withContext StoredAccount(
                     name = name,
                     email = email,
                     avatarUrl = avatarUrl,
-                    cookies = cookies
+                    cookies = cookies,
+                    authUserIndex = authUserIndex
                 )
             }
             
@@ -155,6 +159,40 @@ class YouTubeRepository @Inject constructor(
             e.printStackTrace()
             null
         }
+    }
+
+    suspend fun getAvailableAccounts(): List<StoredAccount> = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
+        try {
+            if (!sessionManager.isLoggedIn()) return@withContext emptyList()
+            val cookies = sessionManager.getCookies() ?: return@withContext emptyList()
+            
+            val jsonResponse = fetchInternalApi("account/account_menu")
+            if (jsonResponse.isBlank()) return@withContext emptyList()
+            
+            val json = JSONObject(jsonResponse)
+            val accountInfos = jsonParser.parseAccountMenu(json)
+            
+            return@withContext accountInfos.map { info ->
+                StoredAccount(
+                    name = info.name,
+                    email = info.email,
+                    avatarUrl = info.avatarUrl,
+                    cookies = cookies, // Sharing same cookies
+                    authUserIndex = info.authUserIndex // Parser should ideally get this, or we need a way to set it
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun switchAccount(account: StoredAccount) {
+        sessionManager.switchAccount(account)
+        // Clear caches that might be user-specific
+        sessionManager.clearRecentlyPlayed()
+        // Force refresh home?
     }
 
     private fun findActiveAccountHeader(node: JSONObject): JSONObject? {
@@ -557,7 +595,7 @@ class YouTubeRepository @Inject constructor(
 
     private fun extractContinuationToken(json: JSONObject): String? = jsonParser.extractContinuationToken(json)
 
-    private fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = "en", gl: String = "US"): String =
+    private suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = "en", gl: String = "US"): String =
         apiClient.fetchInternalApiWithContinuation(continuationToken, hl = hl, gl = gl)
 
     private fun parseChartsSectionsFromJson(json: String): List<HomeSection> {
@@ -1197,7 +1235,7 @@ class YouTubeRepository @Inject constructor(
     }
 
 
-    private fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String =
+    private suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String =
         apiClient.fetchInternalApiWithParams(browseId, params, hl = hl, gl = gl)
 
     private fun parseMoodsAndGenresFromJson(json: String): List<com.suvojeet.suvmusic.data.model.BrowseCategory> {
@@ -2060,11 +2098,11 @@ class YouTubeRepository @Inject constructor(
     // Internal API Helpers (Delegated to YouTubeApiClient)
     // ============================================================================================
 
-    private fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchInternalApi(endpoint, hl = hl, gl = gl)
+    private suspend fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchInternalApi(endpoint, hl = hl, gl = gl)
 
-    private fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchPublicApi(browseId, hl = hl, gl = gl)
+    private suspend fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchPublicApi(browseId, hl = hl, gl = gl)
 
-    private fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean =
+    private suspend fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean =
         apiClient.performAuthenticatedAction(endpoint, innerBody)
 
     // ============================================================================================

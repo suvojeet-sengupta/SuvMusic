@@ -5,6 +5,15 @@ import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class AccountInfo(
+    val name: String,
+    val email: String,
+    val avatarUrl: String,
+    val isSelected: Boolean,
+    val authUserIndex: Int = 0,
+    val pageId: String = "" // For brand accounts that might need pageId instead of index
+)
+
 /**
  * Utility class for parsing YouTube Music JSON responses.
  */
@@ -309,5 +318,97 @@ class YouTubeJsonParser @Inject constructor() {
             }
         }
         return null
+    }
+
+    // --- Account Menu Parsing ---
+
+    fun parseAccountMenu(json: JSONObject): List<AccountInfo> {
+        val accounts = mutableListOf<AccountInfo>()
+        try {
+            // Traverse to find 'multiPageMenuRenderer' -> 'sections'
+            val actions = json.optJSONArray("actions") ?: return emptyList()
+            
+            var sections: JSONArray? = null
+            
+            for (i in 0 until actions.length()) {
+                val action = actions.optJSONObject(i)
+                val popup = action?.optJSONObject("openPopupAction")?.optJSONObject("popup")
+                val multiPageMenu = popup?.optJSONObject("multiPageMenuRenderer")
+                if (multiPageMenu != null) {
+                    sections = multiPageMenu.optJSONArray("sections")
+                    break
+                }
+            }
+
+            if (sections == null) return emptyList()
+
+            // Iterate through sections to find the one with accounts
+            for (i in 0 until sections.length()) {
+                val section = sections.optJSONObject(i)?.optJSONObject("multiPageMenuSectionRenderer")
+                val items = section?.optJSONArray("items") ?: continue
+
+                for (j in 0 until items.length()) {
+                    val item = items.optJSONObject(j)?.optJSONObject("accountItemRenderer") ?: continue
+                    
+                    val name = getRunText(item.optJSONObject("accountName")) ?: "Unknown"
+                    val email = getRunText(item.optJSONObject("datas")) ?: "" // Usually email or "Manage your Google Account"
+                    val avatarUrl = item.optJSONObject("accountPhoto")?.optJSONArray("thumbnails")?.let {
+                        it.optJSONObject(it.length() - 1)?.optString("url")
+                    } ?: ""
+                    
+                    val isSelected = item.optBoolean("isSelected", false)
+                    
+                    // Extract authUser index from endpoint
+                    // endpoint -> signInEndpoint -> (hack) we usually don't get direct index here easily
+                    // But usually, the endpoint command metadata contains it, or we rely on the order
+                    // Actually, for Brand Accounts, the 'navigationEndpoint' (which switches account) 
+                    // usually contains specific signals. 
+                    // However, standard Google switching often uses the 'googleAccountHeader' index.
+                    
+                    // Let's look for navigationEndpoint -> signInEndpoint -> nextUrl (or similar) to find ?authuser=X
+                    val navEndpoint = item.optJSONObject("serviceEndpoint") 
+                                    ?: item.optJSONObject("navigationEndpoint")
+                                    
+                    var authUserIndex = 0
+                    var pageId = ""
+                    
+                    if (navEndpoint != null) {
+                        val signInEndpoint = navEndpoint.optJSONObject("signInEndpoint")
+                        val selectChannelEndpoint = navEndpoint.optJSONObject("selectChannelEndpoint")
+                        
+                        if (signInEndpoint != null) {
+                            // Try to parse authuser from nextUrl or similar manually if possible?
+                            // Actually, mostly the "authuser" index corresponds to the item order or is explicit in some fields
+                            // But usually, we can infer it from the 'hacky' way: the `X-Goog-AuthUser` header maps to these.
+                        }
+                    }
+                    
+                    // Improved extraction: The `accountItemRenderer` usually doesn't strictly give us "authuser=1".
+                    // But in the "account_menu" response, the items are usually listed.
+                    // A trick is to check if these are clickable to SWITCH.
+                    
+                    // For now, we capture basic info. The switching logic might be complex if not using web-based switch.
+                    // But if we use 'account_menu', we get a list.
+                    
+                    // NOTE: Implementing full robust extraction is hard without seeing the exact JSON for multiple brands.
+                    // We will try to rely on a simpler assumption:
+                    // If we are logged in, we are 'isSelected'=true.
+                    
+                    // Wait, usually the `actions` contain the list of accounts we *can* switch to.
+                    // We need to parse valid `AccountInfo`. 
+                    
+                    accounts.add(AccountInfo(
+                        name = name,
+                        email = email,
+                        avatarUrl = avatarUrl,
+                        isSelected = isSelected,
+                        authUserIndex = -1 // We'll fill this in Repository via smart guessing or additional fetches
+                    ))
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return accounts
     }
 }

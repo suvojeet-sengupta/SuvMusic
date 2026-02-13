@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import com.suvojeet.suvmusic.core.model.Album
@@ -149,6 +150,8 @@ class SessionManager @Inject constructor(
         private val SPONSOR_BLOCK_ENABLED_KEY = booleanPreferencesKey("sponsor_block_enabled")
         private val SPONSOR_BLOCK_CATEGORIES_KEY = stringSetPreferencesKey("sponsor_block_categories_v2")
 
+        private val AUTH_USER_INDEX_KEY = intPreferencesKey("auth_user_index")
+        
         private val LAST_FM_SESSION_KEY = stringPreferencesKey("last_fm_session_key")
         private val LAST_FM_USERNAME_KEY = stringPreferencesKey("last_fm_username")
         private val LAST_FM_SCROBBLING_ENABLED_KEY = booleanPreferencesKey("last_fm_scrobbling_enabled")
@@ -1047,7 +1050,8 @@ class SessionManager @Inject constructor(
         val name: String,
         val email: String,
         val avatarUrl: String,
-        val cookies: String
+        val cookies: String,
+        val authUserIndex: Int = 0
     )
     
     private val SAVED_ACCOUNTS_KEY = "saved_accounts"
@@ -1062,7 +1066,8 @@ class SessionManager @Inject constructor(
                     name = obj.optString("name"),
                     email = obj.optString("email"),
                     avatarUrl = obj.optString("avatarUrl"),
-                    cookies = obj.optString("cookies")
+                    cookies = obj.optString("cookies"),
+                    authUserIndex = obj.optInt("authUserIndex", 0)
                 )
             }
         } catch (e: Exception) {
@@ -1078,14 +1083,15 @@ class SessionManager @Inject constructor(
                 put("email", account.email)
                 put("avatarUrl", account.avatarUrl)
                 put("cookies", account.cookies)
+                put("authUserIndex", account.authUserIndex)
             })
         }
         encryptedPrefs.edit().putString(SAVED_ACCOUNTS_KEY, array.toString()).apply()
     }
     
-    suspend fun saveCurrentAccountToHistory(name: String, email: String, avatarUrl: String) {
+    suspend fun saveCurrentAccountToHistory(name: String, email: String, avatarUrl: String, authUserIndex: Int = 0) {
         val currentCookies = getCookies() ?: return
-        val newAccount = StoredAccount(name, email, avatarUrl, currentCookies)
+        val newAccount = StoredAccount(name, email, avatarUrl, currentCookies, authUserIndex)
         
         val accounts = getStoredAccounts().toMutableList()
         accounts.removeAll { it.email == email }
@@ -1098,7 +1104,8 @@ class SessionManager @Inject constructor(
     suspend fun switchAccount(account: StoredAccount) {
         encryptedPrefs.edit().putString("cookies", account.cookies).apply()
         saveUserAvatar(account.avatarUrl)
-        saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
+        setAuthUserIndex(account.authUserIndex)
+        saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl, account.authUserIndex)
     }
     
     fun removeAccount(email: String) {
@@ -1152,6 +1159,19 @@ class SessionManager @Inject constructor(
 
     val userAvatarFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[USER_AVATAR_KEY]
+    }
+
+    suspend fun getAuthUserIndex(): Int =
+        context.dataStore.data.first()[AUTH_USER_INDEX_KEY] ?: 0
+
+    val authUserIndexFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[AUTH_USER_INDEX_KEY] ?: 0
+    }
+
+    suspend fun setAuthUserIndex(index: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[AUTH_USER_INDEX_KEY] = index
+        }
     }
     
     suspend fun getAudioQuality(): AudioQuality {

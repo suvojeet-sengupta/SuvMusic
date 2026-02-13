@@ -37,6 +37,7 @@ data class SettingsUiState(
     val isLoggedIn: Boolean = false,
     val userAvatarUrl: String? = null,
     val storedAccounts: List<SessionManager.StoredAccount> = emptyList(),
+    val availableAccounts: List<SessionManager.StoredAccount> = emptyList(),
     val audioQuality: AudioQuality = AudioQuality.HIGH,
     val videoQuality: VideoQuality = VideoQuality.MEDIUM,
     val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
@@ -832,11 +833,21 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
+     * Fetch available brand accounts.
+     */
+    fun fetchAvailableAccounts() {
+        viewModelScope.launch {
+            val accounts = youtubeRepository.getAvailableAccounts()
+            _uiState.update { it.copy(availableAccounts = accounts) }
+        }
+    }
+
+    /**
      * Switch to a saved account.
      */
     fun switchAccount(account: SessionManager.StoredAccount) {
         viewModelScope.launch {
-            sessionManager.switchAccount(account)
+            youtubeRepository.switchAccount(account)
             _uiState.update { 
                 it.copy(
                     isLoggedIn = true,
@@ -845,6 +856,8 @@ class SettingsViewModel @Inject constructor(
                 )
             }
             fetchAndSaveAccountInfo()
+            // Clear WebView cookies to force fresh login if needed or just to be safe
+            // clearWebViewCookies() 
         }
     }
     
