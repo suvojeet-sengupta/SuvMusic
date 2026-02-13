@@ -224,7 +224,10 @@ fun SettingsScreen(
                             SettingsActionItem(
                                 icon = Icons.Default.SwitchAccount,
                                 title = "Switch Account",
-                                onClick = { showAccountsSheet = true }
+                                onClick = { 
+                                    viewModel.fetchAvailableAccounts()
+                                    showAccountsSheet = true 
+                                }
                             )
                             
                             SettingsActionItem(
@@ -563,12 +566,66 @@ fun SettingsScreen(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
                 )
 
+                if (uiState.availableAccounts.isNotEmpty()) {
+                    Text(
+                        text = "Channels",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                    )
+                    
+                    uiState.availableAccounts.forEach { account ->
+                        val isCurrent = account.authUserIndex == (uiState.storedAccounts.firstOrNull { it.email == "current" }?.authUserIndex ?: 0) &&
+                                        account.name == (uiState.storedAccounts.firstOrNull { it.email == "current" }?.name ?: "")
+                        
+                        ListItem(
+                            headlineContent = { 
+                                Text(
+                                    account.name, 
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal 
+                                )
+                            },
+                            supportingContent = { Text(account.email) },
+                            leadingContent = {
+                                AsyncImage(
+                                    model = account.avatarUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .border(
+                                            if (isCurrent) 2.dp else 0.dp, 
+                                            MaterialTheme.colorScheme.primary, 
+                                            CircleShape
+                                        )
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.switchAccount(account)
+                                    scope.launch { sheetState.hide() }.invokeOnCompletion { 
+                                        showAccountsSheet = false 
+                                    }
+                                }
+                                .padding(horizontal = 8.dp),
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
+                    HorizontalDivider()
+                }
+
                 if (uiState.storedAccounts.isNotEmpty()) {
+                    Text(
+                        text = "Saved Sessions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                    )
                     uiState.storedAccounts.forEach { account ->
+                        // Skip if it is the current one to avoid duplication if we want, 
+                        // but stored accounts are history, so maybe keep them.
                         val isCurrent = account.email == (uiState.storedAccounts.firstOrNull { it.email == "current" }?.email ?: "")
-                        // Note: current detection might need better logic if "current" isn't explicitly marked in list,
-                        // usually the first one or we match cookies.
-                        // Assuming list contains all saved accounts.
                         
                         ListItem(
                             headlineContent = { 

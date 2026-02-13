@@ -24,7 +24,7 @@ class YouTubeApiClient @Inject constructor(
      * @param hl Host language (e.g., "en", "hi")
      * @param gl Geolocation (e.g., "US", "IN")
      */
-    fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String {
+    suspend fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val isBrowse = !endpoint.contains("/")
         
@@ -60,7 +60,7 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("Authorization", authHeader)
             .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
+            .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
         return try {
@@ -73,7 +73,7 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch continuation data for paginated results.
      */
-    fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = "en", gl: String = "US"): String {
+    suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = "en", gl: String = "US"): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
@@ -97,7 +97,7 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("Authorization", authHeader)
             .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
+            .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
         return try {
@@ -110,7 +110,7 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch with browse parameters (for category browsing).
      */
-    fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String {
+    suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
@@ -136,7 +136,7 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("Authorization", authHeader)
             .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
+            .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
         return try {
@@ -150,7 +150,7 @@ class YouTubeApiClient @Inject constructor(
      * Fetch public YouTube Music API without authentication.
      * Used for charts, trending, and public browse content.
      */
-    fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "IN"): String {
+    suspend fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "IN"): String {
         val url = "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false"
         
         val jsonBody = """
@@ -187,7 +187,7 @@ class YouTubeApiClient @Inject constructor(
      * @param endpoint API endpoint path (e.g., "like/like", "playlist/create")
      * @param innerBody JSON body content (without context wrapper)
      */
-    fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean {
+    suspend fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean {
         if (!sessionManager.isLoggedIn()) return false
         val cookies = sessionManager.getCookies() ?: return false
         
@@ -222,7 +222,7 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("Authorization", authHeader)
             .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("X-Goog-AuthUser", "0")
+            .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
         return try {

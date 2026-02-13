@@ -170,6 +170,16 @@ fun YouTubeLoginScreen(
                                             
                                             scope.launch {
                                                 sessionManager.saveCookies(cookies)
+
+                                                // Extract authuser index
+                                                val uri = android.net.Uri.parse(currentUrl)
+                                                val authUserParam = uri.getQueryParameter("authuser")
+                                                if (authUserParam != null) {
+                                                    val index = authUserParam.toIntOrNull() ?: 0
+                                                    sessionManager.setAuthUserIndex(index)
+                                                } else {
+                                                    sessionManager.setAuthUserIndex(0)
+                                                }
                                                 
                                                 // Try to extract avatar URL
                                                 view?.evaluateJavascript(
