@@ -171,7 +171,7 @@ fun MediaMenuBottomSheet(
                 )
 
                 MenuActionItem(
-                    icon = Icons.Default.PlaylistAdd,
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                     title = "Add to playlist",
                     subtitle = "Add to one of your playlists",
                     onClick = { onAddToPlaylist(); onDismiss() }

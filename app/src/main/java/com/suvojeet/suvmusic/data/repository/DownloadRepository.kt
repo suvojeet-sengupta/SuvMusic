@@ -36,10 +36,10 @@ import javax.inject.Singleton
 
 @Singleton
 class DownloadRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
-    @com.suvojeet.suvmusic.di.DownloadDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
+    @param:com.suvojeet.suvmusic.di.DownloadDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
 ) {
     companion object {
         private const val TAG = "DownloadRepository"
@@ -862,7 +862,7 @@ class DownloadRepository @Inject constructor(
                         val thumbnailsDir = File(context.filesDir, "thumbnails")
                          if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
                         val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        val thumbBytes = thumbResponse.body?.bytes()
+                        val thumbBytes = thumbResponse.body.bytes()
                         if (thumbBytes != null) {
                              FileOutputStream(thumbFile).use { output ->
                                 output.write(thumbBytes)
@@ -959,7 +959,7 @@ class DownloadRepository @Inject constructor(
                 return@withContext false
             }
             
-            val contentLength = response.body?.contentLength() ?: -1L
+            val contentLength = response.body.contentLength() ?: -1L
             Log.d(TAG, "Content length: $contentLength bytes")
             
             // Estimate bytes for 30 seconds (assuming ~128kbps = 16KB/s)
@@ -968,7 +968,7 @@ class DownloadRepository @Inject constructor(
             var playbackTriggered = false
             var totalBytesRead = 0L
             
-            response.body?.byteStream()?.use { inputStream ->
+            response.body.byteStream().use { inputStream ->
                 FileOutputStream(tempFile).use { outputStream ->
                     val buffer = ByteArray(8192) // 8KB buffer for smooth progress
                     var bytesRead: Int
@@ -1030,7 +1030,7 @@ class DownloadRepository @Inject constructor(
                         val thumbnailsDir = File(context.filesDir, "thumbnails")
                         if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
                         val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        thumbResponse.body?.bytes()?.let { bytes ->
+                        thumbResponse.body.bytes().let { bytes ->
                             FileOutputStream(thumbFile).use { it.write(bytes) }
                             localThumbnailUrl = thumbFile.toUri().toString()
                         }

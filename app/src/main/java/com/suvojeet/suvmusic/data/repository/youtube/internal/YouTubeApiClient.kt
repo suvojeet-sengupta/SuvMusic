@@ -64,7 +64,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string() ?: ""
         } catch (e: Exception) {
             ""
         }
@@ -101,7 +101,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string() ?: ""
         } catch (e: Exception) {
             ""
         }
@@ -140,7 +140,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string() ?: ""
         } catch (e: Exception) {
             ""
         }
@@ -176,7 +176,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body?.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string() ?: ""
         } catch (e: Exception) {
             ""
         }
@@ -228,7 +228,7 @@ class YouTubeApiClient @Inject constructor(
         return try {
             val response = okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) {
-                val errorBody = response.body?.string()
+                val errorBody = response.body.string()
                 android.util.Log.e("YouTubeApiClient", "Action failed: $endpoint. Code: ${response.code}, Body: $errorBody")
                 return false
             }
