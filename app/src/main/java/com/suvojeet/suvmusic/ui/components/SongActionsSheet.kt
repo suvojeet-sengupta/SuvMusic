@@ -101,45 +101,49 @@ fun SongActionsSheet(
     val variantColor = dominantColors?.onBackground?.copy(alpha = 0.7f) ?: MaterialTheme.colorScheme.onSurfaceVariant
     
     // Share function
-    val shareSong: () -> Unit = {
-        val shareText = buildString {
-            append("🎵 ${song.title}\n")
-            append("🎤 ${song.artist}\n")
-            if (!song.album.isNullOrBlank()) {
-                append("💿 ${song.album}\n")
+    val shareSong = androidx.compose.runtime.remember(song) {
+        {
+            val shareText = buildString {
+                append("🎵 ${song.title}\n")
+                append("🎤 ${song.artist}\n")
+                if (!song.album.isNullOrBlank()) {
+                    append("💿 ${song.album}\n")
+                }
+                append("\n")
+                
+                // Clickable link first
+                if (song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
+                    val query = "${song.title} ${song.artist}".replace(" ", "+")
+                    append("https://www.google.com/search?q=$query")
+                } else {
+                    append("https://music.youtube.com/watch?v=${song.id}")
+                }
+                
+                // SuvMusic users note
+                append("\n\n▶️ SuvMusic users: suvmusic://play?id=${song.id}")
             }
-            append("\n")
             
-            // Clickable link first
-            if (song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
-                val query = "${song.title} ${song.artist}".replace(" ", "+")
-                append("https://www.google.com/search?q=$query")
-            } else {
-                append("https://music.youtube.com/watch?v=${song.id}")
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, shareText)
+                putExtra(Intent.EXTRA_SUBJECT, "${song.title} - ${song.artist}")
+                type = "text/plain"
             }
             
-            // SuvMusic users note
-            append("\n\n▶️ SuvMusic users: suvmusic://play?id=${song.id}")
+            val shareIntent = Intent.createChooser(sendIntent, "Share Song")
+            context.startActivity(shareIntent)
         }
-        
-        val sendIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, shareText)
-            putExtra(Intent.EXTRA_SUBJECT, "${song.title} - ${song.artist}")
-            type = "text/plain"
-        }
-        
-        val shareIntent = Intent.createChooser(sendIntent, "Share Song")
-        context.startActivity(shareIntent)
     }
     
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     
-    val handleAction: (() -> Unit) -> Unit = { action ->
-        action()
-        scope.launch {
-            sheetState.hide()
-            onDismiss()
+    val handleAction = androidx.compose.runtime.remember(sheetState, onDismiss) {
+        { action: () -> Unit ->
+            action()
+            scope.launch {
+                sheetState.hide()
+                onDismiss()
+            }
         }
     }
 
