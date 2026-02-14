@@ -1,7 +1,7 @@
 package com.suvojeet.suvmusic.ui.screens
 
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -59,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,6 +70,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -102,8 +104,23 @@ fun DownloadsScreen(
     // Navigation state for collections
     var openedCollection by remember { mutableStateOf<DownloadItem.CollectionItem?>(null) }
     
-    BackHandler(enabled = openedCollection != null) {
-        openedCollection = null
+    // Predictive Back states
+    var predictiveBackScale by remember { mutableFloatStateOf(1f) }
+    var predictiveBackAlpha by remember { mutableFloatStateOf(1f) }
+
+    PredictiveBackHandler(enabled = openedCollection != null) { backEvent ->
+        try {
+            backEvent.collect { event ->
+                predictiveBackScale = 1f - (event.progress * 0.05f)
+                predictiveBackAlpha = 1f - (event.progress * 0.1f)
+            }
+            openedCollection = null
+            predictiveBackScale = 1f
+            predictiveBackAlpha = 1f
+        } catch (e: Exception) {
+            predictiveBackScale = 1f
+            predictiveBackAlpha = 1f
+        }
     }
 
     // Theme detection - match PlayerScreen approach
@@ -133,18 +150,28 @@ fun DownloadsScreen(
         val currentCollection = downloadItems.filterIsInstance<DownloadItem.CollectionItem>()
             .find { it.id == openedCollection!!.id } ?: openedCollection!!
 
-        DownloadedCollectionDetail(
-            collection = currentCollection,
-            onBackClick = { openedCollection = null },
-            onSongClick = onSongClick,
-            onPlayAll = onPlayAll,
-            onShufflePlay = onShufflePlay,
-            onDeleteSong = { song -> 
-                 viewModel.deleteDownload(song.id)
-            },
-            dominantColors = dominantColors,
-            isDarkTheme = isDarkTheme
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = predictiveBackScale
+                    scaleY = predictiveBackScale
+                    alpha = predictiveBackAlpha
+                }
+        ) {
+            DownloadedCollectionDetail(
+                collection = currentCollection,
+                onBackClick = { openedCollection = null },
+                onSongClick = onSongClick,
+                onPlayAll = onPlayAll,
+                onShufflePlay = onShufflePlay,
+                onDeleteSong = { song -> 
+                     viewModel.deleteDownload(song.id)
+                },
+                dominantColors = dominantColors,
+                isDarkTheme = isDarkTheme
+            )
+        }
         return
     }
 
