@@ -15,3 +15,6 @@ find_library(log-lib log)
 target_link_libraries(suvmusic_native
         ${log-lib}
         android)
+
+# Enable 16 KB page size support for Android 15+ and Android 16
+target_link_options(suvmusic_native PRIVATE "-Wl,-z,max-page-size=16384")
