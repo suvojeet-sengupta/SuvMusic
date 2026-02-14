@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.outlined.Radio
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -350,82 +351,32 @@ fun HomeItemCardLarge(
     onAlbumClick: (Album) -> Unit,
     sectionItems: List<HomeItem>
 ) {
-    val context = LocalContext.current
-    
-    // Large square card implementation
+    // Adapter to use NewReleaseCard for HomeItem
     val (title, subtitle, imageUrl) = when (item) {
         is HomeItem.SongItem -> Triple(item.song.title, item.song.artist, item.song.thumbnailUrl)
         is HomeItem.PlaylistItem -> Triple(item.playlist.name, item.playlist.uploaderName, item.playlist.thumbnailUrl)
         is HomeItem.AlbumItem -> Triple(item.album.title, item.album.artist, item.album.thumbnailUrl)
         else -> Triple("", "", null)
     }
-    
-    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(imageUrl)
-    
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .bounceClick {
-                 when (item) {
-                    is HomeItem.SongItem -> {
-                         val songs = sectionItems.filterIsInstance<HomeItem.SongItem>().map { it.song }
-                         val index = songs.indexOf(item.song)
-                         if (index != -1) onSongClick(songs, index)
-                    }
-                    is HomeItem.PlaylistItem -> onPlaylistClick(item.playlist)
-                    is HomeItem.AlbumItem -> onAlbumClick(item.album)
-                    else -> {}
+
+    NewReleaseCard(
+        title = title,
+        subtitle = subtitle,
+        imageUrl = imageUrl,
+        onClick = {
+            when (item) {
+                is HomeItem.SongItem -> {
+                    val songs = sectionItems.filterIsInstance<HomeItem.SongItem>().map { it.song }
+                    val index = songs.indexOf(item.song)
+                    if (index != -1) onSongClick(songs, index)
                 }
+                is HomeItem.PlaylistItem -> onPlaylistClick(item.playlist)
+                is HomeItem.AlbumItem -> onAlbumClick(item.album)
+                else -> {}
             }
-    ) {
-
-
-         AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(highResThumbnail)
-                .crossfade(true)
-                .size(544)
-                .build(),
-            contentDescription = title,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.8f)
-                        )
-                    )
-                )
-                .padding(12.dp)
-        ) {
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.8f),
-                    maxLines = 1,
-                     overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @Composable
@@ -702,6 +653,92 @@ fun ExploreItemCard(
                  fontWeight = FontWeight.Bold,
                  color = Color.White
              )
+        }
+    }
+}
+
+@Composable
+fun NewReleaseCard(
+    title: String,
+    subtitle: String?,
+    imageUrl: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant
+) {
+    val context = LocalContext.current
+    val imageRequest = ImageRequest.Builder(context)
+        .data(imageUrl)
+        .crossfade(true)
+        .build()
+
+    androidx.compose.material3.Card(
+        modifier = modifier
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = containerColor
+        ),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Left Section: Info
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(16.dp)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Action Button (Arrow)
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Right Section: Image
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = null,
+                modifier = Modifier
+                    .aspectRatio(1f)
+                    .fillMaxHeight(),
+                contentScale = ContentScale.Crop
+            )
         }
     }
 }
