@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -52,40 +53,65 @@ fun MoodChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    // Glassmorphic Style: Semi-transparent background, subtle border
+    // Animate scale for a "pop" effect when selected
+    val selectionScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.08f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "selectionScale"
+    )
+
     val backgroundColor = if (isSelected) 
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.9f) 
+        MaterialTheme.colorScheme.primary 
     else 
         MaterialTheme.colorScheme.surface.copy(alpha = 0.3f) 
 
-    val borderColor = if (isSelected)
-        MaterialTheme.colorScheme.primary
-    else
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-    
     val textColor = if (isSelected) 
         MaterialTheme.colorScheme.onPrimary 
     else 
         MaterialTheme.colorScheme.onSurface
 
-    Surface(
+    Box(
         modifier = Modifier
-            .height(36.dp)
+            .scale(selectionScale)
             .bounceClick(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        color = backgroundColor,
-        border = BorderStroke(1.dp, borderColor)
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
+        // Subtle Glow behind the selected chip
+        if (isSelected) {
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer { alpha = 0.4f }
+            ) {
+                drawRoundRect(
+                    color = backgroundColor,
+                    size = size.copy(width = size.width + 12.dp.toPx(), height = size.height + 6.dp.toPx()),
+                    topLeft = androidx.compose.ui.geometry.Offset(-6.dp.toPx(), -3.dp.toPx()),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx()),
+                )
+            }
+        }
+
+        Surface(
+            modifier = Modifier.height(38.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = backgroundColor,
+            border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
         ) {
-            Text(
-                text = mood,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = textColor
-            )
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            ) {
+                Text(
+                    text = mood,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                    color = textColor
+                )
+            }
         }
     }
 }
