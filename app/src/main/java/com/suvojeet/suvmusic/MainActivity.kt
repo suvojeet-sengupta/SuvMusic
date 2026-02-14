@@ -63,11 +63,11 @@ import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.MainViewModel
 import com.suvojeet.suvmusic.data.model.UpdateState
+import androidx.activity.viewModels
 import com.suvojeet.suvmusic.ui.components.UpdateAvailableDialog
 import com.suvojeet.suvmusic.ui.components.DownloadProgressDialog
 import com.suvojeet.suvmusic.ui.components.UpdateErrorDialog
 import com.suvojeet.suvmusic.util.NetworkMonitor
-import com.suvojeet.suvmusic.service.DynamicIslandService
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -81,6 +81,8 @@ import javax.inject.Inject
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    private val mainViewModel: MainViewModel by viewModels()
     
     @Inject
     lateinit var networkMonitor: NetworkMonitor
@@ -214,14 +216,30 @@ class MainActivity : ComponentActivity() {
         
         // Disable video track for bandwidth optimization when backgrounded
         musicPlayer.optimizeBandwidth(true)
-        
-        // Start Floating Player if enabled and music might be playing
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Enter PiP if music is playing and enabled in settings
         lifecycleScope.launch {
-            if (sessionManager.isDynamicIslandEnabled() && 
-                DynamicIslandService.hasOverlayPermission(this@MainActivity)) {
-                DynamicIslandService.start(this@MainActivity)
+            if (isSongPlaying && sessionManager.isDynamicIslandEnabled()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val aspectRatio = android.util.Rational(1, 1) // Square for audio
+                    val params = android.app.PictureInPictureParams.Builder()
+                        .setAspectRatio(aspectRatio)
+                        .build()
+                    enterPictureInPictureMode(params)
+                }
             }
         }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: android.content.res.Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        mainViewModel.setPictureInPictureMode(isInPictureInPictureMode)
     }
     
     override fun onResume() {
@@ -229,9 +247,6 @@ class MainActivity : ComponentActivity() {
         
         // Re-enable video track when returning to foreground
         musicPlayer.optimizeBandwidth(false)
-        
-        // Stop Floating Player when app comes to foreground
-        DynamicIslandService.stop(this)
     }
 }
 
@@ -265,14 +280,14 @@ fun SuvMusicApp(
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
     
-    val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle()
-    val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle()
-    val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle()
+    val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle(initialValue = null)
+    val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
+    val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO)
     
-    val comments by playerViewModel.commentsState.collectAsStateWithLifecycle()
-    val isFetchingComments by playerViewModel.isFetchingComments.collectAsStateWithLifecycle()
-    val isPostingComment by playerViewModel.isPostingComment.collectAsStateWithLifecycle()
-    val isLoadingMoreComments by playerViewModel.isLoadingMoreComments.collectAsStateWithLifecycle()
+    val comments by playerViewModel.commentsState.collectAsStateWithLifecycle(initialValue = null)
+    val isFetchingComments by playerViewModel.isFetchingComments.collectAsStateWithLifecycle(initialValue = false)
+    val isPostingComment by playerViewModel.isPostingComment.collectAsStateWithLifecycle(initialValue = false)
+    val isLoadingMoreComments by playerViewModel.isLoadingMoreComments.collectAsStateWithLifecycle(initialValue = false)
     
     // Track if song is playing for Activity-level volume interception
     // Use playbackInfo (stable) to avoid recomposing the whole app shell on progress updates
@@ -398,13 +413,13 @@ fun SuvMusicApp(
     }
     
     // Sleep Timer
-    val sleepTimerOption by playerViewModel.sleepTimerOption.collectAsStateWithLifecycle()
-    val sleepTimerRemainingMs by playerViewModel.sleepTimerRemainingMs.collectAsStateWithLifecycle()
+    val sleepTimerOption by playerViewModel.sleepTimerOption.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.player.SleepTimerOption.OFF)
+    val sleepTimerRemainingMs by playerViewModel.sleepTimerRemainingMs.collectAsStateWithLifecycle(initialValue = null)
     
     // Radio Mode
-    val isRadioMode by playerViewModel.isRadioMode.collectAsStateWithLifecycle()
-    val isLoadingMoreSongs by playerViewModel.isLoadingMoreSongs.collectAsStateWithLifecycle()
-    val isMiniPlayerDismissed by playerViewModel.isMiniPlayerDismissed.collectAsStateWithLifecycle()
+    val isRadioMode by playerViewModel.isRadioMode.collectAsStateWithLifecycle(initialValue = false)
+    val isLoadingMoreSongs by playerViewModel.isLoadingMoreSongs.collectAsStateWithLifecycle(initialValue = false)
+    val isMiniPlayerDismissed by playerViewModel.isMiniPlayerDismissed.collectAsStateWithLifecycle(initialValue = false)
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -787,24 +802,24 @@ fun SuvMusicApp(
         }
 
         // Global Update Dialogs
-        when (val updateState = mainUiState.updateState) {
-            is UpdateState.UpdateAvailable -> {
+        when (val state = mainUiState.updateState) {
+            is com.suvojeet.suvmusic.data.model.UpdateState.UpdateAvailable -> {
                 UpdateAvailableDialog(
-                    update = updateState.update,
+                    update = state.update,
                     currentVersion = mainUiState.currentVersion,
-                    onDownload = { mainViewModel.downloadUpdate(updateState.update.downloadUrl, updateState.update.versionName) },
+                    onDownload = { mainViewModel.downloadUpdate(state.update.downloadUrl, state.update.versionName) },
                     onDismiss = { mainViewModel.dismissUpdateDialog() }
                 )
             }
-            is UpdateState.Downloading -> {
+            is com.suvojeet.suvmusic.data.model.UpdateState.Downloading -> {
                 DownloadProgressDialog(
-                    progress = updateState.progress,
+                    progress = state.progress,
                     onCancel = { mainViewModel.cancelDownload() }
                 )
             }
-            is UpdateState.Error -> {
+            is com.suvojeet.suvmusic.data.model.UpdateState.Error -> {
                 UpdateErrorDialog(
-                    errorMessage = updateState.message,
+                    errorMessage = state.message,
                     onRetry = { mainViewModel.dismissUpdateDialog() }, // Just dismiss for now on auto-check error
                     onDismiss = { mainViewModel.dismissUpdateDialog() }
                 )

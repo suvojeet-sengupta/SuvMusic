@@ -38,7 +38,8 @@ sealed class MainEvent {
 
 data class MainUiState(
     val updateState: UpdateState = UpdateState.Idle,
-    val currentVersion: String = ""
+    val currentVersion: String = "",
+    val isInPictureInPictureMode: Boolean = false
 )
 
 @HiltViewModel
@@ -239,5 +240,9 @@ class MainViewModel @OptIn(androidx.media3.common.util.UnstableApi::class)
 
     fun dismissUpdateDialog() {
         _uiState.update { it.copy(updateState = UpdateState.Idle) }
+    }
+
+    fun setPictureInPictureMode(inPip: Boolean) {
+        _uiState.update { it.copy(isInPictureInPictureMode = inPip) }
     }
 }
