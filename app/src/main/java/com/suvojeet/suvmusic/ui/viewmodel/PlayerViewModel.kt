@@ -384,7 +384,6 @@ class PlayerViewModel @Inject constructor(
         _isRadioMode.value = false
         musicPlayer.updateRadioMode(false)
         musicPlayer.playSong(song, queue, startIndex)
-        expandPlayer() // Auto-expand when playing a new song
     }
     
     fun playNext(song: Song) {
