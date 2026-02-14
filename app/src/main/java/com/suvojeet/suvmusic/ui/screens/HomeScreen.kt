@@ -145,21 +145,29 @@ fun HomeScreen(
                             }
                         }
 
-                        // Top "Quick Access" Grid (2x3) - Spotify Style
+                        // Quick Picks Section
                         if (uiState.recommendations.isNotEmpty()) {
                             item {
-                                QuickAccessGrid(
-                                    items = uiState.recommendations.take(6),
-                                    onItemClick = { song ->
-                                        onSongClick(uiState.recommendations, uiState.recommendations.indexOf(song))
-                                    },
+                                com.suvojeet.suvmusic.ui.components.QuickPicksSection(
+                                    section = com.suvojeet.suvmusic.data.model.HomeSection(
+                                        title = "Quick picks",
+                                        items = uiState.recommendations.map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) },
+                                        type = com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks
+                                    ),
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick,
                                     modifier = Modifier.animateEnter(index = 4)
                                 )
                             }
                         }
 
                         // Sections Loop
-                        itemsIndexed(uiState.homeSections) { index, section ->
+                        val filteredSections = uiState.homeSections.filter { 
+                            !it.title.contains("Quick picks", ignoreCase = true) 
+                        }
+                        
+                        itemsIndexed(filteredSections) { index, section ->
                             // Offset index by 5 for static items above
                             val enterModifier = Modifier.animateEnter(index = index + 5)
                             
@@ -211,6 +219,15 @@ fun HomeScreen(
                                             android.widget.Toast.makeText(context, "Saved ${playlist.name} to Library", android.widget.Toast.LENGTH_SHORT).show()
                                         },
                                         modifier = enterModifier
+                                    )
+                                }
+                                com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks -> {
+                                    com.suvojeet.suvmusic.ui.components.QuickPicksSection(
+                                        section = section,
+                                        onSongClick = onSongClick,
+                                        onPlaylistClick = onPlaylistClick,
+                                        onAlbumClick = onAlbumClick,
+                                        modifier = enterModifier,
                                     )
                                 }
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid -> {
