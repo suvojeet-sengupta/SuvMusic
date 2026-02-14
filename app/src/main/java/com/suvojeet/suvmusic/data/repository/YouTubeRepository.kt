@@ -2453,8 +2453,8 @@ class YouTubeRepository @Inject constructor(
          )
     }
 
-    private fun parseHomeSectionsFromInternalJson(json: String): List<com.suvojeet.suvmusic.data.model.HomeSection> {
-        val sections = mutableListOf<com.suvojeet.suvmusic.data.model.HomeSection>()
+    private fun parseHomeSectionsFromInternalJson(json: String): List<HomeSection> {
+        val sections = mutableListOf<HomeSection>()
         try {
             val root = JSONObject(json)
             
@@ -2484,12 +2484,13 @@ class YouTubeRepository @Inject constructor(
                         ?: sectionObj?.optJSONObject("musicImmersiveCarouselShelfRenderer")
 
                     if (carouselShelf != null) {
-                        val title = getRunText(carouselShelf.optJSONObject("header")?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
-                            ?: getRunText(carouselShelf.optJSONObject("header")?.optJSONObject("musicImmersiveCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
+                        val header = carouselShelf.optJSONObject("header")
+                        val title = getRunText(header?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
+                            ?: getRunText(header?.optJSONObject("musicImmersiveCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
                             ?: ""
 
                         val itemsArray = carouselShelf.optJSONArray("contents")
-                        val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+                        val items = mutableListOf<HomeItem>()
 
                         if (itemsArray != null) {
                             for (j in 0 until itemsArray.length()) {
@@ -2498,23 +2499,26 @@ class YouTubeRepository @Inject constructor(
                             }
                         }
 
-                        if (items.isNotEmpty() && title.isNotEmpty()) {
-                            val type = when {
-                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks
-                                title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel
-                                else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
+                        if (items.isNotEmpty()) {
+                            // Default to HorizontalCarousel, but check for specific types if needed
+                            var type = HomeSectionType.HorizontalCarousel
+                            
+                            // Check for "Community" or similar specific layouts if needed
+                            if (title.contains("Community", ignoreCase = true)) {
+                                type = HomeSectionType.CommunityCarousel
                             }
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
+
+                            sections.add(HomeSection(title, items, type))
                         }
                     }
                     
-                    // 2. Shelves (Vertical List - e.g. "Your Likes" often appears as a list)
+                    // 2. Shelves (Vertical List)
+                    // these are often "Your Likes", "Listen Again" lists, or sometimes "Quick Picks"
                     val shelf = sectionObj?.optJSONObject("musicShelfRenderer")
                     if (shelf != null) {
                          val title = getRunText(shelf.optJSONObject("title")) ?: ""
                          val itemsArray = shelf.optJSONArray("contents")
-                         val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+                         val items = mutableListOf<HomeItem>()
                          
                          if (itemsArray != null) {
                              for (j in 0 until itemsArray.length()) {
@@ -2523,23 +2527,18 @@ class YouTubeRepository @Inject constructor(
                              }
                          }
                          
-                         if (items.isNotEmpty() && title.isNotEmpty()) {
-                            val type = when {
-                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks
-                                title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel
-                                else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
-                            }
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
+                         if (items.isNotEmpty()) {
+                            // Shelves are vertical lists
+                            sections.add(HomeSection(title, items, HomeSectionType.VerticalList))
                         }
                     }
                     
-                    // 3. Grids (e.g. "Listen Again" sometimes)
+                    // 3. Grids (e.g. "Listen Again" sometimes, or "Moods")
                     val grid = sectionObj?.optJSONObject("gridRenderer")
                     if (grid != null) {
                         val title = getRunText(grid.optJSONObject("header")?.optJSONObject("gridHeaderRenderer")?.optJSONObject("title")) ?: ""
                         val itemsArray = grid.optJSONArray("items")
-                        val items = mutableListOf<com.suvojeet.suvmusic.data.model.HomeItem>()
+                        val items = mutableListOf<HomeItem>()
                          
                          if (itemsArray != null) {
                              for (j in 0 until itemsArray.length()) {
@@ -2548,14 +2547,8 @@ class YouTubeRepository @Inject constructor(
                              }
                          }
                          
-                         if (items.isNotEmpty() && title.isNotEmpty()) {
-                            val type = when {
-                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
-                                title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                                title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList
-                                else -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
-                            }
-                            sections.add(com.suvojeet.suvmusic.data.model.HomeSection(title, items, type))
+                         if (items.isNotEmpty()) {
+                            sections.add(HomeSection(title, items, HomeSectionType.Grid))
                         }
                     }
                 }
@@ -2566,37 +2559,65 @@ class YouTubeRepository @Inject constructor(
         return sections
     }
 
-    private fun getExploreSection(): com.suvojeet.suvmusic.data.model.HomeSection {
+    private fun getExploreSection(): HomeSection {
         val exploreItems = listOf(
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("New releases", com.suvojeet.suvmusic.R.drawable.ic_music_note, "FEmusic_new_releases"),
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Charts", com.suvojeet.suvmusic.R.drawable.ic_waveform, "FEmusic_charts"),
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Moods and genres", com.suvojeet.suvmusic.R.drawable.ic_play, "FEmusic_moods_and_genres"),
-            com.suvojeet.suvmusic.data.model.HomeItem.ExploreItem("Podcasts", com.suvojeet.suvmusic.R.drawable.ic_launcher_monochrome, "FEmusic_podcasts")
+            HomeItem.ExploreItem("New releases", com.suvojeet.suvmusic.R.drawable.ic_music_note, "FEmusic_new_releases"),
+            HomeItem.ExploreItem("Charts", com.suvojeet.suvmusic.R.drawable.ic_waveform, "FEmusic_charts"),
+            HomeItem.ExploreItem("Moods and genres", com.suvojeet.suvmusic.R.drawable.ic_play, "FEmusic_moods_and_genres"),
+            HomeItem.ExploreItem("Podcasts", com.suvojeet.suvmusic.R.drawable.ic_launcher_monochrome, "FEmusic_podcasts")
         )
-        return com.suvojeet.suvmusic.data.model.HomeSection("Explore", exploreItems, com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid)
+        return HomeSection("Explore", exploreItems, HomeSectionType.ExploreGrid)
     }
 
-    private fun parseHomeItem(itemObj: JSONObject?): com.suvojeet.suvmusic.data.model.HomeItem? {
+    private fun parseHomeItem(itemObj: JSONObject?): HomeItem? {
         if (itemObj == null) return null
 
+        // 1. Check for musicExample2 (Responsive List Item) - Common for Songs/Videos/Episodes
         val responsiveItem = itemObj.optJSONObject("musicResponsiveListItemRenderer")
         if (responsiveItem != null) {
-            // Usually a song or video
-            val videoId = extractValueFromRuns(responsiveItem, "videoId") ?: responsiveItem.optString("videoId")
-            if (videoId.isNotEmpty()) {
-                val title = extractTitle(responsiveItem)
-                val artist = extractArtist(responsiveItem)
-                val thumbnail = extractThumbnail(responsiveItem)
-                
-                // Check if it's a playlist or something else based on navigation endpoint
-                val navEndpoint = responsiveItem.optJSONObject("navigationEndpoint")
-                val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId")
-                
-                if (browseId != null && (browseId.startsWith("VL") || browseId.startsWith("PL"))) {
-                     // It's a playlist masquerading as a list item? Rare but possible.
-                     // Treat as song for now as responsive items are usually tracks.
+            val videoId = extractValueFromRuns(responsiveItem, "videoId") 
+                ?: responsiveItem.optString("videoId").takeIf { it.isNotEmpty() }
+                ?: responsiveItem.optJSONObject("playlistItemData")?.optString("videoId")
+            
+            val title = extractTitle(responsiveItem)
+            val artist = extractArtist(responsiveItem)
+            val thumbnail = extractThumbnail(responsiveItem)
+            
+            // It might be a song, video, or sometimes a playlist/album masquerading as a list item
+            val navEndpoint = responsiveItem.optJSONObject("navigationEndpoint")
+            val browseEndpoint = navEndpoint?.optJSONObject("browseEndpoint")
+            val browseId = browseEndpoint?.optString("browseId")
+            
+            // If it has a browseId, it could be a Playlist/Album
+            if (browseId != null) {
+                val subtitle = extractFullSubtitle(responsiveItem)
+                if (browseId.startsWith("VL") || browseId.startsWith("PL") || browseId.startsWith("RD") || browseId == "LM") {
+                    // Playlist
+                    val cleanId = if (browseId.startsWith("VL")) browseId.removePrefix("VL") else browseId
+                    val playlist = PlaylistDisplayItem(
+                        id = cleanId,
+                        name = title,
+                        url = "https://music.youtube.com/playlist?list=$cleanId",
+                        uploaderName = artist, // Artist field captures second row well
+                        thumbnailUrl = thumbnail,
+                        songCount = extractSongCount(subtitle)
+                    )
+                    return HomeItem.PlaylistItem(playlist)
+                } else if (browseId.startsWith("MPRE") || browseId.startsWith("OLAK")) {
+                    // Album
+                    val album = Album(
+                        id = browseId,
+                        title = title,
+                        artist = artist,
+                        year = "", // Hard to extract year reliably from list item subtitle without parsing "Artist • Year"
+                        thumbnailUrl = thumbnail
+                    )
+                    return HomeItem.AlbumItem(album)
                 }
+            }
 
+            // Otherwise, treat as Song/Video if valid videoId
+            if (videoId != null && videoId.isNotEmpty()) {
                 val song = Song.fromYouTube(
                     videoId = videoId,
                     title = title,
@@ -2605,10 +2626,11 @@ class YouTubeRepository @Inject constructor(
                     duration = extractDuration(responsiveItem),
                     thumbnailUrl = thumbnail
                 )
-                return song?.let { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+                return song?.let { HomeItem.SongItem(it) }
             }
         }
 
+        // 2. Check for musicExample1 (Two Row Item) - Common for Albums/Playlists/Artists/Cards
         val twoRowItem = itemObj.optJSONObject("musicTwoRowItemRenderer")
         if (twoRowItem != null) {
             val title = getRunText(twoRowItem.optJSONObject("title")) ?: "Unknown"
@@ -2616,31 +2638,41 @@ class YouTubeRepository @Inject constructor(
             val thumbnail = extractThumbnail(twoRowItem)
             
             val navEndpoint = twoRowItem.optJSONObject("navigationEndpoint")
-            val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId")
-            val watchId = navEndpoint?.optJSONObject("watchEndpoint")?.optString("videoId")
+            val browseEndpoint = navEndpoint?.optJSONObject("browseEndpoint")
+            val browseId = browseEndpoint?.optString("browseId")
+            
+            val watchEndpoint = navEndpoint?.optJSONObject("watchEndpoint")
+            val videoId = watchEndpoint?.optString("videoId")
 
             if (browseId != null) {
                 if (browseId.startsWith("VL") || browseId.startsWith("PL") || 
                     browseId.startsWith("RD") || browseId.startsWith("RTM") || browseId == "LM") {
-                    // Playlist or Mix
+                    // Playlist
                     val cleanId = if (browseId.startsWith("VL")) browseId.removePrefix("VL") else browseId
                     val playlist = PlaylistDisplayItem(
                         id = cleanId,
                         name = title,
                         url = "https://music.youtube.com/playlist?list=$cleanId",
                         uploaderName = subtitle,
-                        thumbnailUrl = thumbnail
+                        thumbnailUrl = thumbnail,
+                         songCount = extractSongCount(subtitle)
                     )
-                    return com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem(playlist)
+                    return HomeItem.PlaylistItem(playlist)
                 } else if (browseId.startsWith("MPRE") || browseId.startsWith("OLAK")) {
                     // Album
+                     // Subtitle often contains "Artist • Year" or just Artist
+                    val parts = subtitle.split("•").map { it.trim() }
+                    val artistName = parts.firstOrNull() ?: ""
+                    val year = parts.getOrNull(1) ?: ""
+
                     val album = Album(
                         id = browseId,
                         title = title,
-                        artist = subtitle, // Usually "Artist • Year" or just Artist
+                        artist = artistName,
+                        year = year,
                         thumbnailUrl = thumbnail
                     )
-                    return com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem(album)
+                    return HomeItem.AlbumItem(album)
                 } else if (browseId.startsWith("UC")) {
                     // Artist
                      val artist = Artist(
@@ -2650,19 +2682,21 @@ class YouTubeRepository @Inject constructor(
                         description = null,
                         subscribers = subtitle
                     )
-                    return com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(artist)
+                    return HomeItem.ArtistItem(artist)
                 }
-            } else if (watchId != null) {
-                 // It's a video/song but in a card format
+            } 
+            
+            // Sometimes it's a song in a card (Video)
+            if (videoId != null) {
                  val song = Song.fromYouTube(
-                    videoId = watchId,
+                    videoId = videoId,
                     title = title,
                     artist = subtitle,
                     album = "",
-                    duration = extractDuration(twoRowItem),
+                    duration = extractDuration(twoRowItem), // Duration might be missing (0)
                     thumbnailUrl = thumbnail
                 )
-                return song?.let { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
+                return song?.let { HomeItem.SongItem(it) }
             }
         }
         
