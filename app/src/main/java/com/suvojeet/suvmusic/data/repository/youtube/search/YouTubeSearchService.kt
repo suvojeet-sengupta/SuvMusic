@@ -364,6 +364,6 @@ class YouTubeSearchService @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return songs
+        return songs.distinctBy { it.id }
     }
 }
