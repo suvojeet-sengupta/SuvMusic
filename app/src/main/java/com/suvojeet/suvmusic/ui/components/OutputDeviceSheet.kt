@@ -42,7 +42,8 @@ fun OutputDeviceSheet(
             onDismissRequest = onDismiss,
             containerColor = MaterialTheme.colorScheme.surface,
             dragHandle = { BottomSheetDefaults.DragHandle() },
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0)
         ) {
             Column(
                 modifier = Modifier

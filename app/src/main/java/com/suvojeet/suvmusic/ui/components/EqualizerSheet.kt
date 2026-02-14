@@ -69,7 +69,8 @@ fun EqualizerSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        windowInsets = androidx.compose.foundation.layout.WindowInsets(0)
     ) {
         Column(
             modifier = Modifier
