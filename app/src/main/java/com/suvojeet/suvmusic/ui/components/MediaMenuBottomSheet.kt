@@ -74,7 +74,7 @@ fun MediaMenuBottomSheet(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp,
-            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0)
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
         ) {
             Column(
                 modifier = Modifier
