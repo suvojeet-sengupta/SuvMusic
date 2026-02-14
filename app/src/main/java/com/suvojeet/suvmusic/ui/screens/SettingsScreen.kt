@@ -41,7 +41,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -82,7 +82,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.UpdateState
-import com.suvojeet.suvmusic.service.DynamicIslandService
 import com.suvojeet.suvmusic.ui.components.CheckingUpdateDialog
 import com.suvojeet.suvmusic.ui.components.DownloadProgressDialog
 import com.suvojeet.suvmusic.ui.components.NoUpdateDialog
@@ -300,25 +299,12 @@ fun SettingsScreen(
                         HorizontalDivider()
                         
                         SettingsSwitchItem(
-                            icon = Icons.Default.Smartphone,
-                            title = "Floating Player",
-                            subtitle = "Mini player over other apps",
+                            icon = Icons.Default.PictureInPicture,
+                            title = "Picture-in-Picture",
+                            subtitle = "Show mini player when backgrounded",
                             checked = floatingPlayerEnabled,
                             onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    if (DynamicIslandService.hasOverlayPermission(context)) {
-                                        scope.launch { viewModel.setDynamicIslandEnabled(true) }
-                                    } else {
-                                        val intent = Intent(
-                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                            Uri.parse("package:${context.packageName}")
-                                        )
-                                        context.startActivity(intent)
-                                    }
-                                } else {
-                                    scope.launch { viewModel.setDynamicIslandEnabled(false) }
-                                    DynamicIslandService.stop(context)
-                                }
+                                scope.launch { viewModel.setDynamicIslandEnabled(enabled) }
                             }
                         )
                     }

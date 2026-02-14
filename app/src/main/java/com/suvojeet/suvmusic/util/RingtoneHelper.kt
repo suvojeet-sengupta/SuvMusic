@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
@@ -50,7 +51,7 @@ class RingtoneHelper @Inject constructor(
     }
     
     /**
-     * Download the song, trim it and set it as ringtone
+     * Download the song, trim it and save to ringtones folder
      */
     suspend fun downloadAndTrimAsRingtone(
         context: Context,
@@ -58,17 +59,9 @@ class RingtoneHelper @Inject constructor(
         startMs: Long,
         endMs: Long,
         onProgress: (Float, String) -> Unit,
-        onComplete: (Boolean, String) -> Unit
+        onComplete: (Boolean, String, Uri?) -> Unit
     ) = withContext(Dispatchers.IO) {
         try {
-            // Check WRITE_SETTINGS permission
-            if (!Settings.System.canWrite(context)) {
-                withContext(Dispatchers.Main) {
-                    onComplete(false, "Permission required to set ringtone")
-                }
-                return@withContext
-            }
-            
             onProgress(0.05f, "Getting audio stream...")
             
             // Check if already downloaded
@@ -89,7 +82,7 @@ class RingtoneHelper @Inject constructor(
                 val streamUrl = youTubeRepository.getStreamUrlForDownload(song.id)
                 if (streamUrl == null) {
                     withContext(Dispatchers.Main) {
-                        onComplete(false, "Failed to get audio stream")
+                        onComplete(false, "Failed to get audio stream", null)
                     }
                     return@withContext
                 }
@@ -131,7 +124,7 @@ class RingtoneHelper @Inject constructor(
             
             if (tempFile == null || !tempFile.exists()) {
                 withContext(Dispatchers.Main) {
-                    onComplete(false, "Failed to prepare source file")
+                    onComplete(false, "Failed to prepare source file", null)
                 }
                 return@withContext
             }
@@ -145,7 +138,7 @@ class RingtoneHelper @Inject constructor(
             
             if (!success || !trimmedFile.exists() || trimmedFile.length() == 0L) {
                 withContext(Dispatchers.Main) {
-                    onComplete(false, "Failed to trim audio or output is empty")
+                    onComplete(false, "Failed to trim audio or output is empty", null)
                 }
                 return@withContext
             }
@@ -213,24 +206,17 @@ class RingtoneHelper @Inject constructor(
                 trimmedFile.delete()
             }
             
-            onProgress(0.95f, "Setting as ringtone...")
-            
-            // Set as ringtone
-            RingtoneManager.setActualDefaultRingtoneUri(
-                context,
-                RingtoneManager.TYPE_RINGTONE,
-                ringtoneUri
-            )
+            onProgress(0.95f, "Song saved to Ringtones...")
             
             withContext(Dispatchers.Main) {
                 onProgress(1f, "Done!")
-                onComplete(true, "\"${song.title}\" set as ringtone!")
+                onComplete(true, "\"${song.title}\" added to system ringtones. Please select it from settings.", ringtoneUri)
             }
             
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) {
-                onComplete(false, "Error: ${e.message}")
+                onComplete(false, "Error: ${e.message}", null)
             }
         }
     }
@@ -287,24 +273,15 @@ class RingtoneHelper @Inject constructor(
     }
     
     /**
-     * Download the song and set it as ringtone
-     * Shows progress notification during download
+     * Download the song and save to ringtones folder
      */
     suspend fun downloadAndSetAsRingtone(
         context: Context,
         song: Song,
         onProgress: (Float, String) -> Unit,
-        onComplete: (Boolean, String) -> Unit
+        onComplete: (Boolean, String, Uri?) -> Unit
     ) = withContext(Dispatchers.IO) {
         try {
-            // Check WRITE_SETTINGS permission
-            if (!Settings.System.canWrite(context)) {
-                withContext(Dispatchers.Main) {
-                    onComplete(false, "Permission required to set ringtone")
-                }
-                return@withContext
-            }
-            
             onProgress(0f, "Getting audio stream...")
             
             // Check if already downloaded
@@ -318,7 +295,7 @@ class RingtoneHelper @Inject constructor(
                 onProgress(0.1f, "Using downloaded file...")
                 inputStream = context.contentResolver.openInputStream(localUri) ?: run {
                     withContext(Dispatchers.Main) {
-                        onComplete(false, "Could not open downloaded file")
+                        onComplete(false, "Could not open downloaded file", null)
                     }
                     return@withContext
                 }
@@ -327,7 +304,7 @@ class RingtoneHelper @Inject constructor(
                 val streamUrl = youTubeRepository.getStreamUrlForDownload(song.id)
                 if (streamUrl == null) {
                     withContext(Dispatchers.Main) {
-                        onComplete(false, "Failed to get audio stream")
+                        onComplete(false, "Failed to get audio stream", null)
                     }
                     return@withContext
                 }
@@ -369,7 +346,7 @@ class RingtoneHelper @Inject constructor(
                         contentValues
                     ) ?: run {
                         withContext(Dispatchers.Main) {
-                            onComplete(false, "Failed to create ringtone file")
+                            onComplete(false, "Failed to create ringtone file", null)
                         }
                         return@withContext
                     }
@@ -438,39 +415,41 @@ class RingtoneHelper @Inject constructor(
                 dataSource?.close()
             }
             
-            onProgress(0.9f, "Setting as ringtone...")
+            onProgress(0.9f, "Saving to Ringtones...")
             
-            // Set as ringtone
-            try {
-                RingtoneManager.setActualDefaultRingtoneUri(
-                    context,
-                    RingtoneManager.TYPE_RINGTONE,
-                    ringtoneUri
-                )
-                
-                withContext(Dispatchers.Main) {
-                    onProgress(1f, "Done!")
-                    onComplete(true, "\"${song.title}\" set as ringtone!")
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) {
-                    onComplete(false, "Failed to set ringtone: ${e.message}")
-                }
+            withContext(Dispatchers.Main) {
+                onProgress(1f, "Done!")
+                onComplete(true, "\"${song.title}\" added to system ringtones.", ringtoneUri)
             }
             
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) {
-                onComplete(false, "Error: ${e.message}")
+                onComplete(false, "Error: ${e.message}", null)
             }
         }
     }
     
     /**
-     * Check if app has WRITE_SETTINGS permission
+     * Open system ringtone settings
      */
-    fun hasWriteSettingsPermission(context: Context): Boolean {
-        return Settings.System.canWrite(context)
+    fun openRingtoneSettings(context: Context, ringtoneUri: Uri? = null) {
+        try {
+            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_RINGTONE)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Ringtone")
+                if (ringtoneUri != null) {
+                    putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, ringtoneUri)
+                }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback to general sound settings
+            val intent = Intent(Settings.ACTION_SOUND_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
     }
 }

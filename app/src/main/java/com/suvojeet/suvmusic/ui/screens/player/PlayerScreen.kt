@@ -60,6 +60,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -172,12 +173,15 @@ fun PlayerScreen(
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
     ringtoneViewModel: RingtoneViewModel = hiltViewModel(),
     playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
+    mainViewModel: com.suvojeet.suvmusic.ui.viewmodel.MainViewModel = hiltViewModel(),
     onToggleDislike: () -> Unit = { playerViewModel.dislikeCurrentSong() },
     volumeKeyEvents: SharedFlow<Unit>? = null
 ) {
 
     val song = playbackInfo.currentSong
     val context = LocalContext.current
+    val mainUiState by mainViewModel.uiState.collectAsState()
+    val isInPip = mainUiState.isInPictureInPictureMode
     val playlistUiState by playlistViewModel.uiState.collectAsState()
     val sponsorSegments by playerViewModel.sponsorSegments.collectAsState(initial = emptyList())
     val lyricsState by playerViewModel.lyricsState.collectAsState()
@@ -315,6 +319,7 @@ fun PlayerScreen(
     var ringtoneStatusMessage by remember { mutableStateOf("") }
     var ringtoneComplete by remember { mutableStateOf(false) }
     var ringtoneSuccess by remember { mutableStateOf(false) }
+    var savedUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     // Coroutine scope for animations and async tasks
     val coroutineScope = rememberCoroutineScope()
@@ -393,10 +398,56 @@ fun PlayerScreen(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Background Layer
+    if (isInPip) {
+        // Simplified PiP UI
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            // Album Art background
+            val song = playbackInfo.currentSong
+            if (song?.thumbnailUrl != null) {
+                coil.compose.AsyncImage(
+                    model = song.thumbnailUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    alpha = 0.6f
+                )
+            }
+            
+            // Minimal Info Overlay
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    .padding(4.dp)
+            ) {
+                Text(
+                    text = song?.title ?: "Unknown",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = song?.artist ?: "Unknown Artist",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Background Layer
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -991,64 +1042,50 @@ fun PlayerScreen(
                     { playerViewModel.removeQueueItems(listOf(playerState.queue.indexOf(menuSong))) }
                 } else null,
                 onSetRingtone = {
-                    // Check for WRITE_SETTINGS permission
-                    if (!ringtoneViewModel.ringtoneHelper.hasWriteSettingsPermission(context)) {
-                        Toast.makeText(context, "Permission required to set ringtone. Please grant it in settings.", Toast.LENGTH_LONG).show()
-                        try {
-                            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
-                                data = android.net.Uri.parse("package:${context.packageName}")
-                            }
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Could not open settings", Toast.LENGTH_SHORT).show()
-                        }
-                        return@SongActionsSheet
-                    }
-
-                    // Show trimmer first
+                    // Show trimmer directly without permission check
                     showActionsSheet = false
                     showRingtoneTrimmer = true
                 }
             )
 
             // Ringtone Trimmer Dialog
-            if (menuSong != null) {
-                RingtoneTrimmerDialog(
-                    isVisible = showRingtoneTrimmer,
-                    song = menuSong,
-                    onDismiss = { showRingtoneTrimmer = false },
-                    onResolveStreamUrl = { videoId ->
-                        ringtoneViewModel.getStreamUrl(videoId)
-                    },
-                    onConfirm = { startMs, endMs ->
-                        showRingtoneTrimmer = false
-                        // Start ringtone process
-                        coroutineScope.launch {
-                            showRingtoneProgress = true
-                            ringtoneProgress = 0f
-                            ringtoneStatusMessage = "Initializing..."
-                            ringtoneComplete = false
-                            ringtoneSuccess = false
+            RingtoneTrimmerDialog(
+                isVisible = showRingtoneTrimmer,
+                song = menuSong,
+                onDismiss = { showRingtoneTrimmer = false },
+                onResolveStreamUrl = { videoId ->
+                    ringtoneViewModel.getStreamUrl(videoId)
+                },
+                onConfirm = { startMs, endMs ->
+                    showRingtoneTrimmer = false
+                    // Start ringtone process
+                    coroutineScope.launch {
+                        showRingtoneProgress = true
+                        ringtoneProgress = 0f
+                        ringtoneStatusMessage = "Initializing..."
+                        ringtoneComplete = false
+                        ringtoneSuccess = false
+                        var savedUri: android.net.Uri? = null
 
-                            ringtoneViewModel.ringtoneHelper.downloadAndTrimAsRingtone(
-                                context = context,
-                                song = menuSong,
-                                startMs = startMs,
-                                endMs = endMs,
-                                onProgress = { progress, message ->
-                                    ringtoneProgress = progress
-                                    ringtoneStatusMessage = message
-                                },
-                                onComplete = { success, message ->
-                                    ringtoneComplete = true
-                                    ringtoneSuccess = success
-                                    ringtoneStatusMessage = message
-                                }
-                            )
-                        }
+                        ringtoneViewModel.ringtoneHelper.downloadAndTrimAsRingtone(
+                            context = context,
+                            song = menuSong,
+                            startMs = startMs,
+                            endMs = endMs,
+                            onProgress = { progress, message ->
+                                ringtoneProgress = progress
+                                ringtoneStatusMessage = message
+                            },
+                            onComplete = { success, message, uri ->
+                                ringtoneComplete = true
+                                ringtoneSuccess = success
+                                ringtoneStatusMessage = message
+                                savedUri = uri
+                            }
+                        )
                     }
-                )
-            }
+                }
+            )
 
             // Ringtone Progress Dialog
             RingtoneProgressDialog(
@@ -1057,7 +1094,10 @@ fun PlayerScreen(
                 statusMessage = ringtoneStatusMessage,
                 isComplete = ringtoneComplete,
                 isSuccess = ringtoneSuccess,
-                onDismiss = { showRingtoneProgress = false }
+                onDismiss = { showRingtoneProgress = false },
+                onOpenSettings = {
+                    ringtoneViewModel.ringtoneHelper.openRingtoneSettings(context, savedUri)
+                }
             )
 
             // Song Info (Credits) Sheet
@@ -1173,7 +1213,8 @@ fun PlayerScreen(
             }
         }
     }
-    
+}
+
     // Fullscreen Video Overlay
     if (isFullScreen) {
         FullScreenVideoPlayer(
