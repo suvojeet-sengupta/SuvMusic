@@ -38,7 +38,8 @@ fun RingtoneProgressDialog(
     statusMessage: String,
     isComplete: Boolean,
     isSuccess: Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null
 ) {
     if (!isVisible) return
     
@@ -51,8 +52,18 @@ fun RingtoneProgressDialog(
         onDismissRequest = { if (isComplete) onDismiss() },
         confirmButton = {
             if (isComplete) {
-                TextButton(onClick = onDismiss) {
-                    Text("OK")
+                Column(horizontalAlignment = Alignment.End) {
+                    if (isSuccess && onOpenSettings != null) {
+                        TextButton(onClick = {
+                            onOpenSettings()
+                            onDismiss()
+                        }) {
+                            Text("OPEN SETTINGS")
+                        }
+                    }
+                    TextButton(onClick = onDismiss) {
+                        Text("OK")
+                    }
                 }
             }
         },
