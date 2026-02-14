@@ -1383,12 +1383,17 @@ class MusicPlayer @Inject constructor(
         
         scope.launch {
             val currentQueue = _playerState.value.queue.toMutableList()
-            currentQueue.addAll(songs)
+            val existingIds = currentQueue.map { it.id }.toSet()
             
+            // Final de-duplication check to prevent duplicates from concurrent calls
+            val filteredSongs = songs.filter { it.id !in existingIds }
+            if (filteredSongs.isEmpty()) return@launch
+            
+            currentQueue.addAll(filteredSongs)
             _playerState.update { it.copy(queue = currentQueue) }
             
             // Add media items to player
-            songs.forEach { song ->
+            filteredSongs.forEach { song ->
                 val mediaItem = createMediaItem(song, resolveStream = false)
                 mediaController?.addMediaItem(mediaItem)
             }

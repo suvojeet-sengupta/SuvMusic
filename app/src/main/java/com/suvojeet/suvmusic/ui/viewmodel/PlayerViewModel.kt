@@ -641,8 +641,8 @@ class PlayerViewModel @Inject constructor(
         val currentSong = state.currentSong ?: return
         var baseSongId = radioBaseSongId ?: currentSong.id
         
+        _isLoadingMoreSongs.value = true
         viewModelScope.launch {
-            _isLoadingMoreSongs.value = true
             try {
                 var moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
                 
@@ -660,9 +660,10 @@ class PlayerViewModel @Inject constructor(
                 }
                 
                 if (newSongs.isNotEmpty()) {
-                    musicPlayer.addToQueue(newSongs.take(10))
+                    val batchToAdd = newSongs.take(10)
+                    musicPlayer.addToQueue(batchToAdd)
                     // Update base song for next batch (use last added song for variety)
-                    radioBaseSongId = newSongs.lastOrNull()?.id ?: baseSongId
+                    radioBaseSongId = batchToAdd.lastOrNull()?.id ?: baseSongId
                 } else {
                     // Strict YT Music recommendations requested:
                     // Removed local fallback to ensure accuracy and relevance.
