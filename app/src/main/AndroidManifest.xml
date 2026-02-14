@@ -23,23 +23,10 @@
     <!-- Wake lock for continuous playback -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     
-    <!-- Overlay permission for Floating Player -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    
-    <!-- Permission to install APK updates -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    
     <!-- Vibration permission for Music Haptics -->
     <uses-permission android:name="android.permission.VIBRATE" />
     
     <!-- TV features -->
-    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <uses-feature android:name="android.software.leanback" android:required="false" />
-
-    <!-- Permission to modify system settings for Set as Ringtone -->
-    <uses-permission android:name="android.permission.WRITE_SETTINGS" 
-        tools:ignore="ProtectedPermissions" />
 
     <!-- Package visibility for Android 11+ -->
     <queries>
@@ -93,8 +80,9 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.SuvMusic"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:launchMode="singleTop">
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
+            android:launchMode="singleTop"
+            android:supportsPictureInPicture="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -164,16 +152,6 @@
                 <action android:name="androidx.media3.session.MediaLibraryService" />
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
-        </service>
-        
-        <!-- Floating Player Overlay Service -->
-        <service
-            android:name=".service.DynamicIslandService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="floating_music_controls" />
         </service>
         
         <!-- Download Service for background downloads with progress -->
