@@ -46,6 +46,7 @@ import com.suvojeet.suvmusic.core.model.ArtistPreview
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
+import com.suvojeet.suvmusic.ui.components.NewReleaseCard
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
 import kotlin.math.min
@@ -137,6 +138,7 @@ fun ArtistScreen(
                         item {
                             Spacer(modifier = Modifier.height(16.dp))
                             LatestReleaseSection(
+                                artistName = artist.name,
                                 album = latestRelease,
                                 isSingle = artist.singles.contains(latestRelease),
                                 onClick = { onAlbumClick(latestRelease) }
@@ -544,61 +546,32 @@ fun ImmersiveArtistHeader(
 
 @Composable
 fun LatestReleaseSection(
+    artistName: String,
     album: Album,
     isSingle: Boolean,
     onClick: () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Text(
-            text = stringResource(R.string.header_latest_release),
+            text = "New from $artistName", // Use string resource in production ideally
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(16.dp))
-        
-        Row(
+
+        NewReleaseCard(
+            title = album.title,
+            subtitle = buildString {
+                append(if (isSingle) stringResource(R.string.badge_single) else stringResource(R.string.badge_album))
+                if (album.year != null) append(" • ${album.year}")
+            },
+            imageUrl = album.thumbnailUrl,
+            onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), RoundedCornerShape(12.dp))
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(album.thumbnailUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = album.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                     text = buildString {
-                        append(if (isSingle) stringResource(R.string.badge_single) else stringResource(R.string.badge_album))
-                        if (album.year != null) append(" • ${album.year}")
-                     },
-                     style = MaterialTheme.typography.bodyMedium,
-                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+                .height(140.dp)
+        )
     }
 }
 
