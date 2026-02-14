@@ -124,7 +124,8 @@ fun SongInfoSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = Color.Transparent,
-            dragHandle = null
+            dragHandle = null,
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0)
         ) {
             Box(
                 modifier = Modifier
