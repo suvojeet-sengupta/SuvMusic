@@ -147,7 +147,8 @@ fun SongActionsSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = backgroundColor
+            containerColor = backgroundColor,
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0)
         ) {
             Column(
                 modifier = Modifier
