@@ -43,7 +43,7 @@ fun OutputDeviceSheet(
             containerColor = MaterialTheme.colorScheme.surface,
             dragHandle = { BottomSheetDefaults.DragHandle() },
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0)
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
         ) {
             Column(
                 modifier = Modifier
