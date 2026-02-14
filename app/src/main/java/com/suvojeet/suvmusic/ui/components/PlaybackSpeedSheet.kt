@@ -54,7 +54,7 @@ fun PlaybackSpeedSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
-            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0)
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
         ) {
             Column(
                 modifier = Modifier
