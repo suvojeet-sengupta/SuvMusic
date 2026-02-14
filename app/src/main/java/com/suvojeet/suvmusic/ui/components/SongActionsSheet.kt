@@ -148,7 +148,7 @@ fun SongActionsSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = backgroundColor,
-            windowInsets = androidx.compose.foundation.layout.WindowInsets(0)
+            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0)
         ) {
             Column(
                 modifier = Modifier
