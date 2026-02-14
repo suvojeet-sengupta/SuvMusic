@@ -45,6 +45,8 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 @Composable
 fun HorizontalCarouselSection(
@@ -269,6 +271,71 @@ fun GridSection(
                     onAlbumClick = onAlbumClick,
                      sectionItems = section.items
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickPicksSection(
+    section: HomeSection,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        HomeSectionHeader(title = section.title)
+        
+        val chunkedItems = section.items.chunked(4)
+        val lazyListState = rememberLazyListState()
+        
+        LazyRow(
+            state = lazyListState,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(chunkedItems) { columnItems ->
+                Column(
+                    modifier = Modifier.fillParentMaxWidth(0.92f), // Peeking effect
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    columnItems.forEach { item ->
+                        when (item) {
+                            is HomeItem.SongItem -> {
+                                MusicCard(
+                                    song = item.song,
+                                    onClick = {
+                                        val songs = section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+                                        val index = songs.indexOf(item.song)
+                                        if (index != -1) onSongClick(songs, index)
+                                    },
+                                    backgroundColor = Color.Transparent
+                                )
+                            }
+                            is HomeItem.PlaylistItem -> {
+                                MusicCard(
+                                    song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
+                                    onClick = { onPlaylistClick(item.playlist) },
+                                    backgroundColor = Color.Transparent
+                                )
+                            }
+                            is HomeItem.AlbumItem -> {
+                                MusicCard(
+                                    song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
+                                    onClick = { onAlbumClick(item.album) },
+                                    backgroundColor = Color.Transparent
+                                )
+                            }
+                            else -> {}
+                        }
+                    }
+                }
             }
         }
     }
