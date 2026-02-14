@@ -112,7 +112,7 @@ fun CommentsSheet(
                             derivedStateOf {
                                 val layoutInfo = listState.layoutInfo
                                 val visibleItemsInfo = layoutInfo.visibleItemsInfo
-                                if (layoutInfo.totalItemsCount == 0) {
+                                if (layoutInfo.totalItemsCount == 0 || visibleItemsInfo.isEmpty()) {
                                     false
                                 } else {
                                     val lastVisibleItem = visibleItemsInfo.last()
@@ -142,10 +142,10 @@ fun CommentsSheet(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
-                            items(
+                            itemsIndexed(
                                 items = comments,
-                                key = { it.id }
-                            ) { comment ->
+                                key = { index, comment -> "${comment.id}_$index" }
+                            ) { index, comment ->
                                 val isHighlighted = comment.id.startsWith("temp_")
                                 CommentItem(comment = comment, accentColor = accentColor, isHighlighted = isHighlighted)
                             }
