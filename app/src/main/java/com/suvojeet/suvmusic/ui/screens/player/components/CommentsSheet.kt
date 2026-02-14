@@ -50,6 +50,7 @@ fun CommentsSheet(
             onDismissRequest = onDismiss,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = Color.Black.copy(alpha = 0.5f),
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0),
             dragHandle = {
                 Box(
                     modifier = Modifier

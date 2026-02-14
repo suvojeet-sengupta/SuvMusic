@@ -91,7 +91,8 @@ fun AddToPlaylistSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = DarkBackground,
-            contentColor = TextPrimary
+            contentColor = TextPrimary,
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0)
         ) {
             Column(
                 modifier = Modifier

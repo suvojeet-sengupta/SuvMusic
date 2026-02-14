@@ -85,6 +85,7 @@ fun SleepTimerSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = backgroundColor,
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0),
             dragHandle = {
                 // Custom drag handle
                 Box(

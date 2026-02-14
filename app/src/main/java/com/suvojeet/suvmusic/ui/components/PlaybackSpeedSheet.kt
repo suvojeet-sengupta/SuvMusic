@@ -53,7 +53,8 @@ fun PlaybackSpeedSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0)
         ) {
             Column(
                 modifier = Modifier
