@@ -8,7 +8,8 @@ enum class HomeSectionType {
     LargeCardWithList,
     VerticalList,
     CommunityCarousel,
-    ExploreGrid
+    ExploreGrid,
+    QuickPicks
 }
 
 data class HomeSection(

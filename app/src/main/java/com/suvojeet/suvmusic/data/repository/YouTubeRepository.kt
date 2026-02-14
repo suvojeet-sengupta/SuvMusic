@@ -2500,7 +2500,7 @@ class YouTubeRepository @Inject constructor(
 
                         if (items.isNotEmpty() && title.isNotEmpty()) {
                             val type = when {
-                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks
                                 title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
                                 title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel
                                 else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
@@ -2525,7 +2525,7 @@ class YouTubeRepository @Inject constructor(
                          
                          if (items.isNotEmpty() && title.isNotEmpty()) {
                             val type = when {
-                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList
+                                title.contains("Quick picks", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks
                                 title.contains("Fresh finds", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.Grid
                                 title.contains("Community", ignoreCase = true) -> com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel
                                 else -> com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel
