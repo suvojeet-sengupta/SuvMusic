@@ -92,7 +92,7 @@ fun AddToPlaylistSheet(
             sheetState = sheetState,
             containerColor = DarkBackground,
             contentColor = TextPrimary,
-            contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0)
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
         ) {
             Column(
                 modifier = Modifier
