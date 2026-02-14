@@ -63,7 +63,9 @@ fun EqualizerSheet(
         arr
     }
 
-    val frequencies = listOf("31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k")
+    val frequencies = androidx.compose.runtime.remember { 
+        listOf("31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k")
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

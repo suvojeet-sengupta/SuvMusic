@@ -62,7 +62,10 @@ fun OutputDeviceSheet(
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(devices) { device ->
+                    items(
+                        items = devices,
+                        key = { it.id }
+                    ) { device ->
                         DeviceItem(
                             device = device,
                             onClick = {

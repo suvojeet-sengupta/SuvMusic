@@ -142,7 +142,10 @@ fun CommentsSheet(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
-                            items(comments) { comment ->
+                            items(
+                                items = comments,
+                                key = { it.id }
+                            ) { comment ->
                                 val isHighlighted = comment.id.startsWith("temp_")
                                 CommentItem(comment = comment, accentColor = accentColor, isHighlighted = isHighlighted)
                             }

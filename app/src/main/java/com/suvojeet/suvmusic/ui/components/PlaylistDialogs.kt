@@ -225,7 +225,10 @@ fun AddToPlaylistSheet(
                     LazyColumn(
                         modifier = Modifier.height(300.dp)
                     ) {
-                        items(playlists) { playlist ->
+                        items(
+                            items = playlists,
+                            key = { it.getPlaylistId() }
+                        ) { playlist ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
