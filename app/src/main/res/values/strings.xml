@@ -44,4 +44,9 @@
     <string name="error_loading">Loading...</string>
 
     <string name="listen_together">Listen Together</string>
+
+    <!-- Notification Actions -->
+    <string name="notification_action_like">Like</string>
+    <string name="notification_action_repeat">Repeat</string>
+    <string name="notification_action_shuffle">Shuffle</string>
 </resources>
