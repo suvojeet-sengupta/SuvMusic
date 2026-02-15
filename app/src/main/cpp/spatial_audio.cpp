@@ -263,35 +263,6 @@ static std::vector<float> processingBuffer;
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcess(JNIEnv *env, jobject thiz,
-                                                            jfloatArray buffer, jfloat azimuth,
-                                                            jfloat elevation, jint sample_rate) {
-    jfloat* data = (jfloat*)env->GetPrimitiveArrayCritical(buffer, nullptr);
-    jsize len = env->GetArrayLength(buffer);
-
-    if (data != nullptr) {
-        int numFrames = len / 2;
-        // 1. Crossfeed (Subtle headphone correction)
-        crossfeed.process(data, numFrames, sample_rate);
-
-        // 2. Parametric EQ (Tone shaping before spatial)
-        equalizer.process(data, numFrames, 2, sample_rate);
-
-        // 3. Pitch Shifter
-        pitchShifter.process(data, numFrames, 2);
-
-        // 4. Spatial Audio (Positioning)
-        spatializer.process(data, numFrames, azimuth, elevation, sample_rate);
-        
-        // 5. Limiter / Volume Boost
-        limiter.process(data, numFrames, 2, sample_rate);
-
-        env->ReleasePrimitiveArrayCritical(buffer, data, 0);
-    }
-}
-
-extern "C"
-JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, jobject thiz,
                                                                    jobject buffer,
                                                                    jint frameCount,
@@ -354,7 +325,7 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetCrossfeedParams(JNIEnv 
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetPlaybackParams(JNIEnv *env, jobject thiz, jfloat speed, jfloat pitch) {
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetPlaybackParams(JNIEnv *env, jobject thiz, jfloat pitch) {
     pitchShifter.setParams(pitch, 44100);
 }
 
