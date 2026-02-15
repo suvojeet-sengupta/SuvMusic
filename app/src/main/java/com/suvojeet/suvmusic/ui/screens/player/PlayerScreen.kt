@@ -114,6 +114,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -323,6 +324,23 @@ fun PlayerScreen(
 
     // Coroutine scope for animations and async tasks
     val coroutineScope = rememberCoroutineScope()
+
+    // Back Handler to handle overlays and minimize player
+    BackHandler(enabled = true) {
+        when {
+            showQueue -> showQueue = false
+            showLyrics -> showLyrics = false
+            showListenTogetherSheet -> showListenTogetherSheet = false
+            showCommentsSheet -> showCommentsSheet = false
+            showActionsSheet -> showActionsSheet = false
+            showInfoSheet -> showInfoSheet = false
+            showSleepTimerSheet -> showSleepTimerSheet = false
+            showOutputDeviceSheet -> showOutputDeviceSheet = false
+            showPlaybackSpeedSheet -> showPlaybackSpeedSheet = false
+            showEqualizerSheet -> showEqualizerSheet = false
+            else -> onBack()
+        }
+    }
 
     // Optimistic seek state for rapid double-taps
     var pendingSeekPosition by remember { mutableStateOf<Long?>(null) }
