@@ -13,6 +13,8 @@ interface LibraryRepository {
     suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int)
     suspend fun getCachedPlaylistSongs(playlistId: String): List<Song>
     fun getCachedPlaylistSongsFlow(playlistId: String): Flow<List<Song>>
+    fun getPlaylistSongCountFlow(playlistId: String): Flow<Int>
+    suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>)
     suspend fun removePlaylist(playlistId: String)
     suspend fun removeSongFromPlaylist(playlistId: String, songId: String)
     suspend fun addSongToPlaylist(playlistId: String, song: Song)

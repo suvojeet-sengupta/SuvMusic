@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.suvojeet.suvmusic.core.data.local.entity.LibraryEntity
 import com.suvojeet.suvmusic.core.data.local.entity.PlaylistSongEntity
 import kotlinx.coroutines.flow.Flow
@@ -43,4 +44,13 @@ interface LibraryDao {
 
     @Query("DELETE FROM playlist_songs WHERE playlistId = :playlistId AND songId = :songId")
     suspend fun deleteSongFromPlaylist(playlistId: String, songId: String)
+
+    @Query("SELECT COUNT(*) FROM playlist_songs WHERE playlistId = :playlistId")
+    fun getPlaylistSongCountFlow(playlistId: String): Flow<Int>
+
+    @Transaction
+    suspend fun replacePlaylistSongs(playlistId: String, songs: List<PlaylistSongEntity>) {
+        deletePlaylistSongs(playlistId)
+        insertPlaylistSongs(songs)
+    }
 }

@@ -153,9 +153,10 @@ fun LibraryScreen(
                                 when (type) {
                                     SmartPlaylistType.LIKED -> {
                                         // Trigger sync if empty (first time)
-                                        if (uiState.likedSongs.isEmpty()) {
+                                        if (uiState.likedSongsCount == 0) {
                                             viewModel.syncLikedSongs()
                                         }
+                                        viewModel.loadLikedSongs()
                                         onPlaylistClick(PlaylistDisplayItem(id = "LM", name = "Liked Songs", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
                                     SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
@@ -208,9 +209,10 @@ fun LibraryScreen(
                             onSmartPlaylistClick = { type ->
                                 when (type) {
                                     SmartPlaylistType.LIKED -> {
-                                        if (uiState.likedSongs.isEmpty()) {
+                                        if (uiState.likedSongsCount == 0) {
                                             viewModel.syncLikedSongs()
                                         }
+                                        viewModel.loadLikedSongs()
                                         onPlaylistClick(PlaylistDisplayItem(id = "LM", name = "Liked Songs", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
                                     SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
@@ -574,7 +576,7 @@ fun PlaylistsGrid(
             SmartPlaylistCard(
                 title = "Liked",
                 icon = Icons.Default.FavoriteBorder,
-                count = "${uiState.likedSongs.size} songs",
+                count = "${uiState.likedSongsCount} songs",
                 onClick = { onSmartPlaylistClick(SmartPlaylistType.LIKED) }
             )
         }
@@ -800,7 +802,7 @@ fun PlaylistsList(
              SmartPlaylistListItem(
                  title = "Liked",
                  icon = Icons.Default.FavoriteBorder,
-                 count = "${uiState.likedSongs.size} songs",
+                 count = "${uiState.likedSongsCount} songs",
                  onClick = { onSmartPlaylistClick(SmartPlaylistType.LIKED) }
              )
          }
@@ -918,7 +920,7 @@ fun OtherContentList(
 fun getCountForFilter(uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState): String {
     return when(uiState.selectedFilter) {
         LibraryFilter.PLAYLISTS -> "${uiState.playlists.size} playlists"
-        LibraryFilter.SONGS -> "${uiState.likedSongs.size + uiState.localSongs.size} songs"
+        LibraryFilter.SONGS -> "${uiState.likedSongsCount + uiState.localSongs.size} songs"
         LibraryFilter.ALBUMS -> "${uiState.libraryAlbums.size} albums"
         LibraryFilter.ARTISTS -> "${uiState.libraryArtists.size} artists"
     }
