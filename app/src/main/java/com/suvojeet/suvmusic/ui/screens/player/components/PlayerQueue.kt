@@ -51,6 +51,7 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.NowPlayingAnimation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -494,12 +495,11 @@ private fun QueueItem(
             )
         }
 
-        if (isPlaying) {
-            Icon(
-                imageVector = Icons.Default.MusicNote,
-                contentDescription = "Playing",
-                tint = dominantColors.accent,
-                modifier = Modifier.size(24.dp)
+        if (isCurrent) {
+            NowPlayingAnimation(
+                color = dominantColors.accent,
+                isPlaying = isPlaying,
+                modifier = Modifier.padding(end = 8.dp)
             )
         } else if (isSelectionMode) {
              androidx.compose.material3.Checkbox(
