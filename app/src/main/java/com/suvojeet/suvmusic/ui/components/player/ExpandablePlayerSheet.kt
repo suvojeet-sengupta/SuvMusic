@@ -1,6 +1,6 @@
 package com.suvojeet.suvmusic.ui.components.player
 
-import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -122,21 +122,11 @@ fun ExpandablePlayerSheet(
     val collapsedHeightPx = miniPlayerHeightPx + bottomPadding
     val dragRange = screenHeightPx - collapsedHeightPx
 
-    // Predictive Back Handler to collapse on system back gesture with animation
-    PredictiveBackHandler(enabled = isExpanded) { backEvent ->
-        try {
-            backEvent.collect { event ->
-                // As the user swipes, we partially collapse the sheet
-                // event.progress goes from 0 to 1
-                val newExpansion = 1f - (event.progress * 0.5f) // Don't collapse fully until released
-                expansion.snapTo(newExpansion)
-            }
-            // Gesture completed
-            onExpandChange(false)
+    // Back Handler to collapse on system back gesture
+    BackHandler(enabled = isExpanded) {
+        onExpandChange(false)
+        coroutineScope.launch {
             expansion.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
-        } catch (e: Exception) {
-            // Gesture cancelled, snap back to expanded
-            expansion.animateTo(1f, tween(200, easing = FastOutSlowInEasing))
         }
     }
 
