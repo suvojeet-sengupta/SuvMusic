@@ -1336,7 +1336,7 @@ class MusicPlayer @Inject constructor(
         mediaController?.playbackParameters = androidx.media3.common.PlaybackParameters(clampedSpeed, 1.0f)
         
         // Use our high-quality native pitch shifter
-        spatialAudioProcessor.setPlaybackParams(clampedSpeed, clampedPitch)
+        spatialAudioProcessor.setPlaybackParams(clampedPitch)
         
         _playerState.update { 
             it.copy(
