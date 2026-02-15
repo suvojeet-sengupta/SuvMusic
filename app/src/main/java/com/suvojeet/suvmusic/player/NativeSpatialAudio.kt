@@ -20,12 +20,6 @@ class NativeSpatialAudio @Inject constructor() {
     /**
      * Process audio buffer with spatial audio effects.
      */
-    fun process(buffer: FloatArray, azimuth: Float, elevation: Float, sampleRate: Int) {
-        if (isLibraryLoaded) {
-            nProcess(buffer, azimuth, elevation, sampleRate)
-        }
-    }
-
     fun processPcm16(buffer: ByteBuffer, frameCount: Int, channelCount: Int, sampleRate: Int, azimuth: Float, elevation: Float) {
         if (!isLibraryLoaded) return
         if (!buffer.isDirect) {
@@ -34,7 +28,6 @@ class NativeSpatialAudio @Inject constructor() {
         nProcessPcm16(buffer, frameCount, channelCount, sampleRate, azimuth, elevation)
     }
 
-    private external fun nProcess(buffer: FloatArray, azimuth: Float, elevation: Float, sampleRate: Int)
     private external fun nProcessPcm16(
         buffer: ByteBuffer,
         frameCount: Int,
@@ -111,13 +104,13 @@ class NativeSpatialAudio @Inject constructor() {
 
     private external fun nSetEqBand(bandIndex: Int, gainDb: Float)
 
-    fun setPlaybackParams(speed: Float, pitch: Float) {
+    fun setPlaybackParams(pitch: Float) {
         if (isLibraryLoaded) {
-            nSetPlaybackParams(speed, pitch)
+            nSetPlaybackParams(pitch)
         }
     }
 
-    private external fun nSetPlaybackParams(speed: Float, pitch: Float)
+    private external fun nSetPlaybackParams(pitch: Float)
 
     /**
      * Extracts waveform data from a file using high-performance Memory-Mapped IO (mmap).
