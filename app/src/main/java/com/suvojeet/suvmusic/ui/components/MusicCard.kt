@@ -160,25 +160,27 @@ fun MusicCard(
                 }
                 
                 // Playing indicator overlay
-                if (isPlaying) {
+                if (isPlaying) { // In MusicCard, isPlaying means it IS the current song and we want to show indicator
                     Box(
                         modifier = Modifier
                             .size(56.dp)
                             .background(
                                 Brush.radialGradient(
                                     colors = listOf(
-                                        GlassPurple,
+                                        GlassPurple.copy(alpha = 0.8f),
                                         Color.Transparent
                                     )
                                 )
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Playing",
-                            modifier = Modifier.size(28.dp),
-                            tint = Color.White
+                        NowPlayingAnimation(
+                            color = Color.White,
+                            isPlaying = true, // For now keeping it true if isPlaying is true
+                            barCount = 3,
+                            barWidth = 3.dp,
+                            maxBarHeight = 16.dp,
+                            minBarHeight = 6.dp
                         )
                     }
                 } else if (song.isMembersOnly) {
