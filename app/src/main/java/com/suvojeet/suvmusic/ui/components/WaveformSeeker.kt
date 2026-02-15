@@ -106,17 +106,28 @@ fun WaveformSeeker(
         currentStyle = initialStyle
     }
     
-    // Animation for wave movement when playing
-    val infiniteTransition = rememberInfiniteTransition(label = "wave")
-    val wavePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "wavePhase"
+    val shouldAnimateWave = isPlaying && (
+        currentStyle == SeekbarStyle.WAVEFORM ||
+            currentStyle == SeekbarStyle.WAVE_LINE ||
+            currentStyle == SeekbarStyle.DOTS
     )
+    
+    // Animation for wave movement only when needed
+    val wavePhase = if (shouldAnimateWave) {
+        val infiniteTransition = rememberInfiniteTransition(label = "wave")
+        val phase by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "wavePhase"
+        )
+        phase
+    } else {
+        0f
+    }
     
     // Generate random wave amplitudes (simulating audio waveform)
     val waveAmplitudes = remember {
