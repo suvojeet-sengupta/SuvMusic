@@ -64,7 +64,7 @@
 -   <img src="https://img.shields.io/badge/Feature-Spotify_Import-1DB954?style=flat-square&logo=spotify&logoColor=white" /> **Seamless Migration**: Import your existing playlists directly from Spotify.
 -   <img src="https://img.shields.io/badge/Feature-Music_Haptics-FF4081?style=flat-square" /> **Tactile Feedback**: Vibrations synchronized to the beat of your music.
 -   <img src="https://img.shields.io/badge/Feature-Dynamic_Island-black?style=flat-square" /> **Mini Player**: Floating, interactive overlay for system-wide control.
--   <img src="https://img.shields.io/badge/Feature-Pitch_&_Speed-teal?style=flat-square" /> **Audio Control**: Customize playback speed (up to 5x) and pitch.
+-   <img src="https://img.shields.io/badge/Feature-Pitch_&_Speed-teal?style=flat-square" /> **Native Audio Engine**: High-quality playback speed and pitch control powered by C++ WSOLA.
 -   <img src="https://img.shields.io/badge/Design-Material_3-6200EE?style=flat-square&logo=material-design&logoColor=white" /> **Modern UI**: Fully dynamic theming with "Pure Black" OLED mode.
 
 ---
@@ -106,6 +106,15 @@ The project leverages modern Android development standards.
 | Data & Network | Media |
 | :--- | :--- |
 | ![Room](https://img.shields.io/badge/DB-Room-green?style=flat-square) <br> ![Retrofit](https://img.shields.io/badge/Network-Retrofit-26A5E4?style=flat-square) <br> ![OkHttp](https://img.shields.io/badge/HTTP-OkHttp-square?style=flat-square) | ![Media3](https://img.shields.io/badge/Player-Media3_ExoPlayer-black?style=flat-square) <br> ![NewPipe](https://img.shields.io/badge/Extraction-NewPipe-red?style=flat-square) |
+
+### High-Performance Native Engine
+
+SuvMusic features a custom **C++ Audio Engine** (via JNI) to handle CPU-intensive DSP tasks with near-zero latency and high battery efficiency:
+
+-   **WSOLA Time-Stretching**: Natural-sounding pitch and speed adjustments without robotic artifacts.
+-   **Parametric EQ**: 10-band ISO-standard graphic equalizer with Butterworth filters.
+-   **Spatial Audio**: Real-time 3D sound positioning with ITD/ILD head shadowing models.
+-   **Dynamic Limiter**: Advanced look-ahead peak limiting and volume normalization.
 
 </div>
 
