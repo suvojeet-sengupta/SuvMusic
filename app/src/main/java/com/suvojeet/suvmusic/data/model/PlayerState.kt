@@ -37,7 +37,7 @@ data class PlayerState(
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f
     
     val hasNext: Boolean
-        get() = currentIndex < queue.size - 1 || repeatMode == RepeatMode.ALL
+        get() = currentIndex < queue.size - 1 || repeatMode == RepeatMode.ALL || isAutoplayEnabled || isRadioMode
     
     val hasPrevious: Boolean
         get() = currentIndex > 0 || repeatMode == RepeatMode.ALL
