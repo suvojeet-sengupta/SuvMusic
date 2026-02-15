@@ -191,8 +191,7 @@ fun PlayerScreen(
     
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
-    // Create a local dominantColors variable to hold the extracted colors
-    var dominantColors by remember { mutableStateOf<DominantColors>(DominantColors()) }
+    
     val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
     val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
     val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
@@ -223,22 +222,19 @@ fun PlayerScreen(
         }
     }
     
-    val currentSeekbarStyle = try {
-        SeekbarStyle.valueOf(savedSeekbarStyleString)
-    } catch (e: Exception) {
-        SeekbarStyle.WAVEFORM
+    val currentSeekbarStyle = remember(savedSeekbarStyleString) {
+        runCatching { SeekbarStyle.valueOf(savedSeekbarStyleString) }
+            .getOrDefault(SeekbarStyle.WAVEFORM)
     }
     
-    val currentArtworkShape = try {
-        ArtworkShape.valueOf(savedArtworkShapeString) 
-    } catch (e: Exception) {
-        ArtworkShape.ROUNDED_SQUARE
+    val currentArtworkShape = remember(savedArtworkShapeString) {
+        runCatching { ArtworkShape.valueOf(savedArtworkShapeString) }
+            .getOrDefault(ArtworkShape.ROUNDED_SQUARE)
     }
     
-    val currentArtworkSize = try {
-        ArtworkSize.valueOf(savedArtworkSizeString)
-    } catch (e: Exception) {
-        ArtworkSize.LARGE
+    val currentArtworkSize = remember(savedArtworkSizeString) {
+        runCatching { ArtworkSize.valueOf(savedArtworkSizeString) }
+            .getOrDefault(ArtworkSize.LARGE)
     }
 
     // Show toast messages from playlist operations
@@ -268,10 +264,7 @@ fun PlayerScreen(
         isDarkTheme = isAppInDarkTheme
     )
     
-    // Update the mutable dominantColors variable
-    LaunchedEffect(extractedColors) {
-        dominantColors = extractedColors
-    }
+    val dominantColors = extractedColors
     
     DisposableEffect(Unit) {
         val window = (view.context as Activity).window
