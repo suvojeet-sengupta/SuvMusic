@@ -370,8 +370,34 @@ class MusicPlayer @Inject constructor(
                             resolveAndPlayCurrentItem(firstSong, 0, shouldPlay = true)
                         }
                     }
+                } else if (state.isAutoplayEnabled || state.isRadioMode) {
+                    // Autoplay/Radio: Queue ended but more songs should be loaded.
+                    // Wait for the observer to add more songs, then play the next one.
+                    scope.launch {
+                        val originalSize = queueSize
+                        // Retry up to 6 seconds (12 x 500ms) to allow autoplay to add songs
+                        repeat(12) {
+                            delay(500)
+                            val updatedState = _playerState.value
+                            if (updatedState.queue.size > originalSize) {
+                                val newIndex = originalSize
+                                val newSong = updatedState.queue.getOrNull(newIndex)
+                                if (newSong != null) {
+                                    // Add new media items to player if needed
+                                    val ctrl = mediaController ?: return@launch
+                                    if (newIndex < ctrl.mediaItemCount) {
+                                        ctrl.seekTo(newIndex, 0L)
+                                    }
+                                    resolveAndPlayCurrentItem(newSong, newIndex, shouldPlay = true)
+                                }
+                                return@launch
+                            }
+                        }
+                        // Timeout: no new songs were added — playback stops
+                        android.util.Log.w("MusicPlayer", "STATE_ENDED: autoplay timeout, no new songs loaded")
+                    }
                 }
-                // RepeatMode.OFF at end of queue — playback stops naturally (correct)
+                // RepeatMode.OFF at end of queue (no autoplay) — playback stops naturally (correct)
             }
         }
         
@@ -851,6 +877,9 @@ class MusicPlayer @Inject constructor(
                                 if (nextIndex >= state.queue.size && state.repeatMode == RepeatMode.ALL) {
                                     nextIndex = 0
                                 }
+                                // Only do early transition if the next index is valid.
+                                // For autoplay/radio, new songs are appended dynamically so
+                                // nextIndex may not exist yet — let STATE_ENDED handle that.
                                 if (nextIndex < state.queue.size && state.queue.getOrNull(nextIndex)?.id == preloadedNextSongId) {
                                     // Transition to next song immediately
                                     controller.seekToNextMediaItem()
@@ -950,8 +979,10 @@ class MusicPlayer @Inject constructor(
         if (nextIndex >= state.queue.size) {
             if (state.repeatMode == RepeatMode.ALL) {
                 nextIndex = 0
-            } else if (state.isAutoplayEnabled && state.queue.isNotEmpty()) {
-                nextIndex = 0 // Autoplay will loop
+            } else if (state.isAutoplayEnabled || state.isRadioMode) {
+                // Autoplay/Radio: new songs will be appended dynamically.
+                // Don't wrap to index 0 — just skip preloading until songs are added.
+                return
             } else {
                 return // No next song
             }
@@ -1179,28 +1210,26 @@ class MusicPlayer @Inject constructor(
                  playSong(queue[0], queue, 0)
              } else if (state.isAutoplayEnabled || state.isRadioMode) {
                  // Infinite Autoplay/Radio: The ViewModel automatically loads more songs when nearing the end.
-                 // Check if queue has grown (new songs added by autoplay observer)
+                 // Wait with retry loop for new songs to be added by the autoplay observer.
                  val originalQueueSize = queue.size
                  scope.launch {
-                     delay(500) // Brief delay to allow autoplay to add songs
-                     val updatedState = _playerState.value
-                     val updatedQueue = updatedState.queue
-                     val updatedIndex = updatedState.currentIndex
-                     
-                     // Bug Fix: Check for new songs first (queue grew via autoplay),
-                     // then fall back to checking updatedIndex+1.
-                     // Old logic checked updatedIndex+1 first which could miss new songs
-                     // since updatedIndex hadn't advanced yet.
-                     if (updatedQueue.size > originalQueueSize) {
-                         // New songs were added, play the first new one
-                         val newSongIndex = originalQueueSize
-                         if (newSongIndex < updatedQueue.size) {
-                             playSong(updatedQueue[newSongIndex], updatedQueue, newSongIndex)
+                     // Retry up to 6 seconds (12 x 500ms) to allow autoplay to load songs
+                     repeat(12) {
+                         delay(500)
+                         val updatedState = _playerState.value
+                         val updatedQueue = updatedState.queue
+                         
+                         if (updatedQueue.size > originalQueueSize) {
+                             // New songs were added, play the first new one
+                             val newSongIndex = originalQueueSize
+                             if (newSongIndex < updatedQueue.size) {
+                                 playSong(updatedQueue[newSongIndex], updatedQueue, newSongIndex)
+                             }
+                             return@launch
                          }
-                     } else if (updatedIndex + 1 < updatedQueue.size) {
-                         playSong(updatedQueue[updatedIndex + 1], updatedQueue, updatedIndex + 1)
                      }
-                     // If still no new songs, playback naturally stops (rare edge case)
+                     // Timeout: no new songs loaded — playback stops
+                     android.util.Log.w("MusicPlayer", "seekToNext: autoplay timeout, no new songs loaded after retries")
                  }
              }
              // Else: Stop or do nothing
