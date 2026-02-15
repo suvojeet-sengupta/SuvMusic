@@ -8,6 +8,7 @@ import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.UpdateRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import dagger.Module
 import dagger.Provides
@@ -101,9 +102,10 @@ object AppModule {
         cache: androidx.media3.datasource.cache.Cache,
         @PlayerDataSource dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
         musicHapticsManager: com.suvojeet.suvmusic.util.MusicHapticsManager,
-        ttsManager: com.suvojeet.suvmusic.util.TTSManager
+        ttsManager: com.suvojeet.suvmusic.util.TTSManager,
+        spatialAudioProcessor: SpatialAudioProcessor
     ): MusicPlayer {
-        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory, musicHapticsManager, ttsManager)
+        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory, musicHapticsManager, ttsManager, spatialAudioProcessor)
     }
     @Provides
     @Singleton
