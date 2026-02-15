@@ -6,6 +6,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +26,8 @@ class DiscordManager @Inject constructor(
     private var useDetails: Boolean = false
     private var isPrivacyMode: Boolean = false
     
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var privacyCollectorJob: Job? = null
     
     private val _connectionStatus = MutableStateFlow("Disconnected")
     val connectionStatus: StateFlow<String> = _connectionStatus.asStateFlow()
@@ -40,39 +43,34 @@ class DiscordManager @Inject constructor(
             disconnect()
         }
         
-        scope.launch {
-            sessionManager.privacyModeEnabledFlow.collect { enabled ->
-                isPrivacyMode = enabled
-                if (enabled) {
-                    // Start Privacy Mode: Clear presence but keep connection? 
-                    // Or maybe just show "Listening to Music" without details?
-                    // "Stealth Listening" implies hiding completely.
-                    // Discord RPC doesn't have a "Hide" method other than clearing, 
-                    // but usually we just stop sending updates.
-                    // If we want to hide "Playing SuvMusic", we should probably disconnect or send empty.
-                    // Let's just stop sending updates for now.
-                    // Optionally, we can clear the activity:
-                    discordRPC?.updateActivity(name = "SuvMusic", state = null, details = null)
+        privacyCollectorJob?.cancel()
+        privacyCollectorJob = scope.launch {
+            sessionManager.privacyModeEnabledFlow.collect { privacyEnabled ->
+                isPrivacyMode = privacyEnabled
+                if (privacyEnabled) {
+                    // Fully clear presence to hide from Discord profile
+                    discordRPC?.clearActivity()
                 }
             }
         }
     }
     
     fun updateSettings(userToken: String, enabled: Boolean, details: Boolean) {
-        val wasConnected = discordRPC != null && discordRPC!!.isWebSocketConnected()
+        val previousToken = token
         token = userToken
         isEnabled = enabled
         useDetails = details
         
         if (isEnabled && !userToken.isBlank()) {
-            if (!wasConnected || discordRPC == null) {
-                // Reconnect if not connected or instance missing
-                 connect()
+            // Only reconnect if token changed or not connected
+            val tokenChanged = previousToken != userToken
+            val isConnected = discordRPC != null && discordRPC!!.isWebSocketConnected()
+            
+            if (tokenChanged || !isConnected) {
+                disconnect()
+                connect()
             }
-            // If already connected and token changed, we might need to reconnect. 
-            // For simplicity, we can just reconnect.
-             disconnect()
-            connect()
+            // If already connected with same token, no action needed — just update local flags
         } else {
             disconnect()
         }
@@ -99,6 +97,14 @@ class DiscordManager @Inject constructor(
         _connectionStatus.value = "Disconnected"
     }
     
+    /** Clear presence and disconnect cleanly. Called when app is going away. */
+    fun cleanup() {
+        discordRPC?.clearActivity()
+        disconnect()
+        privacyCollectorJob?.cancel()
+        scope.cancel()
+    }
+    
     fun updatePresence(
         title: String,
         artist: String,
@@ -112,50 +118,33 @@ class DiscordManager @Inject constructor(
         
         if (isPlaying) {
              val startTime = System.currentTimeMillis() - currentPosition
-             // val endTime = startTime + duration // Optional, creates a countdown
             
             val (finalDetails, finalState) = if (useDetails) {
                  title to artist
             } else {
                  artist to title
             }
-            
-            val formattedImageUrl = when {
-                imageUrl.isNullOrBlank() -> null
-                imageUrl.startsWith("http") -> imageUrl
-                else -> "https:$imageUrl"
-            }
 
             discordRPC?.updateActivity(
                 name = "SuvMusic",
                 state = finalState,
                 details = finalDetails,
-                imageUrl = formattedImageUrl,
+                imageUrl = imageUrl,
                 largeText = "Listening to $title",
                 startTime = startTime,
-                // endTime = if (duration > 0) startTime + duration else null
             )
         } else {
-             // Clear activity or show paused?
-             // Usually showing "Paused" or just clearing relative timestamps is enough.
-             
             val (finalDetails, finalState) = if (useDetails) {
                  "$title (Paused)" to artist
             } else {
                  artist to "$title (Paused)"
             }
 
-            val formattedImageUrl = when {
-                imageUrl.isNullOrBlank() -> null
-                imageUrl.startsWith("http") -> imageUrl
-                else -> "https:$imageUrl"
-            }
-
              discordRPC?.updateActivity(
                 name = "SuvMusic",
                 state = finalState,
                 details = finalDetails,
-                imageUrl = formattedImageUrl,
+                imageUrl = imageUrl,
                 largeText = "Paused: $title"
             )
         }

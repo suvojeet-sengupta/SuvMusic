@@ -1145,6 +1145,8 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        // Clear Discord presence so it doesn't linger on the profile
+        discordManager.cleanup()
         // Don't release player here - it's shared
     }
 }
