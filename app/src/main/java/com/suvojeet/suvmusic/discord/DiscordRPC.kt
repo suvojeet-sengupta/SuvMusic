@@ -19,10 +19,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import java.util.logging.Logger
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -54,10 +56,8 @@ class DiscordRPC(
     private var currentReconnectDelay = INITIAL_RECONNECT_DELAY
     private var lastPresence: Presence? = null
 
-    private val supervisorJob = SupervisorJob()
-
     override val coroutineContext: CoroutineContext
-        get() = supervisorJob + Dispatchers.IO
+        get() = SupervisorJob() + Dispatchers.IO
 
     fun connect() {
         if (connected) {
@@ -265,23 +265,18 @@ class DiscordRPC(
         reconnectionJob?.cancel()
         heartbeatJob?.cancel()
         heartbeatJob = null
-        connected = false
-        lastPresence = null
-        try {
-            websocket?.let { ws ->
-                launch {
-                    try {
-                        ws.close()
-                        Log.i(tag, "Gateway: Connection to gateway closed")
-                    } catch (e: Exception) {
-                        Log.e(tag, "Error closing gateway", e)
-                    }
-                }
-            }
-        } catch (_: Exception) {}
-        supervisorJob.cancel()
+        this.cancel()
         resumeGatewayUrl = null
         sessionId = null
+        connected = false
+        runBlocking {
+            try {
+                websocket?.close()
+                Log.i(tag, "Gateway: Connection to gateway closed")
+            } catch (e: Exception) {
+                Log.e(tag, "Error closing gateway", e)
+            }
+        }
     }
 
     fun updateActivity(
@@ -297,24 +292,27 @@ class DiscordRPC(
         buttonLabel: String? = null,
         buttonUrl: String? = null
     ) {
-         // Convert external image URL to Discord's mp:external format
-         val resolvedImage = resolveImageUrl(imageUrl)
-         
          val presence = Presence(
             activities = listOf(
                 Activity(
                     name = name,
                     state = state,
                     details = details,
-                    type = type,
-                    timestamps = if (startTime != null || endTime != null) Timestamps(startTime, endTime) else null,
+                    type = type, // Listening
+                    timestamps = Timestamps(startTime, endTime),
                     assets = Assets(
-                        largeImage = resolvedImage,
+                        largeImage = imageUrl, // Use direct URL, client often handles it if valid or proxy might be needed but mp: prefix is unreliable
+                        // NOTE: For external images to work without an app ID, we ideally need a proxy or they might not show up.
+                        // Standard Discord RPC requires an Application ID and uploaded assets or specific external URL capability.
+                        // Assuming 'mp:external' works or we might need to rely on generic icons if not using a specific App ID.
+                        // Actually, Kizzy uses a specific repository to resolve images. We might skip complex image resolution for now
+                        // and just try direct URL or a default one if this fails.
+                        // For user tokens, custom images are tricky.
                         largeText = largeText
                     ),
                     buttons = if (buttonLabel != null && buttonUrl != null) listOf(buttonLabel) else null,
                     metadata = if (buttonUrl != null) Metadata(buttonUrls = listOf(buttonUrl)) else null,
-                    applicationId = APPLICATION_ID
+                    applicationId = null // We are using User Token, usually doesn't bind to specific App ID unless we want it to.
                 )
             ),
             afk = false,
@@ -322,46 +320,18 @@ class DiscordRPC(
             status = "online"
         )
         
-        launch {
-            sendActivity(presence)
-        }
-    }
-    
-    /**
-     * Convert an external image URL to Discord's mp:external format.
-     * Discord requires external images to use the mp:external/url proxy.
-     */
-    private fun resolveImageUrl(url: String?): String? {
-        if (url.isNullOrBlank()) return null
-        val fullUrl = if (url.startsWith("http")) url else "https:$url"
-        // Strip the protocol prefix for mp:external format
-        val stripped = fullUrl
-            .removePrefix("https://")
-            .removePrefix("http://")
-        return "mp:external/$stripped"
-    }
-
-    fun clearActivity() {
-        val presence = Presence(
-            activities = emptyList(),
-            afk = false,
-            since = System.currentTimeMillis(),
-            status = "online"
-        )
-        lastPresence = null
+        lastPresence = presence
+        
         launch {
             sendActivity(presence)
         }
     }
     
     suspend fun sendActivity(presence: Presence) {
-        lastPresence = presence
-        
         if (!isSocketConnectedToAccount()) {
-             // Not connected yet — lastPresence is saved above,
-             // so when READY fires it will resend automatically.
-             Log.i(tag, "Gateway: Not connected yet, presence queued for READY")
-             if (!connected) connect()
+             // If not connected, we should try to connect or wait.
+             // But for now, just logging it.
+             if(!connected) connect()
              return
         }
         
@@ -379,8 +349,5 @@ class DiscordRPC(
     companion object {
         private val INITIAL_RECONNECT_DELAY = 1.seconds
         private val MAX_RECONNECT_DELAY = 60.seconds
-        
-        // Discord Developer Portal → SuvMusic application
-        const val APPLICATION_ID = "1472510657298567331"
     }
 }
