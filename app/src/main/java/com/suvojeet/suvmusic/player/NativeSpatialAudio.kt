@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.player
 
+import java.nio.ByteBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +26,23 @@ class NativeSpatialAudio @Inject constructor() {
         }
     }
 
+    fun processPcm16(buffer: ByteBuffer, frameCount: Int, channelCount: Int, sampleRate: Int, azimuth: Float, elevation: Float) {
+        if (!isLibraryLoaded) return
+        if (!buffer.isDirect) {
+            throw IllegalArgumentException("processPcm16 requires a direct ByteBuffer")
+        }
+        nProcessPcm16(buffer, frameCount, channelCount, sampleRate, azimuth, elevation)
+    }
+
     private external fun nProcess(buffer: FloatArray, azimuth: Float, elevation: Float, sampleRate: Int)
+    private external fun nProcessPcm16(
+        buffer: ByteBuffer,
+        frameCount: Int,
+        channelCount: Int,
+        sampleRate: Int,
+        azimuth: Float,
+        elevation: Float
+    )
 
     /**
      * Reset the internal state of the spatializer.

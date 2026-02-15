@@ -3,6 +3,7 @@
 #include <cmath>
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include "limiter.h"
 #include "biquad.h"
 
@@ -220,6 +221,7 @@ static Spatializer spatializer;
 static Limiter limiter;
 static Crossfeed crossfeed;
 static ParametricEQ equalizer;
+static std::vector<float> processingBuffer;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -243,6 +245,49 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcess(JNIEnv *env, jobje
         limiter.process(data, len / 2, 2, sample_rate);
 
         env->ReleasePrimitiveArrayCritical(buffer, data, 0);
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, jobject thiz,
+                                                                   jobject buffer,
+                                                                   jint frameCount,
+                                                                   jint channelCount,
+                                                                   jint sampleRate,
+                                                                   jfloat azimuth,
+                                                                   jfloat elevation) {
+    if (buffer == nullptr || frameCount <= 0 || channelCount <= 0) {
+        return;
+    }
+
+    auto *pcmData = static_cast<int16_t *>(env->GetDirectBufferAddress(buffer));
+    if (pcmData == nullptr) {
+        return;
+    }
+
+    const int totalSamples = frameCount * channelCount;
+    if (totalSamples <= 0) {
+        return;
+    }
+
+    if (processingBuffer.size() < static_cast<size_t>(totalSamples)) {
+        processingBuffer.resize(static_cast<size_t>(totalSamples));
+    }
+
+    float *floatData = processingBuffer.data();
+    for (int i = 0; i < totalSamples; ++i) {
+        floatData[i] = static_cast<float>(pcmData[i]) / 32768.0f;
+    }
+
+    crossfeed.process(floatData, frameCount, sampleRate);
+    equalizer.process(floatData, frameCount, channelCount, sampleRate);
+    spatializer.process(floatData, frameCount, azimuth, elevation, sampleRate);
+    limiter.process(floatData, frameCount, channelCount, sampleRate);
+
+    for (int i = 0; i < totalSamples; ++i) {
+        float sample = std::max(-1.0f, std::min(1.0f, floatData[i]));
+        pcmData[i] = static_cast<int16_t>(sample * 32767.0f);
     }
 }
 
