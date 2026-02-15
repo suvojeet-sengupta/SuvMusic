@@ -381,7 +381,6 @@ class PlayerViewModel @Inject constructor(
         // Reset radio base so Autoplay adapts to this new song
         radioBaseSongId = null
         _isRadioMode.value = false
-        _isRadioMode.value = false
         musicPlayer.updateRadioMode(false)
         musicPlayer.playSong(song, queue, startIndex)
     }
@@ -562,15 +561,13 @@ class PlayerViewModel @Inject constructor(
             try {
                 val radioSongs = mutableListOf<Song>()
                 
-                // 1. Try YT Music recommendations first (works best when logged in)
-                if (song.source == SongSource.YOUTUBE || song.source == SongSource.DOWNLOADED) {
-                    val relatedSongs = youTubeRepository.getRelatedSongs(song.id)
-                    if (relatedSongs.isNotEmpty()) {
-                        // De-duplicate and filter current song
-                        val filtered = relatedSongs.filter { it.id != song.id }
-                            .distinctBy { it.id }
-                        radioSongs.addAll(filtered.take(30))
-                    }
+                // 1. Try YT Music recommendations first (works for any song with an ID)
+                val relatedSongs = youTubeRepository.getRelatedSongs(song.id)
+                if (relatedSongs.isNotEmpty()) {
+                    // De-duplicate and filter current song
+                    val filtered = relatedSongs.filter { it.id != song.id }
+                        .distinctBy { it.id }
+                    radioSongs.addAll(filtered.take(30))
                 }
                 
                 // 2. If not enough songs or not a YouTube song, use local recommendation engine
@@ -658,15 +655,28 @@ class PlayerViewModel @Inject constructor(
                     newSongs = moreSongs.filter { it.id !in existingIds }
                 }
                 
+                // Fallback: try a random song from the middle of the queue as seed
+                if (newSongs.isEmpty() && currentQueue.size > 2) {
+                    val randomSeed = currentQueue[currentQueue.indices.random()]
+                    if (randomSeed.id != baseSongId) {
+                        moreSongs = youTubeRepository.getRelatedSongs(randomSeed.id)
+                        newSongs = moreSongs.filter { it.id !in existingIds }
+                    }
+                }
+                
+                // Last resort fallback: use local recommendation engine
+                if (newSongs.isEmpty()) {
+                    val localRecs = recommendationEngine.getPersonalizedRecommendations(20)
+                    newSongs = localRecs.filter { it.id !in existingIds }
+                }
+                
                 if (newSongs.isNotEmpty()) {
                     val batchToAdd = newSongs.take(10)
                     musicPlayer.addToQueue(batchToAdd)
                     // Update base song for next batch (use last added song for variety)
                     radioBaseSongId = batchToAdd.lastOrNull()?.id ?: baseSongId
                 } else {
-                    // Strict YT Music recommendations requested:
-                    // Removed local fallback to ensure accuracy and relevance.
-                    Log.w("PlayerViewModel", "Could not find more related songs from YouTube Music")
+                    Log.w("PlayerViewModel", "Could not find more related songs from any source")
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error loading more radio songs", e)
@@ -1145,8 +1155,6 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Clear Discord presence so it doesn't linger on the profile
-        discordManager.cleanup()
         // Don't release player here - it's shared
     }
 }
