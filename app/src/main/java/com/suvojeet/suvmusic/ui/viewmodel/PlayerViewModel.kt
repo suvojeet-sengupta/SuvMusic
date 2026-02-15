@@ -726,9 +726,10 @@ class PlayerViewModel @Inject constructor(
         // Sync if played enough
         if (currentSongPlayTime >= HISTORY_SYNC_THRESHOLD_MS) {
             lastSyncedVideoId = currentSong.id
+            val playedSeconds = (currentSongPlayTime / 1000).toInt()
             viewModelScope.launch {
-                Log.d("PlayerViewModel", "Triggering history sync for ${currentSong.title}")
-                youTubeRepository.markAsWatched(currentSong.id)
+                Log.d("PlayerViewModel", "Triggering history sync for ${currentSong.title} (${playedSeconds}s played)")
+                youTubeRepository.markAsWatched(currentSong.id, playedSeconds)
             }
         }
     }
