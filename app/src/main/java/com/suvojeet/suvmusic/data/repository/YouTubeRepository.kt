@@ -720,35 +720,21 @@ class YouTubeRepository @Inject constructor(
         if (!networkMonitor.isCurrentlyConnected() || !sessionManager.isLoggedIn()) return@withContext false
         
         try {
-            // Incremental Sync Strategy:
-            // 1. Clear old data to avoid duplicates/stale data
-            // 2. Fetch pages and append immediately to DB -> Triggers UI Flow updates
-            
-            // Clear existing Liked Songs
-            libraryRepository.removePlaylist("LM")
+            // Atomic Sync Strategy:
+            // 1. Fetch ALL pages into memory first
+            // 2. Replace old data atomically in a single DB transaction
+            // This prevents the UI from showing intermediate counts (0 -> 25 -> 50 -> ...)
             
             val preferredLanguages = sessionManager.getPreferredLanguages()
             val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
             
             val initialResponse = fetchInternalApi("FEmusic_liked_videos", hl = hl)
             val initialSongs = parseSongsFromInternalJson(initialResponse)
-            var totalSongsAdded = 0
             
             if (initialSongs.isNotEmpty()) {
-                // Save Playlist Metadata first so the card appears/updates
-                libraryRepository.savePlaylist(
-                    Playlist(
-                        id = "LM",
-                        title = "Your Likes",
-                        author = "You",
-                        thumbnailUrl = initialSongs.first().thumbnailUrl,
-                        songs = emptyList() // Metadata only
-                    )
-                )
-                
-                // Append first batch
-                libraryRepository.appendPlaylistSongs("LM", initialSongs, totalSongsAdded)
-                totalSongsAdded += initialSongs.size
+                // Accumulate all songs in memory
+                val allSongs = mutableListOf<Song>()
+                allSongs.addAll(initialSongs)
                 
                 if (fetchAll) {
                     var currentJson = JSONObject(initialResponse)
@@ -763,9 +749,7 @@ class YouTubeRepository @Inject constructor(
                                 val newSongs = parseSongsFromInternalJson(continuationResponse)
                                 if (newSongs.isEmpty()) break
                                 
-                                // Append immediately
-                                libraryRepository.appendPlaylistSongs("LM", newSongs, totalSongsAdded)
-                                totalSongsAdded += newSongs.size
+                                allSongs.addAll(newSongs)
                                 
                                 currentJson = JSONObject(continuationResponse)
                                 continuationToken = extractContinuationToken(currentJson)
@@ -778,6 +762,21 @@ class YouTubeRepository @Inject constructor(
                         }
                     }
                 }
+
+                // Save Playlist Metadata
+                libraryRepository.savePlaylist(
+                    Playlist(
+                        id = "LM",
+                        title = "Your Likes",
+                        author = "You",
+                        thumbnailUrl = allSongs.first().thumbnailUrl,
+                        songs = emptyList() // Metadata only
+                    )
+                )
+
+                // Atomic replace: delete old + insert all new in one transaction
+                libraryRepository.replacePlaylistSongs("LM", allSongs)
+                
                 return@withContext true
             }
         } catch (e: Exception) {

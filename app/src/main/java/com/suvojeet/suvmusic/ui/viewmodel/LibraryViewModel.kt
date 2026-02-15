@@ -32,6 +32,7 @@ data class LibraryUiState(
     val localSongs: List<Song> = emptyList(),
     val downloadedSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    val likedSongsCount: Int = 0,
     val libraryArtists: List<Artist> = emptyList(),
     val libraryAlbums: List<Album> = emptyList(),
     val isLoading: Boolean = false,
@@ -107,6 +108,16 @@ class LibraryViewModel @Inject constructor(
     }
 
     private fun observeLikedSongs() {
+        // Observe only the count for Library screen cards (lightweight)
+        viewModelScope.launch {
+            libraryRepository.getPlaylistSongCountFlow("LM").collect { count ->
+                _uiState.update { it.copy(likedSongsCount = count) }
+            }
+        }
+    }
+
+    fun loadLikedSongs() {
+        // Load full liked songs list only when user actually navigates to liked songs
         viewModelScope.launch {
             libraryRepository.getCachedPlaylistSongsFlow("LM").collect { songs ->
                 _uiState.update { it.copy(likedSongs = songs) }
@@ -466,6 +477,9 @@ class LibraryViewModel @Inject constructor(
 
     fun setFilter(filter: LibraryFilter) {
         _uiState.update { it.copy(selectedFilter = filter) }
+        if (filter == LibraryFilter.SONGS) {
+            loadLikedSongs()
+        }
     }
 
     private suspend fun loadCachedSongCount() {

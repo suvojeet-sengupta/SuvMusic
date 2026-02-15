@@ -105,6 +105,28 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getPlaylistSongCountFlow(playlistId: String): Flow<Int> {
+        return libraryDao.getPlaylistSongCountFlow(playlistId)
+    }
+
+    override suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>) {
+        val entities = songs.mapIndexed { index, song ->
+            PlaylistSongEntity(
+                playlistId = playlistId,
+                songId = song.id,
+                title = song.title,
+                artist = song.artist,
+                album = song.album,
+                thumbnailUrl = song.thumbnailUrl,
+                duration = song.duration,
+                source = song.source.name,
+                localUri = song.localUri?.toString(),
+                order = index
+            )
+        }
+        libraryDao.replacePlaylistSongs(playlistId, entities)
+    }
+
     override suspend fun removePlaylist(playlistId: String) {
         libraryDao.deleteItem(playlistId)
         libraryDao.deletePlaylistSongs(playlistId)
