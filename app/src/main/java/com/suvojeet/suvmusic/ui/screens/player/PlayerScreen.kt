@@ -1195,16 +1195,22 @@ fun PlayerScreen(
             )
             
             // Equalizer Sheet
-            com.suvojeet.suvmusic.ui.components.EqualizerSheet(
-                isVisible = showEqualizerSheet,
-                onDismiss = { showEqualizerSheet = false },
-                dominantColor = dominantColors.primary,
-                onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
-                onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) },
-                onReset = { playerViewModel.resetEqBands() },
-                initialEnabled = eqEnabled,
-                initialBands = eqBands
-            )
+            AnimatedVisibility(
+                visible = showEqualizerSheet,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                com.suvojeet.suvmusic.ui.components.EqualizerSheet(
+                    isVisible = true,
+                    onDismiss = { showEqualizerSheet = false },
+                    dominantColor = dominantColors.primary,
+                    onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
+                    onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) },
+                    onReset = { playerViewModel.resetEqBands() },
+                    initialEnabled = eqEnabled,
+                    initialBands = eqBands
+                )
+            }
             
             // Listen Together Sheet
             AnimatedVisibility(
