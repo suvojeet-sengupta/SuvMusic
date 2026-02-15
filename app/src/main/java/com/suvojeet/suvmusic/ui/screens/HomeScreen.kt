@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import android.content.Intent
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +48,12 @@ import coil.request.ImageRequest
 import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
+import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
+import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
+import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.HomeEvent
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import com.suvojeet.suvmusic.ui.utils.animateEnter
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
@@ -63,16 +69,32 @@ import java.util.Calendar
 fun HomeScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
-    onAlbumClick: (com.suvojeet.suvmusic.core.model.Album) -> Unit,
+    onAlbumClick: (Album) -> Unit,
     onRecentsClick: () -> Unit = {},
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
     currentSong: Song? = null,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    
+    // Song Menu State
+    var showSongMenu by remember { mutableStateOf(false) }
+    var selectedSong: Song? by remember { mutableStateOf(null) }
+    
+    // Handle Events
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is HomeEvent.ShowAddToPlaylistSheet -> {
+                    playlistViewModel.showAddToPlaylistSheet(event.song)
+                }
+            }
+        }
+    }
     
     // Dynamic Background Colors
     val dominantColors = com.suvojeet.suvmusic.ui.components.rememberDominantColors(
@@ -157,6 +179,10 @@ fun HomeScreen(
                                     onSongClick = onSongClick,
                                     onPlaylistClick = onPlaylistClick,
                                     onAlbumClick = onAlbumClick,
+                                    onSongMoreClick = { song ->
+                                        selectedSong = song
+                                        showSongMenu = true
+                                    },
                                     modifier = Modifier.animateEnter(index = 4)
                                 )
                             }
@@ -178,6 +204,10 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
+                                        onSongMoreClick = { song ->
+                                            selectedSong = song
+                                            showSongMenu = true
+                                        },
                                         modifier = enterModifier,
                                     )
                                 }
@@ -187,6 +217,10 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
+                                        onSongMoreClick = { song ->
+                                            selectedSong = song
+                                            showSongMenu = true
+                                        },
                                         modifier = enterModifier,
                                     )
                                 }
@@ -196,6 +230,10 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
+                                        onSongMoreClick = { song ->
+                                            selectedSong = song
+                                            showSongMenu = true
+                                        },
                                         modifier = enterModifier,
                                     )
                                 }
@@ -205,6 +243,10 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
+                                        onSongMoreClick = { song ->
+                                            selectedSong = song
+                                            showSongMenu = true
+                                        },
                                         modifier = enterModifier,
                                     )
                                 }
@@ -218,6 +260,10 @@ fun HomeScreen(
                                         onSavePlaylist = { playlist ->
                                             android.widget.Toast.makeText(context, "Saved ${playlist.name} to Library", android.widget.Toast.LENGTH_SHORT).show()
                                         },
+                                        onSongMoreClick = { song ->
+                                            selectedSong = song
+                                            showSongMenu = true
+                                        },
                                         modifier = enterModifier
                                     )
                                 }
@@ -227,6 +273,10 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
+                                        onSongMoreClick = { song ->
+                                            selectedSong = song
+                                            showSongMenu = true
+                                        },
                                         modifier = enterModifier,
                                     )
                                 }
@@ -262,6 +312,58 @@ fun HomeScreen(
                 }
             }
         }
+        
+        // Song Options Menu
+        selectedSong?.let { song ->
+            SongMenuBottomSheet(
+                isVisible = showSongMenu,
+                onDismiss = { showSongMenu = false },
+                song = song,
+                onPlayNext = {
+                    viewModel.playNext(song)
+                    showSongMenu = false
+                },
+                onAddToQueue = {
+                    viewModel.addToQueue(song)
+                    showSongMenu = false
+                },
+                onAddToPlaylist = {
+                    viewModel.addToPlaylist(song)
+                    showSongMenu = false
+                },
+                onDownload = {
+                    viewModel.downloadSong(song)
+                    showSongMenu = false
+                },
+                onShare = {
+                    val shareText = "🎵 ${song.title}\n🎤 ${song.artist}\n\nhttps://music.youtube.com/watch?v=${song.id}"
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                        type = "text/plain"
+                    }
+                    context.startActivity(Intent.createChooser(sendIntent, "Share Song"))
+                    showSongMenu = false
+                }
+            )
+        }
+
+        // Add to Playlist Sheet
+        val playlistUiState by playlistViewModel.uiState.collectAsState()
+        
+        AddToPlaylistSheet(
+            song = playlistUiState.selectedSong ?: Song("", "", "", "", 0L, null, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
+            isVisible = playlistUiState.showAddToPlaylistSheet,
+            playlists = playlistUiState.userPlaylists,
+            isLoading = playlistUiState.isLoadingPlaylists,
+            onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+            onAddToPlaylist = { playlistId ->
+                playlistViewModel.addSongToPlaylist(playlistId)
+            },
+            onCreateNewPlaylist = {
+                playlistViewModel.showCreatePlaylistDialog()
+            }
+        )
     }
 }
 

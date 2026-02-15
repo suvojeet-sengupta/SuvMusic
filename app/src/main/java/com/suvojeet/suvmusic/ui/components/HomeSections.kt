@@ -9,7 +9,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,26 +57,51 @@ fun HorizontalCarouselSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    if (section.items.isEmpty()) return
+
+    Column(modifier = modifier) {
         HomeSectionHeader(title = section.title)
+        Spacer(modifier = Modifier.height(16.dp))
         
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(section.items) { item ->
-                HomeItemCard(
-                    item = item, 
-                    onSongClick = onSongClick, 
-                    onPlaylistClick = onPlaylistClick, 
-                    onAlbumClick = onAlbumClick,
-                    sectionItems = section.items
-                )
+                when (item) {
+                    is HomeItem.SongItem -> {
+                        MusicCard(
+                            song = item.song,
+                            onClick = { onSongClick(section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }, section.items.indexOf(item)) },
+                            onMoreClick = { onSongMoreClick(item.song) },
+                            backgroundColor = Color.Transparent
+                        )
+                    }
+                    is HomeItem.PlaylistItem -> {
+                        HomeItemCard(
+                            item = item, 
+                            onSongClick = onSongClick, 
+                            onPlaylistClick = onPlaylistClick, 
+                            onAlbumClick = onAlbumClick,
+                            sectionItems = section.items,
+                            onSongMoreClick = onSongMoreClick
+                        )
+                    }
+                    is HomeItem.AlbumItem -> {
+                        HomeItemCard(
+                            item = item, 
+                            onSongClick = onSongClick, 
+                            onPlaylistClick = onPlaylistClick, 
+                            onAlbumClick = onAlbumClick,
+                            sectionItems = section.items,
+                            onSongMoreClick = onSongMoreClick
+                        )
+                    }
+                    else -> {}
+                }
             }
         }
     }
@@ -86,6 +113,7 @@ fun VerticalListSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -109,6 +137,7 @@ fun VerticalListSection(
                                 val index = songs.indexOf(item.song)
                                 if (index != -1) onSongClick(songs, index)
                             },
+                             onMoreClick = { onSongMoreClick(item.song) },
                              backgroundColor = Color.Transparent
                         )
                     }
@@ -158,6 +187,7 @@ fun LargeCardWithListSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (section.items.isEmpty()) return
@@ -189,7 +219,8 @@ fun LargeCardWithListSection(
                     onSongClick = onSongClick,
                     onPlaylistClick = onPlaylistClick,
                     onAlbumClick = onAlbumClick,
-                    sectionItems = section.items
+                    sectionItems = section.items,
+                    onSongMoreClick = onSongMoreClick
                  )
             }
             
@@ -210,6 +241,7 @@ fun LargeCardWithListSection(
                                     val index = songs.indexOf(item.song)
                                     if (index != -1) onSongClick(songs, index)
                                 },
+                                onMoreClick = { onSongMoreClick(item.song) },
                                 modifier = Modifier.height(60.dp)
                             )
                         }
@@ -244,6 +276,7 @@ fun GridSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -253,10 +286,6 @@ fun GridSection(
         HomeSectionHeader(title = section.title)
         
         // Use a LazyHorizontalGrid for grid feel but horizontally scrolling
-        // OR render a fixed grid if it's supposed to be vertical. 
-        // Based on "Fresh finds" typically it creates a 2-row horizontal scroll or a vertical grid.
-        // Assuming horizontal scroll with 2 rows for now as it fits typical music apps better within a vertical feed.
-        
         LazyHorizontalGrid(
             rows = GridCells.Fixed(2),
             modifier = Modifier.height(340.dp), // Height for 2 items + spacing
@@ -270,7 +299,8 @@ fun GridSection(
                     onSongClick = onSongClick, 
                     onPlaylistClick = onPlaylistClick, 
                     onAlbumClick = onAlbumClick,
-                     sectionItems = section.items
+                     sectionItems = section.items,
+                     onSongMoreClick = onSongMoreClick
                 )
             }
         }
@@ -283,6 +313,7 @@ fun QuickPicksSection(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -316,6 +347,7 @@ fun QuickPicksSection(
                                         val index = songs.indexOf(item.song)
                                         if (index != -1) onSongClick(songs, index)
                                     },
+                                    onMoreClick = { onSongMoreClick(item.song) },
                                     backgroundColor = Color.Transparent
                                 )
                             }
@@ -349,7 +381,8 @@ fun HomeItemCardLarge(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    sectionItems: List<HomeItem>
+    sectionItems: List<HomeItem>,
+    onSongMoreClick: (Song) -> Unit = {}
 ) {
     // Adapter to use NewReleaseCard for HomeItem
     val (title, subtitle, imageUrl) = when (item) {
@@ -375,6 +408,9 @@ fun HomeItemCardLarge(
                 else -> {}
             }
         },
+        onMoreClick = if (item is HomeItem.SongItem) {
+            { onSongMoreClick(item.song) }
+        } else null,
         modifier = Modifier.fillMaxSize()
     )
 }
@@ -387,6 +423,7 @@ fun CommunityCarouselSection(
     onAlbumClick: (Album) -> Unit,
     onStartRadio: () -> Unit = {},
     onSavePlaylist: (PlaylistDisplayItem) -> Unit = {},
+    onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -663,6 +700,7 @@ fun NewReleaseCard(
     subtitle: String?,
     imageUrl: String?,
     onClick: () -> Unit,
+    onMoreClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
@@ -712,31 +750,49 @@ fun NewReleaseCard(
                         )
                     }
                 }
-
-                // Action Button (Arrow)
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
+                
+                // Bottom Section: Play Button & More
+                Row(
+                   modifier = Modifier.fillMaxWidth(),
+                   horizontalArrangement = Arrangement.End,
+                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (onMoreClick != null) {
+                        IconButton(onClick = onMoreClick) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = "More",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    
+                    Surface(
+                        onClick = onClick,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
-
+            
             // Right Section: Image
             AsyncImage(
                 model = imageRequest,
                 contentDescription = null,
                 modifier = Modifier
+                    .fillMaxHeight()
                     .aspectRatio(1f)
-                    .fillMaxHeight(),
+                    .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)),
                 contentScale = ContentScale.Crop
             )
         }

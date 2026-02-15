@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.util.ImageUtils
@@ -28,6 +29,8 @@ import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MoreVert
 
 @Composable
 fun HomeItemCard(
@@ -35,7 +38,8 @@ fun HomeItemCard(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    sectionItems: List<HomeItem>
+    sectionItems: List<HomeItem>,
+    onSongMoreClick: (Song) -> Unit = {}
 ) {
     when (item) {
         is HomeItem.SongItem -> {
@@ -47,6 +51,7 @@ fun HomeItemCard(
                     val index = songs.indexOf(item.song)
                     if (index != -1) onSongClick(songs, index)
                 },
+                onMoreClick = { onSongMoreClick(item.song) }
             )
         }
         is HomeItem.PlaylistItem -> {
@@ -145,7 +150,8 @@ fun PlaylistDisplayCard(
 @Composable
 fun MediumSongCard(
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onMoreClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     
@@ -192,19 +198,41 @@ fun MediumSongCard(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = song.title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = song.artist,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            
+            IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "More",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
     }
 }
 

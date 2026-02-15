@@ -14,13 +14,22 @@ import com.suvojeet.suvmusic.data.MusicSource
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.lastfm.RecommendedArtist
 import com.suvojeet.suvmusic.lastfm.RecommendedTrack
+import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+sealed class HomeEvent {
+    data class ShowAddToPlaylistSheet(val song: Song) : HomeEvent()
+}
 
 data class HomeUiState(
     val homeSections: List<HomeSection> = emptyList(),
@@ -41,11 +50,16 @@ class HomeViewModel @Inject constructor(
     private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,
     private val recommendationEngine: RecommendationEngine,
-    private val lastFmRepository: LastFmRepository
+    private val lastFmRepository: LastFmRepository,
+    private val musicPlayer: MusicPlayer,
+    private val downloadRepository: DownloadRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<HomeEvent>()
+    val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
     
     init {
         loadData()
@@ -271,6 +285,26 @@ class HomeViewModel @Inject constructor(
             } else {
                 _uiState.update { it.copy(recommendedArtists = emptyList(), recommendedTracks = emptyList()) }
             }
+        }
+    }
+
+    fun playNext(song: Song) {
+        musicPlayer.playNext(listOf(song))
+    }
+
+    fun addToQueue(song: Song) {
+        musicPlayer.addToQueue(listOf(song))
+    }
+
+    fun downloadSong(song: Song) {
+        viewModelScope.launch {
+            downloadRepository.downloadSong(song)
+        }
+    }
+
+    fun addToPlaylist(song: Song) {
+        viewModelScope.launch {
+            _events.emit(HomeEvent.ShowAddToPlaylistSheet(song))
         }
     }
 }
