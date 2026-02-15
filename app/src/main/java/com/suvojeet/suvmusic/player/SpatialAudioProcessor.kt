@@ -108,56 +108,66 @@ class SpatialAudioProcessor @Inject constructor(
         val remaining = inputBuffer.remaining()
         if (remaining == 0 || !isActive) return
 
-        // SMART BYPASS: If no effects are active, don't even convert or call C++
-        val effectsActive = isSpatialEnabled || isLimiterEnabled || (isCrossfeedEnabled && !isSpatialEnabled)
-        
-        if (!effectsActive) {
-            val outBuffer = replaceOutputBuffer(remaining)
-            outBuffer.put(inputBuffer)
-            outBuffer.flip()
+        val encoding = inputAudioFormat.encoding
+        val channelCount = inputAudioFormat.channelCount
+        val sampleRate = inputAudioFormat.sampleRate
+
+        if (channelCount <= 0 || sampleRate <= 0) {
+            val passthrough = replaceOutputBuffer(remaining)
+            passthrough.put(inputBuffer)
+            passthrough.flip()
             return
         }
 
-        // Prepare Float Array for processing
-        val floatArray: FloatArray
-        if (inputAudioFormat.encoding == C.ENCODING_PCM_16BIT) {
-            val sampleCount = remaining / 2
-            floatArray = FloatArray(sampleCount)
-            for (i in 0 until sampleCount) {
-                floatArray[i] = inputBuffer.getShort() / 32768f
-            }
-        } else {
-            val sampleCount = remaining / 4
-            floatArray = FloatArray(sampleCount)
-            inputBuffer.asFloatBuffer().get(floatArray)
-            inputBuffer.position(inputBuffer.position() + remaining)
+        val bytesPerSample = when (encoding) {
+            C.ENCODING_PCM_16BIT -> 2
+            C.ENCODING_PCM_FLOAT -> 4
+            else -> return
         }
 
-        // Process if enabled
-        if (isSpatialEnabled || isLimiterEnabled) {
-            // Get latest rotation from manager
-            val currentBalance = audioARManager.stereoBalance.value
-            
-            if (isSpatialEnabled) {
-                 azimuth = currentBalance * (Math.PI.toFloat() / 2f)
-                 nativeSpatialAudio.setLimiterBalance(0f)
-            } else {
-                 azimuth = 0f
-                 elevation = 0f
-                 nativeSpatialAudio.setLimiterBalance(currentBalance)
-            }
-            
-            // Native process (in-place)
-            nativeSpatialAudio.process(floatArray, azimuth, elevation, inputAudioFormat.sampleRate)
-        }
+        val frameCount = remaining / (bytesPerSample * channelCount)
+        if (frameCount <= 0) return
 
-        // Convert back to 16-bit PCM for Output
-        val outBuffer = replaceOutputBuffer(floatArray.size * 2) // 2 bytes per sample
-        for (sample in floatArray) {
-            val clamped = sample.coerceIn(-1.0f, 1.0f)
-            val shortSample = (clamped * 32767f).toInt().toShort()
-            outBuffer.putShort(shortSample)
+    val outBuffer = replaceOutputBuffer(frameCount * channelCount * 2)
+    outBuffer.order(ByteOrder.LITTLE_ENDIAN)
+        outBuffer.clear()
+        when (encoding) {
+            C.ENCODING_PCM_16BIT -> outBuffer.put(inputBuffer)
+            C.ENCODING_PCM_FLOAT -> {
+                inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
+                repeat(frameCount * channelCount) {
+                    val clamped = inputBuffer.getFloat().coerceIn(-1f, 1f)
+                    val sample = (clamped * 32767f).toInt().toShort()
+                    outBuffer.putShort(sample)
+                }
+            }
         }
         outBuffer.flip()
+
+        val effectsActive = isSpatialEnabled || isLimiterEnabled || (isCrossfeedEnabled && !isSpatialEnabled)
+        if (!effectsActive) {
+            return
+        }
+
+        val currentBalance = audioARManager.stereoBalance.value
+        if (isSpatialEnabled) {
+            azimuth = currentBalance * (Math.PI.toFloat() / 2f)
+            elevation = 0f
+            nativeSpatialAudio.setLimiterBalance(0f)
+        } else {
+            azimuth = 0f
+            elevation = 0f
+            nativeSpatialAudio.setLimiterBalance(currentBalance)
+        }
+
+        val nativeBuffer = outBuffer.duplicate().apply {
+            position(0)
+            limit(frameCount * channelCount * 2)
+        }
+
+        nativeSpatialAudio.processPcm16(nativeBuffer, frameCount, channelCount, sampleRate, azimuth, elevation)
+
+        outBuffer.position(0)
+        outBuffer.limit(frameCount * channelCount * 2)
     }
 }
