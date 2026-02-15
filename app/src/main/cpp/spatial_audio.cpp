@@ -7,6 +7,7 @@
 #include <mutex>
 #include "limiter.h"
 #include "biquad.h"
+#include "pitch_shifter.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -257,6 +258,7 @@ static Spatializer spatializer;
 static Limiter limiter;
 static Crossfeed crossfeed;
 static ParametricEQ equalizer;
+static PitchShifter pitchShifter;
 static std::vector<float> processingBuffer;
 
 extern "C"
@@ -268,17 +270,21 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcess(JNIEnv *env, jobje
     jsize len = env->GetArrayLength(buffer);
 
     if (data != nullptr) {
+        int numFrames = len / 2;
         // 1. Crossfeed (Subtle headphone correction)
-        crossfeed.process(data, len / 2, sample_rate);
+        crossfeed.process(data, numFrames, sample_rate);
 
         // 2. Parametric EQ (Tone shaping before spatial)
-        equalizer.process(data, len / 2, 2, sample_rate);
+        equalizer.process(data, numFrames, 2, sample_rate);
 
-        // 3. Spatial Audio (Positioning)
-        spatializer.process(data, len / 2, azimuth, elevation, sample_rate);
+        // 3. Pitch Shifter
+        pitchShifter.process(data, numFrames, 2);
+
+        // 4. Spatial Audio (Positioning)
+        spatializer.process(data, numFrames, azimuth, elevation, sample_rate);
         
-        // 4. Limiter / Volume Boost
-        limiter.process(data, len / 2, 2, sample_rate);
+        // 5. Limiter / Volume Boost
+        limiter.process(data, numFrames, 2, sample_rate);
 
         env->ReleasePrimitiveArrayCritical(buffer, data, 0);
     }
@@ -318,6 +324,7 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, 
 
     crossfeed.process(floatData, frameCount, sampleRate);
     equalizer.process(floatData, frameCount, channelCount, sampleRate);
+    pitchShifter.process(floatData, frameCount, channelCount);
     spatializer.process(floatData, frameCount, azimuth, elevation, sampleRate);
     limiter.process(floatData, frameCount, channelCount, sampleRate);
 
@@ -347,11 +354,18 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetCrossfeedParams(JNIEnv 
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetPlaybackParams(JNIEnv *env, jobject thiz, jfloat speed, jfloat pitch) {
+    pitchShifter.setParams(pitch, 44100);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nReset(JNIEnv *env, jobject thiz) {
     spatializer.reset();
     limiter.reset();
     crossfeed.reset();
     equalizer.reset();
+    pitchShifter.reset();
 }
 
 extern "C"

@@ -111,6 +111,14 @@ class NativeSpatialAudio @Inject constructor() {
 
     private external fun nSetEqBand(bandIndex: Int, gainDb: Float)
 
+    fun setPlaybackParams(speed: Float, pitch: Float) {
+        if (isLibraryLoaded) {
+            nSetPlaybackParams(speed, pitch)
+        }
+    }
+
+    private external fun nSetPlaybackParams(speed: Float, pitch: Float)
+
     /**
      * Extracts waveform data from a file using high-performance Memory-Mapped IO (mmap).
      * @param filePath Path to the local file.

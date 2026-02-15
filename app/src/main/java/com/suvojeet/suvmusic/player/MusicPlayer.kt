@@ -60,7 +60,8 @@ class MusicPlayer @Inject constructor(
     private val cache: androidx.media3.datasource.cache.Cache,
     @com.suvojeet.suvmusic.di.PlayerDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
     private val musicHapticsManager: MusicHapticsManager,
-    private val ttsManager: TTSManager
+    private val ttsManager: TTSManager,
+    private val spatialAudioProcessor: SpatialAudioProcessor
 ) {
     
     // ... (existing properties)
@@ -1330,7 +1331,12 @@ class MusicPlayer @Inject constructor(
         val clampedSpeed = speed.coerceIn(0.1f, 5.0f)
         val clampedPitch = pitch.coerceIn(0.1f, 5.0f)
         
-        mediaController?.playbackParameters = androidx.media3.common.PlaybackParameters(clampedSpeed, clampedPitch)
+        // Use Media3 for speed (better sync) but native for pitch (better quality)
+        // By setting pitch to 1.0f in Media3, we disable its internal pitch shifter
+        mediaController?.playbackParameters = androidx.media3.common.PlaybackParameters(clampedSpeed, 1.0f)
+        
+        // Use our high-quality native pitch shifter
+        spatialAudioProcessor.setPlaybackParams(clampedSpeed, clampedPitch)
         
         _playerState.update { 
             it.copy(

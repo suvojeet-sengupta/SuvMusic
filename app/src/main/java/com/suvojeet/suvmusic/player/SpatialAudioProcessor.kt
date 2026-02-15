@@ -83,6 +83,10 @@ class SpatialAudioProcessor @Inject constructor(
             checkActive()
         }
     }
+
+    fun setPlaybackParams(speed: Float, pitch: Float) {
+        nativeSpatialAudio.setPlaybackParams(speed, pitch)
+    }
     
     private fun checkActive() {
         if (!isSpatialEnabled && !isLimiterEnabled) {
