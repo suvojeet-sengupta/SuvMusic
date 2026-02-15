@@ -128,17 +128,19 @@ fun EqualizerSheet(
             uncheckedTrackColor = surfaceVariantColor
         )
         
-        val curveBgColor = surfaceVariantColor.copy(alpha = 0.3f)
-        val centerLineColor = onSurfaceColor.copy(alpha = 0.1f)
+        val curveBgColor = onSurfaceVariantColor.copy(alpha = 0.08f)
+        val centerLineColor = onSurfaceColor.copy(alpha = 0.3f)
         
-        val dbMarkingColor = onSurfaceVariantColor.copy(alpha = 0.4f)
-        val dividerColor = onSurfaceColor.copy(alpha = 0.05f)
+        val dbMarkingColor = onSurfaceVariantColor.copy(alpha = 0.7f)
+        val dividerColor = onSurfaceColor.copy(alpha = 0.15f)
         
         val sliderColors = SliderDefaults.colors(
             thumbColor = dominantColor,
             activeTrackColor = dominantColor,
-            inactiveTrackColor = surfaceVariantColor,
-            disabledThumbColor = onSurfaceColor.copy(alpha = 0.2f)
+            inactiveTrackColor = onSurfaceVariantColor.copy(alpha = 0.25f),
+            disabledThumbColor = onSurfaceColor.copy(alpha = 0.38f),
+            disabledActiveTrackColor = onSurfaceColor.copy(alpha = 0.12f),
+            disabledInactiveTrackColor = onSurfaceColor.copy(alpha = 0.12f)
         )
 
         ModalBottomSheet(
@@ -265,8 +267,8 @@ fun EqualizerSheet(
                         path = fillPath,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                dominantColor.copy(alpha = 0.3f),
-                                dominantColor.copy(alpha = 0.05f),
+                                dominantColor.copy(alpha = 0.5f),
+                                dominantColor.copy(alpha = 0.1f),
                                 Color.Transparent
                             )
                         )
