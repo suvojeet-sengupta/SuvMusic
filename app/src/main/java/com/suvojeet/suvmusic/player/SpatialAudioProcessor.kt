@@ -21,6 +21,7 @@ class SpatialAudioProcessor @Inject constructor(
     private var isSpatialEnabled = false
     private var isLimiterEnabled = false
     private var isCrossfeedEnabled = true
+    private var currentPitch = 1.0f
 
     fun setSpatialEnabled(enabled: Boolean) {
         if (isSpatialEnabled != enabled) {
@@ -85,13 +86,14 @@ class SpatialAudioProcessor @Inject constructor(
     }
 
     fun setPlaybackParams(pitch: Float) {
+        currentPitch = pitch
         nativeSpatialAudio.setPlaybackParams(pitch)
+        checkActive()
     }
     
     private fun checkActive() {
-        if (!isSpatialEnabled && !isLimiterEnabled) {
-            // If both off, maybe reset?
-            // nativeSpatialAudio.reset() // Optional, keeps buffers clear
+        if (!isSpatialEnabled && !isLimiterEnabled && currentPitch == 1.0f) {
+            // All effects off
         }
     }
 
@@ -101,8 +103,9 @@ class SpatialAudioProcessor @Inject constructor(
             return AudioFormat.NOT_SET
         }
         
-        // Initialize Crossfeed (subtle)
+        // Initialize effects with current state
         nativeSpatialAudio.setCrossfeedParams(isCrossfeedEnabled && !isSpatialEnabled, 0.15f)
+        nativeSpatialAudio.setPlaybackParams(currentPitch)
 
         // Always output 16-bit PCM for maximum compatibility
         return AudioFormat(inputAudioFormat.sampleRate, inputAudioFormat.channelCount, C.ENCODING_PCM_16BIT)
