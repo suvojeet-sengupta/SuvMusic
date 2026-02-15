@@ -6,7 +6,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -47,7 +47,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -115,24 +113,9 @@ fun FullScreenVideoPlayer(
         }
     }
     
-
-    // Predictive Back states
-    var predictiveBackScale by remember { mutableFloatStateOf(1f) }
-    var predictiveBackAlpha by remember { mutableFloatStateOf(1f) }
-
-    PredictiveBackHandler { backEvent ->
-        try {
-            backEvent.collect { event ->
-                // Animate scale and alpha based on progress
-                predictiveBackScale = 1f - (event.progress * 0.1f)
-                predictiveBackAlpha = 1f - (event.progress * 0.2f)
-            }
-            onDismiss()
-        } catch (e: Exception) {
-            // Cancelled
-            predictiveBackScale = 1f
-            predictiveBackAlpha = 1f
-        }
+    // Back Handler to exit full screen
+    BackHandler {
+        onDismiss()
     }
 
     if (showQualityDialog) {
@@ -173,11 +156,6 @@ fun FullScreenVideoPlayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer {
-                scaleX = predictiveBackScale
-                scaleY = predictiveBackScale
-                alpha = predictiveBackAlpha
-            }
             .background(Color.Black)
             .pointerInput(Unit) {
                 detectTapGestures(
