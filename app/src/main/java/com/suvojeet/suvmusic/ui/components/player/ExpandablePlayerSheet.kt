@@ -91,6 +91,7 @@ fun ExpandablePlayerSheet(
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    userAlpha: Float = 1f,
     expandedContent: @Composable (onCollapse: () -> Unit) -> Unit
 ) {
     val song = playerState.currentSong ?: return
@@ -153,6 +154,7 @@ fun ExpandablePlayerSheet(
                 progress = playerState.progress,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
+                userAlpha = userAlpha,
                 onTap = {
                     coroutineScope.launch {
                         expansion.animateTo(
@@ -297,6 +299,7 @@ private fun CollapsedMiniPlayer(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onTap: () -> Unit,
+    userAlpha: Float = 1f,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -315,8 +318,8 @@ private fun CollapsedMiniPlayer(
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            dominantColors.primary.copy(alpha = 0.85f),
-                            dominantColors.secondary.copy(alpha = 0.85f)
+                            dominantColors.primary.copy(alpha = 0.85f * userAlpha),
+                            dominantColors.secondary.copy(alpha = 0.85f * userAlpha)
                         )
                     )
                 )
