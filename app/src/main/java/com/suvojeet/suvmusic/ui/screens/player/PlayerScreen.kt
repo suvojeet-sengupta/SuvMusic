@@ -866,6 +866,7 @@ fun PlayerScreen(
                 QueueView(
                     currentSong = song,
                     queue = playerState.queue,
+                    currentIndex = playerState.currentIndex,
                     isPlaying = playerState.isPlaying,
                     shuffleEnabled = playerState.shuffleEnabled,
                     repeatMode = playerState.repeatMode,
