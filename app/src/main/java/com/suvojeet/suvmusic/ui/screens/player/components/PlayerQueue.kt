@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.core.model.Song
@@ -69,6 +71,7 @@ import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 fun QueueView(
     currentSong: Song?,
     queue: List<Song>,
+    currentIndex: Int,
     isPlaying: Boolean,
     shuffleEnabled: Boolean,
     repeatMode: RepeatMode,
@@ -326,59 +329,107 @@ fun QueueView(
             }
         }
 
-        // Queue list with infinite scroll
+        // Queue list with sticky headers
         val listState = rememberLazyListState()
         
-        // Detect when user scrolls near end (5 items from end) - trigger load more
-        val shouldLoadMore = remember {
-            derivedStateOf {
-                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                val totalItems = listState.layoutInfo.totalItemsCount
-                isRadioMode && !isLoadingMore && lastVisibleItem >= totalItems - 5 && totalItems > 0
-            }
+        // Logic to determine headers:
+        // In this app's logic (observed from PlayerViewModel):
+        // 'Up Next' are the songs that were in the original queue.
+        // When autoplay/radio loads more, it appends them to the end.
+        // We can use a heuristic: if radio mode is on, we can split the queue
+        // into "Up Next" (original items) and "Autoplay" (newly appended items).
+        // For simplicity and immediate UI feedback, we'll split based on current index.
+        
+        val upNextSongs = remember(queue, currentIndex) {
+            if (currentIndex < 0) queue else queue.subList(0, (currentIndex + 1).coerceAtMost(queue.size))
         }
         
-        LaunchedEffect(shouldLoadMore.value) {
-            if (shouldLoadMore.value) {
-                onLoadMore()
-            }
+        val autoPlaySongs = remember(queue, currentIndex) {
+            if (currentIndex < 0 || currentIndex >= queue.size - 1) emptyList() 
+            else queue.subList(currentIndex + 1, queue.size)
         }
-        
+
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
             modifier = Modifier.weight(1f)
         ) {
-            itemsIndexed(queue, key = { index, song -> song.id + "_" + index }) { index, song ->
-                QueueItem(
-                    song = song,
-                    isCurrent = song.id == currentSong?.id,
-                    isPlaying = song.id == currentSong?.id && isPlaying,
-                    isSelected = selectedIndices.contains(index),
-                    isSelectionMode = isSelectionMode,
-                    onClick = {
-                        if (isSelectionMode) {
-                            selectedIndices = if (selectedIndices.contains(index)) {
-                                selectedIndices - index
+            // Up Next Section
+            if (upNextSongs.isNotEmpty()) {
+                stickyHeader {
+                    HeaderItem("Up Next", dominantColors)
+                }
+                
+                itemsIndexed(upNextSongs, key = { index, song -> "upnext_${song.id}_$index" }) { index, song ->
+                    QueueItem(
+                        song = song,
+                        isCurrent = song.id == currentSong?.id,
+                        isPlaying = song.id == currentSong?.id && isPlaying,
+                        isSelected = selectedIndices.contains(index),
+                        isSelectionMode = isSelectionMode,
+                        onClick = {
+                            if (isSelectionMode) {
+                                selectedIndices = if (selectedIndices.contains(index)) {
+                                    selectedIndices - index
+                                } else {
+                                    selectedIndices + index
+                                }
                             } else {
-                                selectedIndices + index
+                                onSongClick(index)
                             }
-                        } else {
-                            onSongClick(index)
-                        }
-                    },
-                    onLongClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        if (!isSelectionMode) {
-                            selectedIndices = setOf(index)
-                        } else {
-                            onMoreClick(song)
-                        }
-                    },
-                    onMoreClick = { onMoreClick(song) },
-                    dominantColors = dominantColors
-                )
+                        },
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (!isSelectionMode) {
+                                selectedIndices = setOf(index)
+                            } else {
+                                onMoreClick(song)
+                            }
+                        },
+                        onMoreClick = { onMoreClick(song) },
+                        dominantColors = dominantColors
+                    )
+                }
+            }
+
+            // Autoplay Section
+            if (autoPlaySongs.isNotEmpty()) {
+                stickyHeader {
+                    val title = if (isRadioMode || isAutoplayEnabled) "Autoplay" else "Coming Up"
+                    HeaderItem(title, dominantColors)
+                }
+                
+                itemsIndexed(autoPlaySongs, key = { index, song -> "auto_${song.id}_$index" }) { indexInList, song ->
+                    val actualIndex = upNextSongs.size + indexInList
+                    QueueItem(
+                        song = song,
+                        isCurrent = false,
+                        isPlaying = false,
+                        isSelected = selectedIndices.contains(actualIndex),
+                        isSelectionMode = isSelectionMode,
+                        onClick = {
+                            if (isSelectionMode) {
+                                selectedIndices = if (selectedIndices.contains(actualIndex)) {
+                                    selectedIndices - actualIndex
+                                } else {
+                                    selectedIndices + actualIndex
+                                }
+                            } else {
+                                onSongClick(actualIndex)
+                            }
+                        },
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (!isSelectionMode) {
+                                selectedIndices = setOf(actualIndex)
+                            } else {
+                                onMoreClick(song)
+                            }
+                        },
+                        onMoreClick = { onMoreClick(song) },
+                        dominantColors = dominantColors
+                    )
+                }
             }
             
             // Loading indicator at bottom when loading more
@@ -438,6 +489,26 @@ fun QueueView(
 }
 
 
+
+@Composable
+private fun HeaderItem(
+    title: String,
+    dominantColors: DominantColors
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(dominantColors.primary.copy(alpha = 0.95f))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = dominantColors.onBackground.copy(alpha = 0.7f),
+            letterSpacing = 1.sp
+        )
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
