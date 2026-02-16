@@ -249,7 +249,7 @@ fun YouTubeLoginScreen(
                             }
                         }
                         
-                        loadUrl("https://accounts.google.com/AccountChooser?service=youtube&continue=https%3A%2F%2Fmusic.youtube.com%2F&select_account=true")
+                        loadUrl("https://accounts.google.com/AccountChooser?service=youtube&continue=https%3A%2F%2Fmusic.youtube.com%2F&select_account=true&uilel=3")
                     }
                 },
                 modifier = Modifier.fillMaxSize()
