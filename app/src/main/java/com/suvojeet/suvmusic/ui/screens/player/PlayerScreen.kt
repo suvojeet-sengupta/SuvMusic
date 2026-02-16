@@ -1052,6 +1052,7 @@ fun PlayerScreen(
                 onRemoveFromQueue = if (showQueue) {
                     { playerViewModel.removeQueueItems(listOf(playerState.queue.indexOf(menuSong))) }
                 } else null,
+                isFromQueue = showQueue,
                 onSetRingtone = {
                     // Show trimmer directly without permission check
                     showActionsSheet = false
