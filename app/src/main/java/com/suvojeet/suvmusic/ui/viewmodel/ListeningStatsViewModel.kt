@@ -20,8 +20,10 @@ import javax.inject.Inject
 data class ListeningStatsUiState(
     val totalSongsPlayed: Int = 0,
     val totalListeningTimeMs: Long = 0L,
+    val averageDailyMs: Long = 0L,
     val topSongs: List<ListeningHistory> = emptyList(),
     val topArtists: List<ArtistStats> = emptyList(),
+    val topArtistThisMonth: ArtistStats? = null,
     val timeOfDayStats: Map<TimeOfDay, Int> = emptyMap(), // Count of songs played per time of day
     val weeklyTrends: List<DailyListening> = emptyList(), // Last 7 days listening time
     val musicPersonality: MusicPersonality = MusicPersonality.NEWCOMER,
@@ -83,24 +85,23 @@ class ListeningStatsViewModel @Inject constructor(
                     val timeOfDayStats = calculateTimeOfDayStats(recentHistory)
                     val weeklyTrends = calculateWeeklyTrends(recentHistory)
                     val personality = determinePersonality(timeOfDayStats, globalStats.totalSongsPlayed)
+                    val avgDaily = if (weeklyTrends.isNotEmpty()) weeklyTrends.map { it.minutesListen }.average().toLong() * 60 * 1000 else 0L
+                    val monthTopArtist = calculateTopArtistFromHistory(recentHistory)
                     
-                    // Top Artists calculation from repository is a suspend function, so we call it outside or handle differently.
-                    // Ideally modify repository to return Flow, but for now we can just fetch it once as it's less dynamic in real-time updates usually.
-                    // However, 'combine' implies real-time. Let's launch a separate fetch for artists or just use what we have.
-                    // For correctness with the flow, we should rely on the collected data if possible, but calculating top artists from raw history is expensive.
-                    // We'll trust the repository's separate call for top artists for now and update it.
-                    
-                    Triple(topSongs, Triple(timeOfDayStats, weeklyTrends, personality), recentHistory)
-                }.collect { (songs, stats, _) ->
+                    Triple(topSongs, Triple(timeOfDayStats, weeklyTrends, personality), Pair(avgDaily, monthTopArtist))
+                }.collect { (songs, stats, advanced) ->
                     val (timeOfDay, trends, personality) = stats
+                    val (avgDaily, monthTopArtist) = advanced
                     val artists = listeningHistoryRepository.getTopArtists(10) // Fetch fresh artists
                     
                     _uiState.update {
                         it.copy(
-                            totalSongsPlayed = globalStats.totalSongsPlayed, // This might need a flow too for real-time, but acceptable for now
+                            totalSongsPlayed = globalStats.totalSongsPlayed,
                             totalListeningTimeMs = globalStats.totalListeningTimeMs,
+                            averageDailyMs = avgDaily,
                             topSongs = songs,
                             topArtists = artists,
+                            topArtistThisMonth = monthTopArtist,
                             timeOfDayStats = timeOfDay,
                             weeklyTrends = trends,
                             musicPersonality = personality,
@@ -113,6 +114,15 @@ class ListeningStatsViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
+    }
+
+    private fun calculateTopArtistFromHistory(history: List<ListeningHistory>): ArtistStats? {
+        if (history.isEmpty()) return null
+        return history.groupBy { it.artist }
+            .map { (artist, songs) -> 
+                ArtistStats(artist, songs.sumOf { it.playCount }) 
+            }
+            .maxByOrNull { it.totalPlays }
     }
     
     private fun calculateTimeOfDayStats(history: List<ListeningHistory>): Map<TimeOfDay, Int> {
