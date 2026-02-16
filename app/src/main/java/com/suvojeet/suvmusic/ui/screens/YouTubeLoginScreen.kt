@@ -110,7 +110,7 @@ fun YouTubeLoginScreen(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Login is handled directly by Google. This app only uses the session to play music.",
+                    text = "Login is handled by Google. Tip: If you have multiple channels, select your desired YouTube Brand account during the process.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -249,7 +249,7 @@ fun YouTubeLoginScreen(
                             }
                         }
                         
-                        loadUrl("https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fmusic.youtube.com%2F")
+                        loadUrl("https://accounts.google.com/AccountChooser?service=youtube&continue=https%3A%2F%2Fmusic.youtube.com%2F")
                     }
                 },
                 modifier = Modifier.fillMaxSize()
