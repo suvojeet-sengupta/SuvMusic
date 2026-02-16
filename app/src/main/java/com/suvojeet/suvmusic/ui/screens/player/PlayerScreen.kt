@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -84,6 +85,7 @@ import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen
 import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
+import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
 import com.suvojeet.suvmusic.ui.components.RingtoneTrimmerDialog
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
@@ -116,6 +118,17 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.InfiniteRepeatableSpec
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode as AnimationRepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -198,6 +211,7 @@ fun PlayerScreen(
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
     val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsState(initial = 10)
     val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsState(initial = false)
+    val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsState(initial = true)
     val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition.CENTER)
     val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
     val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsState(initial = 1.5f)
@@ -459,19 +473,25 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             // Background Layer
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            dominantColors.secondary,
-                            dominantColors.primary,
-                            playerBackgroundColor
-                        )
-                    )
+            if (animatedBackgroundEnabled && !playerState.isVideoMode) {
+                MeshGradientBackground(
+                    dominantColors = dominantColors
                 )
-        )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    dominantColors.secondary,
+                                    dominantColors.primary,
+                                    playerBackgroundColor
+                                )
+                            )
+                        )
+                )
+            }
 
         // Main Content Layer
         Box(
@@ -897,7 +917,9 @@ fun PlayerScreen(
                             }
                         }
                     },
-                    dominantColors = dominantColors
+                    dominantColors = dominantColors,
+                    animatedBackgroundEnabled = animatedBackgroundEnabled,
+                    isDarkTheme = isAppInDarkTheme
                 )
             }
 

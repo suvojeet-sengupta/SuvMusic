@@ -145,6 +145,7 @@ class SessionManager @Inject constructor(
         private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
+        private val PLAYER_ANIMATED_BACKGROUND_KEY = booleanPreferencesKey("player_animated_background")
         private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
         private val VOLUME_BOOST_ENABLED_KEY = booleanPreferencesKey("volume_boost_enabled")
         private val VOLUME_BOOST_AMOUNT_KEY = intPreferencesKey("volume_boost_amount")
@@ -776,6 +777,19 @@ class SessionManager @Inject constructor(
     suspend fun setPureBlackEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PURE_BLACK_KEY] = enabled
+        }
+    }
+
+    suspend fun isPlayerAnimatedBackgroundEnabled(): Boolean =
+        context.dataStore.data.first()[PLAYER_ANIMATED_BACKGROUND_KEY] ?: true
+
+    val playerAnimatedBackgroundFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_ANIMATED_BACKGROUND_KEY] ?: true
+    }
+
+    suspend fun setPlayerAnimatedBackground(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYER_ANIMATED_BACKGROUND_KEY] = enabled
         }
     }
 

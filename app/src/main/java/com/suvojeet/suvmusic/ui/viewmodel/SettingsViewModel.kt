@@ -67,6 +67,7 @@ data class SettingsUiState(
     val keepScreenOn: Boolean = false,
     // Appearance
     val pureBlackEnabled: Boolean = false,
+    val playerAnimatedBackgroundEnabled: Boolean = true,
     // Lyrics
     val preferredLyricsProvider: String = "BetterLyrics",
     val lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
@@ -279,6 +280,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.playerAnimatedBackgroundFlow.collect { enabled ->
+                _uiState.update { it.copy(playerAnimatedBackgroundEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.preferredLyricsProviderFlow.collect { provider ->
                 _uiState.update { it.copy(preferredLyricsProvider = provider) }
             }
@@ -477,6 +484,7 @@ class SettingsViewModel @Inject constructor(
             val pauseMusicOnMediaMuted = sessionManager.isPauseMusicOnMediaMutedEnabled()
             val keepScreenOn = sessionManager.isKeepScreenOnEnabled()
             val pureBlackEnabled = sessionManager.isPureBlackEnabled()
+            val playerAnimatedBackgroundEnabled = sessionManager.isPlayerAnimatedBackgroundEnabled()
             val sponsorBlockEnabled = sessionManager.isSponsorBlockEnabled()
             val lastFmUsername = sessionManager.getLastFmUsername()
             val lastFmScrobblingEnabled = sessionManager.isLastFmScrobblingEnabled()
@@ -543,6 +551,7 @@ class SettingsViewModel @Inject constructor(
                     pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
                     keepScreenOn = keepScreenOn,
                     pureBlackEnabled = pureBlackEnabled,
+                    playerAnimatedBackgroundEnabled = playerAnimatedBackgroundEnabled,
                     preferredLyricsProvider = preferredLyricsProvider,
                     lyricsTextPosition = lyricsTextPosition,
                     lyricsAnimationType = lyricsAnimationType,
@@ -1174,6 +1183,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setPureBlackEnabled(enabled)
             _uiState.update { it.copy(pureBlackEnabled = enabled) }
+        }
+    }
+
+    fun setPlayerAnimatedBackgroundEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setPlayerAnimatedBackground(enabled)
+            _uiState.update { it.copy(playerAnimatedBackgroundEnabled = enabled) }
         }
     }
 
