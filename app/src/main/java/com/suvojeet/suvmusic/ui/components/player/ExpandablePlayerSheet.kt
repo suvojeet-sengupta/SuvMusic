@@ -318,8 +318,8 @@ private fun CollapsedMiniPlayer(
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            dominantColors.primary.copy(alpha = 0.85f * userAlpha),
-                            dominantColors.secondary.copy(alpha = 0.85f * userAlpha)
+                            dominantColors.primary.copy(alpha = 0.85f * (1f - userAlpha)),
+                            dominantColors.secondary.copy(alpha = 0.85f * (1f - userAlpha))
                         )
                     )
                 )
