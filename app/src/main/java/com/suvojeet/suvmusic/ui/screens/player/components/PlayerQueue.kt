@@ -53,6 +53,7 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.components.NowPlayingAnimation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -91,7 +92,9 @@ fun QueueView(
     onMoveItem: (Int, Int) -> Unit,
     onRemoveItems: (List<Int>) -> Unit,
     onSaveAsPlaylist: (String, String, Boolean, Boolean) -> Unit,
-    dominantColors: DominantColors
+    dominantColors: DominantColors,
+    animatedBackgroundEnabled: Boolean = true,
+    isDarkTheme: Boolean = true
 ) {
     // Capture background color for QueueView as well
     val themeBackgroundColor = MaterialTheme.colorScheme.background
@@ -102,23 +105,35 @@ fun QueueView(
 
     var showSavePlaylistDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        dominantColors.secondary,
-                        dominantColors.primary,
-                        // Use themeBackgroundColor instead of Color.Black
-                        themeBackgroundColor
-                    )
-                )
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Background Layer
+        if (animatedBackgroundEnabled) {
+            MeshGradientBackground(
+                dominantColors = dominantColors
             )
-            .statusBarsPadding()
-            .navigationBarsPadding()
-    ) {
-        // Selection Mode Top Bar or Header
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                dominantColors.secondary,
+                                dominantColors.primary,
+                                themeBackgroundColor
+                            )
+                        )
+                    )
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            // Selection Mode Top Bar or Header
         if (isSelectionMode) {
             Row(
                 modifier = Modifier
@@ -486,6 +501,7 @@ fun QueueView(
             }
         )
     }
+}
 }
 
 
