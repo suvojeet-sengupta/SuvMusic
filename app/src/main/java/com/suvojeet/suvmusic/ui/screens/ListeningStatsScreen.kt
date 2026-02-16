@@ -269,6 +269,7 @@ fun WeeklyActivitySection(trends: List<DailyListening>) {
 @Composable
 fun BezierChart(trends: List<DailyListening>) {
     val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
     
     val maxMinutes = trends.maxOfOrNull { it.minutesListen }?.toFloat() ?: 1f
@@ -340,7 +341,7 @@ fun BezierChart(trends: List<DailyListening>) {
                 
                 if (daily.minutesListen > 0 || index == 0 || index == trends.size - 1) {
                     drawCircle(color = primaryColor, radius = 4.dp.toPx(), center = point)
-                    drawCircle(color = MaterialTheme.colorScheme.surface, radius = 2.dp.toPx(), center = point)
+                    drawCircle(color = surfaceColor, radius = 2.dp.toPx(), center = point)
                 }
                 
                 drawContext.canvas.nativeCanvas.apply {
