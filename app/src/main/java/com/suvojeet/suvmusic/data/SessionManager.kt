@@ -781,10 +781,10 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun isPlayerAnimatedBackgroundEnabled(): Boolean =
-        context.dataStore.data.first()[PLAYER_ANIMATED_BACKGROUND_KEY] ?: true
+        context.dataStore.data.first()[PLAYER_ANIMATED_BACKGROUND_KEY] ?: false
 
     val playerAnimatedBackgroundFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PLAYER_ANIMATED_BACKGROUND_KEY] ?: true
+        preferences[PLAYER_ANIMATED_BACKGROUND_KEY] ?: false
     }
 
     suspend fun setPlayerAnimatedBackground(enabled: Boolean) {
