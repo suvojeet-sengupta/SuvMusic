@@ -58,86 +58,103 @@ fun MeshGradientBackground(
 
     val infiniteTransition = rememberInfiniteTransition(label = "mesh_gradient_motion")
     
-    // Animate positions of blobs to create "breathing" effect
-    val offset1 by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(10000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "blob1_motion"
+    // Blob 1: Top-Left movement
+    val x1 by infiniteTransition.animateFloat(
+        initialValue = 0.1f, targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "x1"
     )
-    
-    val offset2 by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(15000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "blob2_motion"
+    val y1 by infiniteTransition.animateFloat(
+        initialValue = 0.1f, targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "y1"
+    )
+
+    // Blob 2: Top-Right movement
+    val x2 by infiniteTransition.animateFloat(
+        initialValue = 0.9f, targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(tween(18000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "x2"
+    )
+    val y2 by infiniteTransition.animateFloat(
+        initialValue = 0.2f, targetValue = 0.5f,
+        animationSpec = infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "y2"
+    )
+
+    // Blob 3: Bottom-Left movement
+    val x3 by infiniteTransition.animateFloat(
+        initialValue = 0.2f, targetValue = 0.5f,
+        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "x3"
+    )
+    val y3 by infiniteTransition.animateFloat(
+        initialValue = 0.8f, targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(tween(16000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "y3"
+    )
+
+    // Blob 4: Bottom-Right movement
+    val x4 by infiniteTransition.animateFloat(
+        initialValue = 0.8f, targetValue = 0.5f,
+        animationSpec = infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "x4"
+    )
+    val y4 by infiniteTransition.animateFloat(
+        initialValue = 0.9f, targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(tween(19000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "y4"
     )
 
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // We use a Canvas with a heavy blur effect to simulate mesh gradients
-        // Since Blur needs SDK 31+ for RenderEffect, we'll use a gradient approximation for compatibility
-        // or just large radial gradients which look like blobs.
-        
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
             
-            // Primary Blob (Top-Right moving Left)
+            // Draw 4 distinct blobs with large radii and overlap
+            
+            // Blob 1: Primary
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(animatedPrimary.copy(alpha = 0.4f), Color.Transparent),
-                    center = Offset(
-                        x = width * 0.8f - (width * 0.4f * offset1),
-                        y = height * 0.2f + (height * 0.1f * offset2)
-                    ),
-                    radius = width * 0.8f,
-                    tileMode = TileMode.Clamp
+                    colors = listOf(animatedPrimary.copy(alpha = 0.45f), Color.Transparent),
+                    center = Offset(width * x1, height * y1),
+                    radius = width * 1.2f
                 ),
-                radius = width * 0.8f,
-                center = Offset(
-                    x = width * 0.8f - (width * 0.4f * offset1),
-                    y = height * 0.2f + (height * 0.1f * offset2)
-                )
+                radius = width * 1.2f,
+                center = Offset(width * x1, height * y1)
             )
             
-            // Secondary Blob (Bottom-Left moving Right)
+            // Blob 2: Secondary
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(animatedSecondary.copy(alpha = 0.3f), Color.Transparent),
-                    center = Offset(
-                        x = width * 0.2f + (width * 0.3f * offset1),
-                        y = height * 0.8f - (height * 0.2f * offset2)
-                    ),
-                    radius = width * 0.7f,
-                    tileMode = TileMode.Clamp
+                    colors = listOf(animatedSecondary.copy(alpha = 0.4f), Color.Transparent),
+                    center = Offset(width * x2, height * y2),
+                    radius = width * 1.1f
                 ),
-                radius = width * 0.7f,
-                center = Offset(
-                     x = width * 0.2f + (width * 0.3f * offset1),
-                    y = height * 0.8f - (height * 0.2f * offset2)
-                )
+                radius = width * 1.1f,
+                center = Offset(width * x2, height * y2)
             )
             
-            // Accent Blob (Center-ish, pulsating)
-             drawCircle(
+            // Blob 3: Accent
+            drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(animatedAccent.copy(alpha = 0.2f), Color.Transparent),
-                    center = Offset(
-                        x = width * 0.5f,
-                        y = height * 0.5f
-                    ),
-                    radius = width * 0.6f * (0.8f + (0.2f * offset2)), // Pulsating size
-                     tileMode = TileMode.Clamp
+                    colors = listOf(animatedAccent.copy(alpha = 0.35f), Color.Transparent),
+                    center = Offset(width * x3, height * y3),
+                    radius = width * 1.0f
                 ),
-                radius = width * 0.6f * (0.8f + (0.2f * offset2)),
-                center = Offset(
-                    x = width * 0.5f,
-                    y = height * 0.5f
-                )
+                radius = width * 1.0f,
+                center = Offset(width * x3, height * y3)
+            )
+
+            // Blob 4: Primary Variation
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(animatedPrimary.copy(alpha = 0.3f), Color.Transparent),
+                    center = Offset(width * x4, height * y4),
+                    radius = width * 1.3f
+                ),
+                radius = width * 1.3f,
+                center = Offset(width * x4, height * y4)
             )
         }
         
