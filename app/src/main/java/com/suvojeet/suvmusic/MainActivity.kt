@@ -710,6 +710,7 @@ fun SuvMusicApp(
             onPrevious = { playerViewModel.seekToPrevious() },
             bottomPadding = bottomPaddingPx,
             isExpanded = isPlayerExpanded,
+            userAlpha = miniPlayerAlpha,
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
             },

@@ -234,37 +234,42 @@ fun CustomizationScreen(
             
             // Section: Interface Transparency
             CustomizationSection(title = "Interface Transparency") {
-                OutlinedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.outlinedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Preview Card
+                    MiniPlayerPreview(alpha = miniPlayerAlpha)
+
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        )
                     ) {
-                        // Mini Player Transparency
-                        TransparencySliderItem(
-                            title = "Mini Player",
-                            icon = Icons.Default.MusicNote,
-                            alpha = miniPlayerAlpha,
-                            onAlphaChange = { newAlpha ->
-                                scope.launch {
-                                    sessionManager.setMiniPlayerAlpha(newAlpha)
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            // Mini Player Transparency
+                            TransparencySliderItem(
+                                title = "Transparency Level",
+                                icon = Icons.Default.MusicNote,
+                                alpha = miniPlayerAlpha,
+                                onAlphaChange = { newAlpha ->
+                                    scope.launch {
+                                        sessionManager.setMiniPlayerAlpha(newAlpha)
+                                    }
                                 }
-                            }
-                        )
+                            )
 
-                        HorizontalDivider()
+                            HorizontalDivider()
 
-                        // Mini Player Style
-                        SettingItem(
-                            title = "Mini Player Style",
-                            subtitle = currentMiniPlayerStyle.label,
-                            icon = Icons.Default.MusicNote, // Or a better style icon
-                            onClick = { showMiniPlayerStyleSheet = true }
-                        )
+                            // Mini Player Style
+                            SettingItem(
+                                title = "Mini Player Style",
+                                subtitle = currentMiniPlayerStyle.label,
+                                icon = Icons.Default.MusicNote, 
+                                onClick = { showMiniPlayerStyleSheet = true }
+                            )
+                        }
                     }
                 }
             }
@@ -442,6 +447,73 @@ private fun TransparencySliderItem(
                 inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
+    }
+}
+
+@Composable
+private fun MiniPlayerPreview(alpha: Float) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        contentAlignment = Alignment.Center
+    ) {
+        // Mock background content to show transparency
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(5) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                )
+            }
+        }
+
+        // Mini Player Mockup
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .height(64.dp)
+                .clip(RoundedCornerShape(14.dp)),
+            color = Color.Transparent,
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.85f * alpha),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f * alpha)
+                            )
+                        )
+                    )
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Box(modifier = Modifier.width(100.dp).height(8.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), RoundedCornerShape(4.dp)))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(modifier = Modifier.width(60.dp).height(6.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(3.dp)))
+                    }
+                }
+            }
+        }
     }
 }
 
