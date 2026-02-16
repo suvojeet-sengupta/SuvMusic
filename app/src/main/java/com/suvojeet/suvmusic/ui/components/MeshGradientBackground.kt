@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -34,6 +35,27 @@ fun MeshGradientBackground(
         onBackground = MaterialTheme.colorScheme.onBackground
     )
 
+    // Animate colors for smooth transitions when song changes
+    val animatedPrimary by animateColorAsState(
+        targetValue = colors.primary,
+        animationSpec = tween(1000),
+        label = "primary_color_anim"
+    )
+    val animatedSecondary by animateColorAsState(
+        targetValue = colors.secondary,
+        animationSpec = tween(1000),
+        label = "secondary_color_anim"
+    )
+    val animatedAccent by animateColorAsState(
+        targetValue = colors.accent,
+        animationSpec = tween(1000),
+        label = "accent_color_anim"
+    )
+
+    androidx.compose.runtime.LaunchedEffect(colors) {
+        android.util.Log.d("MeshGradient", "Colors updated: primary=${colors.primary}")
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "mesh_gradient_motion")
     
     // Animate positions of blobs to create "breathing" effect
@@ -67,7 +89,7 @@ fun MeshGradientBackground(
             // Primary Blob (Top-Right moving Left)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(colors.primary.copy(alpha = 0.4f), Color.Transparent),
+                    colors = listOf(animatedPrimary.copy(alpha = 0.4f), Color.Transparent),
                     center = Offset(
                         x = width * 0.8f - (width * 0.4f * offset1),
                         y = height * 0.2f + (height * 0.1f * offset2)
@@ -85,7 +107,7 @@ fun MeshGradientBackground(
             // Secondary Blob (Bottom-Left moving Right)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(colors.secondary.copy(alpha = 0.3f), Color.Transparent),
+                    colors = listOf(animatedSecondary.copy(alpha = 0.3f), Color.Transparent),
                     center = Offset(
                         x = width * 0.2f + (width * 0.3f * offset1),
                         y = height * 0.8f - (height * 0.2f * offset2)
@@ -103,7 +125,7 @@ fun MeshGradientBackground(
             // Accent Blob (Center-ish, pulsating)
              drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(colors.accent.copy(alpha = 0.2f), Color.Transparent),
+                    colors = listOf(animatedAccent.copy(alpha = 0.2f), Color.Transparent),
                     center = Offset(
                         x = width * 0.5f,
                         y = height * 0.5f
