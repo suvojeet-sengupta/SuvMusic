@@ -491,8 +491,8 @@ private fun MiniPlayerPreview(alpha: Float) {
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.85f * alpha),
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f * alpha)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.85f * (1f - alpha)),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f * (1f - alpha))
                             )
                         )
                     )
