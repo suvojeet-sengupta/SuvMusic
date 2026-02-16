@@ -53,7 +53,7 @@ fun rememberDominantColors(
         )
     }
     
-    var colors by remember(imageUrl, isDarkTheme) { mutableStateOf(themeAwareDefaults) }
+    var colors by remember { mutableStateOf(themeAwareDefaults) }
     val context = LocalContext.current
     
     LaunchedEffect(imageUrl, isDarkTheme) {
@@ -75,11 +75,14 @@ fun rememberDominantColors(
                 if (result is SuccessResult) {
                     val bitmap = (result.drawable as? BitmapDrawable)?.bitmap
                     bitmap?.let {
-                        colors = extractColorsFromBitmap(it, isDarkTheme)
+                        val newColors = extractColorsFromBitmap(it, isDarkTheme)
+                        withContext(Dispatchers.Main) {
+                            colors = newColors
+                        }
                     }
                 }
             } catch (e: Exception) {
-                colors = themeAwareDefaults
+                // Keep current colors on error or set to defaults if needed
             }
         }
     }
