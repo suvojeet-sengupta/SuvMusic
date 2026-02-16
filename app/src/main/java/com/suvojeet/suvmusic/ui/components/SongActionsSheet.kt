@@ -90,6 +90,7 @@ fun SongActionsSheet(
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
     onRemoveFromQueue: (() -> Unit)? = null,
+    isFromQueue: Boolean = false,
     dominantColors: DominantColors? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -239,13 +240,15 @@ fun SongActionsSheet(
                     onClick = { handleAction { onPlayNext() } }
                 )
 
-                ActionItem(
-                    icon = Icons.Default.AddToQueue,
-                    title = "Add to Queue",
-                    iconTint = contentColor,
-                    textColor = contentColor,
-                    onClick = { handleAction { onAddToQueue() } }
-                )
+                if (!isFromQueue) {
+                    ActionItem(
+                        icon = Icons.Default.AddToQueue,
+                        title = "Add to Queue",
+                        iconTint = contentColor,
+                        textColor = contentColor,
+                        onClick = { handleAction { onAddToQueue() } }
+                    )
+                }
 
                 ActionItem(
                     icon = Icons.AutoMirrored.Filled.PlaylistAdd,
@@ -295,30 +298,32 @@ fun SongActionsSheet(
                     onClick = { handleAction { onViewComments() } }
                 )
                 
-                val speedLabel = if (currentSpeed == 1.0f) "" else "($currentSpeed x)"
-                ActionItem(
-                    icon = Icons.Default.Speed,
-                    title = "Speed & Tempo $speedLabel",
-                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
-                    textColor = contentColor,
-                    onClick = { handleAction { onPlaybackSpeed() } }
-                )
+                if (!isFromQueue) {
+                    val speedLabel = if (currentSpeed == 1.0f) "" else "($currentSpeed x)"
+                    ActionItem(
+                        icon = Icons.Default.Speed,
+                        title = "Speed & Tempo $speedLabel",
+                        iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
+                        textColor = contentColor,
+                        onClick = { handleAction { onPlaybackSpeed() } }
+                    )
 
-                ActionItem(
-                    icon = Icons.Default.Tune, // Using Tune icon for Equalizer
-                    title = "Equalizer",
-                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
-                    textColor = contentColor,
-                    onClick = { handleAction { onEqualizerClick() } }
-                )
+                    ActionItem(
+                        icon = Icons.Default.Tune, // Using Tune icon for Equalizer
+                        title = "Equalizer",
+                        iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
+                        textColor = contentColor,
+                        onClick = { handleAction { onEqualizerClick() } }
+                    )
 
-                ActionItem(
-                    icon = Icons.Default.Nightlight,
-                    title = "Sleep Timer",
-                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.tertiary,
-                    textColor = contentColor,
-                    onClick = { handleAction { onSleepTimer() } }
-                )
+                    ActionItem(
+                        icon = Icons.Default.Nightlight,
+                        title = "Sleep Timer",
+                        iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.tertiary,
+                        textColor = contentColor,
+                        onClick = { handleAction { onSleepTimer() } }
+                    )
+                }
 
                 // Dislike button removed as per request
                 
