@@ -205,6 +205,21 @@ fun AppearanceSettingsScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
+                // --- Player Section ---
+                item {
+                    SettingsSectionTitle("Player")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        AppearanceSwitchItem(
+                            icon = Icons.Default.Animation,
+                            title = "Dynamic Background",
+                            subtitle = "Animate player background colors",
+                            checked = uiState.playerAnimatedBackgroundEnabled,
+                            onCheckedChange = { viewModel.setPlayerAnimatedBackgroundEnabled(it) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
                 // --- Lyrics Section ---
                 item {
                     SettingsSectionTitle("Lyrics")
