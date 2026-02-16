@@ -313,13 +313,15 @@ private fun CollapsedMiniPlayer(
         shadowElevation = 8.dp
     ) {
         // Gradient background using dominant colors with transparency
+        // Max transparency limited to 0.7 (70%) so it stays visible
+        val effectiveAlpha = 1f - (userAlpha * 0.7f)
         Box(
             modifier = Modifier
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            dominantColors.primary.copy(alpha = 0.85f * (1f - userAlpha)),
-                            dominantColors.secondary.copy(alpha = 0.85f * (1f - userAlpha))
+                            dominantColors.primary.copy(alpha = 0.85f * effectiveAlpha),
+                            dominantColors.secondary.copy(alpha = 0.85f * effectiveAlpha)
                         )
                     )
                 )
