@@ -109,7 +109,8 @@ fun SettingsScreen(
     onSponsorBlockClick: () -> Unit = {},
     onCreditsClick: () -> Unit = {},
     onLastFmClick: () -> Unit = {},
-    onDiscordClick: () -> Unit = {}
+    onDiscordClick: () -> Unit = {},
+    onUpdaterClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -486,9 +487,9 @@ fun SettingsScreen(
                         
                         SettingsNavigationItem(
                             icon = Icons.Default.SystemUpdate,
-                            title = "Check for Updates",
-                            subtitle = if (uiState.updateState is UpdateState.Checking) "Checking..." else "Tap to check",
-                            onClick = { viewModel.checkForUpdates() }
+                            title = "Updater",
+                            subtitle = "Check for app updates and changelogs",
+                            onClick = onUpdaterClick
                         )
                     }
                     Spacer(modifier = Modifier.height(32.dp))
