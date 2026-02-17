@@ -157,29 +157,56 @@ class YouTubeStreamingService @Inject constructor(
             
             // Strategy:
             // 1. For higher quality (720p, 1080p), use videoOnlyStreams + separate audio
-            //    These are typically higher quality but require merging
+            //    These provide true HD quality but require MergingMediaSource in ExoPlayer
             // 2. For lower quality (360p) or as fallback, use muxed videoStreams
             
             var videoResult: VideoStreamResult? = null
             
-            // Try DASH stream first (Native adaptive streaming for 720p/1080p)
+            // For 720p+: Use video-only streams + separate audio stream (best quality)
             if (targetResolution >= 720) {
                 try {
-                    val dashUrl = streamExtractor.dashMpdUrl
-                    if (!dashUrl.isNullOrEmpty()) {
-                        android.util.Log.d("YouTubeStreaming", "Using DASH manifest: $dashUrl")
-                        videoResult = VideoStreamResult(
-                            videoUrl = dashUrl,
-                            audioUrl = null, // DASH handles audio internally
-                            resolution = "Auto (DASH)"
-                        )
+                    val videoOnlyStreams = streamExtractor.videoOnlyStreams
+                    val audioStreams = streamExtractor.audioStreams
+                    
+                    android.util.Log.d("YouTubeStreaming", "Available video-only streams: ${videoOnlyStreams.map { "${it.resolution} (${it.format?.name})" }}")
+                    android.util.Log.d("YouTubeStreaming", "Available audio streams: ${audioStreams.map { "${it.averageBitrate}kbps (${it.format?.name})" }}")
+                    
+                    // Find best video-only stream at or below target resolution
+                    val bestVideoStream = videoOnlyStreams
+                        .filter { stream ->
+                            val resolutionString = stream.resolution ?: return@filter false
+                            val height = resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                            height in 1..targetResolution
+                        }
+                        .maxByOrNull { stream ->
+                            val resolutionString = stream.resolution ?: "0"
+                            resolutionString.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+                        }
+                    
+                    // Get best audio stream (highest bitrate)
+                    val bestAudioStream = audioStreams.maxByOrNull { it.averageBitrate }
+                    
+                    if (bestVideoStream != null && bestAudioStream != null) {
+                        val videoUrl = bestVideoStream.content
+                        val audioUrl = bestAudioStream.content
+                        
+                        if (videoUrl != null && audioUrl != null) {
+                            android.util.Log.d("YouTubeStreaming", "Using video-only stream: ${bestVideoStream.resolution} + audio: ${bestAudioStream.averageBitrate}kbps")
+                            
+                            streamCache.put(videoCacheKey, CachedStream(videoUrl, System.currentTimeMillis()))
+                            streamCache.put(audioCacheKey, CachedStream(audioUrl, System.currentTimeMillis()))
+                            
+                            videoResult = VideoStreamResult(
+                                videoUrl = videoUrl,
+                                audioUrl = audioUrl,  // Separate audio - needs MergingMediaSource
+                                resolution = bestVideoStream.resolution
+                            )
+                        }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.w("YouTubeStreaming", "Failed to get DASH URL", e)
+                    android.util.Log.w("YouTubeStreaming", "Failed to get video-only streams, falling back to muxed", e)
                 }
             }
-            
-            // If DASH not available, try finding best muxed stream (unlikely for high res, but fallback)
             
             // Fallback to muxed streams (video + audio combined) for lower quality or if video-only failed
             if (videoResult == null) {

@@ -638,10 +638,10 @@ class MusicPlayer @Inject constructor(
         
         _playerState.update { it.copy(videoQuality = quality) }
         
-        // Update DASH resolution constraints
+        // Update video resolution constraints
         mediaController?.let { player ->
             val maxResolution = quality.maxResolution
-            // Constrain video size to the selected quality (DASH will adapt up to this limit)
+            // Constrain video size to the selected quality
             val params = player.trackSelectionParameters
                 .buildUpon()
                 .setMaxVideoSize(maxResolution, maxResolution)
@@ -743,10 +743,11 @@ class MusicPlayer @Inject constructor(
             }
 
             // Build MediaItem
-            // Note: For DASH streams (720p+), the streamUrl is the manifest URL which handles both video and audio.
+            // For dual-stream video (720p/1080p), audio URL is passed via RequestMetadata extras
+            // so the service-side DualStreamMediaSourceFactory can create MergingMediaSource.
             val finalUri = streamUrl
             
-            android.util.Log.d("MusicPlayer", "Final URI: $finalUri")
+            android.util.Log.d("MusicPlayer", "Final URI: $finalUri, audioStreamUrl: $audioStreamUrl")
             
             val mediaItemBuilder = MediaItem.Builder()
                 .setUri(finalUri)
@@ -760,6 +761,17 @@ class MusicPlayer @Inject constructor(
                         .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
                         .build()
                 )
+            
+            // Pass audio URL for dual-stream merging (video-only + audio-only)
+            if (!audioStreamUrl.isNullOrEmpty()) {
+                mediaItemBuilder.setRequestMetadata(
+                    MediaItem.RequestMetadata.Builder()
+                        .setExtras(android.os.Bundle().apply {
+                            putString("audioStreamUrl", audioStreamUrl)
+                        })
+                        .build()
+                )
+            }
             
             val newMediaItem = mediaItemBuilder.build()
             
@@ -1537,19 +1549,17 @@ class MusicPlayer @Inject constructor(
         
         scope.launch {
             try {
-                val streamUrl = if (newVideoMode) {
-                    // Switch to video stream
-                    // 1. Determine Video ID
-                    // Video ID determination with Smart Match
+                var streamUrl: String? = null
+                var audioStreamUrl: String? = null
+                
+                if (newVideoMode) {
+                    // Switch to video stream with quality-aware dual-stream support
                     val videoId = if (song.source == SongSource.YOUTUBE) {
-                         // Check cache or resolve smart match
                          resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
                              resolvedVideoIds.put(song.id, it) 
                          }
                     } else {
-                        // For non-YouTube songs (JioSaavn), we can also try to find a video
                         resolvedVideoIds[song.id] ?: run {
-                            // Search for video
                             val query = "${song.title} ${song.artist} official video"
                             try {
                                 val results = youTubeRepository.search(query)
@@ -1562,13 +1572,17 @@ class MusicPlayer @Inject constructor(
                     }
                     
                     if (videoId != null) {
-                        youTubeRepository.getVideoStreamUrl(videoId)
-                    } else {
-                        null
+                        // Use getVideoStreamResult for proper quality + dual-stream
+                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                        if (videoResult != null) {
+                            streamUrl = videoResult.videoUrl
+                            audioStreamUrl = videoResult.audioUrl
+                            android.util.Log.d("MusicPlayer", "Toggle video: ${videoResult.resolution}, dual-stream: ${videoResult.audioUrl != null}")
+                        }
                     }
                 } else {
                     // Switch back to audio stream - use original source logic
-                    when (song.source) {
+                    streamUrl = when (song.source) {
                         SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
                         SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id)
                         else -> youTubeRepository.getStreamUrl(song.id)
@@ -1587,7 +1601,7 @@ class MusicPlayer @Inject constructor(
                     return@launch
                 }
                 
-                val newMediaItem = MediaItem.Builder()
+                val mediaItemBuilder = MediaItem.Builder()
                     .setUri(streamUrl)
                     .setMediaId(song.id)
                     .setMediaMetadata(
@@ -1598,7 +1612,19 @@ class MusicPlayer @Inject constructor(
                             .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
                             .build()
                     )
-                    .build()
+                
+                // Pass audio URL for dual-stream merging (video-only + audio-only)
+                if (!audioStreamUrl.isNullOrEmpty()) {
+                    mediaItemBuilder.setRequestMetadata(
+                        MediaItem.RequestMetadata.Builder()
+                            .setExtras(android.os.Bundle().apply {
+                                putString("audioStreamUrl", audioStreamUrl)
+                            })
+                            .build()
+                    )
+                }
+                
+                val newMediaItem = mediaItemBuilder.build()
                 
                 mediaController?.let { controller ->
                     val currentIndex = controller.currentMediaItemIndex
