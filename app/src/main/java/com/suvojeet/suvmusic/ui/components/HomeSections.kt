@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier 
 import androidx.compose.foundation.border
@@ -49,6 +50,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 
 @Composable
@@ -62,6 +64,10 @@ fun HorizontalCarouselSection(
 ) {
     if (section.items.isEmpty()) return
 
+    val songs = remember(section.items) {
+        section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    }
+
     Column(modifier = modifier) {
         HomeSectionHeader(title = section.title)
         Spacer(modifier = Modifier.height(16.dp))
@@ -70,12 +76,19 @@ fun HorizontalCarouselSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(section.items) { item ->
+            itemsIndexed(
+                items = section.items,
+                key = { _, item -> item.id },
+                contentType = { _, item -> item::class }
+            ) { index, item ->
                 when (item) {
                     is HomeItem.SongItem -> {
                         MusicCard(
                             song = item.song,
-                            onClick = { onSongClick(section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }, section.items.indexOf(item)) },
+                            onClick = { 
+                                val songIndex = songs.indexOf(item.song)
+                                if (songIndex != -1) onSongClick(songs, songIndex)
+                            },
                             onMoreClick = { onSongMoreClick(item.song) },
                             backgroundColor = Color.Transparent
                         )
@@ -316,14 +329,19 @@ fun QuickPicksSection(
     onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    if (section.items.isEmpty()) return
+
+    val songs = remember(section.items) {
+        section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    }
+    val chunkedItems = remember(section.items) { section.items.chunked(4) }
+    val lazyListState = rememberLazyListState()
+    
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HomeSectionHeader(title = section.title)
-        
-        val chunkedItems = section.items.chunked(4)
-        val lazyListState = rememberLazyListState()
         
         LazyRow(
             state = lazyListState,
@@ -332,40 +350,44 @@ fun QuickPicksSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(chunkedItems) { columnItems ->
-                Column(
-                    modifier = Modifier.fillParentMaxWidth(0.92f), // Peeking effect
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            chunkedItems.forEach { columnItems ->
+                item(
+                    key = columnItems.firstOrNull()?.id ?: java.util.UUID.randomUUID().toString(),
+                    contentType = "column_of_4"
                 ) {
-                    columnItems.forEach { item ->
-                        when (item) {
-                            is HomeItem.SongItem -> {
-                                MusicCard(
-                                    song = item.song,
-                                    onClick = {
-                                        val songs = section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
-                                        val index = songs.indexOf(item.song)
-                                        if (index != -1) onSongClick(songs, index)
-                                    },
-                                    onMoreClick = { onSongMoreClick(item.song) },
-                                    backgroundColor = Color.Transparent
-                                )
+                    Column(
+                        modifier = Modifier.fillParentMaxWidth(0.92f), // Peeking effect
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        columnItems.forEach { item ->
+                            when (item) {
+                                is HomeItem.SongItem -> {
+                                    MusicCard(
+                                        song = item.song,
+                                        onClick = {
+                                            val index = songs.indexOf(item.song)
+                                            if (index != -1) onSongClick(songs, index)
+                                        },
+                                        onMoreClick = { onSongMoreClick(item.song) },
+                                        backgroundColor = Color.Transparent
+                                    )
+                                }
+                                is HomeItem.PlaylistItem -> {
+                                    MusicCard(
+                                        song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
+                                        onClick = { onPlaylistClick(item.playlist) },
+                                        backgroundColor = Color.Transparent
+                                    )
+                                }
+                                is HomeItem.AlbumItem -> {
+                                    MusicCard(
+                                        song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
+                                        onClick = { onAlbumClick(item.album) },
+                                        backgroundColor = Color.Transparent
+                                    )
+                                }
+                                else -> {}
                             }
-                            is HomeItem.PlaylistItem -> {
-                                MusicCard(
-                                    song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
-                                    onClick = { onPlaylistClick(item.playlist) },
-                                    backgroundColor = Color.Transparent
-                                )
-                            }
-                            is HomeItem.AlbumItem -> {
-                                MusicCard(
-                                    song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
-                                    onClick = { onAlbumClick(item.album) },
-                                    backgroundColor = Color.Transparent
-                                )
-                            }
-                            else -> {}
                         }
                     }
                 }
