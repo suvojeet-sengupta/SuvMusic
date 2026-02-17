@@ -53,6 +53,18 @@ class SpatialAudioProcessor @Inject constructor(
         nativeSpatialAudio.setEqBand(bandIndex, gainDb)
     }
 
+    fun setEqPreamp(gainDb: Float) {
+        nativeSpatialAudio.setEqPreamp(gainDb)
+    }
+
+    fun setBassBoost(strength: Float) {
+        nativeSpatialAudio.setBassBoost(strength)
+    }
+
+    fun setVirtualizer(strength: Float) {
+        nativeSpatialAudio.setVirtualizer(strength)
+    }
+
     fun resetEqBands() {
         for (i in 0 until 10) {
             nativeSpatialAudio.setEqBand(i, 0f)

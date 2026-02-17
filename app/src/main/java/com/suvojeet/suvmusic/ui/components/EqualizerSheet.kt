@@ -28,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -61,6 +62,49 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
+@Composable
+private fun ControlKnob(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    dominantColor: Color,
+    enabled: Boolean = true
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0f..1f,
+            enabled = enabled,
+            colors = SliderDefaults.colors(
+                thumbColor = dominantColor,
+                activeTrackColor = dominantColor,
+                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+            )
+        )
+        Text(
+            text = "${(value * 100).toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            color = dominantColor,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
+}
+
 val EqPresets = mapOf(
     "Flat" to floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f),
     "Bass Boost" to floatArrayOf(6f, 5f, 4f, 2f, 0f, 0f, 0f, 0f, 0f, 0f),
@@ -80,11 +124,17 @@ fun EqualizerSheet(
     onDismiss: () -> Unit,
     onBandChange: (Int, Float) -> Unit,
     onBandsChange: (FloatArray) -> Unit = {},
+    onPreampChange: (Float) -> Unit = {},
+    onBassBoostChange: (Float) -> Unit = {},
+    onVirtualizerChange: (Float) -> Unit = {},
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
     dominantColor: Color,
     initialEnabled: Boolean,
-    initialBands: FloatArray
+    initialBands: FloatArray,
+    initialPreamp: Float = 0f,
+    initialBassBoost: Float = 0f,
+    initialVirtualizer: Float = 0f
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val haptic = LocalHapticFeedback.current
@@ -106,6 +156,10 @@ fun EqualizerSheet(
         var localBands by remember(initialBands) { 
             mutableStateOf(initialBands.copyOf())
         }
+        
+        var preampValue by remember(initialPreamp) { mutableStateOf(initialPreamp) }
+        var bassBoostValue by remember(initialBassBoost) { mutableStateOf(initialBassBoost) }
+        var virtualizerValue by remember(initialVirtualizer) { mutableStateOf(initialVirtualizer) }
 
         val frequencies = remember { 
             listOf("31Hz", "62Hz", "125Hz", "250Hz", "500Hz", "1kHz", "2kHz", "4kHz", "8kHz", "16kHz")
@@ -198,6 +252,12 @@ fun EqualizerSheet(
                     androidx.compose.material3.TextButton(
                         onClick = {
                             onReset()
+                            onPreampChange(0f)
+                            onBassBoostChange(0f)
+                            onVirtualizerChange(0f)
+                            preampValue = 0f
+                            bassBoostValue = 0f
+                            virtualizerValue = 0f
                             selectedPreset = "Flat"
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         },
@@ -301,6 +361,42 @@ fun EqualizerSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Preamp, Bass Boost, Virtualizer
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Bass Boost
+                ControlKnob(
+                    label = "Bass Boost",
+                    value = bassBoostValue,
+                    onValueChange = {
+                        bassBoostValue = it
+                        onBassBoostChange(it)
+                    },
+                    modifier = Modifier.weight(1f),
+                    dominantColor = dominantColor,
+                    enabled = isEnabled
+                )
+
+                // Virtualizer
+                ControlKnob(
+                    label = "Virtualizer",
+                    value = virtualizerValue,
+                    onValueChange = {
+                        virtualizerValue = it
+                        onVirtualizerChange(it)
+                    },
+                    modifier = Modifier.weight(1f),
+                    dominantColor = dominantColor,
+                    enabled = isEnabled
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Presets Horizontal List
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 24.dp),
@@ -377,6 +473,64 @@ fun EqualizerSheet(
                 ) {
                     Spacer(modifier = Modifier.width(20.dp)) // Offset for labels
                     
+                    // Preamp Slider
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .width(44.dp)
+                            .fillMaxHeight()
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .width(44.dp)
+                        ) {
+                            Slider(
+                                value = preampValue,
+                                onValueChange = { 
+                                    preampValue = it
+                                    onPreampChange(it)
+                                },
+                                valueRange = -15f..15f,
+                                enabled = isEnabled,
+                                colors = sliderColors,
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        rotationZ = 270f
+                                        transformOrigin = TransformOrigin(0.5f, 0.5f)
+                                    }
+                                    .layout { measurable, constraints ->
+                                        val placeable = measurable.measure(
+                                            Constraints(
+                                                minWidth = constraints.minHeight,
+                                                maxWidth = constraints.maxHeight,
+                                                minHeight = constraints.minWidth,
+                                                maxHeight = constraints.maxWidth
+                                            )
+                                        )
+                                        layout(placeable.height, placeable.width) {
+                                            placeable.place(-placeable.width / 2 + placeable.height / 2, -placeable.height / 2 + placeable.width / 2)
+                                        }
+                                    }
+                                    .width(200.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Preamp",
+                            style = labelSmallStyle,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isEnabled) dominantColor else onSurfaceVariantColor
+                        )
+                    }
+
+                    VerticalDivider(
+                        modifier = Modifier.height(200.dp).padding(vertical = 20.dp),
+                        color = dividerColor
+                    )
+
                     for (index in localBands.indices) {
                         val gain = localBands[index]
                         var sliderValue by remember(gain) { mutableStateOf(gain) }
