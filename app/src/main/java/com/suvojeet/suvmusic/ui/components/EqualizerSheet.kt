@@ -79,6 +79,7 @@ fun EqualizerSheet(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onBandChange: (Int, Float) -> Unit,
+    onBandsChange: (FloatArray) -> Unit = {},
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
     dominantColor: Color,
@@ -91,13 +92,19 @@ fun EqualizerSheet(
     if (isVisible) {
         // State management
         var isEnabled by remember(initialEnabled) { mutableStateOf(initialEnabled) }
-        var selectedPreset by remember { mutableStateOf("Custom") }
+        
+        // Find if current bands match any preset
+        val initialPreset = remember(initialBands) {
+            EqPresets.entries.find { entry ->
+                entry.value.size == initialBands.size && 
+                entry.value.zip(initialBands).all { (a, b) -> abs(a - b) < 0.01f }
+            }?.key ?: "Custom"
+        }
+        var selectedPreset by remember(initialPreset) { mutableStateOf(initialPreset) }
         
         // Local bands to sync with UI
-        val localBands = remember(initialBands) { 
-            val arr = FloatArray(10)
-            initialBands.copyInto(arr)
-            arr
+        var localBands by remember(initialBands) { 
+            mutableStateOf(initialBands.copyOf())
         }
 
         val frequencies = remember { 
@@ -314,10 +321,8 @@ fun EqualizerSheet(
                         onClick = {
                             selectedPreset = presetName
                             val presetBands = EqPresets[presetName]!!
-                            presetBands.forEachIndexed { index, gain ->
-                                localBands[index] = gain
-                                onBandChange(index, gain)
-                            }
+                            localBands = presetBands.copyOf()
+                            onBandsChange(presetBands)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         },
                         dominantColor = dominantColor,
@@ -392,6 +397,9 @@ fun EqualizerSheet(
                                             onDoubleTap = {
                                                 if (isEnabled) {
                                                     sliderValue = 0f
+                                                    val newBands = localBands.copyOf()
+                                                    newBands[index] = 0f
+                                                    localBands = newBands
                                                     onBandChange(index, 0f)
                                                     selectedPreset = "Custom"
                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -414,6 +422,9 @@ fun EqualizerSheet(
                                         }
                                         
                                         sliderValue = finalValue
+                                        val newBands = localBands.copyOf()
+                                        newBands[index] = finalValue
+                                        localBands = newBands
                                         onBandChange(index, finalValue)
                                         selectedPreset = "Custom"
                                     },
