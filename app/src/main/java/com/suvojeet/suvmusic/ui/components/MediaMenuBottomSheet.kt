@@ -64,7 +64,8 @@ fun MediaMenuBottomSheet(
     onDownload: () -> Unit,
     onShare: () -> Unit,
     onRename: () -> Unit = {},
-    onDelete: () -> Unit = {}
+    onDelete: () -> Unit = {},
+    showShare: Boolean = true
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -201,12 +202,14 @@ fun MediaMenuBottomSheet(
                     )
                 }
 
-                MenuActionItem(
-                    icon = Icons.Default.Share,
-                    title = "Share",
-                    subtitle = "Share a link to this item",
-                    onClick = { onShare(); onDismiss() }
-                )
+                if (showShare) {
+                    MenuActionItem(
+                        icon = Icons.Default.Share,
+                        title = "Share",
+                        subtitle = "Share a link to this item",
+                        onClick = { onShare(); onDismiss() }
+                    )
+                }
             }
         }
     }
