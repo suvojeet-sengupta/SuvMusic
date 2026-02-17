@@ -220,6 +220,21 @@ fun AppearanceSettingsScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
+                // --- Performance Section ---
+                item {
+                    SettingsSectionTitle("Performance")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        AppearanceSwitchItem(
+                            icon = Icons.Default.Animation, // Using Animation icon or similar
+                            title = "Force Max Refresh Rate",
+                            subtitle = "Enable 90Hz/120Hz for smoother UI",
+                            checked = uiState.forceMaxRefreshRateEnabled,
+                            onCheckedChange = { viewModel.setForceMaxRefreshRate(it) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
                 // --- Lyrics Section ---
                 item {
                     SettingsSectionTitle("Lyrics")

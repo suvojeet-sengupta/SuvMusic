@@ -195,6 +195,8 @@ class SessionManager @Inject constructor(
         private val EQ_PREAMP_KEY = floatPreferencesKey("eq_preamp")
         private val BASS_BOOST_KEY = floatPreferencesKey("bass_boost")
         private val VIRTUALIZER_KEY = floatPreferencesKey("virtualizer")
+
+        private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -994,6 +996,16 @@ class SessionManager @Inject constructor(
     suspend fun setVirtualizer(strength: Float) {
         context.dataStore.edit { preferences ->
             preferences[VIRTUALIZER_KEY] = strength
+        }
+    }
+
+    val forceMaxRefreshRateFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[FORCE_MAX_REFRESH_RATE_KEY] ?: true
+    }
+
+    suspend fun setForceMaxRefreshRate(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[FORCE_MAX_REFRESH_RATE_KEY] = enabled
         }
     }
 
