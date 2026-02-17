@@ -114,7 +114,8 @@ data class SettingsUiState(
     val crossfeedEnabled: Boolean = true,
     // Equalizer
     val eqEnabled: Boolean = false,
-    val eqBands: FloatArray = FloatArray(10) { 0f }
+    val eqBands: FloatArray = FloatArray(10) { 0f },
+    val forceMaxRefreshRateEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -447,6 +448,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.forceMaxRefreshRateFlow.collect { enabled ->
+                _uiState.update { it.copy(forceMaxRefreshRateEnabled = enabled) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -518,6 +525,7 @@ class SettingsViewModel @Inject constructor(
             val crossfeedEnabled = sessionManager.isCrossfeedEnabled()
             val eqEnabled = sessionManager.isEqEnabled()
             val eqBands = sessionManager.getEqBands()
+            val forceMaxRefreshRate = sessionManager.forceMaxRefreshRateFlow.first()
 
 
             _uiState.update { 
@@ -587,7 +595,8 @@ class SettingsViewModel @Inject constructor(
                     nextSongPreloadDelay = nextSongPreloadDelay,
                     crossfeedEnabled = crossfeedEnabled,
                     eqEnabled = eqEnabled,
-                    eqBands = eqBands
+                    eqBands = eqBands,
+                    forceMaxRefreshRateEnabled = forceMaxRefreshRate
                 )
             }
         }
@@ -1241,6 +1250,13 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(volumeBoostAmount = amount) }
         }
     }
+    fun setForceMaxRefreshRate(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setForceMaxRefreshRate(enabled)
+            _uiState.update { it.copy(forceMaxRefreshRateEnabled = enabled) }
+        }
+    }
+
     fun setSponsorBlockEnabled(enabled: Boolean) {
         viewModelScope.launch {
             sessionManager.setSponsorBlockEnabled(enabled)
