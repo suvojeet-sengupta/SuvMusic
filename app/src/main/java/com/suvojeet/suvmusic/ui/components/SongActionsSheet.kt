@@ -91,6 +91,7 @@ fun SongActionsSheet(
     onMoveDown: (() -> Unit)? = null,
     onRemoveFromQueue: (() -> Unit)? = null,
     isFromQueue: Boolean = false,
+    showShare: Boolean = true,
     dominantColors: DominantColors? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -274,13 +275,15 @@ fun SongActionsSheet(
                     onClick = { handleAction { onListenTogether() } }
                 )
                 
-                ActionItem(
-                    icon = Icons.Default.Share,
-                    title = "Share Song",
-                    iconTint = contentColor,
-                    textColor = contentColor,
-                    onClick = { handleAction { shareSong() } }
-                )
+                if (showShare) {
+                    ActionItem(
+                        icon = Icons.Default.Share,
+                        title = "Share Song",
+                        iconTint = contentColor,
+                        textColor = contentColor,
+                        onClick = { handleAction { shareSong() } }
+                    )
+                }
                 
                 ActionItem(
                     icon = Icons.Default.Info,

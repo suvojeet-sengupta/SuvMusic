@@ -55,7 +55,8 @@ fun SongMenuBottomSheet(
     onDownload: () -> Unit,
     onShare: () -> Unit,
     onViewArtist: (() -> Unit)? = null,
-    onViewAlbum: (() -> Unit)? = null
+    onViewAlbum: (() -> Unit)? = null,
+    showShare: Boolean = true
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
@@ -172,12 +173,14 @@ fun SongMenuBottomSheet(
                     )
                 }
 
-                MenuActionItem(
-                    icon = Icons.Default.Share,
-                    title = "Share",
-                    subtitle = "Share a link to this song",
-                    onClick = { onShare(); onDismiss() }
-                )
+                if (showShare) {
+                    MenuActionItem(
+                        icon = Icons.Default.Share,
+                        title = "Share",
+                        subtitle = "Share a link to this song",
+                        onClick = { onShare(); onDismiss() }
+                    )
+                }
             }
         }
     }
