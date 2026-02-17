@@ -19,9 +19,20 @@ data class HomeSection(
 )
 
 sealed class HomeItem {
-    data class SongItem(val song: Song) : HomeItem()
-    data class PlaylistItem(val playlist: PlaylistDisplayItem, val previewSongs: List<Song> = emptyList()) : HomeItem()
-    data class AlbumItem(val album: Album) : HomeItem()
-    data class ArtistItem(val artist: Artist) : HomeItem()
-    data class ExploreItem(val title: String, val iconRes: Int, val browseId: String) : HomeItem()
+    abstract val id: String
+    data class SongItem(val song: Song) : HomeItem() {
+        override val id: String = song.id
+    }
+    data class PlaylistItem(val playlist: PlaylistDisplayItem, val previewSongs: List<Song> = emptyList()) : HomeItem() {
+        override val id: String = playlist.id
+    }
+    data class AlbumItem(val album: Album) : HomeItem() {
+        override val id: String = album.id
+    }
+    data class ArtistItem(val artist: Artist) : HomeItem() {
+        override val id: String = artist.id
+    }
+    data class ExploreItem(val title: String, val iconRes: Int, val browseId: String) : HomeItem() {
+        override val id: String = browseId
+    }
 }

@@ -33,6 +33,7 @@ sealed class HomeEvent {
 
 data class HomeUiState(
     val homeSections: List<HomeSection> = emptyList(),
+    val filteredSections: List<HomeSection> = emptyList(),
     val recommendations: List<Song> = emptyList(),
     val recommendedArtists: List<RecommendedArtist> = emptyList(),
     val recommendedTracks: List<RecommendedTrack> = emptyList(),
@@ -124,6 +125,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         homeSections = sections,
+                        filteredSections = sections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
                         isLoading = false,
                         isRefreshing = false,
                         error = if (sections.isEmpty()) "No content found for $mood" else null
@@ -161,6 +163,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         homeSections = cachedSections, 
+                        filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
                         isLoading = false,
                         isRefreshing = false, // Not explicitly refreshing unless we decide to fetch
                         error = null
@@ -209,6 +212,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { 
                         it.copy(
                             homeSections = sections,
+                            filteredSections = sections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
                             isLoading = false,
                             isRefreshing = false,
                             error = null
