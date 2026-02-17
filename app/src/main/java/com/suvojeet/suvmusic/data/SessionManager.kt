@@ -192,6 +192,9 @@ class SessionManager @Inject constructor(
         // Equalizer
         private val EQ_ENABLED_KEY = booleanPreferencesKey("eq_enabled")
         private val EQ_BANDS_KEY = stringPreferencesKey("eq_bands") // Store as comma-separated floats
+        private val EQ_PREAMP_KEY = floatPreferencesKey("eq_preamp")
+        private val BASS_BOOST_KEY = floatPreferencesKey("bass_boost")
+        private val VIRTUALIZER_KEY = floatPreferencesKey("virtualizer")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -961,6 +964,36 @@ class SessionManager @Inject constructor(
     suspend fun resetEqBands() {
         context.dataStore.edit { preferences ->
             preferences[EQ_BANDS_KEY] = "0,0,0,0,0,0,0,0,0,0"
+        }
+    }
+
+    val eqPreampFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[EQ_PREAMP_KEY] ?: 0f
+    }
+
+    suspend fun setEqPreamp(gain: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[EQ_PREAMP_KEY] = gain
+        }
+    }
+
+    val bassBoostFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[BASS_BOOST_KEY] ?: 0f
+    }
+
+    suspend fun setBassBoost(strength: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[BASS_BOOST_KEY] = strength
+        }
+    }
+
+    val virtualizerFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[VIRTUALIZER_KEY] ?: 0f
+    }
+
+    suspend fun setVirtualizer(strength: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[VIRTUALIZER_KEY] = strength
         }
     }
 

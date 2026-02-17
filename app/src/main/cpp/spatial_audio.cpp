@@ -203,7 +203,7 @@ private:
 
 class ParametricEQ {
 public:
-    ParametricEQ() : enabled(false) {
+    ParametricEQ() : enabled(false), preampGain(1.0f) {
         // Standard 10-Band ISO Frequencies
         float freqs[] = {31.0f, 62.0f, 125.0f, 250.0f, 500.0f, 1000.0f, 2000.0f, 4000.0f, 8000.0f, 16000.0f};
         
@@ -227,6 +227,10 @@ public:
         }
     }
 
+    void setPreamp(float gainDb) {
+        preampGain.store(powf(10.0f, gainDb / 20.0f), std::memory_order_release);
+    }
+
     void setEnabled(bool e) {
         enabled.store(e, std::memory_order_release);
     }
@@ -234,6 +238,13 @@ public:
     void process(float* buffer, int numFrames, int numChannels, int sampleRate) {
         if (!enabled.load(std::memory_order_acquire)) return;
         if (buffer == nullptr || numFrames <= 0 || numChannels <= 0) return;
+
+        float pGain = preampGain.load(std::memory_order_acquire);
+        if (pGain != 1.0f) {
+            for (int i = 0; i < numFrames * numChannels; ++i) {
+                buffer[i] *= pGain;
+            }
+        }
 
         std::lock_guard<std::mutex> lock(filterMutex);
         
@@ -246,18 +257,85 @@ public:
     void reset() {
         std::lock_guard<std::mutex> lock(filterMutex);
         for (auto& filter : filters) filter.reset();
+        preampGain.store(1.0f, std::memory_order_release);
     }
 
 private:
     std::mutex filterMutex;
     std::atomic<bool> enabled;
+    std::atomic<float> preampGain;
     std::vector<Biquad> filters;
+};
+
+class BassBoost {
+public:
+    BassBoost() : strength(0.0f) {
+        filter.setParams(LOW_SHELF, 80.0f, 1.0f, 0.0f, 44100);
+    }
+
+    void setStrength(float s) {
+        strength.store(s, std::memory_order_release);
+        // Strength 0-1 maps to 0-12dB boost
+        filter.updateGain(s * 12.0f);
+    }
+
+    void process(float* buffer, int numFrames, int numChannels) {
+        if (strength.load(std::memory_order_acquire) <= 0.01f) return;
+        filter.process(buffer, numFrames, numChannels);
+    }
+
+    void reset() {
+        filter.reset();
+        strength.store(0.0f, std::memory_order_release);
+    }
+
+private:
+    Biquad filter;
+    std::atomic<float> strength;
+};
+
+class Virtualizer {
+public:
+    Virtualizer() : strength(0.0f) {}
+
+    void setStrength(float s) {
+        strength.store(s, std::memory_order_release);
+    }
+
+    void process(float* buffer, int numFrames, int numChannels) {
+        float s = strength.load(std::memory_order_acquire);
+        if (s <= 0.01f || numChannels < 2) return;
+
+        // Simple MS-based widening for virtualizer effect
+        for (int i = 0; i < numFrames; ++i) {
+            float l = buffer[i * 2];
+            float r = buffer[i * 2 + 1];
+            
+            float mid = (l + r) * 0.5f;
+            float side = (l - r) * 0.5f;
+            
+            // Boost side signal based on strength
+            side *= (1.0f + s * 0.8f);
+            
+            buffer[i * 2] = mid + side;
+            buffer[i * 2 + 1] = mid - side;
+        }
+    }
+
+    void reset() {
+        strength.store(0.0f, std::memory_order_release);
+    }
+
+private:
+    std::atomic<float> strength;
 };
 
 static Spatializer spatializer;
 static Limiter limiter;
 static Crossfeed crossfeed;
 static ParametricEQ equalizer;
+static BassBoost bassBoost;
+static Virtualizer virtualizer;
 static PitchShifter pitchShifter;
 static std::vector<float> processingBuffer;
 
@@ -295,6 +373,8 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, 
 
     crossfeed.process(floatData, frameCount, sampleRate);
     equalizer.process(floatData, frameCount, channelCount, sampleRate);
+    bassBoost.process(floatData, frameCount, channelCount);
+    virtualizer.process(floatData, frameCount, channelCount);
     pitchShifter.process(floatData, frameCount, channelCount);
     spatializer.process(floatData, frameCount, azimuth, elevation, sampleRate);
     limiter.process(floatData, frameCount, channelCount, sampleRate);
@@ -319,6 +399,24 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetEqBand(JNIEnv *env, job
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetEqPreamp(JNIEnv *env, jobject thiz, jfloat gainDb) {
+    equalizer.setPreamp(gainDb);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetBassBoost(JNIEnv *env, jobject thiz, jfloat strength) {
+    bassBoost.setStrength(strength);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetVirtualizer(JNIEnv *env, jobject thiz, jfloat strength) {
+    virtualizer.setStrength(strength);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetCrossfeedParams(JNIEnv *env, jobject thiz, jboolean enabled, jfloat strength) {
     crossfeed.setParams(enabled, strength);
 }
@@ -336,6 +434,8 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nReset(JNIEnv *env, jobject
     limiter.reset();
     crossfeed.reset();
     equalizer.reset();
+    bassBoost.reset();
+    virtualizer.reset();
     pitchShifter.reset();
 }
 
