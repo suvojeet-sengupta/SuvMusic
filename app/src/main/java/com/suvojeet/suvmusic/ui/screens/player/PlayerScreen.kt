@@ -1216,7 +1216,7 @@ fun PlayerScreen(
                 com.suvojeet.suvmusic.ui.components.EqualizerSheet(
                     isVisible = true,
                     onDismiss = { showEqualizerSheet = false },
-                    dominantColor = dominantColors.primary,
+                    dominantColor = dominantColors.accent,
                     onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
                     onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) },
                     onBandsChange = { bands -> playerViewModel.setEqBands(bands) },
