@@ -29,6 +29,7 @@ sealed class Destination(val route: String) {
     data object SponsorBlockSettings : Destination("sponsor_block_settings")
     data object DiscordSettings : Destination("discord_settings")
     data object Credits : Destination("credits")
+    data object Updater : Destination("updater")
 
     data class Playlist(
         val playlistId: String,
