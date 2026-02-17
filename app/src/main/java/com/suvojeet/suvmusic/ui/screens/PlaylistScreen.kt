@@ -344,7 +344,8 @@ fun PlaylistScreen(
                     onDownload = { viewModel.downloadPlaylist(playlist) },
                     onShare = { sharePlaylist(playlist) },
                     onRename = { showRenameDialog = true },
-                    onDelete = { showDeleteDialog = true }
+                    onDelete = { showDeleteDialog = true },
+                    showShare = playlist.id != "CACHED_ALL" && playlist.id != "DEVICE_SONGS"
                 )
             }
         }
@@ -360,7 +361,8 @@ fun PlaylistScreen(
                 onAddToQueue = { viewModel.addToQueue(song) },
                 onAddToPlaylist = { playlistMgmtViewModel.showAddToPlaylistSheet(song) },
                 onDownload = { viewModel.downloadSong(song) },
-                onShare = { shareSong(song) }
+                onShare = { shareSong(song) },
+                showShare = playlist?.id != "CACHED_ALL" && playlist?.id != "DEVICE_SONGS"
             )
         }
 
@@ -645,20 +647,22 @@ private fun PlaylistHeader(
             }
             
             // Share Button
-            BounceButton(
-                onClick = onShare,
-                size = 48.dp,
-                shape = CircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = CircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    tint = contentColor
-                )
+            if (playlist.id != "CACHED_ALL" && playlist.id != "DEVICE_SONGS") {
+                BounceButton(
+                    onClick = onShare,
+                    size = 48.dp,
+                    shape = CircleShape,
+                    modifier = Modifier.background(
+                        color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                        shape = CircleShape
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
+                        tint = contentColor
+                    )
+                }
             }
             
             // More Button
