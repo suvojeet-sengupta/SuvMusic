@@ -1130,53 +1130,91 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun setEqEnabled(enabled: Boolean) {
+        // Immediate audio update
+        spatialAudioProcessor.setEqEnabled(enabled)
         viewModelScope.launch {
             sessionManager.setEqEnabled(enabled)
-            spatialAudioProcessor.setEqEnabled(enabled)
         }
     }
     
+    private var eqBandsUpdateJob: kotlinx.coroutines.Job? = null
     fun setEqBandGain(bandIndex: Int, gainDb: Float) {
-        viewModelScope.launch {
+        // Immediate audio update
+        spatialAudioProcessor.setEqBand(bandIndex, gainDb)
+        
+        // Debounced persistence
+        eqBandsUpdateJob?.cancel()
+        eqBandsUpdateJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
             sessionManager.setEqBand(bandIndex, gainDb)
-            spatialAudioProcessor.setEqBand(bandIndex, gainDb)
         }
     }
 
     fun setEqBands(bands: FloatArray) {
-        viewModelScope.launch {
+        // Immediate audio update
+        bands.forEachIndexed { index, gain ->
+            spatialAudioProcessor.setEqBand(index, gain)
+        }
+        
+        // Debounced persistence
+        eqBandsUpdateJob?.cancel()
+        eqBandsUpdateJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
             sessionManager.setEqBands(bands)
-            bands.forEachIndexed { index, gain ->
-                spatialAudioProcessor.setEqBand(index, gain)
-            }
         }
     }
 
     fun resetEqBands() {
+        // Immediate audio update
+        spatialAudioProcessor.resetEqBands()
+        spatialAudioProcessor.setEqPreamp(0f)
+        spatialAudioProcessor.setBassBoost(0f)
+        spatialAudioProcessor.setVirtualizer(0f)
+        
         viewModelScope.launch {
             sessionManager.resetEqBands()
-            spatialAudioProcessor.resetEqBands()
+            sessionManager.setEqPreamp(0f)
+            sessionManager.setBassBoost(0f)
+            sessionManager.setVirtualizer(0f)
         }
     }
 
+    private var eqPreampUpdateJob: kotlinx.coroutines.Job? = null
     fun setEqPreamp(gainDb: Float) {
-        viewModelScope.launch {
+        // Immediate audio update
+        spatialAudioProcessor.setEqPreamp(gainDb)
+        
+        // Debounced persistence
+        eqPreampUpdateJob?.cancel()
+        eqPreampUpdateJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
             sessionManager.setEqPreamp(gainDb)
-            spatialAudioProcessor.setEqPreamp(gainDb)
         }
     }
 
+    private var bassBoostUpdateJob: kotlinx.coroutines.Job? = null
     fun setBassBoost(strength: Float) {
-        viewModelScope.launch {
+        // Immediate audio update
+        spatialAudioProcessor.setBassBoost(strength)
+        
+        // Debounced persistence
+        bassBoostUpdateJob?.cancel()
+        bassBoostUpdateJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
             sessionManager.setBassBoost(strength)
-            spatialAudioProcessor.setBassBoost(strength)
         }
     }
 
+    private var virtualizerUpdateJob: kotlinx.coroutines.Job? = null
     fun setVirtualizer(strength: Float) {
-        viewModelScope.launch {
+        // Immediate audio update
+        spatialAudioProcessor.setVirtualizer(strength)
+        
+        // Debounced persistence
+        virtualizerUpdateJob?.cancel()
+        virtualizerUpdateJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
             sessionManager.setVirtualizer(strength)
-            spatialAudioProcessor.setVirtualizer(strength)
         }
     }
 

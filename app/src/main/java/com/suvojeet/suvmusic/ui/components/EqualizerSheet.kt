@@ -157,9 +157,20 @@ fun EqualizerSheet(
             mutableStateOf(initialBands.copyOf())
         }
         
-        var preampValue by remember(initialPreamp) { mutableStateOf(initialPreamp) }
-        var bassBoostValue by remember(initialBassBoost) { mutableStateOf(initialBassBoost) }
-        var virtualizerValue by remember(initialVirtualizer) { mutableStateOf(initialVirtualizer) }
+        var preampValue by remember { mutableStateOf(initialPreamp) }
+        androidx.compose.runtime.LaunchedEffect(initialPreamp) {
+            preampValue = initialPreamp
+        }
+        
+        var bassBoostValue by remember { mutableStateOf(initialBassBoost) }
+        androidx.compose.runtime.LaunchedEffect(initialBassBoost) {
+            bassBoostValue = initialBassBoost
+        }
+        
+        var virtualizerValue by remember { mutableStateOf(initialVirtualizer) }
+        androidx.compose.runtime.LaunchedEffect(initialVirtualizer) {
+            virtualizerValue = initialVirtualizer
+        }
 
         val frequencies = remember { 
             listOf("31Hz", "62Hz", "125Hz", "250Hz", "500Hz", "1kHz", "2kHz", "4kHz", "8kHz", "16kHz")
@@ -480,6 +491,11 @@ fun EqualizerSheet(
                             .width(44.dp)
                             .fillMaxHeight()
                     ) {
+                        var sliderValue by remember { mutableStateOf(preampValue) }
+                        androidx.compose.runtime.LaunchedEffect(preampValue) {
+                            sliderValue = preampValue
+                        }
+
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -487,8 +503,9 @@ fun EqualizerSheet(
                                 .width(44.dp)
                         ) {
                             Slider(
-                                value = preampValue,
+                                value = sliderValue,
                                 onValueChange = { 
+                                    sliderValue = it
                                     preampValue = it
                                     onPreampChange(it)
                                 },
@@ -533,7 +550,14 @@ fun EqualizerSheet(
 
                     for (index in localBands.indices) {
                         val gain = localBands[index]
-                        var sliderValue by remember(gain) { mutableStateOf(gain) }
+                        var sliderValue by remember { mutableStateOf(gain) }
+                        
+                        // Sync with localBands (e.g. when preset changes)
+                        androidx.compose.runtime.LaunchedEffect(gain) {
+                            if (sliderValue != gain) {
+                                sliderValue = gain
+                            }
+                        }
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
