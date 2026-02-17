@@ -213,6 +213,9 @@ fun PlayerScreen(
     
     val eqEnabled by playerViewModel.getEqEnabled().collectAsState(initial = false)
     val eqBands by playerViewModel.getEqBands().collectAsState(initial = FloatArray(10) { 0f })
+    val eqPreamp by playerViewModel.getEqPreamp().collectAsState(initial = 0f)
+    val bassBoost by playerViewModel.getBassBoost().collectAsState(initial = 0f)
+    val virtualizer by playerViewModel.getVirtualizer().collectAsState(initial = 0f)
     
     // Keep Screen On Logic
     DisposableEffect(keepScreenOn) {
@@ -1217,9 +1220,15 @@ fun PlayerScreen(
                     onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
                     onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) },
                     onBandsChange = { bands -> playerViewModel.setEqBands(bands) },
+                    onPreampChange = { gain -> playerViewModel.setEqPreamp(gain) },
+                    onBassBoostChange = { strength -> playerViewModel.setBassBoost(strength) },
+                    onVirtualizerChange = { strength -> playerViewModel.setVirtualizer(strength) },
                     onReset = { playerViewModel.resetEqBands() },
                     initialEnabled = eqEnabled,
-                    initialBands = eqBands
+                    initialBands = eqBands,
+                    initialPreamp = eqPreamp,
+                    initialBassBoost = bassBoost,
+                    initialVirtualizer = virtualizer
                 )
             }
             

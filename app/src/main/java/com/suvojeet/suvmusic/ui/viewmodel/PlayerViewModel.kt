@@ -1159,8 +1159,32 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun setEqPreamp(gainDb: Float) {
+        viewModelScope.launch {
+            sessionManager.setEqPreamp(gainDb)
+            spatialAudioProcessor.setEqPreamp(gainDb)
+        }
+    }
+
+    fun setBassBoost(strength: Float) {
+        viewModelScope.launch {
+            sessionManager.setBassBoost(strength)
+            spatialAudioProcessor.setBassBoost(strength)
+        }
+    }
+
+    fun setVirtualizer(strength: Float) {
+        viewModelScope.launch {
+            sessionManager.setVirtualizer(strength)
+            spatialAudioProcessor.setVirtualizer(strength)
+        }
+    }
+
     fun getEqEnabled(): Flow<Boolean> = sessionManager.eqEnabledFlow
     fun getEqBands(): Flow<FloatArray> = sessionManager.eqBandsFlow
+    fun getEqPreamp(): Flow<Float> = sessionManager.eqPreampFlow
+    fun getBassBoost(): Flow<Float> = sessionManager.bassBoostFlow
+    fun getVirtualizer(): Flow<Float> = sessionManager.virtualizerFlow
 
     override fun onCleared() {
         super.onCleared()
