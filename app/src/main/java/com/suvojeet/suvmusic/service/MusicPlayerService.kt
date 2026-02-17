@@ -280,6 +280,20 @@ class MusicPlayerService : MediaLibraryService() {
         }
 
         serviceScope.launch {
+            sessionManager.eqEnabledFlow.collect { enabled ->
+                spatialAudioProcessor.setEqEnabled(enabled)
+            }
+        }
+
+        serviceScope.launch {
+            sessionManager.eqBandsFlow.collect { bands ->
+                bands.forEachIndexed { index, gain ->
+                    spatialAudioProcessor.setEqBand(index, gain)
+                }
+            }
+        }
+
+        serviceScope.launch {
             sessionManager.ignoreAudioFocusDuringCallsFlow.collect { ignoreFocus ->
                 val player = mediaLibrarySession?.player as? ExoPlayer ?: return@collect
                 player.setAudioAttributes(

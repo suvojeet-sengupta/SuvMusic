@@ -941,21 +941,26 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun setEqBand(index: Int, gain: Float) {
-        val currentBands = getEqBands()
-        if (index in currentBands.indices) {
-            currentBands[index] = gain
-            val bandsStr = currentBands.joinToString(",")
-            context.dataStore.edit { preferences ->
-                preferences[EQ_BANDS_KEY] = bandsStr
+        context.dataStore.edit { preferences ->
+            val bandsStr = preferences[EQ_BANDS_KEY] ?: "0,0,0,0,0,0,0,0,0,0"
+            val bands = bandsStr.split(",").map { it.toFloatOrNull() ?: 0f }.toMutableList()
+            if (index in bands.indices) {
+                bands[index] = gain
+                preferences[EQ_BANDS_KEY] = bands.joinToString(",")
             }
         }
     }
 
-    suspend fun resetEqBands() {
-        val resetBands = FloatArray(10) { 0f }
-        val bandsStr = resetBands.joinToString(",")
+    suspend fun setEqBands(bands: FloatArray) {
+        val bandsStr = bands.joinToString(",")
         context.dataStore.edit { preferences ->
             preferences[EQ_BANDS_KEY] = bandsStr
+        }
+    }
+
+    suspend fun resetEqBands() {
+        context.dataStore.edit { preferences ->
+            preferences[EQ_BANDS_KEY] = "0,0,0,0,0,0,0,0,0,0"
         }
     }
 

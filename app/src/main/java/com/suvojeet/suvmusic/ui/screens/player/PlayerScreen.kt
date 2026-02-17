@@ -1216,6 +1216,7 @@ fun PlayerScreen(
                     dominantColor = dominantColors.primary,
                     onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
                     onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) },
+                    onBandsChange = { bands -> playerViewModel.setEqBands(bands) },
                     onReset = { playerViewModel.resetEqBands() },
                     initialEnabled = eqEnabled,
                     initialBands = eqBands
