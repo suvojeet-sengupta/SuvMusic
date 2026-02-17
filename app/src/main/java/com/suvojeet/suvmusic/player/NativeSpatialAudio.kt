@@ -104,6 +104,30 @@ class NativeSpatialAudio @Inject constructor() {
 
     private external fun nSetEqBand(bandIndex: Int, gainDb: Float)
 
+    fun setEqPreamp(gainDb: Float) {
+        if (isLibraryLoaded) {
+            nSetEqPreamp(gainDb)
+        }
+    }
+
+    private external fun nSetEqPreamp(gainDb: Float)
+
+    fun setBassBoost(strength: Float) {
+        if (isLibraryLoaded) {
+            nSetBassBoost(strength)
+        }
+    }
+
+    private external fun nSetBassBoost(strength: Float)
+
+    fun setVirtualizer(strength: Float) {
+        if (isLibraryLoaded) {
+            nSetVirtualizer(strength)
+        }
+    }
+
+    private external fun nSetVirtualizer(strength: Float)
+
     fun setPlaybackParams(pitch: Float) {
         if (isLibraryLoaded) {
             nSetPlaybackParams(pitch)
