@@ -99,7 +99,7 @@ private fun ControlKnob(
         Text(
             text = "${(value * 100).toInt()}%",
             style = MaterialTheme.typography.labelSmall,
-            color = dominantColor,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             fontWeight = FontWeight.ExtraBold
         )
     }
@@ -539,7 +539,7 @@ fun EqualizerSheet(
                             style = labelSmallStyle,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isEnabled) dominantColor else onSurfaceVariantColor
+                            color = if (isEnabled) onSurfaceColor else onSurfaceVariantColor
                         )
                     }
 
