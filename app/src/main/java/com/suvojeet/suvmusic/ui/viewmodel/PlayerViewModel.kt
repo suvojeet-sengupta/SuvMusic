@@ -1143,6 +1143,15 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun setEqBands(bands: FloatArray) {
+        viewModelScope.launch {
+            sessionManager.setEqBands(bands)
+            bands.forEachIndexed { index, gain ->
+                spatialAudioProcessor.setEqBand(index, gain)
+            }
+        }
+    }
+
     fun resetEqBands() {
         viewModelScope.launch {
             sessionManager.resetEqBands()
