@@ -27,22 +27,26 @@ fun MoodChipsSection(
     onMoodSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val moods = listOf(
-        "Sleep", "Relax", "Sad", "Romance", 
-        "Feel Good", "Party", "Focus", "Energize"
-    )
+    val moods = remember {
+        listOf(
+            "Sleep", "Relax", "Sad", "Romance", 
+            "Feel Good", "Party", "Focus", "Energize"
+        )
+    }
     
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(moods) { mood ->
-            MoodChip(
-                mood = mood,
-                isSelected = mood == selectedMood,
-                onClick = { onMoodSelected(mood) }
-            )
+        moods.forEach { mood ->
+            item(key = mood) {
+                MoodChip(
+                    mood = mood,
+                    isSelected = mood == selectedMood,
+                    onClick = { onMoodSelected(mood) }
+                )
+            }
         }
     }
 }
@@ -75,7 +79,10 @@ fun MoodChip(
 
     Box(
         modifier = Modifier
-            .scale(selectionScale)
+            .graphicsLayer {
+                scaleX = selectionScale
+                scaleY = selectionScale
+            }
             .bounceClick(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -84,13 +91,13 @@ fun MoodChip(
             androidx.compose.foundation.Canvas(
                 modifier = Modifier
                     .matchParentSize()
-                    .graphicsLayer { alpha = 0.4f }
             ) {
                 drawRoundRect(
                     color = backgroundColor,
                     size = size.copy(width = size.width + 12.dp.toPx(), height = size.height + 6.dp.toPx()),
                     topLeft = androidx.compose.ui.geometry.Offset(-6.dp.toPx(), -3.dp.toPx()),
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx()),
+                    alpha = 0.4f
                 )
             }
         }
@@ -116,19 +123,28 @@ fun MoodChip(
     }
 }
 
+@Composable
 private fun Modifier.bounceClick(
     scaleDown: Float = 0.95f,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(8.dp),
     onClick: () -> Unit
-): Modifier = composed {
+): Modifier {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy, 
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
         label = "bounce"
     )
 
-    this
-        .scale(scale)
+    return this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
         .clickable(
             interactionSource = interactionSource,
             indication = null,
