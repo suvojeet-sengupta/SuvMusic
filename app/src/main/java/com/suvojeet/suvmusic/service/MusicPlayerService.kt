@@ -183,8 +183,48 @@ class MusicPlayerService : MediaLibraryService() {
             }
         }
         
+        // Custom MediaSource.Factory that handles dual-stream merging (video-only + audio-only)
+        // When a MediaItem has an "audioStreamUrl" in its RequestMetadata extras,
+        // it creates a MergingMediaSource combining the video and audio sources.
+        val defaultMediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
+        val dualStreamMediaSourceFactory = object : androidx.media3.exoplayer.source.MediaSource.Factory {
+            override fun setDrmSessionManagerProvider(drmSessionManagerProvider: androidx.media3.exoplayer.drm.DrmSessionManagerProvider): androidx.media3.exoplayer.source.MediaSource.Factory {
+                defaultMediaSourceFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
+                return this
+            }
+            
+            override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy): androidx.media3.exoplayer.source.MediaSource.Factory {
+                defaultMediaSourceFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+                return this
+            }
+            
+            override fun getSupportedTypes(): IntArray {
+                return defaultMediaSourceFactory.supportedTypes
+            }
+            
+            override fun createMediaSource(mediaItem: MediaItem): androidx.media3.exoplayer.source.MediaSource {
+                val audioStreamUrl = mediaItem.requestMetadata.extras?.getString("audioStreamUrl")
+                
+                if (!audioStreamUrl.isNullOrEmpty()) {
+                    // Dual-stream: video-only + audio-only → MergingMediaSource
+                    android.util.Log.d("MusicPlayerService", "Creating MergingMediaSource: video=${mediaItem.localConfiguration?.uri}, audio=$audioStreamUrl")
+                    
+                    val videoSource = defaultMediaSourceFactory.createMediaSource(mediaItem)
+                    val audioMediaItem = MediaItem.Builder()
+                        .setUri(audioStreamUrl)
+                        .build()
+                    val audioSource = defaultMediaSourceFactory.createMediaSource(audioMediaItem)
+                    
+                    return androidx.media3.exoplayer.source.MergingMediaSource(videoSource, audioSource)
+                }
+                
+                // Normal single-stream (muxed or audio-only)
+                return defaultMediaSourceFactory.createMediaSource(mediaItem)
+            }
+        }
+        
         val player = ExoPlayer.Builder(this, renderersFactory)
-            .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory))
+            .setMediaSourceFactory(dualStreamMediaSourceFactory)
             .setLoadControl(loadControl)
             .setAudioAttributes(
                 AudioAttributes.Builder()
