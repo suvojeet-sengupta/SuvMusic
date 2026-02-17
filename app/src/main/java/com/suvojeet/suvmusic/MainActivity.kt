@@ -116,6 +116,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        enableMaxRefreshRate()
         
         // Initialize audio manager for volume control
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -128,8 +129,22 @@ class MainActivity : ComponentActivity() {
             val dynamicColor by sessionManager.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true)
             val appTheme by sessionManager.appThemeFlow.collectAsStateWithLifecycle(initialValue = AppTheme.DEFAULT)
             val pureBlackEnabled by sessionManager.pureBlackEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+            val forceMaxRefreshRate by sessionManager.forceMaxRefreshRateFlow.collectAsStateWithLifecycle(initialValue = true)
             val systemDarkTheme = isSystemInDarkTheme()
             
+            LaunchedEffect(forceMaxRefreshRate) {
+                if (forceMaxRefreshRate) {
+                    enableMaxRefreshRate()
+                } else {
+                    // Reset to default
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        window.attributes = window.attributes.apply {
+                            preferredDisplayModeId = 0 // 0 means default/no preference
+                        }
+                    }
+                }
+            }
+
             val darkTheme = when (themeMode) {
                 ThemeMode.DARK -> true
                 ThemeMode.LIGHT -> false
@@ -208,6 +223,18 @@ class MainActivity : ComponentActivity() {
         val missingPermissions = com.suvojeet.suvmusic.util.PermissionUtils.getMissingPermissions(this)
         if (missingPermissions.isNotEmpty()) {
             requestPermissionLauncher.launch(missingPermissions.toTypedArray())
+        }
+    }
+
+    private fun enableMaxRefreshRate() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val modes = display?.supportedModes
+            val maxRefreshRate = modes?.maxByOrNull { it.refreshRate }?.refreshRate ?: return
+            val preferredMode = modes.find { it.refreshRate == maxRefreshRate } ?: return
+            
+            window.attributes = window.attributes.apply {
+                preferredDisplayModeId = preferredMode.modeId
+            }
         }
     }
     
