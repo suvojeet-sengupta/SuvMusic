@@ -2,10 +2,12 @@ package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -80,6 +82,8 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val sessionManager = remember { com.suvojeet.suvmusic.data.SessionManager(context) }
+    val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsState(initial = true)
     
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
@@ -105,9 +109,17 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         // fluid mesh gradient background
-        com.suvojeet.suvmusic.ui.components.MeshGradientBackground(
-            dominantColors = dominantColors
-        )
+        if (animatedBackgroundEnabled) {
+            com.suvojeet.suvmusic.ui.components.MeshGradientBackground(
+                dominantColors = dominantColors
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            )
+        }
 
         // Content
         when {
@@ -129,7 +141,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(23.dp)
                     ) {
                         // Greeting & Profile Header
-                        item {
+                        item(key = "header", contentType = "header") {
                             ProfileHeader(
                                 modifier = Modifier
                                     .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -139,7 +151,7 @@ fun HomeScreen(
                         }
 
                         // Mood Chips Section
-                        item {
+                        item(key = "mood_chips", contentType = "mood_chips") {
                             MoodChipsSection(
                                 selectedMood = uiState.selectedMood,
                                 onMoodSelected = viewModel::onMoodSelected,
@@ -149,7 +161,7 @@ fun HomeScreen(
 
                         // Recommended Artists (Last.fm)
                         if (uiState.recommendedArtists.isNotEmpty()) {
-                            item {
+                            item(key = "recommended_artists", contentType = "artists") {
                                 RecommendedArtistsSection(
                                     artists = uiState.recommendedArtists,
                                     modifier = Modifier.animateEnter(index = 2)
@@ -159,7 +171,7 @@ fun HomeScreen(
 
                         // Recommended Tracks (Last.fm)
                         if (uiState.recommendedTracks.isNotEmpty()) {
-                            item {
+                            item(key = "recommended_tracks", contentType = "tracks") {
                                 RecommendedTracksSection(
                                     tracks = uiState.recommendedTracks,
                                     modifier = Modifier.animateEnter(index = 3)
@@ -169,7 +181,7 @@ fun HomeScreen(
 
                         // Quick Picks Section
                         if (uiState.recommendations.isNotEmpty()) {
-                            item {
+                            item(key = "quick_picks", contentType = "section_quick_picks") {
                                 com.suvojeet.suvmusic.ui.components.QuickPicksSection(
                                     section = com.suvojeet.suvmusic.data.model.HomeSection(
                                         title = "Quick picks",
@@ -189,11 +201,11 @@ fun HomeScreen(
                         }
 
                         // Sections Loop
-                        val filteredSections = uiState.homeSections.filter { 
-                            !it.title.contains("Quick picks", ignoreCase = true) 
-                        }
-                        
-                        itemsIndexed(filteredSections) { index, section ->
+                        itemsIndexed(
+                            items = uiState.filteredSections,
+                            key = { _, section -> section.title },
+                            contentType = { _, section -> section.type }
+                        ) { index, section ->
                             // Offset index by 5 for static items above
                             val enterModifier = Modifier.animateEnter(index = index + 5)
                             
@@ -291,7 +303,7 @@ fun HomeScreen(
                         }
 
                         // Create a Mix Section (Quick Access)
-                        item {
+                        item(key = "create_mix", contentType = "create_mix") {
                              // Spotify often has these functional cards in-between
                              Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                  HomeSectionHeader(title = "More specifically")
@@ -301,7 +313,7 @@ fun HomeScreen(
                         }
 
                         // App Footer
-                        item {
+                        item(key = "footer", contentType = "footer") {
                             AppFooter(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -457,6 +469,7 @@ private fun ProfileHeader(
     modifier: Modifier = Modifier,
     onRecentsClick: () -> Unit = {}
 ) {
+    val greeting = remember { getGreeting() }
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -464,7 +477,7 @@ private fun ProfileHeader(
     ) {
         // Greeting
         Text(
-            text = getGreeting(),
+            text = greeting,
             style = MaterialTheme.typography.headlineMedium, // Slightly larger
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -671,20 +684,25 @@ private fun CreateMixCard(
     }
 }
 
+@Composable
 private fun Modifier.bounceClick(
     scaleDown: Float = 0.95f,
     shape: Shape = RoundedCornerShape(8.dp),
     onClick: () -> Unit
-): Modifier = composed {
+): Modifier {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
         label = "bounce"
     )
 
-    this
-        .scale(scale)
+    return this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
         .dpadFocusable(
             shape = shape,
             focusedScale = 1.05f,
