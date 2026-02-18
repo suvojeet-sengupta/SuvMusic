@@ -20,9 +20,10 @@ public:
     Spatializer() : leftDelayBuffer(DELAY_BUFFER_SIZE, 0.0f), rightDelayBuffer(DELAY_BUFFER_SIZE, 0.0f),
                     writeIndex(0), headRadius(0.0875f), speedOfSound(343.0f), enabled(false) {}
 
-    void process(float* buffer, int numFrames, float azimuth, float elevation, int sampleRate) {
+    void process(float* buffer, int numFrames, int channelCount, float azimuth, float elevation, int sampleRate) {
         if (!enabled.load(std::memory_order_acquire)) return;
         if (buffer == nullptr || numFrames <= 0 || sampleRate <= 0) return;
+        if (channelCount != 2) return; // Spatial audio requires stereo input
 
         std::lock_guard<std::mutex> lock(processMutex);
 
@@ -117,9 +118,10 @@ public:
         this->strength.store(std::max(0.0f, std::min(1.0f, strength)), std::memory_order_release);
     }
 
-    void process(float* buffer, int numFrames, int sr) {
+    void process(float* buffer, int numFrames, int channelCount, int sr) {
         if (!enabled.load(std::memory_order_acquire)) return;
         if (buffer == nullptr || numFrames <= 0 || sr <= 0) return;
+        if (channelCount != 2) return; // Crossfeed requires stereo input
 
         std::lock_guard<std::mutex> lock(processMutex);
         
@@ -371,12 +373,12 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, 
         floatData[i] = static_cast<float>(pcmData[i]) / 32768.0f;
     }
 
-    crossfeed.process(floatData, frameCount, sampleRate);
+    crossfeed.process(floatData, frameCount, channelCount, sampleRate);
     equalizer.process(floatData, frameCount, channelCount, sampleRate);
     bassBoost.process(floatData, frameCount, channelCount);
     virtualizer.process(floatData, frameCount, channelCount);
     pitchShifter.process(floatData, frameCount, channelCount);
-    spatializer.process(floatData, frameCount, azimuth, elevation, sampleRate);
+    spatializer.process(floatData, frameCount, channelCount, azimuth, elevation, sampleRate);
     limiter.process(floatData, frameCount, channelCount, sampleRate);
 
     for (int i = 0; i < totalSamples; ++i) {

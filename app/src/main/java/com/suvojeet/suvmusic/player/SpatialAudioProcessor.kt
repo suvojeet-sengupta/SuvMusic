@@ -9,6 +9,12 @@ import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Reusable direct ByteBuffer for JNI calls.
+ * GetDirectBufferAddress requires a direct buffer; replaceOutputBuffer returns heap buffers.
+ */
+private var directNativeBuffer: ByteBuffer? = null
+
 @Singleton
 class SpatialAudioProcessor @Inject constructor(
     private val nativeSpatialAudio: NativeSpatialAudio,
@@ -179,14 +185,25 @@ class SpatialAudioProcessor @Inject constructor(
             nativeSpatialAudio.setLimiterBalance(currentBalance)
         }
 
-        val nativeBuffer = outBuffer.duplicate().apply {
-            position(0)
-            limit(frameCount * channelCount * 2)
+        val requiredBytes = frameCount * channelCount * 2
+        var nativeBuffer = directNativeBuffer
+        if (nativeBuffer == null || nativeBuffer.capacity() < requiredBytes) {
+            nativeBuffer = ByteBuffer.allocateDirect(requiredBytes).order(ByteOrder.LITTLE_ENDIAN)
+            directNativeBuffer = nativeBuffer
         }
+        nativeBuffer.clear()
+        outBuffer.position(0)
+        outBuffer.limit(requiredBytes)
+        nativeBuffer.put(outBuffer)
+        nativeBuffer.flip()
 
         nativeSpatialAudio.processPcm16(nativeBuffer, frameCount, channelCount, sampleRate, azimuth, elevation)
 
+        // Copy processed data back to output buffer
+        nativeBuffer.position(0)
         outBuffer.position(0)
-        outBuffer.limit(frameCount * channelCount * 2)
+        outBuffer.limit(requiredBytes)
+        outBuffer.put(nativeBuffer)
+        outBuffer.flip()
     }
 }
