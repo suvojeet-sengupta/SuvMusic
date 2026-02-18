@@ -744,7 +744,10 @@ class MusicPlayerService : MediaLibraryService() {
         val contentUri = song.localUri ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else Uri.EMPTY
         val metadata = MediaMetadata.Builder()
             .setTitle(song.title)
+            .setDisplayTitle(song.title)
             .setArtist(song.artist)
+            .setDisplaySubtitle(song.artist)
+            .setAlbumTitle(song.album ?: "")
             .setArtworkUri(artworkUri)
             .setIsBrowsable(false)
             .setIsPlayable(true)
