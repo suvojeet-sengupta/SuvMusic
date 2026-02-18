@@ -24,6 +24,7 @@ import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.service.MusicPlayerService
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -1669,6 +1670,11 @@ class MusicPlayer @Inject constructor(
 
     fun release() {
         positionUpdateJob?.cancel()
+        
+        // Cancel the entire coroutine scope to stop all launched coroutines
+        // (flow collectors, preloading, caching, error-recovery, etc.)
+        scope.cancel()
+        
         controllerFuture?.let { MediaController.releaseFuture(it) }
         mediaController = null
         
