@@ -137,10 +137,8 @@ class MainActivity : ComponentActivity() {
                     enableMaxRefreshRate()
                 } else {
                     // Reset to default
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        window.attributes = window.attributes.apply {
-                            preferredDisplayModeId = 0 // 0 means default/no preference
-                        }
+                    window.attributes = window.attributes.apply {
+                        preferredDisplayModeId = 0 // 0 means default/no preference
                     }
                 }
             }
