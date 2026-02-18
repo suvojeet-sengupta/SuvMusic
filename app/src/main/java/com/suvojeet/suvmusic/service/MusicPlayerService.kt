@@ -746,7 +746,7 @@ class MusicPlayerService : MediaLibraryService() {
             .setTitle(song.title)
             .setDisplayTitle(song.title)
             .setArtist(song.artist)
-            .setDisplaySubtitle(song.artist)
+            .setSubtitle(song.artist)
             .setAlbumTitle(song.album ?: "")
             .setArtworkUri(artworkUri)
             .setIsBrowsable(false)
