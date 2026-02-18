@@ -457,10 +457,10 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun getMiniPlayerAlpha(): Float = 
-        context.dataStore.data.first()[MINI_PLAYER_ALPHA_KEY] ?: 1f
+        context.dataStore.data.first()[MINI_PLAYER_ALPHA_KEY] ?: 0f
 
     val miniPlayerAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        preferences[MINI_PLAYER_ALPHA_KEY] ?: 1f
+        preferences[MINI_PLAYER_ALPHA_KEY] ?: 0f
     }
 
     suspend fun setMiniPlayerAlpha(alpha: Float) {
