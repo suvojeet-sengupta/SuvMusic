@@ -122,7 +122,7 @@ fun CustomizationScreen(
         ArtworkSize.LARGE
     }
 
-    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 1f)
+    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
     val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD)
 
     val scope = rememberCoroutineScope()
@@ -489,15 +489,14 @@ private fun MiniPlayerPreview(alpha: Float) {
             val effectiveAlpha = 1f - (alpha * 0.7f)
             Box(
                 modifier = Modifier
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.85f * effectiveAlpha),
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f * effectiveAlpha)
-                            )
-                        )
-                    )
-                    .padding(horizontal = 12.dp),
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = effectiveAlpha),
+                                                MaterialTheme.colorScheme.secondary.copy(alpha = effectiveAlpha)
+                                            )
+                                        )
+                                    )                    .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
