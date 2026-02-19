@@ -159,6 +159,7 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.transformer)
     implementation(libs.androidx.media3.exoplayer.dash)
+    implementation(libs.androidx.media3.ui.compose)
     
     // Media Router
     implementation(libs.androidx.mediarouter)
