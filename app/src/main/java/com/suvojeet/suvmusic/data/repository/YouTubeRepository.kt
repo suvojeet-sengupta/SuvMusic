@@ -439,7 +439,8 @@ class YouTubeRepository @Inject constructor(
                     if (songs.isNotEmpty()) {
                         val type = when {
                             title.contains("Quick picks", ignoreCase = true) -> HomeSectionType.VerticalList
-                            title.contains("Fresh finds", ignoreCase = true) -> HomeSectionType.Grid
+                            title.contains("Fresh finds", ignoreCase = true) || 
+                            title.contains("Listen again", ignoreCase = true) -> HomeSectionType.Grid
                             title.contains("Community", ignoreCase = true) -> HomeSectionType.LargeCardWithList
                             title.contains("Trending", ignoreCase = true) -> HomeSectionType.HorizontalCarousel
                              else -> HomeSectionType.HorizontalCarousel
@@ -2527,8 +2528,16 @@ class YouTubeRepository @Inject constructor(
                          }
                          
                          if (items.isNotEmpty()) {
-                            // Shelves are vertical lists
-                            sections.add(HomeSection(title, items, HomeSectionType.VerticalList))
+                            // Shelves are vertical lists, but some should be Grids (like Listen Again)
+                            val type = when {
+                                title.contains("Listen again", ignoreCase = true) ||
+                                title.contains("Recommended", ignoreCase = true) ||
+                                title.contains("Your top", ignoreCase = true) ||
+                                title.contains("Mixed for you", ignoreCase = true) ||
+                                title.contains("Made for you", ignoreCase = true) -> HomeSectionType.Grid
+                                else -> HomeSectionType.VerticalList
+                            }
+                            sections.add(HomeSection(title, items, type))
                         }
                     }
                     

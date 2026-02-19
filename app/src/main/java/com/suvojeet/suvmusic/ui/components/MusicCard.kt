@@ -134,7 +134,7 @@ fun MusicCard(
 
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(64.dp)
                     .clip(AlbumArtShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
@@ -144,17 +144,17 @@ fun MusicCard(
                         model = ImageRequest.Builder(context)
                             .data(highResThumbnail)
                             .crossfade(true)
-                            .size(112) // 2x for high DPI
+                            .size(128) // 2x for high DPI (64 * 2)
                             .build(),
                         contentDescription = song.title,
-                        modifier = Modifier.size(56.dp),
+                        modifier = Modifier.size(64.dp),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(28.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -163,7 +163,7 @@ fun MusicCard(
                 if (isPlaying) { // In MusicCard, isPlaying means it IS the current song and we want to show indicator
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(64.dp)
                             .background(
                                 Brush.radialGradient(
                                     colors = listOf(
@@ -179,22 +179,22 @@ fun MusicCard(
                             isPlaying = true, // For now keeping it true if isPlaying is true
                             barCount = 3,
                             barWidth = 3.dp,
-                            maxBarHeight = 16.dp,
-                            minBarHeight = 6.dp
+                            maxBarHeight = 20.dp,
+                            minBarHeight = 8.dp
                         )
                     }
                 } else if (song.isMembersOnly) {
                     // Members Only Badge
                      Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(64.dp)
                             .background(Color.Black.copy(alpha = 0.5f)),
                         contentAlignment = Alignment.BottomEnd
                     ) {
                         Icon(
                              imageVector = Icons.Default.Lock,
                              contentDescription = "Members Only",
-                             modifier = Modifier.size(16.dp).padding(2.dp),
+                             modifier = Modifier.size(18.dp).padding(2.dp),
                              tint = MaterialTheme.colorScheme.primary
                         )
                     }

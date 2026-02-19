@@ -83,14 +83,13 @@ fun HorizontalCarouselSection(
             ) { index, item ->
                 when (item) {
                     is HomeItem.SongItem -> {
-                        MusicCard(
-                            song = item.song,
-                            onClick = { 
-                                val songIndex = songs.indexOf(item.song)
-                                if (songIndex != -1) onSongClick(songs, songIndex)
-                            },
-                            onMoreClick = { onSongMoreClick(item.song) },
-                            backgroundColor = Color.Transparent
+                        HomeItemCard(
+                            item = item,
+                            onSongClick = onSongClick,
+                            onPlaylistClick = onPlaylistClick,
+                            onAlbumClick = onAlbumClick,
+                            sectionItems = section.items,
+                            onSongMoreClick = onSongMoreClick
                         )
                     }
                     is HomeItem.PlaylistItem -> {
