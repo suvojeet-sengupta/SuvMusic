@@ -298,6 +298,12 @@ class MusicPlayerService : MediaLibraryService() {
                 }
                 
                 override fun onRepeatModeChanged(repeatMode: Int) {
+                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                }
+
+                override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                }
             })
         }
             
