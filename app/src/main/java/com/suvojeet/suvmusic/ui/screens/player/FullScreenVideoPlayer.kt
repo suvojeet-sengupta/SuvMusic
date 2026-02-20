@@ -79,12 +79,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.ui.PlayerView
+import androidx.compose.material3.ExperimentalMaterial3Api
 import com.suvojeet.suvmusic.data.model.VideoDownloadQuality
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullScreenVideoPlayer(
     viewModel: PlayerViewModel,
