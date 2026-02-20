@@ -425,6 +425,8 @@ fun QuickAccessCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
+    
     // Darker surface for contrast
     Surface(
         modifier = modifier.bounceClick(
@@ -438,7 +440,7 @@ fun QuickAccessCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data(song.thumbnailUrl)
+                    .data(highResThumbnail)
                     .crossfade(true)
                     .size(160)
                     .build(),
