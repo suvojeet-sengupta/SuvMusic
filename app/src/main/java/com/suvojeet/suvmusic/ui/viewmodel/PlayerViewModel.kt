@@ -501,7 +501,15 @@ class PlayerViewModel @Inject constructor(
     fun setVideoQuality(quality: VideoQuality) {
         musicPlayer.setVideoQuality(quality)
     }
-    
+
+    /**
+     * Download the given song as a video (.mp4) at the specified max resolution.
+     * Called from [FullScreenVideoPlayer] when the user taps the download button.
+     */
+    suspend fun downloadCurrentVideo(song: Song, maxResolution: Int = 720): Boolean {
+        return downloadRepository.downloadVideo(song, maxResolution)
+    }
+
     fun toggleFullScreen() {
         _isFullScreen.value = !_isFullScreen.value
     }
