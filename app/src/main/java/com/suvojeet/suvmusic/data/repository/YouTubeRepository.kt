@@ -259,6 +259,13 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getStreamUrlForDownload(videoId: String): String? = streamingService.getStreamUrlForDownload(videoId)
 
+    /**
+     * Get a muxed (video+audio combined) stream URL for video download.
+     * Uses [maxResolution] to cap quality (e.g. 360 / 720 / 1080).
+     */
+    suspend fun getMuxedVideoStreamUrlForDownload(videoId: String, maxResolution: Int = 720): String? =
+        streamingService.getMuxedVideoStreamUrlForDownload(videoId, maxResolution)
+
     suspend fun getSongDetails(videoId: String): Song? = streamingService.getSongDetails(videoId)
 
     suspend fun getRelatedSongs(videoId: String): List<Song> {

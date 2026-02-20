@@ -301,6 +301,46 @@ class YouTubeStreamingService @Inject constructor(
     }
 
     /**
+     * Get a muxed video+audio stream URL for offline video download.
+     * Uses muxed streams only (so no separate audio track merge needed).
+     * Falls back to highest available muxed resolution if target is unavailable.
+     */
+    suspend fun getMuxedVideoStreamUrlForDownload(
+        videoId: String,
+        maxResolution: Int = 720
+    ): String? = withContext(Dispatchers.IO) {
+        retryWithBackoff {
+            android.util.Log.d("YouTubeStreaming", "Fetching muxed video for download: $videoId at ${maxResolution}p")
+
+            val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
+                ?: throw IllegalStateException("YouTube service not found")
+
+            val streamExtractor = ytService.getStreamExtractor(streamUrl)
+            streamExtractor.fetchPage()
+
+            // Only muxed (video+audio combined) streams — no separate audio merge needed for download
+            val videoStreams = streamExtractor.videoStreams
+            android.util.Log.d("YouTubeStreaming", "Available muxed streams: ${videoStreams.map { it.resolution }}")
+
+            val best = videoStreams
+                .filter { stream ->
+                    val h = stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                    h in 1..maxResolution
+                }
+                .maxByOrNull { stream ->
+                    stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                }
+                ?: videoStreams.maxByOrNull { stream ->
+                    stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                }
+
+            android.util.Log.d("YouTubeStreaming", "Selected muxed stream for download: ${best?.resolution}")
+            best?.content
+        }
+    }
+
+    /**
      * Get song details from a video ID.
      * Used for deep linking to play songs from YouTube/YouTube Music URLs.
      */

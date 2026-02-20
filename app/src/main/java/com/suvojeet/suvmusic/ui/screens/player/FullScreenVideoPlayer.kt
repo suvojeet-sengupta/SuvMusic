@@ -14,18 +14,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Compress
@@ -33,22 +35,34 @@ import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,11 +73,17 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.ui.PlayerView
+import com.suvojeet.suvmusic.data.model.VideoDownloadQuality
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun FullScreenVideoPlayer(
@@ -72,56 +92,52 @@ fun FullScreenVideoPlayer(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val playerState by viewModel.playerState.collectAsState()
     val player = viewModel.getPlayer()
-    
-    // Auto-hide controls logic
+
+    // Auto-hide controls
     var areControlsVisible by remember { mutableStateOf(true) }
     var showQualityDialog by remember { mutableStateOf(false) }
-    
+    var showDownloadSheet by remember { mutableStateOf(false) }
+    var isVideoDownloading by remember { mutableStateOf(false) }
+    var videoDownloaded by remember { mutableStateOf(false) }
+    val downloadSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     LaunchedEffect(areControlsVisible, playerState.isPlaying) {
         if (areControlsVisible && playerState.isPlaying) {
-            delay(3000)
+            delay(3500)
             areControlsVisible = false
         }
     }
-    
-    // Rotation logic
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    
+
+    // Use WindowInsetsControllerCompat for modern immersive mode
     DisposableEffect(Unit) {
-        // Hide system bars
         val activity = context as? Activity
-        val originalSystemUiVisibility = activity?.window?.decorView?.systemUiVisibility ?: 0
-        
-        // Hide status and navigation bars (Immersive Sticky)
-        activity?.window?.decorView?.systemUiVisibility = (
-            android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-            or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-        )
-        
+        val window = activity?.window
+        val insetsController = window?.let { WindowInsetsControllerCompat(it, it.decorView) }
+
+        insetsController?.apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
         onDispose {
-            // Restore system bars
-            activity?.window?.decorView?.systemUiVisibility = originalSystemUiVisibility
-            // Force portrait when exiting if needed, or let system decide
+            insetsController?.show(WindowInsetsCompat.Type.systemBars())
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
-    
-    // Back Handler to exit full screen
-    BackHandler {
-        onDismiss()
-    }
 
+    BackHandler { onDismiss() }
+
+    // Video quality dialog
     if (showQualityDialog) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showQualityDialog = false },
-            title = { Text("Video Quality") },
+            title = { Text("Video Quality", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     com.suvojeet.suvmusic.data.model.VideoQuality.entries.forEach { quality ->
@@ -132,25 +148,88 @@ fun FullScreenVideoPlayer(
                                     viewModel.setVideoQuality(quality)
                                     showQualityDialog = false
                                 }
-                                .padding(12.dp),
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            androidx.compose.material3.RadioButton(
+                            RadioButton(
                                 selected = playerState.videoQuality == quality,
-                                onClick = null // Handled by Row
+                                onClick = null
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = quality.label)
+                            Text(quality.label)
                         }
                     }
                 }
             },
             confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { showQualityDialog = false }) {
-                    Text("Close")
-                }
+                TextButton(onClick = { showQualityDialog = false }) { Text("Close") }
             }
         )
+    }
+
+    // Video download bottom sheet
+    if (showDownloadSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showDownloadSheet = false },
+            sheetState = downloadSheetState,
+            containerColor = Color(0xFF1A1A2E),
+            contentColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 48.dp, top = 8.dp)
+            ) {
+                Text(
+                    text = "Download Video",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = playerState.currentSong?.title ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+
+                VideoDownloadQuality.entries.forEach { quality ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable {
+                                val song = playerState.currentSong ?: return@clickable
+                                showDownloadSheet = false
+                                isVideoDownloading = true
+                                scope.launch {
+                                    val success = viewModel.downloadCurrentVideo(song, quality.maxResolution)
+                                    isVideoDownloading = false
+                                    if (success) videoDownloaded = true
+                                }
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White.copy(alpha = 0.08f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = quality.label,
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Box(
@@ -161,23 +240,23 @@ fun FullScreenVideoPlayer(
                 detectTapGestures(
                     onTap = { areControlsVisible = !areControlsVisible },
                     onDoubleTap = { offset ->
-                         if (offset.x > size.width / 2) {
-                             viewModel.seekTo(playerState.currentPosition + 10000)
-                         } else {
-                             viewModel.seekTo(playerState.currentPosition - 10000)
-                         }
+                        if (offset.x > size.width / 2) {
+                            viewModel.seekTo(playerState.currentPosition + 10000)
+                        } else {
+                            viewModel.seekTo(playerState.currentPosition - 10000)
+                        }
                     }
                 )
             }
     ) {
-        // Ambient Background (Subtle Glow)
+        // Ambient Background
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            dominantColors.primary.copy(alpha = 0.3f),
+                            dominantColors.primary.copy(alpha = 0.2f),
                             Color.Black
                         ),
                         radius = 1500f
@@ -201,18 +280,11 @@ fun FullScreenVideoPlayer(
             update = { playerView ->
                 playerView.player = player
             },
-            modifier = Modifier.fillMaxSize().align(Alignment.Center)
+            modifier = Modifier
+                .fillMaxSize()
+                .align(Alignment.Center)
         )
-        
-        // Explicitly detach player when this full screen player leaves composition
-        DisposableEffect(player) {
-            onDispose {
-                // This is crucial to prevent the "stuck" issue when returning to PlayerScreen
-                // By setting player to null here, we ensure the player instance is available 
-                // for the smaller PlayerView in PlayerScreen.
-            }
-        }
-        
+
         // Controls Overlay
         AnimatedVisibility(
             visible = areControlsVisible,
@@ -223,14 +295,14 @@ fun FullScreenVideoPlayer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .systemBarsPadding() 
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .systemBarsPadding()
             ) {
-                // Top Bar
+                // ─── Top Bar ─────────────────────────────────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
                         .align(Alignment.TopCenter),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -238,13 +310,12 @@ fun FullScreenVideoPlayer(
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "Minimize",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
                         )
                     }
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
                         Text(
                             text = playerState.currentSong?.title ?: "",
                             style = MaterialTheme.typography.titleMedium,
@@ -259,7 +330,25 @@ fun FullScreenVideoPlayer(
                             maxLines = 1
                         )
                     }
-                    
+
+                    // Resolution chip
+                    val resLabel = playerState.videoQuality?.let { "${it.maxResolution}p" } ?: ""
+                    if (resLabel.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color.White.copy(alpha = 0.15f),
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Text(
+                                text = resLabel,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    // Quality picker
                     IconButton(onClick = { showQualityDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -268,6 +357,35 @@ fun FullScreenVideoPlayer(
                         )
                     }
 
+                    // Download video
+                    IconButton(
+                        onClick = {
+                            if (!isVideoDownloading && !videoDownloaded) {
+                                showDownloadSheet = true
+                            }
+                        }
+                    ) {
+                        when {
+                            isVideoDownloading -> CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            videoDownloaded -> Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Downloaded",
+                                tint = dominantColors.accent,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            else -> Icon(
+                                imageVector = Icons.Default.SaveAlt,
+                                contentDescription = "Download Video",
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    // Rotate screen
                     IconButton(onClick = {
                         val activity = context as? Activity
                         if (isLandscape) {
@@ -283,34 +401,78 @@ fun FullScreenVideoPlayer(
                         )
                     }
                 }
-                
-                // Center Play/Pause & Buffering
-                Box(
-                    modifier = Modifier.align(Alignment.Center)
+
+                // ─── Center Controls ──────────────────────────────────────────
+                Row(
+                    modifier = Modifier.align(Alignment.Center),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (playerState.isLoading) {
-                        CircularProgressIndicator(color = dominantColors.primary)
-                    } else {
-                        IconButton(
-                            onClick = { viewModel.togglePlayPause() },
-                            modifier = Modifier.size(64.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = "Play/Pause",
-                                tint = Color.White,
-                                modifier = Modifier.size(64.dp)
+                    // Skip backward 10s
+                    IconButton(
+                        onClick = { viewModel.seekTo(playerState.currentPosition - 10000L) },
+                        modifier = Modifier.size(52.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Replay10,
+                            contentDescription = "Rewind 10s",
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    // Play / Pause / Loading
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(72.dp)) {
+                        if (playerState.isLoading) {
+                            CircularProgressIndicator(
+                                color = dominantColors.primary,
+                                strokeWidth = 3.dp,
+                                modifier = Modifier.size(52.dp)
                             )
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = Color.White.copy(alpha = 0.15f),
+                                modifier = Modifier.size(64.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    IconButton(
+                                        onClick = { viewModel.togglePlayPause() },
+                                        modifier = Modifier.size(64.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            contentDescription = "Play/Pause",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
+
+                    // Skip forward 10s
+                    IconButton(
+                        onClick = { viewModel.seekTo(playerState.currentPosition + 10000L) },
+                        modifier = Modifier.size(52.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Forward10,
+                            contentDescription = "Forward 10s",
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
-                
-                // Bottom Controls (Seekbar)
+
+                // ─── Bottom Seekbar ───────────────────────────────────────────
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 8.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -320,15 +482,17 @@ fun FullScreenVideoPlayer(
                         Text(
                             text = formatDuration(playerState.currentPosition),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 12.sp
                         )
                         Text(
                             text = formatDuration(playerState.duration),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 12.sp
                         )
                     }
-                    
+
                     Slider(
                         value = if (playerState.duration > 0) playerState.currentPosition.toFloat() else 0f,
                         onValueChange = { viewModel.seekTo(it.toLong()) },

@@ -23,7 +23,17 @@ class DownloadsViewModel @Inject constructor(
     val queueState: StateFlow<List<Song>> = downloadRepository.queueState
     val downloadingIds: StateFlow<Set<String>> = downloadRepository.downloadingIds
     val downloadProgress: StateFlow<Map<String, Float>> = downloadRepository.downloadProgress
-    
+
+    /** Audio-only downloads (isVideo == false) shown in the Songs tab. */
+    val downloadedAudioSongs: StateFlow<List<Song>> = downloadedSongs
+        .map { list -> list.filter { !it.isVideo } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Video downloads (isVideo == true) shown in the Videos tab. */
+    val downloadedVideos: StateFlow<List<Song>> = downloadedSongs
+        .map { list -> list.filter { it.isVideo } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val downloadItems: StateFlow<List<DownloadItem>> = kotlinx.coroutines.flow.combine(
         downloadedSongs,
         queueState,
