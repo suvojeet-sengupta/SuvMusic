@@ -113,8 +113,6 @@ data class SettingsUiState(
     val nextSongPreloadDelay: Int = 3, // seconds
     // Crossfeed
     val crossfeedEnabled: Boolean = true,
-    // Video Mode
-    val preferVideoModeEnabled: Boolean = false,
     // Equalizer
     val eqEnabled: Boolean = false,
     val eqBands: FloatArray = FloatArray(10) { 0f },
@@ -440,12 +438,6 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sessionManager.preferVideoModeFlow.collect { enabled ->
-                _uiState.update { it.copy(preferVideoModeEnabled = enabled) }
-            }
-        }
-
-        viewModelScope.launch {
             sessionManager.eqEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(eqEnabled = enabled) }
             }
@@ -532,7 +524,6 @@ class SettingsViewModel @Inject constructor(
             val nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled()
             val nextSongPreloadDelay = sessionManager.getNextSongPreloadDelay()
             val crossfeedEnabled = sessionManager.isCrossfeedEnabled()
-            val preferVideoModeEnabled = sessionManager.isPreferVideoModeEnabled()
             val eqEnabled = sessionManager.isEqEnabled()
             val eqBands = sessionManager.getEqBands()
             val forceMaxRefreshRate = sessionManager.forceMaxRefreshRateFlow.first()
@@ -604,7 +595,6 @@ class SettingsViewModel @Inject constructor(
                     nextSongPreloadingEnabled = nextSongPreloadingEnabled,
                     nextSongPreloadDelay = nextSongPreloadDelay,
                     crossfeedEnabled = crossfeedEnabled,
-                    preferVideoModeEnabled = preferVideoModeEnabled,
                     eqEnabled = eqEnabled,
                     eqBands = eqBands,
                     forceMaxRefreshRateEnabled = forceMaxRefreshRate
@@ -815,13 +805,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setNextSongPreloadingEnabled(enabled)
             _uiState.update { it.copy(nextSongPreloadingEnabled = enabled) }
-        }
-    }
-
-    fun setPreferVideoMode(enabled: Boolean) {
-        viewModelScope.launch {
-            sessionManager.setPreferVideoMode(enabled)
-            _uiState.update { it.copy(preferVideoModeEnabled = enabled) }
         }
     }
     
