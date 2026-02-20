@@ -83,6 +83,7 @@ class SessionManager @Inject constructor(
         private val AUTOMIX_KEY = booleanPreferencesKey("automix")
         private val DOWNLOAD_QUALITY_KEY = stringPreferencesKey("download_quality")
         private val VIDEO_QUALITY_KEY = stringPreferencesKey("video_quality")
+        private val PREFER_VIDEO_MODE_KEY = booleanPreferencesKey("prefer_video_mode")
         private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
@@ -530,6 +531,21 @@ class SessionManager @Inject constructor(
     suspend fun setVideoQuality(quality: VideoQuality) {
         context.dataStore.edit { preferences ->
             preferences[VIDEO_QUALITY_KEY] = quality.name
+        }
+    }
+
+    // --- Prefer Video Mode ---
+
+    suspend fun isPreferVideoModeEnabled(): Boolean =
+        context.dataStore.data.first()[PREFER_VIDEO_MODE_KEY] ?: false
+
+    val preferVideoModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PREFER_VIDEO_MODE_KEY] ?: false
+    }
+
+    suspend fun setPreferVideoMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PREFER_VIDEO_MODE_KEY] = enabled
         }
     }
     

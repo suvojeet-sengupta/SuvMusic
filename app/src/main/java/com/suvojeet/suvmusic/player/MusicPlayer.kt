@@ -88,6 +88,7 @@ class MusicPlayer @Inject constructor(
     private var preloadedNextSongId: String? = null
     private var lastPreloadAttemptTime: Long = 0L
     private var preloadedStreamUrl: String? = null
+    private var preloadedIsVideoMode: Boolean = false  // Track if preloaded URL is video or audio
     private var isPreloading = false
     
     // Track manually selected device ID to persist selection across refreshes
@@ -116,6 +117,14 @@ class MusicPlayer @Inject constructor(
         scope.launch {
             val quality = sessionManager.getVideoQuality()
             _playerState.update { it.copy(videoQuality = quality) }
+        }
+
+        // Restore prefer video mode from settings
+        scope.launch {
+            val preferVideo = sessionManager.isPreferVideoModeEnabled()
+            if (preferVideo) {
+                _playerState.update { it.copy(isVideoMode = true) }
+            }
         }
         
         // Listen for preloading settings
@@ -503,12 +512,20 @@ class MusicPlayer @Inject constructor(
                     val needsResolution = isYouTubePlaceholder || isEmptyOrInvalid
                     
                     if (!needsResolution && currentUri != null) {
-                        // Already has valid stream, just ensure UI state is correct and play
-                        _playerState.update { it.copy(isLoading = false) }
+                        // Check if preloaded content mode matches current video mode
+                        // If we preloaded a video URL but user toggled to audio (or vice versa),
+                        // treat as stale and force re-resolution
+                        if (preloadedNextSongId == song.id && preloadedIsVideoMode != _playerState.value.isVideoMode) {
+                            // Mode mismatch — preloaded URL is for wrong mode, re-resolve
+                            android.util.Log.d("MusicPlayer", "Preloaded mode mismatch: preloaded=${preloadedIsVideoMode}, current=${_playerState.value.isVideoMode}")
+                        } else {
+                            // Already has valid stream, just ensure UI state is correct and play
+                            _playerState.update { it.copy(isLoading = false) }
                         
                         // Reset preload state as we've seemingly consumed it
                         preloadedNextSongId = null
                         preloadedStreamUrl = null
+                        preloadedIsVideoMode = false
                         isPreloading = false
                         
                         // Start aggressive caching for this preloaded/resolved song
@@ -523,6 +540,7 @@ class MusicPlayer @Inject constructor(
                             controller.play()
                         }
                         return@let
+                        }
                     }
                     
                     // Check sleep timer (only for auto transitions)
@@ -1020,11 +1038,12 @@ class MusicPlayer @Inject constructor(
                     SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
                     else -> {
                         if (isVideoMode) {
-                            // Smart Video Matching for Preload
+                            // Smart Video Matching for Preload — use getVideoStreamResult to respect quality settings
                             val videoId = resolvedVideoIds[nextSong.id] ?: youTubeRepository.getBestVideoId(nextSong).also { 
                                 resolvedVideoIds.put(nextSong.id, it) 
                             }
-                            youTubeRepository.getVideoStreamUrl(videoId)
+                            val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                            videoResult?.videoUrl ?: youTubeRepository.getVideoStreamUrl(videoId)
                         } else {
                             youTubeRepository.getStreamUrl(nextSong.id)
                         }
@@ -1034,6 +1053,7 @@ class MusicPlayer @Inject constructor(
                 if (streamUrl != null) {
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
+                    preloadedIsVideoMode = isVideoMode
                     
                     // Update the media item in the queue with resolved URL
                     updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
@@ -1055,7 +1075,10 @@ class MusicPlayer @Inject constructor(
                 val newMediaItem = MediaItem.Builder()
                     .setUri(streamUrl)
                     .setMediaId(song.id)
-                    .setCustomCacheKey(song.id) // CRITICAL: Stable cache key
+                    .setCustomCacheKey(
+                    if (preloadedIsVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" 
+                    else song.id
+                ) // CRITICAL: Stable cache key matching video/audio mode
                     .setMediaMetadata(
                         MediaMetadata.Builder()
                             .setTitle(song.title)
@@ -1089,15 +1112,20 @@ class MusicPlayer @Inject constructor(
         // Reset preload state
         preloadedNextSongId = null
         preloadedStreamUrl = null
+        preloadedIsVideoMode = false
         isPreloading = false
         
         playJob = scope.launch {
+            val preferVideo = sessionManager.isPreferVideoModeEnabled()
+            val shouldBeVideoMode = if (preferVideo && song.source == SongSource.YOUTUBE) true else _playerState.value.isVideoMode
+
             _playerState.update { 
                 it.copy(
                     queue = queue,
                     currentIndex = startIndex,
                     currentSong = song,
-                    isLoading = true
+                    isLoading = true,
+                    isVideoMode = shouldBeVideoMode
                 )
             }
             
