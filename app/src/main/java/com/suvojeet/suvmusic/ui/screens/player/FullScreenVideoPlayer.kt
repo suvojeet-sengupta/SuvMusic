@@ -134,22 +134,8 @@ fun FullScreenVideoPlayer(
     }
 
     BackHandler {
-        // Try to enter PiP when pressing back in fullscreen video (YouTube behavior)
-        val activity = context as? Activity
-        if (activity != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            try {
-                val aspectRatio = android.util.Rational(16, 9)
-                val params = android.app.PictureInPictureParams.Builder()
-                    .setAspectRatio(aspectRatio)
-                    .build()
-                activity.enterPictureInPictureMode(params)
-            } catch (e: Exception) {
-                // PiP not available, fall back to dismissing fullscreen
-                onDismiss()
-            }
-        } else {
-            onDismiss()
-        }
+        // Return to embedded player screen (PiP triggers via Home/switch apps)
+        onDismiss()
     }
 
     // Video quality dialog
