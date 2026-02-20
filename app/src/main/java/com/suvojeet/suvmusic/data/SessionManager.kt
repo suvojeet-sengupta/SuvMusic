@@ -444,10 +444,10 @@ class SessionManager @Inject constructor(
     }
     
     suspend fun isVolumeSliderEnabled(): Boolean = 
-        context.dataStore.data.first()[VOLUME_SLIDER_ENABLED_KEY] ?: true
+        context.dataStore.data.first()[VOLUME_SLIDER_ENABLED_KEY] ?: false
     
     val volumeSliderEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[VOLUME_SLIDER_ENABLED_KEY] ?: true
+        preferences[VOLUME_SLIDER_ENABLED_KEY] ?: false
     }
     
     suspend fun setVolumeSliderEnabled(enabled: Boolean) {
