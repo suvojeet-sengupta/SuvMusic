@@ -27,7 +27,7 @@ object WaveformStyle {
         val height = size.height
         val centerY = height / 2
         val barWidth = width / waveAmplitudes.size
-        val maxBarHeight = height * 0.5f // Reduced height
+        val maxBarHeight = height * 0.6f // Balanced height for 100 bars
         val progressX = progress * width
         
         // Draw unplayed track line
@@ -35,7 +35,7 @@ object WaveformStyle {
             color = inactiveColor.copy(alpha = 0.3f),
             start = Offset(progressX, centerY),
             end = Offset(width, centerY),
-            strokeWidth = 4.dp.toPx(),
+            strokeWidth = 3.dp.toPx(), // Slightly thinner line
             cap = androidx.compose.ui.graphics.StrokeCap.Round
         )
 
@@ -45,9 +45,9 @@ object WaveformStyle {
             
             if (isPast) {
                 val animatedAmplitude = if (isPlaying) {
-                    val phase = (wavePhase + index * 12) % 360
+                    val phase = (wavePhase + index * 10) % 360 // Slower phase shift
                     val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
-                    amplitude * (0.85f + wave * 0.15f) // Reduced wiggle (was 0.3f)
+                    amplitude * (0.9f + wave * 0.1f) // More stable animation
                 } else {
                     amplitude
                 }
@@ -57,9 +57,9 @@ object WaveformStyle {
                 
                 val barColor = Brush.verticalGradient(
                     colors = listOf(
-                        activeColor.copy(alpha = 0.7f),
+                        activeColor.copy(alpha = 0.8f),
                         activeColor,
-                        activeColor.copy(alpha = 0.7f)
+                        activeColor.copy(alpha = 0.8f)
                     ),
                     startY = topY,
                     endY = topY + barHeight
@@ -67,9 +67,9 @@ object WaveformStyle {
                 
                 drawRoundRect(
                     brush = barColor,
-                    topLeft = Offset(x - barWidth * 0.35f, topY),
-                    size = Size(barWidth * 0.7f, barHeight),
-                    cornerRadius = CornerRadius(barWidth * 0.35f)
+                    topLeft = Offset(x - barWidth * 0.3f, topY), // More space between bars
+                    size = Size(barWidth * 0.6f, barHeight),
+                    cornerRadius = CornerRadius(barWidth * 0.3f)
                 )
             }
         }
