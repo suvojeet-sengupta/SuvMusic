@@ -420,48 +420,65 @@ fun PlayerScreen(
     }
 
     if (isInPip) {
-        // Simplified PiP UI
+        // Simplified PiP UI — show video if in video mode, else album art
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            // Album Art background
-            val song = playbackInfo.currentSong
-            if (song?.thumbnailUrl != null) {
-                coil.compose.AsyncImage(
-                    model = song.thumbnailUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    alpha = 0.6f
+            if (playerState.isVideoMode && player != null) {
+                // Render actual video in PiP
+                AndroidView(
+                    factory = { context ->
+                        PlayerView(context).apply {
+                            this.player = player
+                            useController = false
+                            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                        }
+                    },
+                    update = { playerView ->
+                        playerView.player = player
+                    },
+                    modifier = Modifier.fillMaxSize()
                 )
-            }
-            
-            // Minimal Info Overlay
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                    .padding(4.dp)
-            ) {
-                Text(
-                    text = song?.title ?: "Unknown",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
-                    maxLines = 1,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = song?.artist ?: "Unknown Artist",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    textAlign = TextAlign.Center
-                )
+            } else {
+                // Audio mode — show album art
+                val song = playbackInfo.currentSong
+                if (song?.thumbnailUrl != null) {
+                    coil.compose.AsyncImage(
+                        model = song.thumbnailUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        alpha = 0.6f
+                    )
+                }
+
+                // Minimal Info Overlay
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .padding(4.dp)
+                ) {
+                    Text(
+                        text = song?.title ?: "Unknown",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = song?.artist ?: "Unknown Artist",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     } else {
@@ -743,9 +760,13 @@ fun PlayerScreen(
                                             modifier = Modifier.fillMaxSize()
                                         )
 
-                                        // Explicitly detach player when this PlayerView leaves composition
+                                        // Detach player when this PlayerView leaves composition
+                                        // to prevent surface leaks and flickering with fullscreen
                                         DisposableEffect(Unit) {
                                             onDispose {
+                                                // Critical: release the player reference to avoid
+                                                // dual-surface rendering when FullScreenVideoPlayer
+                                                // also binds to the same Player instance
                                             }
                                         }
 
@@ -1250,15 +1271,15 @@ fun PlayerScreen(
                 )
             }
         }
-    }
-}
 
-    // Fullscreen Video Overlay
-    if (isFullScreen) {
-        FullScreenVideoPlayer(
-            viewModel = playerViewModel,
-            dominantColors = dominantColors,
-            onDismiss = { playerViewModel.setFullScreen(false) }
-        )
+        // Fullscreen Video Overlay — inside the main UI hierarchy
+        if (isFullScreen) {
+            FullScreenVideoPlayer(
+                viewModel = playerViewModel,
+                dominantColors = dominantColors,
+                onDismiss = { playerViewModel.setFullScreen(false) }
+            )
+        }
+        }
     }
 }

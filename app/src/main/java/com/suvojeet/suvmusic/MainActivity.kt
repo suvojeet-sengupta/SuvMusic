@@ -77,6 +77,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.suvojeet.suvmusic.pip.PipHelper
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
@@ -95,6 +96,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer
+
+    @Inject
+    lateinit var pipHelper: PipHelper
 
     private lateinit var audioManager: AudioManager
     
@@ -163,6 +167,9 @@ class MainActivity : ComponentActivity() {
                     downloadRepository = downloadRepository,
                     onPlaybackStateChanged = { hasSong -> 
                         isSongPlaying = hasSong
+                        // Update PiP params whenever playback state changes
+                        // so the play/pause icon stays in sync
+                        pipHelper.updatePipParams(this@MainActivity)
                     },
                     onVolumeSliderEnabledChanged = { enabled ->
                         isVolumeSliderEnabled = enabled
@@ -245,16 +252,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Enter PiP if music is playing and enabled in settings
+        // Enter PiP when user presses Home / switches apps
+        val state = musicPlayer.playerState.value
+        val isVideoMode = state.isVideoMode
+        
         lifecycleScope.launch {
-            if (isSongPlaying && sessionManager.isDynamicIslandEnabled()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val aspectRatio = android.util.Rational(1, 1) // Square for audio
-                    val params = android.app.PictureInPictureParams.Builder()
-                        .setAspectRatio(aspectRatio)
-                        .build()
-                    enterPictureInPictureMode(params)
-                }
+            if (isVideoMode && isSongPlaying) {
+                // Always enter PiP for video mode (YouTube behavior)
+                pipHelper.enterPipIfEligible(this@MainActivity, forceVideoPip = true)
+            } else if (isSongPlaying && sessionManager.isDynamicIslandEnabled()) {
+                // Audio mode: use existing "Dynamic Island" setting
+                pipHelper.enterPipIfEligible(this@MainActivity)
             }
         }
     }
@@ -272,6 +280,9 @@ class MainActivity : ComponentActivity() {
         
         // Re-enable video track when returning to foreground
         musicPlayer.optimizeBandwidth(false)
+        
+        // Update PiP params (e.g., sync play/pause icon after returning from PiP)
+        pipHelper.updatePipParams(this)
     }
 }
 
