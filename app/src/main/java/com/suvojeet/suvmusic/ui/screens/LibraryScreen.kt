@@ -126,7 +126,8 @@ fun LibraryScreen(
             androidx.compose.material3.FloatingActionButton(
                 onClick = { showAddMenu = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(bottom = 90.dp)
             ) {
                  Icon(Icons.Default.Add, "Add")
             }
