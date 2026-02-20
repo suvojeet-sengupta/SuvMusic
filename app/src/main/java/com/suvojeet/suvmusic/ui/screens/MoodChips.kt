@@ -104,7 +104,7 @@ fun MoodChip(
 
         Surface(
             modifier = Modifier.height(38.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = androidx.compose.foundation.shape.CircleShape,
             color = backgroundColor,
             border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
         ) {
