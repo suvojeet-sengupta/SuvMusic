@@ -664,171 +664,86 @@ private fun Modifier.bounceClick(
 
 @Composable
 private fun AppFooter(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "footer")
-    
-    val bounceOffset by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            tween(1200, easing = androidx.compose.animation.core.EaseInOutSine), 
-            RepeatMode.Reverse
-        ),
-        label = "bounce"
-    )
-    
-    val heartScale by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 1.25f,
-        animationSpec = infiniteRepeatable(
-            tween(800, easing = androidx.compose.animation.core.EaseInOutBack), 
-            RepeatMode.Reverse
-        ),
-        label = "heartbeat"
-    )
-
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 40.dp, bottom = 24.dp)
+            .padding(top = 48.dp, bottom = 32.dp)
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Decorative Divider
-        Box(
-            modifier = Modifier
-                .width(60.dp)
-                .height(1.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Large Musical Icons
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(20.dp), 
-            verticalAlignment = Alignment.CenterVertically
+        // Simple elegant logo/icon
+        Surface(
+            modifier = Modifier.size(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
         ) {
-            Text("🎵", fontSize = 32.sp, modifier = Modifier.offset(y = (-bounceOffset).dp))
-            Surface(
-                modifier = Modifier
-                    .size(80.dp)
-                    .graphicsLayer { rotationZ = bounceOffset },
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("🎧", fontSize = 48.sp)
-                }
+            Box(contentAlignment = Alignment.Center) {
+                AsyncImage(
+                    model = com.suvojeet.suvmusic.R.drawable.logo,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
+                )
             }
-            Text("🎶", fontSize = 32.sp, modifier = Modifier.offset(y = bounceOffset.dp))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "That's all for now!", 
-            style = MaterialTheme.typography.headlineSmall, 
-            fontWeight = FontWeight.ExtraBold, 
+            text = "SuvMusic",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.onSurface,
-            letterSpacing = (-0.5).sp
+            letterSpacing = 1.sp
         )
         
-        Spacer(modifier = Modifier.height(4.dp))
-        
+        val versionName = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME
         Text(
-            text = "Keep vibing, new music drops daily ✨", 
-            style = MaterialTheme.typography.bodyMedium, 
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), 
-            textAlign = TextAlign.Center
+            text = "v$versionName",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            fontWeight = FontWeight.Medium
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // Developer Section - Unique Design
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.0f),
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        )
-                    )
-                )
-                .padding(vertical = 24.dp, horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        // Professional attribution
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "CRAFTED WITH",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    letterSpacing = 2.sp
-                )
-                Icon(
-                    imageVector = Icons.Default.Favorite, 
-                    contentDescription = "Love", 
-                    tint = Color(0xFFFF4081), 
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .size(16.dp)
-                        .scale(heartScale)
-                )
-                Text(
-                    text = "FROM INDIA",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    letterSpacing = 2.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Spotlight on Suvojeet Sengupta
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Suvojeet Sengupta",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary
-                            )
-                        )
-                    ),
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.5.sp
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
             Text(
-                text = "Lead Developer & Designer",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Medium
+                text = "CRAFTED WITH",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                letterSpacing = 1.5.sp
+            )
+            Icon(
+                imageVector = Icons.Default.Favorite, 
+                contentDescription = null, 
+                tint = Color(0xFFFF4081).copy(alpha = 0.7f), 
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .size(12.dp)
+            )
+            Text(
+                text = "IN INDIA",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                letterSpacing = 1.5.sp
             )
         }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "© 2026 Suvojeet Sengupta",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+            fontWeight = FontWeight.Normal
+        )
     }
 }
 

@@ -380,10 +380,10 @@ class SessionManager @Inject constructor(
     }
     
     suspend fun getSeekbarStyle(): String = 
-        context.dataStore.data.first()[SEEKBAR_STYLE_KEY] ?: "WAVEFORM"
+        context.dataStore.data.first()[SEEKBAR_STYLE_KEY] ?: "WAVE_LINE"
     
     val seekbarStyleFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[SEEKBAR_STYLE_KEY] ?: "WAVEFORM"
+        preferences[SEEKBAR_STYLE_KEY] ?: "WAVE_LINE"
     }
     
     suspend fun setSeekbarStyle(style: String) {

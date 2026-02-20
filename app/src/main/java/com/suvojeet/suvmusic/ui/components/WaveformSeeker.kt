@@ -92,7 +92,7 @@ fun WaveformSeeker(
     modifier: Modifier = Modifier,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
-    initialStyle: SeekbarStyle = SeekbarStyle.WAVEFORM,
+    initialStyle: SeekbarStyle = SeekbarStyle.WAVE_LINE,
     onStyleChange: ((SeekbarStyle) -> Unit)? = null,
     duration: Long = 0L,
     sponsorSegments: List<SponsorSegment> = emptyList()
