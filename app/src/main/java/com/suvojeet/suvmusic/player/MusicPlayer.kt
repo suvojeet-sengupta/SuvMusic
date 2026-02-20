@@ -559,27 +559,31 @@ class MusicPlayer @Inject constructor(
         
         override fun onPlayerError(error: PlaybackException) {
             // Log error
-            android.util.Log.e("MusicPlayer", "Playback error: ${error.errorCodeName}", error)
+            android.util.Log.e("MusicPlayer", "Playback error: ${error.errorCodeName} (${error.errorCode})", error)
             
-            // Check if error is recoverable (e.g. 403/410 HTTP error means URL expired)
+            // Check if error is recoverable
             val cause = error.cause
             val isHttpError = cause is androidx.media3.datasource.HttpDataSource.HttpDataSourceException
             val responseCode = (cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode ?: 0
-            val isexpiredUrl = (isHttpError && (responseCode == 403 || responseCode == 410))
+            val isExpiredUrl = (isHttpError && (responseCode == 403 || responseCode == 410))
             val isNetworkError = cause is java.net.UnknownHostException || cause is java.net.SocketTimeoutException
-            val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED
+            
+            // Critical: Audio Sink or Decoder errors often cause the "No Sound" issue
+            val isAudioSinkError = error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
+                                 error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED
+            val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
+                               error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
             
             // Placeholder Check: If current URI is a YouTube watch URL, it will fail and MUST be resolved
             val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
             val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
 
-            if (isexpiredUrl || isNetworkError || isDecoderError || isYouTubePlaceholder) {
+            if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isYouTubePlaceholder) {
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
                 if (currentSong != null && currentSong.source != SongSource.LOCAL && currentSong.source != SongSource.DOWNLOADED) {
                     
-                    // Bug Fix: Track retry count per song to prevent infinite error loops
                     if (currentSong.id == errorRetrySongId) {
                         errorRetryCount++
                     } else {
@@ -588,8 +592,7 @@ class MusicPlayer @Inject constructor(
                     }
                     
                     if (errorRetryCount > 3) {
-                        // Max retries exhausted — skip to next song to avoid infinite loop
-                        android.util.Log.w("MusicPlayer", "Max retries (3) reached for ${currentSong.id}, skipping")
+                        android.util.Log.w("MusicPlayer", "Max retries reached for ${currentSong.id}, skipping")
                         _playerState.update { it.copy(error = "Skipping unplayable song", isLoading = false) }
                         errorRetryCount = 0
                         errorRetrySongId = null
@@ -600,8 +603,19 @@ class MusicPlayer @Inject constructor(
                     android.util.Log.d("MusicPlayer", "Attempting recovery (attempt $errorRetryCount/3) for: ${currentSong.id}")
                     
                     scope.launch {
-                        // Fallback logic: If in Video Mode, switch to Audio Mode first
-                        if (_playerState.value.isVideoMode) {
+                        // If Audio Sink or Decoder error occurred, switching modes often fixes it (Audio <-> Video)
+                        // as it forces a complete reset of the decoder and audio track.
+                        if (isAudioSinkError || isDecoderError) {
+                            android.util.Log.d("MusicPlayer", "Audio/Decoder error detected, performing mode-switch reset")
+                            val originalMode = _playerState.value.isVideoMode
+                            
+                            // 1. Temporarily switch mode to force renderer reset
+                            _playerState.update { it.copy(isVideoMode = !originalMode, isLoading = true) }
+                            delay(500)
+                            // 2. Switch back to original mode and re-resolve
+                            _playerState.update { it.copy(isVideoMode = originalMode) }
+                        } else if (_playerState.value.isVideoMode && (isExpiredUrl || isDecoderError)) {
+                             // Fallback logic for video
                              android.util.Log.d("MusicPlayer", "Video playback failed, falling back to audio")
                              _playerState.update { 
                                  it.copy(
@@ -610,32 +624,24 @@ class MusicPlayer @Inject constructor(
                                      error = "Video unavailable, switching to audio..."
                                  ) 
                              }
-                             // Clear cached video entry if it might be bad
                              resolvedVideoIds.remove(currentSong.id)
                         } else {
                              _playerState.update { it.copy(isLoading = true, error = null) }
                         }
 
-                        // Wait a bit before retrying (exponential backoff)
-                        delay(1000L * errorRetryCount)
+                        // Exponential backoff
+                        delay(800L * errorRetryCount)
                         
-                        // Resume from last position
                         val resumePosition = _playerState.value.currentPosition
                         
-                        // Re-resolve and play (force resolution)
                         try {
                              resolveAndPlayCurrentItem(currentSong, _playerState.value.currentIndex, shouldPlay = true)
-                             
-                             // Seek to previous position once ready
-                             mediaController?.seekTo(resumePosition)
+                             if (resumePosition > 0) {
+                                 delay(500) // Give player a moment to prepare
+                                 mediaController?.seekTo(resumePosition)
+                             }
                         } catch (e: Exception) {
-                            // Recovery failed
-                             _playerState.update { 
-                                it.copy(
-                                    error = "Playback failed: ${error.message}",
-                                    isLoading = false
-                                )
-                            }
+                             _playerState.update { it.copy(error = "Playback failed: ${error.message}", isLoading = false) }
                         }
                     }
                     return

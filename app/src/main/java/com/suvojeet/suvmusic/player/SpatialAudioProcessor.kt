@@ -131,12 +131,22 @@ class SpatialAudioProcessor @Inject constructor(
 
     override fun queueInput(inputBuffer: ByteBuffer) {
         val remaining = inputBuffer.remaining()
-        if (remaining == 0 || !isActive) return
+        if (remaining == 0) return
+
+        // If processor is NOT active, just pass through (ExoPlayer should handle this via BaseAudioProcessor, 
+        // but explicit handling is safer for our custom buffer management)
+        if (!isActive) {
+            val out = replaceOutputBuffer(remaining)
+            out.put(inputBuffer)
+            out.flip()
+            return
+        }
 
         val encoding = inputAudioFormat.encoding
         val channelCount = inputAudioFormat.channelCount
         val sampleRate = inputAudioFormat.sampleRate
 
+        // Safety: Prevent division by zero or invalid formats causing silence
         if (channelCount <= 0 || sampleRate <= 0) {
             val passthrough = replaceOutputBuffer(remaining)
             passthrough.put(inputBuffer)
@@ -147,33 +157,53 @@ class SpatialAudioProcessor @Inject constructor(
         val bytesPerSample = when (encoding) {
             C.ENCODING_PCM_16BIT -> 2
             C.ENCODING_PCM_FLOAT -> 4
-            else -> return
+            else -> {
+                // Unknown encoding, just pass through to avoid silence
+                val passthrough = replaceOutputBuffer(remaining)
+                passthrough.put(inputBuffer)
+                passthrough.flip()
+                return
+            }
         }
 
         val frameCount = remaining / (bytesPerSample * channelCount)
         if (frameCount <= 0) return
 
-    val outBuffer = replaceOutputBuffer(frameCount * channelCount * 2)
-    outBuffer.order(ByteOrder.LITTLE_ENDIAN)
+        // 1. Prepare output buffer (we always output PCM 16-bit as per onConfigure)
+        val requiredBytes = frameCount * channelCount * 2
+        val outBuffer = replaceOutputBuffer(requiredBytes)
+        outBuffer.order(ByteOrder.LITTLE_ENDIAN)
         outBuffer.clear()
-        when (encoding) {
-            C.ENCODING_PCM_16BIT -> outBuffer.put(inputBuffer)
-            C.ENCODING_PCM_FLOAT -> {
-                inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
-                repeat(frameCount * channelCount) {
-                    val clamped = inputBuffer.getFloat().coerceIn(-1f, 1f)
-                    val sample = (clamped * 32767f).toInt().toShort()
-                    outBuffer.putShort(sample)
+
+        // 2. Convert input to PCM 16-bit if necessary
+        try {
+            when (encoding) {
+                C.ENCODING_PCM_16BIT -> outBuffer.put(inputBuffer)
+                C.ENCODING_PCM_FLOAT -> {
+                    inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
+                    repeat(frameCount * channelCount) {
+                        val clamped = inputBuffer.getFloat().coerceIn(-1f, 1f)
+                        val sample = (clamped * 32767f).toInt().toShort()
+                        outBuffer.putShort(sample)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            // Conversion failed, return empty to avoid noise, but log it
+            android.util.Log.e("SpatialAudioProcessor", "Buffer conversion error", e)
+            return
         }
         outBuffer.flip()
 
-        val effectsActive = isSpatialEnabled || isLimiterEnabled || (isCrossfeedEnabled && !isSpatialEnabled)
+        // 3. Process with Native JNI if effects are active
+        val effectsActive = isSpatialEnabled || isLimiterEnabled || (isCrossfeedEnabled && !isSpatialEnabled) || currentPitch != 1.0f
+        
         if (!effectsActive) {
+            // No effects active, output buffer already contains the converted data
             return
         }
 
+        // Apply balance/spatial positioning
         val currentBalance = audioARManager.stereoBalance.value
         if (isSpatialEnabled) {
             azimuth = currentBalance * (Math.PI.toFloat() / 2f)
@@ -185,25 +215,33 @@ class SpatialAudioProcessor @Inject constructor(
             nativeSpatialAudio.setLimiterBalance(currentBalance)
         }
 
-        val requiredBytes = frameCount * channelCount * 2
+        // Use direct native buffer for JNI
         var nativeBuffer = directNativeBuffer
         if (nativeBuffer == null || nativeBuffer.capacity() < requiredBytes) {
             nativeBuffer = ByteBuffer.allocateDirect(requiredBytes).order(ByteOrder.LITTLE_ENDIAN)
             directNativeBuffer = nativeBuffer
         }
-        nativeBuffer.clear()
-        outBuffer.position(0)
-        outBuffer.limit(requiredBytes)
-        nativeBuffer.put(outBuffer)
-        nativeBuffer.flip()
+        
+        try {
+            nativeBuffer.clear()
+            outBuffer.position(0)
+            nativeBuffer.put(outBuffer)
+            nativeBuffer.flip()
 
-        nativeSpatialAudio.processPcm16(nativeBuffer, frameCount, channelCount, sampleRate, azimuth, elevation)
+            // JNI Call
+            nativeSpatialAudio.processPcm16(nativeBuffer, frameCount, channelCount, sampleRate, azimuth, elevation)
 
-        // Copy processed data back to output buffer
-        nativeBuffer.position(0)
-        outBuffer.position(0)
-        outBuffer.limit(requiredBytes)
-        outBuffer.put(nativeBuffer)
-        outBuffer.flip()
+            // Copy processed data back to output buffer
+            nativeBuffer.position(0)
+            outBuffer.clear()
+            outBuffer.put(nativeBuffer)
+            outBuffer.flip()
+        } catch (e: Exception) {
+            android.util.Log.e("SpatialAudioProcessor", "Native processing error", e)
+            // On error, the outBuffer already has the (unprocessed) data, 
+            // so we just return it rather than silence.
+            outBuffer.position(0)
+            outBuffer.limit(requiredBytes)
+        }
     }
 }
