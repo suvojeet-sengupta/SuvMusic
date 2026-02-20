@@ -1171,7 +1171,154 @@ class DownloadRepository @Inject constructor(
     fun isDownloading(songId: String): Boolean {
         return _downloadingIds.value.contains(songId)
     }
-    
+
+    fun isVideoDownloaded(songId: String): Boolean {
+        return _downloadedSongs.value.any { it.id == songId && it.isVideo }
+    }
+
+    /**
+     * Download a song as a video (.mp4) by fetching a muxed stream.
+     * Saves to Music/SuvMusic/Videos/ on the device.
+     * Progress is tracked in [_downloadProgress] so the UI can react.
+     */
+    suspend fun downloadVideo(
+        song: Song,
+        maxResolution: Int = 720
+    ): Boolean = withContext(Dispatchers.IO) {
+        val videoKey = "${song.id}_video"
+
+        val canDownload = downloadMutex.withLock {
+            if (_downloadedSongs.value.any { it.id == song.id && it.isVideo }) {
+                Log.d(TAG, "Video ${song.id} already downloaded")
+                return@withLock false
+            }
+            if (_downloadingIds.value.contains(videoKey)) {
+                Log.d(TAG, "Video ${song.id} is already downloading")
+                return@withLock false
+            }
+            _downloadingIds.update { it + videoKey }
+            true
+        }
+
+        if (!canDownload) return@withContext true
+
+        Log.d(TAG, "Starting video download for: ${song.title} at ${maxResolution}p")
+
+        try {
+            val muxedUrl = youTubeRepository.getMuxedVideoStreamUrlForDownload(song.id, maxResolution)
+            if (muxedUrl == null) {
+                Log.e(TAG, "Failed to get muxed video stream for ${song.id}")
+                downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
+                return@withContext false
+            }
+
+            val request = Request.Builder()
+                .url(muxedUrl)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .header("Accept", "*/*")
+                .header("Accept-Encoding", "identity")
+                .build()
+
+            val response = downloadClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                Log.e(TAG, "Video download request failed: ${response.code}")
+                response.close()
+                downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
+                return@withContext false
+            }
+
+            val contentLength = response.body.contentLength()
+            _downloadProgress.update { it + (videoKey to 0f) }
+
+            // Save as .mp4
+            val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.mp4"
+            val savedUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val relativePath = "${Environment.DIRECTORY_MOVIES}/SuvMusic"
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                    put(MediaStore.Video.Media.RELATIVE_PATH, relativePath)
+                    put(MediaStore.Video.Media.IS_PENDING, 1)
+                }
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
+                uri?.let { videoUri ->
+                    resolver.openOutputStream(videoUri)?.use { out ->
+                        copyWithProgress(response.body.byteStream(), out, contentLength) { p ->
+                            _downloadProgress.update { it + (videoKey to p) }
+                        }
+                    }
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Video.Media.IS_PENDING, 0)
+                    resolver.update(videoUri, contentValues, null, null)
+                }
+                uri
+            } else {
+                val videosDir = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
+                    "SuvMusic"
+                ).apply { mkdirs() }
+                val file = File(videosDir, fileName)
+                FileOutputStream(file).use { out ->
+                    copyWithProgress(response.body.byteStream(), out, contentLength) { p ->
+                        _downloadProgress.update { it + (videoKey to p) }
+                    }
+                }
+                android.net.Uri.fromFile(file)
+            }
+
+            response.close()
+
+            if (savedUri == null) {
+                Log.e(TAG, "Failed to save video file")
+                downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
+                _downloadProgress.update { it - videoKey }
+                return@withContext false
+            }
+
+            // save thumbnail
+            val currentThumbnailUrl = song.thumbnailUrl
+            var localThumbnailUrl = currentThumbnailUrl
+            if (!currentThumbnailUrl.isNullOrEmpty() && currentThumbnailUrl.startsWith("http")) {
+                try {
+                    val highResThumbnailUrl = getHighResThumbnailUrl(currentThumbnailUrl, song.id)
+                    val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
+                    val thumbResponse = downloadClient.newCall(thumbRequest).execute()
+                    if (thumbResponse.isSuccessful) {
+                        val thumbnailsDir = File(context.filesDir, "thumbnails").apply { mkdirs() }
+                        val thumbFile = File(thumbnailsDir, "${song.id}_video.jpg")
+                        FileOutputStream(thumbFile).use { it.write(thumbResponse.body.bytes()) }
+                        localThumbnailUrl = thumbFile.toUri().toString()
+                    }
+                    thumbResponse.close()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to download video thumbnail", e)
+                }
+            }
+
+            val downloadedSong = song.copy(
+                source = SongSource.DOWNLOADED,
+                localUri = savedUri,
+                thumbnailUrl = localThumbnailUrl,
+                streamUrl = null,
+                originalSource = song.source,
+                isVideo = true
+            )
+
+            _downloadedSongs.update { it + downloadedSong }
+            saveDownloads()
+            downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
+            _downloadProgress.update { it - videoKey }
+            Log.d(TAG, "Video download complete: $savedUri")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Video download error for ${song.id}", e)
+            downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
+            _downloadProgress.update { it - videoKey }
+            false
+        }
+    }
+
     /**
      * Rescan Downloads/SuvMusic folder for new files.
      * Call this when entering the Library screen to pick up manually added files.
