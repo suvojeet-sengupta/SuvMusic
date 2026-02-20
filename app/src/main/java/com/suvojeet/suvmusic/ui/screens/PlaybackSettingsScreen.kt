@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.History
@@ -378,6 +379,26 @@ fun PlaybackSettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable { showVideoQualitySheet = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
+                headlineContent = { Text("Prefer Video Mode") },
+                supportingContent = {
+                    Text("Automatically play video when a song starts. Next/prev will load video too.")
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Videocam,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.preferVideoModeEnabled,
+                        onCheckedChange = { viewModel.setPreferVideoMode(it) }
+                    )
+                },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
