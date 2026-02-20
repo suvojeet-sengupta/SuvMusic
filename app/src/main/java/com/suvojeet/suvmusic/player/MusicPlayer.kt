@@ -119,14 +119,6 @@ class MusicPlayer @Inject constructor(
             _playerState.update { it.copy(videoQuality = quality) }
         }
 
-        // Restore prefer video mode from settings
-        scope.launch {
-            val preferVideo = sessionManager.isPreferVideoModeEnabled()
-            if (preferVideo) {
-                _playerState.update { it.copy(isVideoMode = true) }
-            }
-        }
-        
         // Listen for preloading settings
         scope.launch {
             sessionManager.nextSongPreloadingEnabledFlow.collect { nextSongPreloadingEnabled = it }
@@ -459,7 +451,7 @@ class MusicPlayer @Inject constructor(
                         isLiked = false,
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
-                        isVideoMode = it.isVideoMode, // Persist video mode across songs
+                        isVideoMode = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) false else it.isVideoMode,
                         videoNotFound = false // Reset error flag on track change
                     )
                 }
@@ -1122,16 +1114,12 @@ class MusicPlayer @Inject constructor(
         isPreloading = false
         
         playJob = scope.launch {
-            val preferVideo = sessionManager.isPreferVideoModeEnabled()
-            val shouldBeVideoMode = if (preferVideo && song.source == SongSource.YOUTUBE) true else _playerState.value.isVideoMode
-
             _playerState.update { 
                 it.copy(
                     queue = queue,
                     currentIndex = startIndex,
                     currentSong = song,
-                    isLoading = true,
-                    isVideoMode = shouldBeVideoMode
+                    isLoading = true
                 )
             }
             
