@@ -121,6 +121,42 @@ fun CreditsScreen(
                         context.startActivity(intent)
                     }
                 )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LibraryCard(
+                    name = "Discord integration",
+                    description = "For the Rich Presence support allowing users to share what they are listening to on their profile.",
+                    isSpecial = true,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.com/developers"))
+                        context.startActivity(intent)
+                    }
+                )
+            }
+
+            // --- Third-Party Services ---
+            item {
+                SectionHeader("External Services")
+                LibraryCard(
+                    name = "Last.fm",
+                    description = "Used for scrobbling support and providing high-quality personalized recommendations.",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.last.fm/"))
+                        context.startActivity(intent)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LibraryCard(
+                    name = "YouTube Music Auth",
+                    description = "Custom implementation for secure authentication to access user libraries and history.",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/"))
+                        context.startActivity(intent)
+                    }
+                )
             }
 
             // --- Lyrics Providers ---

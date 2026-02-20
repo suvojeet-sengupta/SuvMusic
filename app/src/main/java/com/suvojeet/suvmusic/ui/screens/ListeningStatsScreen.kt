@@ -74,7 +74,7 @@ fun ListeningStatsScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            LargeTopAppBar(
+            TopAppBar(
                 title = { Text("Your Insights", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -86,7 +86,6 @@ fun ListeningStatsScreen(
                         Icon(Icons.Default.Share, "Share")
                     }
                 },
-                scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     scrolledContainerColor = MaterialTheme.colorScheme.background
@@ -111,7 +110,7 @@ fun ListeningStatsScreen(
                     .fillMaxSize()
                     .padding(padding),
                 contentPadding = PaddingValues(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // 1. Music Personality Hero Section
                 item {
@@ -238,7 +237,9 @@ private fun MusicPersonalityHero(personality: MusicPersonality) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(280.dp)
+            .height(240.dp)
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(32.dp))
     ) {
         com.suvojeet.suvmusic.ui.components.MeshGradientBackground(
             dominantColors = com.suvojeet.suvmusic.ui.components.DominantColors(
