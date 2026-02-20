@@ -695,7 +695,7 @@ fun PlayerScreen(
                                 onRecenter = { playerViewModel.calibrateAudioAr() }
                             )
 
-                            Spacer(modifier = Modifier.weight(0.5f))
+                            Spacer(modifier = Modifier.weight(1f))
 
                             // Album Art or Video Player - swipeable
                             if (playerState.isVideoMode && player != null && !isFullScreen) {
@@ -788,7 +788,7 @@ fun PlayerScreen(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(32.dp))
+                            Spacer(modifier = Modifier.weight(1f))
 
                             // Song Info with actions
                                 SongInfoSection(
@@ -809,7 +809,7 @@ fun PlayerScreen(
                             if (playerState.isVideoMode) {
                                 Spacer(modifier = Modifier.height(16.dp))
                             } else {
-                                Spacer(modifier = Modifier.weight(1f))
+                                Spacer(modifier = Modifier.height(24.dp))
                             }
 
                             // Progress & Waveform
