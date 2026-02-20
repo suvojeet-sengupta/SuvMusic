@@ -206,7 +206,7 @@ fun MediumSongCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = song.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -214,7 +214,7 @@ fun MediumSongCard(
                 )
                 Text(
                     text = song.artist,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -250,18 +250,23 @@ fun HomeSectionHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = (-0.5).sp
         )
         if (onSeeAllClick != null) {
-            TextButton(onClick = onSeeAllClick) {
-                Text(
-                    text = "See All",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            Text(
+                text = "SEE ALL",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .clickable(onClick = onSeeAllClick)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                letterSpacing = 1.sp
+            )
         }
     }
 }
