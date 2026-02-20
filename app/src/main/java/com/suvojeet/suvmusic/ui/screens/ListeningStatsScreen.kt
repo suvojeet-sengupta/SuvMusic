@@ -1,5 +1,7 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,11 +16,10 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Offset
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.core.data.local.dao.ArtistStats
@@ -48,6 +50,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.ListeningStatsViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.MusicPersonality
 import com.suvojeet.suvmusic.ui.viewmodel.TimeOfDay
 import java.util.concurrent.TimeUnit
+import android.content.Intent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,8 +58,18 @@ fun ListeningStatsScreen(
     onBackClick: () -> Unit,
     viewModel: ListeningStatsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val context = LocalContext.current
+
+    val shareStats = {
+        val shareIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, "Check out my music personality on SuvMusic: ${uiState.musicPersonality.title}! I've listened to ${uiState.totalSongsPlayed} songs.")
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share your insights"))
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -66,6 +79,11 @@ fun ListeningStatsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = shareStats) {
+                        Icon(Icons.Default.Share, "Share")
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -97,28 +115,36 @@ fun ListeningStatsScreen(
             ) {
                 // 1. Music Personality Hero Section
                 item {
-                    MusicPersonalityHero(uiState.musicPersonality)
+                    AnimatedEntry {
+                        MusicPersonalityHero(uiState.musicPersonality)
+                    }
                 }
 
                 // 2. Global Key Metrics
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        GlobalStatsRow(uiState)
+                    AnimatedEntry(delay = 100) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            GlobalStatsRow(uiState)
+                        }
                     }
                 }
 
                 // 3. Weekly Activity Chart (Premium Bezier)
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        WeeklyActivitySection(uiState.weeklyTrends)
+                    AnimatedEntry(delay = 200) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            WeeklyActivitySection(uiState.weeklyTrends)
+                        }
                     }
                 }
 
                 // 4. Monthly Highlight
                 if (uiState.topArtistThisMonth != null) {
                     item {
-                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            MonthlyHighlightSection(uiState.topArtistThisMonth!!)
+                        AnimatedEntry(delay = 300) {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                MonthlyHighlightSection(uiState.topArtistThisMonth!!)
+                            }
                         }
                     }
                 }
@@ -127,25 +153,35 @@ fun ListeningStatsScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                         if (uiState.topSongs.isNotEmpty()) {
-                            SectionHeaderWithPadding("Most Played Songs", Icons.Default.Audiotrack)
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp)
-                            ) {
-                                items(uiState.topSongs) { song ->
-                                    TopSongCard(song)
+                            AnimatedEntry(delay = 400) {
+                                Column {
+                                    SectionHeaderWithPadding("Most Played Songs", Icons.Default.Audiotrack)
+                                    Spacer(Modifier.height(12.dp))
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                        contentPadding = PaddingValues(horizontal = 16.dp)
+                                    ) {
+                                        items(uiState.topSongs) { song ->
+                                            TopSongCard(song)
+                                        }
+                                    }
                                 }
                             }
                         }
 
                         if (uiState.topArtists.isNotEmpty()) {
-                            SectionHeaderWithPadding("Top Artists", Icons.Default.Person)
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp)
-                            ) {
-                                items(uiState.topArtists) { artist ->
-                                    TopArtistCard(artist)
+                            AnimatedEntry(delay = 500) {
+                                Column {
+                                    SectionHeaderWithPadding("Top Artists", Icons.Default.Person)
+                                    Spacer(Modifier.height(12.dp))
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                        contentPadding = PaddingValues(horizontal = 16.dp)
+                                    ) {
+                                        items(uiState.topArtists) { artist ->
+                                            TopArtistCard(artist)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -154,12 +190,34 @@ fun ListeningStatsScreen(
 
                 // 6. Time of Day Breakdown
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        TimeOfDaySection(uiState.timeOfDayStats)
+                    AnimatedEntry(delay = 600) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            TimeOfDaySection(uiState.timeOfDayStats)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AnimatedEntry(
+    delay: Int = 0,
+    content: @Composable () -> Unit
+) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(delay.toLong())
+        visible = true
+    }
+    
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(800)) + 
+                slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(800))
+    ) {
+        content()
     }
 }
 
@@ -180,9 +238,8 @@ private fun MusicPersonalityHero(personality: MusicPersonality) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp)
+            .height(280.dp)
     ) {
-        // Mesh Gradient Background (Placeholder/Internal component)
         com.suvojeet.suvmusic.ui.components.MeshGradientBackground(
             dominantColors = com.suvojeet.suvmusic.ui.components.DominantColors(
                 primary = MaterialTheme.colorScheme.primaryContainer,
@@ -212,7 +269,7 @@ private fun MusicPersonalityHero(personality: MusicPersonality) {
                     letterSpacing = 1.5.sp
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
             Text(
                 text = personality.title,
                 style = MaterialTheme.typography.displayMedium,
@@ -275,6 +332,12 @@ fun BezierChart(trends: List<DailyListening>) {
     val maxMinutes = trends.maxOfOrNull { it.minutesListen }?.toFloat() ?: 1f
     val chartMax = maxOf(maxMinutes, 30f) * 1.2f
 
+    val animationProgress by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+        label = "ChartAnimation"
+    )
+
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
@@ -287,7 +350,7 @@ fun BezierChart(trends: List<DailyListening>) {
         val points = trends.mapIndexed { index, daily ->
             Offset(
                 x = index * spacing,
-                y = height - (daily.minutesListen / chartMax) * height
+                y = height - ((daily.minutesListen / chartMax) * height * animationProgress)
             )
         }
 
@@ -324,7 +387,7 @@ fun BezierChart(trends: List<DailyListening>) {
             drawPath(
                 path = fillPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(primaryColor.copy(alpha = 0.3f), Color.Transparent),
+                    colors = listOf(primaryColor.copy(alpha = 0.3f * animationProgress), Color.Transparent),
                     startY = 0f,
                     endY = height
                 )
@@ -339,7 +402,7 @@ fun BezierChart(trends: List<DailyListening>) {
             trends.forEachIndexed { index, daily ->
                 val point = points[index]
                 
-                if (daily.minutesListen > 0 || index == 0 || index == trends.size - 1) {
+                if ((daily.minutesListen > 0 || index == 0 || index == trends.size - 1) && animationProgress > 0.8f) {
                     drawCircle(color = primaryColor, radius = 4.dp.toPx(), center = point)
                     drawCircle(color = surfaceColor, radius = 2.dp.toPx(), center = point)
                 }
@@ -350,6 +413,7 @@ fun BezierChart(trends: List<DailyListening>) {
                         textSize = 28f
                         textAlign = android.graphics.Paint.Align.CENTER
                         typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        alpha = (255 * animationProgress).toInt()
                     }
                     drawText(daily.dayName, point.x, height + 40f, paint)
                 }
@@ -619,6 +683,12 @@ private fun TimeOfDaySection(stats: Map<TimeOfDay, Int>) {
                 val count = stats[time] ?: 0
                 val progress = if (max > 0) count / max else 0f
                 
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progress,
+                    animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+                    label = "BarAnimation"
+                )
+                
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -640,7 +710,7 @@ private fun TimeOfDaySection(stats: Map<TimeOfDay, Int>) {
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(progress)
+                                .fillMaxWidth(animatedProgress)
                                 .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.primary)
                         )
