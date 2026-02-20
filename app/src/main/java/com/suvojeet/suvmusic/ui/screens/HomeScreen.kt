@@ -138,7 +138,7 @@ fun HomeScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 140.dp),
-                        verticalArrangement = Arrangement.spacedBy(23.dp)
+                        verticalArrangement = Arrangement.spacedBy(32.dp)
                     ) {
                         // Greeting & Profile Header
                         item(key = "header", contentType = "header") {
@@ -478,118 +478,44 @@ private fun ProfileHeader(
         // Greeting
         Text(
             text = greeting,
-            style = MaterialTheme.typography.headlineMedium, // Slightly larger
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            style = MaterialTheme.typography.headlineMedium.copy(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.onBackground,
+                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                )
+            ),
+            fontWeight = FontWeight.Black,
+            letterSpacing = (-0.5).sp
         )
 
         // Actions Row
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Icon(
-                imageVector = Icons.Default.History,
-                contentDescription = "Recents",
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(24.dp).clickable(onClick = onRecentsClick)
-            )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(onClick = onRecentsClick),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = "Recents",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun MediumSongCard(
-    song: Song,
-    onClick: () -> Unit
-) {
-    // Spotify Style: Square image, Title below, Artist below that
-    val context = LocalContext.current
-    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
-
-    Column(
-        modifier = Modifier
-            .width(150.dp) // Slightly tighter
-            .bounceClick(
-                shape = RoundedCornerShape(4.dp),
-                onClick = onClick
-            )
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(highResThumbnail)
-                .crossfade(true)
-                .build(),
-            contentDescription = song.title,
-            modifier = Modifier
-                .size(150.dp)
-                .clip(RoundedCornerShape(4.dp)), // Minimal rounding often looks more modern/album-like
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = song.title,
-            style = MaterialTheme.typography.bodyMedium, // Use bodyMedium but Bold
-            fontWeight = FontWeight.SemiBold, // Not too bold
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = song.artist,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun PlaylistDisplayCard(
-    playlist: PlaylistDisplayItem,
-    onClick: () -> Unit
-) {
-    val context = LocalContext.current
-    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl) ?: playlist.thumbnailUrl
-
-    Column(
-        modifier = Modifier
-            .width(150.dp)
-            .bounceClick(
-                shape = RoundedCornerShape(4.dp),
-                onClick = onClick
-            )
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(highResThumbnail)
-                .crossfade(true)
-                .size(544)
-                .build(),
-            contentDescription = playlist.name,
-            modifier = Modifier
-                .size(150.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = playlist.name,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = "Playlist • ${playlist.uploaderName}",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
+// Unused local cards removed for cleanliness
 
 // -----------------------------------------------------------------------------
 // Existing Helpers & Footer (Refined)
@@ -605,25 +531,26 @@ private fun HomeSectionHeader(
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom // Align baseline
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = (-0.5).sp
         )
-        // Spotify often doesn't show "See All" prominently unless relevant, but we keep it
         if (onSeeAllClick != null) {
             Text(
-                text = "MORE", // Cleaner text
+                text = "SEE ALL",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
+                    .clip(androidx.compose.foundation.shape.CircleShape)
                     .clickable(onClick = onSeeAllClick)
-                    .padding(4.dp),
-                 letterSpacing = 1.sp
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                letterSpacing = 1.sp
             )
         }
     }
@@ -647,23 +574,39 @@ private fun CreateMixCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+            .height(76.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                    )
+                )
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+                .size(48.dp)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary
+                        )
+                    ), 
+                    RoundedCornerShape(12.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(24.dp)
             )
         }
         
@@ -672,13 +615,15 @@ private fun CreateMixCard(
         Column {
             Text(
                 text = "Create your own mix",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Pick artists to get started",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
             )
         }
     }
@@ -992,22 +937,23 @@ fun TrackCard(
             contentDescription = track.name,
             modifier = Modifier
                 .size(140.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = track.name,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
         )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = track.artist.name,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
