@@ -189,6 +189,17 @@
                 tools:node="remove" />
         </provider>
         
+        <!-- PiP Remote Action Receiver -->
+        <receiver
+            android:name=".pip.PipActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.suvojeet.suvmusic.pip.PLAY_PAUSE" />
+                <action android:name="com.suvojeet.suvmusic.pip.NEXT" />
+                <action android:name="com.suvojeet.suvmusic.pip.PREVIOUS" />
+            </intent-filter>
+        </receiver>
+        
     </application>
 
 </manifest>

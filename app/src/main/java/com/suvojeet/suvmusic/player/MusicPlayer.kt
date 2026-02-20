@@ -1602,9 +1602,16 @@ class MusicPlayer @Inject constructor(
                     return@launch
                 }
                 
+                val cacheKey = if (newVideoMode) {
+                    "${song.id}_${_playerState.value.videoQuality.name}"
+                } else {
+                    song.id
+                }
+                
                 val mediaItemBuilder = MediaItem.Builder()
                     .setUri(streamUrl)
                     .setMediaId(song.id)
+                    .setCustomCacheKey(cacheKey) // Match cache key pattern from resolveAndPlayCurrentItem
                     .setMediaMetadata(
                         MediaMetadata.Builder()
                             .setTitle(song.title)
