@@ -280,6 +280,21 @@ class MusicPlayerService : MediaLibraryService() {
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    
+                    // Bug Fix: Some devices have a "Silent Handshake" issue where AudioTrack 
+                    // is ready but doesn't produce sound until gain is updated.
+                    if (playbackState == Player.STATE_READY) {
+                        serviceScope.launch {
+                            val p = mediaLibrarySession?.player ?: return@launch
+                            if (p.playWhenReady) {
+                                val currentVol = p.volume
+                                // Micro-toggle volume to "kickstart" the AudioSink
+                                p.volume = 0.99f * currentVol
+                                delay(50)
+                                p.volume = currentVol
+                            }
+                        }
+                    }
                 }
 
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
