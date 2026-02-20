@@ -311,10 +311,14 @@ private fun ProcessingView(state: ImportState.Processing, onCancel: () -> Unit) 
         
         Spacer(modifier = Modifier.height(8.dp))
         
+        val animatedProgress by animateFloatAsState(
+            targetValue = if (state.totalSongs > 0) state.currentIndex.toFloat() / state.totalSongs else 0f,
+            animationSpec = spring(stiffness = Spring.StiffnessLow),
+            label = "import_progress"
+        )
+        
         LinearProgressIndicator(
-            progress = { 
-                if (state.totalSongs > 0) state.currentIndex.toFloat() / state.totalSongs else 0f 
-            },
+            progress = { animatedProgress },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)

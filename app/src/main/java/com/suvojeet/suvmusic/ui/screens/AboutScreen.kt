@@ -558,7 +558,7 @@ fun AboutScreen(
                 color = onSurfaceVariant.copy(alpha = 0.4f)
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(120.dp))
         }
     }
     
