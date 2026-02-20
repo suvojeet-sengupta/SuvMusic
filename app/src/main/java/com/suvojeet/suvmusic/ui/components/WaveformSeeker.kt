@@ -131,7 +131,7 @@ fun WaveformSeeker(
     
     // Generate random wave amplitudes (simulating audio waveform)
     val waveAmplitudes = remember {
-        List(60) { Random.nextFloat() * 0.6f + 0.4f }
+        List(100) { Random.nextFloat() * 0.6f + 0.4f }
     }
     
     var isDragging by remember { mutableStateOf(false) }
