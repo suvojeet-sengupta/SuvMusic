@@ -107,6 +107,9 @@ class MainActivity : ComponentActivity() {
     
     // Track whether in-app volume slider is enabled (if false, show system UI)
     private var isVolumeSliderEnabled: Boolean = true
+
+    // Track whether Picture-in-Picture is enabled in settings
+    private var isPipEnabled: Boolean = false
     
     // Flow to emit volume key events to the UI
     private val _volumeKeyEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -147,6 +150,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Observe PiP enabled state globally
+            LaunchedEffect(Unit) {
+                sessionManager.dynamicIslandEnabledFlow.collect { enabled ->
+                    isPipEnabled = enabled
+                    pipHelper.updatePipParams(this@MainActivity, isPipEnabled)
+                }
+            }
+
             val darkTheme = when (themeMode) {
                 ThemeMode.DARK -> true
                 ThemeMode.LIGHT -> false
@@ -169,7 +180,7 @@ class MainActivity : ComponentActivity() {
                         isSongPlaying = hasSong
                         // Update PiP params whenever playback state changes
                         // so the play/pause icon stays in sync
-                        pipHelper.updatePipParams(this@MainActivity)
+                        pipHelper.updatePipParams(this@MainActivity, isPipEnabled)
                     },
                     onVolumeSliderEnabledChanged = { enabled ->
                         isVolumeSliderEnabled = enabled
@@ -255,17 +266,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Enter PiP when user presses Home / switches apps
-        val state = musicPlayer.playerState.value
-        val isVideoMode = state.isVideoMode
         
         lifecycleScope.launch {
-            if (isVideoMode && isSongPlaying) {
-                // Always enter PiP for video mode (YouTube behavior)
-                pipHelper.enterPipIfEligible(this@MainActivity, forceVideoPip = true)
-            } else if (isSongPlaying && sessionManager.isDynamicIslandEnabled()) {
-                // Audio mode: use existing "Dynamic Island" setting
-                pipHelper.enterPipIfEligible(this@MainActivity)
+            if (isSongPlaying && isPipEnabled) {
+                // Enter PiP (only if enabled in Settings -> General -> Picture-in-Picture)
+                val isVideoMode = musicPlayer.playerState.value.isVideoMode
+                pipHelper.enterPipIfEligible(this@MainActivity, forceVideoPip = isVideoMode, isPipEnabled = isPipEnabled)
             }
         }
     }
@@ -285,7 +291,7 @@ class MainActivity : ComponentActivity() {
         musicPlayer.optimizeBandwidth(false)
         
         // Update PiP params (e.g., sync play/pause icon after returning from PiP)
-        pipHelper.updatePipParams(this)
+        pipHelper.updatePipParams(this, isPipEnabled)
     }
 }
 
