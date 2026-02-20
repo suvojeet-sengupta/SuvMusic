@@ -7,11 +7,12 @@ import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -56,66 +57,51 @@ class ListeningStatsViewModel @Inject constructor(
     private val listeningHistoryRepository: ListeningHistoryRepository
 ) : ViewModel() {
     
-    private val _uiState = MutableStateFlow(ListeningStatsUiState())
-    val uiState: StateFlow<ListeningStatsUiState> = _uiState.asStateFlow()
-    
-    init {
-        loadStats()
-    }
-    
-    private fun loadStats() {
-        viewModelScope.launch {
-            try {
-                _uiState.update { it.copy(isLoading = true) }
-                
-                // Get basic stats
+    private val refreshTrigger = MutableStateFlow(System.currentTimeMillis())
+
+    val uiState: StateFlow<ListeningStatsUiState> = refreshTrigger
+        .flatMapLatest {
+            combine(
+                listeningHistoryRepository.getTopSongs(10),
+                listeningHistoryRepository.getHistoryForTimePeriod(30)
+            ) { topSongs, recentHistory ->
                 val globalStats = listeningHistoryRepository.getListeningStats()
+                val topArtists = listeningHistoryRepository.getTopArtists(10)
                 
-                // data flows
-                val topSongsFlow = listeningHistoryRepository.getTopSongs(10)
-                // Get history for analysis (last 30 days for broader trends, but we focus on 7 for chart)
-                val recentHistoryFlow = listeningHistoryRepository.getHistoryForTimePeriod(30)
+                val timeOfDayStats = calculateTimeOfDayStats(recentHistory)
+                val weeklyTrends = calculateWeeklyTrends(recentHistory)
                 
-                // Combine flows to update UI state derived from these
-                combine(
-                    topSongsFlow,
-                    recentHistoryFlow
-                ) { topSongs, recentHistory ->
-                    
-                    val timeOfDayStats = calculateTimeOfDayStats(recentHistory)
-                    val weeklyTrends = calculateWeeklyTrends(recentHistory)
-                    val personality = determinePersonality(timeOfDayStats, globalStats.totalSongsPlayed)
-                    val avgDaily = if (weeklyTrends.isNotEmpty()) weeklyTrends.map { it.minutesListen }.average().toLong() * 60 * 1000 else 0L
-                    val monthTopArtist = calculateTopArtistFromHistory(recentHistory)
-                    
-                    Triple(topSongs, Triple(timeOfDayStats, weeklyTrends, personality), Pair(avgDaily, monthTopArtist))
-                }.collect { (songs, stats, advanced) ->
-                    val (timeOfDay, trends, personality) = stats
-                    val (avgDaily, monthTopArtist) = advanced
-                    val artists = listeningHistoryRepository.getTopArtists(10) // Fetch fresh artists
-                    
-                    _uiState.update {
-                        it.copy(
-                            totalSongsPlayed = globalStats.totalSongsPlayed,
-                            totalListeningTimeMs = globalStats.totalListeningTimeMs,
-                            averageDailyMs = avgDaily,
-                            topSongs = songs,
-                            topArtists = artists,
-                            topArtistThisMonth = monthTopArtist,
-                            timeOfDayStats = timeOfDay,
-                            weeklyTrends = trends,
-                            musicPersonality = personality,
-                            isLoading = false
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                // In production handle error properly
-                _uiState.update { it.copy(isLoading = false) }
+                val avgDaily = if (weeklyTrends.isNotEmpty()) {
+                    weeklyTrends.map { it.minutesListen }.average().toLong() * 60 * 1000
+                } else 0L
+                
+                val personality = determinePersonality(timeOfDayStats, globalStats.totalSongsPlayed, avgDaily)
+                
+                val monthTopArtist = calculateTopArtistFromHistory(recentHistory)
+                
+                ListeningStatsUiState(
+                    totalSongsPlayed = globalStats.totalSongsPlayed,
+                    totalListeningTimeMs = globalStats.totalListeningTimeMs,
+                    averageDailyMs = avgDaily,
+                    topSongs = topSongs,
+                    topArtists = topArtists,
+                    topArtistThisMonth = monthTopArtist,
+                    timeOfDayStats = timeOfDayStats,
+                    weeklyTrends = weeklyTrends,
+                    musicPersonality = personality,
+                    isLoading = false
+                )
+            }.catch { e ->
+                // Log error or handle it
+                emit(ListeningStatsUiState(isLoading = false))
             }
         }
-    }
-
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ListeningStatsUiState(isLoading = true)
+        )
+    
     private fun calculateTopArtistFromHistory(history: List<ListeningHistory>): ArtistStats? {
         if (history.isEmpty()) return null
         return history.groupBy { it.artist }
@@ -126,13 +112,7 @@ class ListeningStatsViewModel @Inject constructor(
     }
     
     private fun calculateTimeOfDayStats(history: List<ListeningHistory>): Map<TimeOfDay, Int> {
-        val stats = mutableMapOf(
-            TimeOfDay.MORNING to 0,
-            TimeOfDay.AFTERNOON to 0,
-            TimeOfDay.EVENING to 0,
-            TimeOfDay.NIGHT to 0
-        )
-        
+        val stats = TimeOfDay.entries.associateWith { 0 }.toMutableMap()
         val calendar = Calendar.getInstance()
         
         history.forEach { item ->
@@ -145,7 +125,7 @@ class ListeningStatsViewModel @Inject constructor(
                 in 17..21 -> TimeOfDay.EVENING
                 else -> TimeOfDay.NIGHT
             }
-            stats[timeOfDay] = stats.getOrDefault(timeOfDay, 0) + 1
+            stats[timeOfDay] = (stats[timeOfDay] ?: 0) + 1
         }
         
         return stats
@@ -153,7 +133,6 @@ class ListeningStatsViewModel @Inject constructor(
     
     private fun calculateWeeklyTrends(history: List<ListeningHistory>): List<DailyListening> {
         val calendar = Calendar.getInstance()
-        // Reset to start of today
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
@@ -162,43 +141,27 @@ class ListeningStatsViewModel @Inject constructor(
         val todayStart = calendar.timeInMillis
         val msPerDay = 24 * 60 * 60 * 1000L
         
-        // last 7 days including today
-        val trends = mutableListOf<DailyListening>()
-        
-        for (i in 6 downTo 0) {
+        return (6 downTo 0).map { i ->
             val dayStart = todayStart - (i * msPerDay)
             val dayEnd = dayStart + msPerDay
             
-            // Filter listening within this day window
-            // Note: This relies on 'lastPlayed'. Ideally we'd need separate play events, 
-            // but 'ListeningHistory' aggregates by song. 
-            // So we are approximating "active engagement" based on when they LAST played the song.
-            // For a perfect chart we would need a 'PlaySession' entity, but for now this is a limitation we accept.
-            // We can improve this if we assume 'lastPlayed' is the significant interaction.
-            val playsOnDay = history.filter { 
-                it.lastPlayed in dayStart until dayEnd 
-            }
-            
+            val playsOnDay = history.filter { it.lastPlayed in dayStart until dayEnd }
             val totalMinutes = playsOnDay.sumOf { it.duration } / 1000 / 60
             
-            val dayCal = Calendar.getInstance()
-            dayCal.timeInMillis = dayStart
+            val dayCal = Calendar.getInstance().apply { timeInMillis = dayStart }
             val dayName = dayCal.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault()) ?: "?"
             
-            trends.add(DailyListening(dayName, totalMinutes))
+            DailyListening(dayName, totalMinutes)
         }
-        
-        return trends
     }
     
-    private fun determinePersonality(timeStats: Map<TimeOfDay, Int>, totalSongs: Int): MusicPersonality {
+    private fun determinePersonality(timeStats: Map<TimeOfDay, Int>, totalSongs: Int, avgDailyMs: Long): MusicPersonality {
         if (totalSongs < 10) return MusicPersonality.NEWCOMER
         
-        val topTime = timeStats.maxByOrNull { it.value }?.key ?: return MusicPersonality.NEWCOMER
-        val totalTracked = timeStats.values.sum()
+        // If average daily listening is more than 2 hours
+        if (avgDailyMs > 2 * 60 * 60 * 1000L) return MusicPersonality.BINGE_LISTENER
         
-        // If they listen a lot in one session relative to total history
-        // calculating "Binge Listener" is hard without session data, so we stick to Time of Day for now.
+        val topTime = timeStats.maxByOrNull { it.value }?.key ?: return MusicPersonality.NEWCOMER
         
         return when (topTime) {
             TimeOfDay.MORNING -> MusicPersonality.EARLY_BIRD
@@ -209,12 +172,6 @@ class ListeningStatsViewModel @Inject constructor(
     }
     
     fun refresh() {
-        val current = _uiState.value
-        if (!current.isLoading) {
-             // Re-trigger load
-             // In a real flow setup, we might not need this if we are observing database changes.
-             // But 'loadStats' sets up the collectors again which is fine.
-             loadStats()
-        }
+        refreshTrigger.value = System.currentTimeMillis()
     }
 }
