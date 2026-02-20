@@ -695,22 +695,20 @@ fun PlayerScreen(
                                 onRecenter = { playerViewModel.calibrateAudioAr() }
                             )
 
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            // Album Art or Video Player - swipeable
+                            // Album Art or Video Player
                             if (playerState.isVideoMode && player != null && !isFullScreen) {
-                                // Video Player with Ambient Mode
+                                // Give video container flexible weight to fill available space
+                                Spacer(modifier = Modifier.height(16.dp))
                                 Box(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 12.dp)
+                                        .weight(1f) // ← Flexible height
                                 ) {
                                     // Ambient Glow Effect
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxWidth(0.95f)
-                                            .aspectRatio(16f / 9f)
+                                            .fillMaxSize(0.95f)
                                             .background(
                                                 brush = Brush.radialGradient(
                                                     colors = listOf(
@@ -725,8 +723,7 @@ fun PlayerScreen(
                                     // Main Player Box with AndroidView
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(16f / 9f)
+                                            .fillMaxSize()
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(Color.Black)
                                             .clickable { playerViewModel.setFullScreen(true) },
@@ -749,18 +746,16 @@ fun PlayerScreen(
                                         // Explicitly detach player when this PlayerView leaves composition
                                         DisposableEffect(Unit) {
                                             onDispose {
-                                                // Detach player to prevent conflicts with FullScreenVideoPlayer
-                                                // We can't easily access the PlayerView from here to set player = null
-                                                // but the factory/update logic above will be cleaned up by Compose.
-                                                // In some cases, a more explicit detachment is needed:
                                             }
                                         }
 
                                         LoadingArtworkOverlay(isVisible = playerState.isLoading)
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(16.dp))
                             } else {
-                                // Album artwork
+                                // Album artwork (audio mode)
+                                Spacer(modifier = Modifier.weight(1f))
                                 val artworkModifier = Modifier
 
                                 AlbumArtwork(
@@ -786,30 +781,29 @@ fun PlayerScreen(
                                     songId = song?.id,
                                     modifier = artworkModifier
                                 )
+                                Spacer(modifier = Modifier.weight(1f))
                             }
 
-                            Spacer(modifier = Modifier.weight(1f))
-
                             // Song Info with actions
-                                SongInfoSection(
-                                    song = song,
-                                    isFavorite = playerState.isLiked,
-                                    downloadState = playerState.downloadState,
-                                    onFavoriteClick = onToggleLike,
-                                    onDownloadClick = onDownload,
-                                    onMoreClick = { 
-                                        selectedSongForMenu = song
-                                        showActionsSheet = true 
-                                    },
-                                    onArtistClick = onArtistClick,
-                                    onAlbumClick = onAlbumClick,
-                                    dominantColors = dominantColors
-                                )
+                            SongInfoSection(
+                                song = song,
+                                isFavorite = playerState.isLiked,
+                                downloadState = playerState.downloadState,
+                                onFavoriteClick = onToggleLike,
+                                onDownloadClick = onDownload,
+                                onMoreClick = { 
+                                    selectedSongForMenu = song
+                                    showActionsSheet = true 
+                                },
+                                onArtistClick = onArtistClick,
+                                onAlbumClick = onAlbumClick,
+                                dominantColors = dominantColors
+                            )
 
-                            if (playerState.isVideoMode) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                            } else {
+                            if (!playerState.isVideoMode) {
                                 Spacer(modifier = Modifier.height(24.dp))
+                            } else {
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
 
                             // Progress & Waveform
