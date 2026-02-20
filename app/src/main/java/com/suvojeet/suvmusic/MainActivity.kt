@@ -247,7 +247,10 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         
         // Disable video track for bandwidth optimization when backgrounded
-        musicPlayer.optimizeBandwidth(true)
+        // but NOT when entering PiP mode (video needs to remain active for PiP)
+        if (!isInPictureInPictureMode) {
+            musicPlayer.optimizeBandwidth(true)
+        }
     }
 
     override fun onUserLeaveHint() {
