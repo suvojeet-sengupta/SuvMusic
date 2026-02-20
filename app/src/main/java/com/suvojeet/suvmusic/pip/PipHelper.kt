@@ -32,7 +32,7 @@ class PipHelper @Inject constructor(
      * Build PiP parameters with appropriate aspect ratio and remote actions.
      * Returns null if PiP is not supported on this API level.
      */
-    fun buildPipParams(isVideoMode: Boolean, isPlaying: Boolean): PictureInPictureParams? {
+    fun buildPipParams(isVideoMode: Boolean, isPlaying: Boolean, isPipEnabled: Boolean = true): PictureInPictureParams? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
 
         val aspectRatio = if (isVideoMode) {
@@ -46,7 +46,7 @@ class PipHelper @Inject constructor(
             .setActions(createRemoteActions(isPlaying))
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            builder.setAutoEnterEnabled(isVideoMode)
+            builder.setAutoEnterEnabled(if (isPipEnabled) isVideoMode else false)
             builder.setSeamlessResizeEnabled(true)
         }
 
@@ -58,7 +58,7 @@ class PipHelper @Inject constructor(
      * For video mode: always enter (YouTube behavior).
      * For audio mode: only enter if "Dynamic Island" setting is enabled (existing behavior).
      */
-    fun enterPipIfEligible(activity: Activity, forceVideoPip: Boolean = false) {
+    fun enterPipIfEligible(activity: Activity, forceVideoPip: Boolean = false, isPipEnabled: Boolean = true) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
         val state = musicPlayer.playerState.value
@@ -66,8 +66,10 @@ class PipHelper @Inject constructor(
 
         if (!hasSong) return
 
+        if (!isPipEnabled) return
+
         val isVideoMode = state.isVideoMode || forceVideoPip
-        val params = buildPipParams(isVideoMode, state.isPlaying) ?: return
+        val params = buildPipParams(isVideoMode, state.isPlaying, isPipEnabled) ?: return
 
         try {
             activity.enterPictureInPictureMode(params)
@@ -79,11 +81,11 @@ class PipHelper @Inject constructor(
     /**
      * Update PiP params dynamically (e.g., when play state changes in PiP).
      */
-    fun updatePipParams(activity: Activity) {
+    fun updatePipParams(activity: Activity, isPipEnabled: Boolean = true) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
         val state = musicPlayer.playerState.value
-        val params = buildPipParams(state.isVideoMode, state.isPlaying) ?: return
+        val params = buildPipParams(state.isVideoMode, state.isPlaying, isPipEnabled) ?: return
 
         try {
             activity.setPictureInPictureParams(params)

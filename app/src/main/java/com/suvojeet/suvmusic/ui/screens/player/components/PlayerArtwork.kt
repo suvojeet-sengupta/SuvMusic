@@ -147,16 +147,23 @@ fun AlbumArtwork(
     
     // Track horizontal drag offset
     var offsetX by remember { mutableStateOf(0f) }
-    val swipeThreshold = 300f
+    // Lower threshold for easier, YT Music-like swipes
+    val swipeThreshold = 150f
 
     val animatedOffsetX by animateFloatAsState(
         targetValue = offsetX,
-        animationSpec = tween(durationMillis = if (offsetX == 0f) 200 else 0),
+        // Spring bounce back to 0, immediate track when dragging
+        animationSpec = if (offsetX == 0f) spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ) else tween(durationMillis = 0),
         label = "swipe_offset"
     )
 
-    val scale = 1f - (kotlin.math.abs(animatedOffsetX) / 1500f).coerceIn(0f, 0.1f)
-    val rotation = animatedOffsetX / 30f
+    // Dynamic scale scaling down slightly more as you drag
+    val scale = 1f - (kotlin.math.abs(animatedOffsetX) / 800f).coerceIn(0f, 0.15f)
+    // Dynamic slight tilt
+    val rotation = animatedOffsetX / 40f
 
     val currentOnDoubleTapLeft by rememberUpdatedState(onDoubleTapLeft)
     val currentOnDoubleTapRight by rememberUpdatedState(onDoubleTapRight)
@@ -206,10 +213,12 @@ fun AlbumArtwork(
                         },
                         onDragCancel = { offsetX = 0f },
                         onHorizontalDrag = { _, dragAmount ->
-                            offsetX += dragAmount
+                            // Add drag physics: it gets heavier the further you pull
+                            val resistance = 1f - (kotlin.math.abs(offsetX) / 600f).coerceIn(0f, 0.7f)
+                            offsetX += (dragAmount * resistance)
                             // Rotate vinyl while dragging
                             if (currentShape == ArtworkShape.VINYL) {
-                                vinylRotation += dragAmount * 0.1f
+                                vinylRotation += (dragAmount * 0.1f * resistance)
                             }
                         }
                     )
