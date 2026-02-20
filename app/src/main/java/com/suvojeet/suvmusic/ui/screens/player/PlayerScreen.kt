@@ -198,7 +198,7 @@ fun PlayerScreen(
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
     
-    val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVEFORM")
+    val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVE_LINE")
     val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
     val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
@@ -234,7 +234,7 @@ fun PlayerScreen(
     
     val currentSeekbarStyle = remember(savedSeekbarStyleString) {
         runCatching { SeekbarStyle.valueOf(savedSeekbarStyleString) }
-            .getOrDefault(SeekbarStyle.WAVEFORM)
+            .getOrDefault(SeekbarStyle.WAVE_LINE)
     }
     
     val currentArtworkShape = remember(savedArtworkShapeString) {

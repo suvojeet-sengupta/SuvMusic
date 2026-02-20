@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LockOpen
@@ -236,6 +237,18 @@ fun AboutScreen(
                         icon = Icons.Default.Language,
                         title = "Spatial Audio",
                         subtitle = "Audio AR support for headphones",
+                        accentColor = primaryColor,
+                    )
+                    FeatureRow(
+                        icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub, // Placeholder or specific icon
+                        title = "Discord Rich Presence",
+                        subtitle = "Show what you're listening to",
+                        accentColor = primaryColor
+                    )
+                    FeatureRow(
+                        icon = Icons.Default.History,
+                        title = "Last.fm Scrobbling",
+                        subtitle = "Track your listening habits",
                         accentColor = primaryColor,
                         showDivider = false
                     )
