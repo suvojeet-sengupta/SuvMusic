@@ -1091,6 +1091,10 @@ class PlayerViewModel @Inject constructor(
      * Restore last playback state if available.
      */
     suspend fun restoreLastPlayback() {
+        // Skip restore if MusicPlayer already has a song loaded
+        // (prevents interrupting active playback when activity is recreated)
+        if (musicPlayer.playerState.value.currentSong != null) return
+
         val lastState = sessionManager.getLastPlaybackState() ?: return
         
         try {
