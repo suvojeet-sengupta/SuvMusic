@@ -533,21 +533,6 @@ class SessionManager @Inject constructor(
             preferences[VIDEO_QUALITY_KEY] = quality.name
         }
     }
-
-    // --- Prefer Video Mode ---
-
-    suspend fun isPreferVideoModeEnabled(): Boolean =
-        context.dataStore.data.first()[PREFER_VIDEO_MODE_KEY] ?: false
-
-    val preferVideoModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PREFER_VIDEO_MODE_KEY] ?: false
-    }
-
-    suspend fun setPreferVideoMode(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PREFER_VIDEO_MODE_KEY] = enabled
-        }
-    }
     
     suspend fun doesEnableBetterLyrics(): Boolean = 
             context.dataStore.data.first()[ENABLE_BETTER_LYRICS_KEY] ?: true
