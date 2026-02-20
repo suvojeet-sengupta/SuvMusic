@@ -29,8 +29,8 @@ object WaveLineStyle {
         val height = size.height
         val centerY = height / 2
         val progressX = progress * width
-        val amplitude = height * 0.15f // Reduced height (was 0.3f)
-        val frequency = 0.045f // Slightly tighter frequency (was 0.03f)
+        val amplitude = height * 0.12f // Further reduced height for tighter look
+        val frequency = 0.08f // Much tighter frequency (shorter wavelength)
         val phase = wavePhase * (Math.PI.toFloat() / 180f)
         
         // Unplayed path - Straight line
