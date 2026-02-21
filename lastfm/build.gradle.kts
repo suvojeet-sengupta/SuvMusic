@@ -29,7 +29,6 @@ android {
         buildConfigField("String", "LAST_FM_SHARED_SECRET", "\"$lastFmSecret\"")
         
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
