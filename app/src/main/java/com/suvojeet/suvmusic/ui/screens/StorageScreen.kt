@@ -44,6 +44,8 @@ fun StorageScreen(
     var storageInfo by remember { mutableStateOf<DownloadRepository.StorageInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
+    var showClearThumbnailsDialog by remember { mutableStateOf(false) }
+    var showClearImageCacheDialog by remember { mutableStateOf(false) }
     var isClearing by remember { mutableStateOf(false) }
     
     // Load storage info
@@ -159,10 +161,22 @@ fun StorageScreen(
                         icon = Icons.Default.Cached,
                         title = "Player Cache",
                         subtitle = "Streamed songs",
-                        size = info.formatSize(info.cacheBytes),
+                        size = info.formatSize(info.progressiveCacheBytes),
                         color = MaterialTheme.colorScheme.tertiary,
                         onClick = onPlayerCacheClick,
                         showChevron = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Image Cache Item
+                    StorageItem(
+                        icon = Icons.Default.Image,
+                        title = "Image Cache",
+                        subtitle = "Temporary app images",
+                        size = info.formatSize(info.imageCacheBytes),
+                        color = MaterialTheme.colorScheme.primary,
+                        onClick = { showClearImageCacheDialog = true }
                     )
                     
                     Spacer(modifier = Modifier.height(12.dp))
@@ -174,7 +188,7 @@ fun StorageScreen(
                         subtitle = "Album artwork images",
                         size = info.formatSize(info.thumbnailsBytes),
                         color = MaterialTheme.colorScheme.secondary,
-                        onClick = null
+                        onClick = { showClearThumbnailsDialog = true }
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -240,13 +254,77 @@ fun StorageScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteAllDialog = false }) {
+            }
+        )
+    }
+
+    // Clear Image Cache Dialog
+    if (showClearImageCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearImageCacheDialog = false },
+            title = { Text("Clear Image Cache?") },
+            text = { 
+                Text("This will remove all temporary images cached by the app. They will be re-downloaded when needed.") 
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearImageCacheDialog = false
+                        isClearing = true
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                downloadRepository.clearImageCache()
+                                refreshInfo()
+                            }
+                            isClearing = false
+                        }
+                    }
+                ) {
+                    Text("Clear", color = MaterialTheme.colorScheme.primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearImageCacheDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Clear Thumbnails Dialog
+    if (showClearThumbnailsDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearThumbnailsDialog = false },
+            title = { Text("Clear Thumbnails?") },
+            text = { 
+                Text("This will remove all downloaded album artworks. They will be re-downloaded when needed.") 
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearThumbnailsDialog = false
+                        isClearing = true
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                downloadRepository.clearThumbnails()
+                                refreshInfo()
+                            }
+                            isClearing = false
+                        }
+                    }
+                ) {
+                    Text("Clear", color = MaterialTheme.colorScheme.primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearThumbnailsDialog = false }) {
                     Text("Cancel")
                 }
             }
         )
     }
 }
+
 
 @Composable
 private fun StorageItem(
