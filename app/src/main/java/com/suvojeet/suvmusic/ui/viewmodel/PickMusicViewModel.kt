@@ -110,8 +110,8 @@ class PickMusicViewModel @Inject constructor(
                 return@launch
             }
 
-            // Target roughly 100 songs
-            val targetTotal = 100
+            // Target roughly 500 songs
+            val targetTotal = 500
             val songsPerArtist = (targetTotal / artists.size).coerceAtLeast(10)
 
             // Fetch songs for each selected artist
