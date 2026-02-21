@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.components
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import kotlinx.coroutines.launch
@@ -225,7 +226,12 @@ fun SongActionsSheet(
                     TopActionSheetCard(
                         icon = Icons.AutoMirrored.Filled.PlaylistPlay,
                         label = "Play next",
-                        onClick = { handleAction { onPlayNext() } },
+                        onClick = { 
+                            handleAction { 
+                                onPlayNext()
+                                Toast.makeText(context, "Playing next: ${song.title}", Toast.LENGTH_SHORT).show()
+                            } 
+                        },
                         modifier = Modifier.weight(1f),
                         backgroundColor = cardBackground,
                         contentColor = cardContentColor
@@ -287,7 +293,12 @@ fun SongActionsSheet(
                         title = "Add to Queue",
                         iconTint = contentColor,
                         textColor = contentColor,
-                        onClick = { handleAction { onAddToQueue() } }
+                        onClick = { 
+                            handleAction { 
+                                onAddToQueue()
+                                Toast.makeText(context, "Added to queue: ${song.title}", Toast.LENGTH_SHORT).show()
+                            } 
+                        }
                     )
                 }
                 

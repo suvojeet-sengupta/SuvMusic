@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.components
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +69,7 @@ fun MediaMenuBottomSheet(
     showShare: Boolean = true
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
 
     if (isVisible) {
         ModalBottomSheet(
@@ -162,14 +164,22 @@ fun MediaMenuBottomSheet(
                     icon = Icons.Default.SkipNext,
                     title = "Play next",
                     subtitle = "Add to the top of your queue",
-                    onClick = { onPlayNext(); onDismiss() }
+                    onClick = { 
+                        onPlayNext()
+                        Toast.makeText(context, "Playing next: $title", Toast.LENGTH_SHORT).show()
+                        onDismiss() 
+                    }
                 )
 
                 MenuActionItem(
                     icon = Icons.Default.AddToQueue,
                     title = "Add to queue",
                     subtitle = "Add to the bottom of your queue",
-                    onClick = { onAddToQueue(); onDismiss() }
+                    onClick = { 
+                        onAddToQueue()
+                        Toast.makeText(context, "Added to queue: $title", Toast.LENGTH_SHORT).show()
+                        onDismiss() 
+                    }
                 )
 
                 MenuActionItem(
