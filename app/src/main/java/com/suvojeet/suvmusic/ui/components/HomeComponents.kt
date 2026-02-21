@@ -240,7 +240,8 @@ fun MediumSongCard(
 @Composable
 fun HomeSectionHeader(
     title: String,
-    onSeeAllClick: (() -> Unit)? = null
+    onSeeAllClick: (() -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -256,7 +257,9 @@ fun HomeSectionHeader(
             color = MaterialTheme.colorScheme.onSurface,
             letterSpacing = (-0.5).sp
         )
-        if (onSeeAllClick != null) {
+        if (trailingContent != null) {
+            trailingContent()
+        } else if (onSeeAllClick != null) {
             Text(
                 text = "SEE ALL",
                 style = MaterialTheme.typography.labelSmall,
