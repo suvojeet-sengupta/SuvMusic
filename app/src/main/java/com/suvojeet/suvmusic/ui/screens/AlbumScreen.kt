@@ -250,7 +250,7 @@ fun AlbumScreen(
                         onPlayNext = { viewModel.playNext(listOf(song)) },
                         onAddToQueue = { viewModel.addToQueue(listOf(song)) },
                         onAddToPlaylist = { playlistViewModel.showAddToPlaylistSheet(song) },
-                        onDownload = { viewModel.downloadAlbum(album) }, // Using album download for now as context is album
+                        onDownload = { viewModel.downloadSong(song) },
                         onShare = { 
                             val shareText = "Check out this song: ${song.title} by ${song.artist}\n\nhttps://music.youtube.com/watch?v=${song.id}"
                             val sendIntent = android.content.Intent().apply {
