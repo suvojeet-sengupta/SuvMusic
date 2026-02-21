@@ -7,9 +7,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.ui.theme.GradientEnd
-import com.suvojeet.suvmusic.ui.theme.GradientMiddle
-import com.suvojeet.suvmusic.ui.theme.GradientStart
 
 /**
  * Gradient Bar style seekbar - Progress bar with colorful gradient and glow
@@ -28,6 +25,10 @@ object GradientBarStyle {
         val progressX = progress * width
         val trackHeight = 8.dp.toPx()
         
+        val gradientStart = activeColor.copy(alpha = 0.4f)
+        val gradientMiddle = activeColor.copy(alpha = 0.7f)
+        val gradientEnd = activeColor
+
         // Background track
         drawRoundRect(
             color = inactiveColor.copy(alpha = 0.2f),
@@ -40,9 +41,9 @@ object GradientBarStyle {
         drawRoundRect(
             brush = Brush.horizontalGradient(
                 colors = listOf(
-                    GradientStart.copy(alpha = 0.3f),
-                    GradientMiddle.copy(alpha = 0.3f),
-                    GradientEnd.copy(alpha = 0.3f)
+                    gradientStart.copy(alpha = 0.3f),
+                    gradientMiddle.copy(alpha = 0.3f),
+                    gradientEnd.copy(alpha = 0.3f)
                 )
             ),
             topLeft = Offset(0f, centerY - trackHeight),
@@ -53,7 +54,7 @@ object GradientBarStyle {
         // Progress track with gradient
         drawRoundRect(
             brush = Brush.horizontalGradient(
-                colors = listOf(GradientStart, GradientMiddle, GradientEnd)
+                colors = listOf(gradientStart, gradientMiddle, gradientEnd)
             ),
             topLeft = Offset(0f, centerY - trackHeight / 2),
             size = Size(progressX, trackHeight),
@@ -73,6 +74,10 @@ object GradientBarStyle {
         val centerY = height / 2
         val trackHeight = 5.dp.toPx()
         
+        val gradientStart = activeColor.copy(alpha = 0.4f)
+        val gradientMiddle = activeColor.copy(alpha = 0.7f)
+        val gradientEnd = activeColor
+
         drawRoundRect(
             color = inactiveColor.copy(alpha = 0.2f),
             topLeft = Offset(0f, centerY - trackHeight / 2),
@@ -82,7 +87,7 @@ object GradientBarStyle {
         
         drawRoundRect(
             brush = Brush.horizontalGradient(
-                colors = listOf(GradientStart, GradientMiddle, GradientEnd)
+                colors = listOf(gradientStart, gradientMiddle, gradientEnd)
             ),
             topLeft = Offset(0f, centerY - trackHeight / 2),
             size = Size(progress * width, trackHeight),
