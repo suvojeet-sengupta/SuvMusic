@@ -106,7 +106,7 @@ fun PlayerCacheScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    val usedBytes = storageInfo?.cacheBytes ?: 0L
+                    val usedBytes = storageInfo?.progressiveCacheBytes ?: 0L
                     val limitBytes = uiState.playerCacheLimit
                     val isUnlimited = limitBytes == -1L
                     
@@ -283,7 +283,7 @@ fun PlayerCacheScreen(
             OutlinedButton(
                 onClick = { showClearCacheDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isClearing && (storageInfo?.cacheBytes ?: 0L) > 0,
+                enabled = !isClearing && (storageInfo?.progressiveCacheBytes ?: 0L) > 0,
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
@@ -317,7 +317,7 @@ fun PlayerCacheScreen(
                         isClearing = true
                         scope.launch {
                             withContext(Dispatchers.IO) {
-                                downloadRepository.clearCache()
+                                downloadRepository.clearProgressiveCache()
                                 storageInfo = downloadRepository.getStorageInfo()
                             }
                             isClearing = false

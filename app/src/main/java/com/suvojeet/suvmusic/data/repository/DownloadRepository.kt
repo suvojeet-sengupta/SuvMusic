@@ -1369,6 +1369,8 @@ class DownloadRepository @Inject constructor(
         val downloadedSongsCount: Int = 0,
         val thumbnailsBytes: Long = 0L,
         val cacheBytes: Long = 0L,
+        val progressiveCacheBytes: Long = 0L,
+        val imageCacheBytes: Long = 0L,
         val totalBytes: Long = 0L
     ) {
         fun formatSize(bytes: Long): String {
@@ -1387,7 +1389,8 @@ class DownloadRepository @Inject constructor(
     fun getStorageInfo(): StorageInfo {
         var downloadedSongsBytes = 0L
         var thumbnailsBytes = 0L
-        var cacheBytes = 0L
+        var progressiveCacheBytes = 0L
+        var imageCacheBytes = 0L
         
         // Calculate downloaded songs size
         val publicFolder = getPublicMusicFolder()
@@ -1411,7 +1414,7 @@ class DownloadRepository @Inject constructor(
         val progressiveCacheDir = File(context.cacheDir, "progressive_downloads")
         if (progressiveCacheDir.exists()) {
             progressiveCacheDir.listFiles()?.forEach { file ->
-                cacheBytes += file.length()
+                progressiveCacheBytes += file.length()
             }
         }
         
@@ -1420,7 +1423,7 @@ class DownloadRepository @Inject constructor(
             if (file.isDirectory && (file.name.contains("coil") || file.name.contains("image"))) {
                 file.walkTopDown().forEach { cacheFile ->
                     if (cacheFile.isFile) {
-                        cacheBytes += cacheFile.length()
+                        imageCacheBytes += cacheFile.length()
                     }
                 }
             }
@@ -1430,8 +1433,10 @@ class DownloadRepository @Inject constructor(
             downloadedSongsBytes = downloadedSongsBytes,
             downloadedSongsCount = _downloadedSongs.value.size,
             thumbnailsBytes = thumbnailsBytes,
-            cacheBytes = cacheBytes,
-            totalBytes = downloadedSongsBytes + thumbnailsBytes + cacheBytes
+            cacheBytes = progressiveCacheBytes + imageCacheBytes,
+            progressiveCacheBytes = progressiveCacheBytes,
+            imageCacheBytes = imageCacheBytes,
+            totalBytes = downloadedSongsBytes + thumbnailsBytes + progressiveCacheBytes + imageCacheBytes
         )
     }
     
@@ -1440,28 +1445,47 @@ class DownloadRepository @Inject constructor(
      * Does NOT delete downloaded songs.
      */
     fun clearCache() {
-        // Clear thumbnails
-        val thumbnailsDir = File(context.filesDir, "thumbnails")
-        if (thumbnailsDir.exists()) {
-            thumbnailsDir.deleteRecursively()
-            thumbnailsDir.mkdirs()
-        }
-        
-        // Clear progressive downloads cache
+        clearThumbnails()
+        clearProgressiveCache()
+        clearImageCache()
+        Log.d(TAG, "All cache cleared")
+    }
+
+    /**
+     * Clear progressive downloads cache (Player Cache).
+     */
+    fun clearProgressiveCache() {
         val progressiveCacheDir = File(context.cacheDir, "progressive_downloads")
         if (progressiveCacheDir.exists()) {
             progressiveCacheDir.deleteRecursively()
         }
-        
-        // Clear Coil image cache
+        Log.d(TAG, "Progressive cache cleared")
+    }
+
+    /**
+     * Clear Coil image cache.
+     */
+    fun clearImageCache() {
         context.cacheDir.listFiles()?.forEach { file ->
             if (file.isDirectory && (file.name.contains("coil") || file.name.contains("image"))) {
                 file.deleteRecursively()
             }
         }
-        
-        Log.d(TAG, "Cache cleared")
+        Log.d(TAG, "Image cache cleared")
     }
+
+    /**
+     * Clear downloaded thumbnails.
+     */
+    fun clearThumbnails() {
+        val thumbnailsDir = File(context.filesDir, "thumbnails")
+        if (thumbnailsDir.exists()) {
+            thumbnailsDir.deleteRecursively()
+            thumbnailsDir.mkdirs()
+        }
+        Log.d(TAG, "Thumbnails cleared")
+    }
+
 
     // Batch Download Queue functions
     // We expect the Service to process this queue.
