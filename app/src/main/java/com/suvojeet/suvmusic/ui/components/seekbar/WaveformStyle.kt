@@ -29,32 +29,23 @@ object WaveformStyle {
         val barWidth = width / waveAmplitudes.size
         val maxBarHeight = height * 0.6f // Balanced height for 100 bars
         val progressX = progress * width
-        
-        // Draw unplayed track line
-        drawLine(
-            color = inactiveColor.copy(alpha = 0.3f),
-            start = Offset(progressX, centerY),
-            end = Offset(width, centerY),
-            strokeWidth = 3.dp.toPx(), // Slightly thinner line
-            cap = androidx.compose.ui.graphics.StrokeCap.Round
-        )
 
         waveAmplitudes.forEachIndexed { index, amplitude ->
             val x = index * barWidth + barWidth / 2
             val isPast = x < progressX
             
+            val animatedAmplitude = if (isPlaying && isPast) {
+                val phase = (wavePhase + index * 10) % 360 // Slower phase shift
+                val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
+                amplitude * (0.9f + wave * 0.1f) // More stable animation
+            } else {
+                amplitude
+            }
+            
+            val barHeight = animatedAmplitude * maxBarHeight
+            val topY = centerY - barHeight / 2
+            
             if (isPast) {
-                val animatedAmplitude = if (isPlaying) {
-                    val phase = (wavePhase + index * 10) % 360 // Slower phase shift
-                    val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
-                    amplitude * (0.9f + wave * 0.1f) // More stable animation
-                } else {
-                    amplitude
-                }
-                
-                val barHeight = animatedAmplitude * maxBarHeight
-                val topY = centerY - barHeight / 2
-                
                 val barColor = Brush.verticalGradient(
                     colors = listOf(
                         activeColor.copy(alpha = 0.8f),
@@ -68,6 +59,13 @@ object WaveformStyle {
                 drawRoundRect(
                     brush = barColor,
                     topLeft = Offset(x - barWidth * 0.3f, topY), // More space between bars
+                    size = Size(barWidth * 0.6f, barHeight),
+                    cornerRadius = CornerRadius(barWidth * 0.3f)
+                )
+            } else {
+                drawRoundRect(
+                    color = inactiveColor.copy(alpha = 0.4f),
+                    topLeft = Offset(x - barWidth * 0.3f, topY),
                     size = Size(barWidth * 0.6f, barHeight),
                     cornerRadius = CornerRadius(barWidth * 0.3f)
                 )
@@ -115,33 +113,30 @@ fun DrawScope.drawProgressIndicator(
     activeColor: Color,
     isDragging: Boolean
 ) {
-    val indicatorRadius = if (isDragging) 12.dp.toPx() else 8.dp.toPx()
+    val indicatorRadius = if (isDragging) 10.dp.toPx() else 7.dp.toPx()
     
-    // Glow
+    // Subtle Glow around thumb
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(activeColor.copy(alpha = 0.4f), Color.Transparent),
+            colors = listOf(activeColor.copy(alpha = 0.3f), Color.Transparent),
             center = Offset(progressX, centerY),
-            radius = indicatorRadius * 2
+            radius = indicatorRadius * 2.5f
         ),
-        radius = indicatorRadius * 2,
+        radius = indicatorRadius * 2.5f,
         center = Offset(progressX, centerY)
     )
     
-    // White outer
+    // Solid filled circular thumb
     drawCircle(
-        color = Color.White,
+        color = activeColor,
         radius = indicatorRadius,
         center = Offset(progressX, centerY)
     )
     
-    // Colored inner
+    // Subtle inner shadow/highlight effect to make it look premium
     drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(activeColor, activeColor),
-            center = Offset(progressX, centerY)
-        ),
-        radius = indicatorRadius - 2.dp.toPx(),
+        color = Color.White.copy(alpha = 0.8f),
+        radius = indicatorRadius * 0.3f,
         center = Offset(progressX, centerY)
     )
 }

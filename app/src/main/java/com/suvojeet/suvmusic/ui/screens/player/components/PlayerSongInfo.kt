@@ -141,58 +141,80 @@ fun SongInfoSection(
             }
         }
 
-        // Download Button
-        IconButton(onClick = onDownloadClick) {
-            when(downloadState) {
-                DownloadState.DOWNLOADING -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = dominantColors.accent,
-                        strokeWidth = 2.dp
-                    )
-                }
-                DownloadState.DOWNLOADED -> {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Downloaded",
-                        tint = dominantColors.accent,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                DownloadState.FAILED -> {
-                    Icon(
-                        imageVector = Icons.Filled.Error,
-                        contentDescription = "Retry Download",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                else -> {
-                    Icon(
-                        imageVector = Icons.Filled.Download,
-                        contentDescription = "Download",
-                        tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                        modifier = Modifier.size(28.dp)
-                    )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val iconButtonModifier = Modifier
+                .size(42.dp)
+                .background(
+                    color = dominantColors.onBackground.copy(alpha = 0.08f),
+                    shape = androidx.compose.foundation.shape.CircleShape
+                )
+
+            // Download Button
+            IconButton(
+                onClick = onDownloadClick,
+                modifier = iconButtonModifier
+            ) {
+                when(downloadState) {
+                    DownloadState.DOWNLOADING -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = dominantColors.accent,
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    DownloadState.DOWNLOADED -> {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Downloaded",
+                            tint = dominantColors.accent,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    DownloadState.FAILED -> {
+                        Icon(
+                            imageVector = Icons.Filled.Error,
+                            contentDescription = "Retry Download",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Filled.Download,
+                            contentDescription = "Download",
+                            tint = dominantColors.onBackground.copy(alpha = 0.9f),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
-        }
 
-        IconButton(onClick = onFavoriteClick) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                contentDescription = "Like",
-                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(28.dp)
-            )
-        }
+            IconButton(
+                onClick = onFavoriteClick,
+                modifier = iconButtonModifier
+            ) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                    contentDescription = "Like",
+                    tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.9f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
 
-        IconButton(onClick = onMoreClick) {
-            Icon(
-                imageVector = Icons.Filled.MoreVert,
-                contentDescription = "More options",
-                tint = dominantColors.onBackground.copy(alpha = 0.7f)
-            )
+            IconButton(
+                onClick = onMoreClick,
+                modifier = iconButtonModifier
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "More options",
+                    tint = dominantColors.onBackground.copy(alpha = 0.9f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }

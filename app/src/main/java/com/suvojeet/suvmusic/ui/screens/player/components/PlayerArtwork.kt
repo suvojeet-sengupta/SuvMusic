@@ -170,24 +170,20 @@ fun AlbumArtwork(
     val currentOnSwipeLeft by rememberUpdatedState(onSwipeLeft)
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
 
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         val isWideLayout = maxWidth > maxHeight
+        val maxFraction = ArtworkSize.LARGE.fraction
 
+        // Outer fixed-size container to maintain layout stability
         Box(
             modifier = Modifier
                 .then(
                     if (isWideLayout) {
-                        Modifier.fillMaxHeight(artworkSize.fraction).aspectRatio(1f)
+                        Modifier.fillMaxHeight(maxFraction).aspectRatio(1f)
                     } else {
-                        Modifier.fillMaxWidth(artworkSize.fraction).aspectRatio(1f)
+                        Modifier.fillMaxWidth(maxFraction).aspectRatio(1f)
                     }
                 )
-                .graphicsLayer {
-                    translationX = animatedOffsetX
-                    scaleX = scale
-                    scaleY = scale
-                    rotationZ = rotation + if (currentShape == ArtworkShape.VINYL) animatedVinylRotation else 0f
-                }
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = { offset ->
@@ -223,15 +219,27 @@ fun AlbumArtwork(
                         }
                     )
                 }
-                .shadow(
-                    elevation = 32.dp,
-                    shape = RoundedCornerShape(safeCornerRadius),
-                    spotColor = dominantColors.primary.copy(alpha = 0.5f)
-                )
-                .clip(RoundedCornerShape(safeCornerRadius))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
         ) {
+            // Inner Box for visual artwork scaling
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = animatedOffsetX
+                        val dynamicScale = (artworkSize.fraction / maxFraction) * scale
+                        scaleX = dynamicScale
+                        scaleY = dynamicScale
+                        rotationZ = rotation + if (currentShape == ArtworkShape.VINYL) animatedVinylRotation else 0f
+                    }
+                    .shadow(
+                        elevation = 32.dp,
+                        shape = RoundedCornerShape(safeCornerRadius),
+                        spotColor = dominantColors.primary.copy(alpha = 0.5f)
+                    )
+                    .clip(RoundedCornerShape(safeCornerRadius))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
             // Main artwork image
             if (imageUrl != null) {
                 // Try high-res first, fallback to original on error
@@ -270,27 +278,28 @@ fun AlbumArtwork(
 
             LoadingArtworkOverlay(isVisible = isLoading)
         }
-        
-        // Shape selection popup menu
-        if (showShapeMenu) {
-            Popup(
-                alignment = Alignment.Center,
-                onDismissRequest = { showShapeMenu = false },
-                properties = PopupProperties(focusable = true)
-            ) {
-                ShapeSelectionMenu(
-                    currentShape = currentShape,
-                    dominantColors = dominantColors,
-                    onShapeSelected = { shape ->
-                        currentShape = shape
-                        onShapeChange?.invoke(shape)
-                        showShapeMenu = false
-                    },
-                    onDismiss = { showShapeMenu = false }
-                )
-            }
+    }
+    
+    // Shape selection popup menu
+    if (showShapeMenu) {
+        Popup(
+            alignment = Alignment.Center,
+            onDismissRequest = { showShapeMenu = false },
+            properties = PopupProperties(focusable = true)
+        ) {
+            ShapeSelectionMenu(
+                currentShape = currentShape,
+                dominantColors = dominantColors,
+                onShapeSelected = { shape ->
+                    currentShape = shape
+                    onShapeChange?.invoke(shape)
+                    showShapeMenu = false
+                },
+                onDismiss = { showShapeMenu = false }
+            )
         }
     }
+}
 }
 
 /**
