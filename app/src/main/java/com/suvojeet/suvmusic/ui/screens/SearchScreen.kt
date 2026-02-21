@@ -106,6 +106,15 @@ fun SearchScreen(
     var selectedSong: Song? by remember { mutableStateOf(null) }
     var showAddToPlaylistSheet by remember { mutableStateOf(false) }
     
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    
+    // Hide keyboard on scroll
+    androidx.compose.runtime.LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            focusManager.clearFocus()
+        }
+    }
+    
     // Accent color for the app (works in both light/dark)
     val accentColor = MaterialTheme.colorScheme.primary
     
@@ -312,6 +321,7 @@ fun SearchScreen(
             
             // Content Area
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 140.dp)
             ) {
@@ -402,16 +412,25 @@ fun SearchScreen(
                     // Artist Results (show at top)
                     if (uiState.query.isNotBlank() && uiState.artistResults.isNotEmpty()) {
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                modifier = Modifier.padding(vertical = 12.dp)
-                            ) {
-                                items(uiState.artistResults) { artist ->
-                                    ArtistSearchCard(
-                                        artist = artist,
-                                        onClick = { onArtistClick(artist.id) }
-                                    )
+                            Column {
+                                Text(
+                                    text = "Artists",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                                )
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    modifier = Modifier.padding(vertical = 12.dp)
+                                ) {
+                                    items(uiState.artistResults) { artist ->
+                                        ArtistSearchCard(
+                                            artist = artist,
+                                            onClick = { onArtistClick(artist.id) }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -427,19 +446,28 @@ fun SearchScreen(
                     // Playlist Results (show after artists)
                     if (uiState.query.isNotBlank() && uiState.playlistResults.isNotEmpty()) {
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.padding(vertical = 12.dp)
-                            ) {
-                                items(uiState.playlistResults) { playlist ->
-                                    PlaylistSearchCard(
-                                        playlist = playlist,
-                                        onClick = { 
-                                            viewModel.addToRecentSearches(playlist)
-                                            onPlaylistClick(playlist.id) 
-                                        }
-                                    )
+                            Column {
+                                Text(
+                                    text = "Playlists",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                                )
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(vertical = 12.dp)
+                                ) {
+                                    items(uiState.playlistResults) { playlist ->
+                                        PlaylistSearchCard(
+                                            playlist = playlist,
+                                            onClick = { 
+                                                viewModel.addToRecentSearches(playlist)
+                                                onPlaylistClick(playlist.id) 
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -455,19 +483,28 @@ fun SearchScreen(
                     // Album Results
                     if (uiState.query.isNotBlank() && uiState.albumResults.isNotEmpty()) {
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.padding(vertical = 12.dp)
-                            ) {
-                                items(uiState.albumResults) { album ->
-                                    AlbumSearchCard(
-                                        album = album,
-                                        onClick = { 
-                                            viewModel.addToRecentSearches(album)
-                                            onAlbumClick(album) 
-                                        }
-                                    )
+                            Column {
+                                Text(
+                                    text = "Albums",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                                )
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(vertical = 12.dp)
+                                ) {
+                                    items(uiState.albumResults) { album ->
+                                        AlbumSearchCard(
+                                            album = album,
+                                            onClick = { 
+                                                viewModel.addToRecentSearches(album)
+                                                onAlbumClick(album) 
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -482,6 +519,15 @@ fun SearchScreen(
                     
                     // Search Results
                     if (uiState.query.isNotBlank() && uiState.results.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Songs",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
+                            )
+                        }
                         itemsIndexed(uiState.results) { index, song ->
                             SearchResultItem(
                                 song = song,
