@@ -54,7 +54,8 @@ fun SongInfoSection(
     onMoreClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (String) -> Unit = {},
-    dominantColors: DominantColors
+    dominantColors: DominantColors,
+    compact: Boolean = false
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
 
@@ -73,18 +74,20 @@ fun SongInfoSection(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song?.title ?: "No song playing",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold
-                ),
+                style = if (compact) {
+                    MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                } else {
+                    MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                },
                 color = dominantColors.onBackground,
-                maxLines = 2,
+                maxLines = if (compact) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     // Album navigation disabled as Song model doesn't consistently have albumId
                     // .clickable { onAlbumClick(song.albumId) }
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
 
             Text(
                 text = song?.artist ?: "",
@@ -99,7 +102,7 @@ fun SongInfoSection(
 
             // Audio Quality Badge - Apple Music style
             if (song != null) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(if (compact) 3.dp else 6.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -110,7 +113,10 @@ fun SongInfoSection(
                             shape = RoundedCornerShape(4.dp)
                         )
                         .clickable { showQualityDialog = true }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(
+                            horizontal = if (compact) 6.dp else 8.dp,
+                            vertical = if (compact) 2.dp else 4.dp
+                        )
                 ) {
                     Icon(
                         imageVector = Icons.Filled.MusicNote,

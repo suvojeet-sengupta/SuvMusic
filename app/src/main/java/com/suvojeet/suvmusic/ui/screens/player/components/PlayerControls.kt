@@ -125,18 +125,26 @@ fun PlaybackControls(
     onPrevious: () -> Unit,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    dominantColors: DominantColors
+    dominantColors: DominantColors,
+    compact: Boolean = false
 ) {
+    // Adaptive sizing for compact (16:9) vs standard screens
+    val playSize = if (compact) 56.dp else 80.dp
+    val playIconSize = if (compact) 40.dp else 56.dp
+    val skipSize = if (compact) 40.dp else 56.dp
+    val skipIconSize = if (compact) 28.dp else 40.dp
+    val secondarySize = if (compact) 36.dp else 48.dp
+    val secondaryIconSize = if (compact) 22.dp else 28.dp
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Shuffle
         // Shuffle - Apple Music style
         AppleMusicButton(
             onClick = onShuffleToggle,
-            size = 48.dp,
+            size = secondarySize,
             modifier = Modifier.background(
                 if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
                 CircleShape
@@ -146,58 +154,57 @@ fun PlaybackControls(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
                 tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(secondaryIconSize)
             )
         }
 
         // Previous - Apple Music style with press animation
         AppleMusicButton(
             onClick = onPrevious,
-            size = 56.dp,
-            iconSize = 40.dp
+            size = skipSize,
+            iconSize = skipIconSize
         ) { _ ->
             Icon(
                 imageVector = SkipPrevious,
                 contentDescription = "Previous",
                 tint = dominantColors.onBackground,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(skipIconSize)
             )
         }
 
         // Play/Pause - Large button with press animation
         AppleMusicButton(
             onClick = onPlayPause,
-            size = 80.dp,
-            iconSize = 56.dp,
+            size = playSize,
+            iconSize = playIconSize,
             isLarge = true
         ) { _ ->
             Icon(
                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (isPlaying) "Pause" else "Play",
                 tint = dominantColors.onBackground,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(playIconSize)
             )
         }
 
         // Next - Apple Music style with press animation
         AppleMusicButton(
             onClick = onNext,
-            size = 56.dp,
-            iconSize = 40.dp
+            size = skipSize,
+            iconSize = skipIconSize
         ) { _ ->
             Icon(
                 imageVector = SkipNext,
                 contentDescription = "Next",
                 tint = dominantColors.onBackground,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(skipIconSize)
             )
         }
 
-        // Repeat
         // Repeat - Apple Music style
         AppleMusicButton(
             onClick = onRepeatToggle,
-            size = 48.dp,
+            size = secondarySize,
             modifier = Modifier.background(
                 if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
                 CircleShape
@@ -210,7 +217,7 @@ fun PlaybackControls(
                 },
                 contentDescription = "Repeat",
                 tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(secondaryIconSize)
             )
         }
     }
