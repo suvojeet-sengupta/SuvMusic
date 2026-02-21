@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.components
 
 import androidx.compose.foundation.background
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -137,7 +138,11 @@ fun SongMenuBottomSheet(
                     TopActionCard(
                         icon = Icons.AutoMirrored.Filled.PlaylistPlay,
                         label = "Play next",
-                        onClick = { onPlayNext(); onDismiss() },
+                        onClick = { 
+                            onPlayNext()
+                            Toast.makeText(context, "Playing next: ${song.title}", Toast.LENGTH_SHORT).show()
+                            onDismiss() 
+                        },
                         modifier = Modifier.weight(1f),
                         backgroundColor = cardBackground,
                         contentColor = cardContentColor
@@ -180,7 +185,11 @@ fun SongMenuBottomSheet(
                     icon = Icons.Default.AddToQueue,
                     title = "Add to queue",
                     subtitle = "Add to the bottom of your queue",
-                    onClick = { onAddToQueue(); onDismiss() }
+                    onClick = { 
+                        onAddToQueue()
+                        Toast.makeText(context, "Added to queue: ${song.title}", Toast.LENGTH_SHORT).show()
+                        onDismiss() 
+                    }
                 )
 
                 MenuActionItem(
