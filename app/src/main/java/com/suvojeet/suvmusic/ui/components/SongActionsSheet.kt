@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Radio
@@ -208,6 +210,52 @@ fun SongActionsSheet(
                     }
                 }
                 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Top Horizontal Actions
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val cardBackground = dominantColors?.primary ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    val cardContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+                    
+                    TopActionSheetCard(
+                        icon = Icons.AutoMirrored.Filled.PlaylistPlay,
+                        label = "Play next",
+                        onClick = { handleAction { onPlayNext() } },
+                        modifier = Modifier.weight(1f),
+                        backgroundColor = cardBackground,
+                        contentColor = cardContentColor
+                    )
+                    
+                    TopActionSheetCard(
+                        icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                        label = "Save",
+                        onClick = { handleAction { onAddToPlaylist() } },
+                        modifier = Modifier.weight(1f),
+                        backgroundColor = cardBackground,
+                        contentColor = cardContentColor
+                    )
+                    
+                    if (showShare) {
+                        TopActionSheetCard(
+                            icon = Icons.Default.Share,
+                            label = "Share",
+                            onClick = { handleAction { shareSong() } },
+                            modifier = Modifier.weight(1f),
+                            backgroundColor = cardBackground,
+                            contentColor = cardContentColor
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     color = contentColor.copy(alpha = 0.2f)
@@ -233,14 +281,6 @@ fun SongActionsSheet(
                     )
                 }
 
-                ActionItem(
-                    icon = Icons.Default.SkipNext,
-                    title = "Play Next",
-                    iconTint = contentColor,
-                    textColor = contentColor,
-                    onClick = { handleAction { onPlayNext() } }
-                )
-
                 if (!isFromQueue) {
                     ActionItem(
                         icon = Icons.Default.AddToQueue,
@@ -250,14 +290,6 @@ fun SongActionsSheet(
                         onClick = { handleAction { onAddToQueue() } }
                     )
                 }
-
-                ActionItem(
-                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
-                    title = "Add to a Playlist...",
-                    iconTint = contentColor,
-                    textColor = contentColor,
-                    onClick = { handleAction { onAddToPlaylist() } }
-                )
                 
                 ActionItem(
                     icon = Icons.Default.Radio,
@@ -274,16 +306,6 @@ fun SongActionsSheet(
                     textColor = contentColor,
                     onClick = { handleAction { onListenTogether() } }
                 )
-                
-                if (showShare) {
-                    ActionItem(
-                        icon = Icons.Default.Share,
-                        title = "Share Song",
-                        iconTint = contentColor,
-                        textColor = contentColor,
-                        onClick = { handleAction { shareSong() } }
-                    )
-                }
                 
                 ActionItem(
                     icon = Icons.Default.Info,
@@ -407,6 +429,41 @@ private fun ActionItem(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
             color = textColor
+        )
+    }
+}
+
+@Composable
+private fun TopActionSheetCard(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color,
+    contentColor: Color
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
