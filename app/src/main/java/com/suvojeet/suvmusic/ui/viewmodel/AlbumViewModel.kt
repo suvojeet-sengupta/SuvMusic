@@ -133,4 +133,10 @@ class AlbumViewModel @Inject constructor(
             downloadRepository.downloadAlbum(album)
         }
     }
+
+    fun downloadSong(song: Song) {
+        viewModelScope.launch {
+            downloadRepository.downloadSong(song)
+        }
+    }
 }
