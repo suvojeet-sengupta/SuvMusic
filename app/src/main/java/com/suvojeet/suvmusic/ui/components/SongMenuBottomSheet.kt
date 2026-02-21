@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.HorizontalDivider
@@ -121,6 +122,52 @@ fun SongMenuBottomSheet(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Top Horizontal Actions
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val cardBackground = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    val cardContentColor = MaterialTheme.colorScheme.onSurface
+                    
+                    TopActionCard(
+                        icon = Icons.AutoMirrored.Filled.PlaylistPlay,
+                        label = "Play next",
+                        onClick = { onPlayNext(); onDismiss() },
+                        modifier = Modifier.weight(1f),
+                        backgroundColor = cardBackground,
+                        contentColor = cardContentColor
+                    )
+                    
+                    TopActionCard(
+                        icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                        label = "Save",
+                        onClick = { onAddToPlaylist(); onDismiss() },
+                        modifier = Modifier.weight(1f),
+                        backgroundColor = cardBackground,
+                        contentColor = cardContentColor
+                    )
+                    
+                    if (showShare) {
+                        TopActionCard(
+                            icon = Icons.Default.Share,
+                            label = "Share",
+                            onClick = { onShare(); onDismiss() },
+                            modifier = Modifier.weight(1f),
+                            backgroundColor = cardBackground,
+                            contentColor = cardContentColor
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
@@ -130,24 +177,10 @@ fun SongMenuBottomSheet(
 
                 // List Actions
                 MenuActionItem(
-                    icon = Icons.Default.SkipNext,
-                    title = "Play next",
-                    subtitle = "Add to the top of your queue",
-                    onClick = { onPlayNext(); onDismiss() }
-                )
-
-                MenuActionItem(
                     icon = Icons.Default.AddToQueue,
                     title = "Add to queue",
                     subtitle = "Add to the bottom of your queue",
                     onClick = { onAddToQueue(); onDismiss() }
-                )
-
-                MenuActionItem(
-                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
-                    title = "Add to playlist",
-                    subtitle = "Add to one of your playlists",
-                    onClick = { onAddToPlaylist(); onDismiss() }
                 )
 
                 MenuActionItem(
@@ -172,17 +205,43 @@ fun SongMenuBottomSheet(
                         onClick = { onViewAlbum(); onDismiss() }
                     )
                 }
-
-                if (showShare) {
-                    MenuActionItem(
-                        icon = Icons.Default.Share,
-                        title = "Share",
-                        subtitle = "Share a link to this song",
-                        onClick = { onShare(); onDismiss() }
-                    )
-                }
             }
         }
+    }
+}
+
+@Composable
+private fun TopActionCard(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    backgroundColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
