@@ -694,196 +694,217 @@ fun PlayerScreen(
                             }
                         }
                     } else {
-                        // Portrait Layout - Original vertical layout
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .statusBarsPadding()
-                                .navigationBarsPadding()
-                                .padding(horizontal = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        // Portrait Layout - Adaptive vertical layout
+                        // Detect compact screens (16:9 and similar short aspect ratios)
+                        BoxWithConstraints(
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            // Top Bar
-                            PlayerTopBar(
-                                onBack = onBack,
-                                onShowQueue = { showQueue = true },
-                                dominantColors = dominantColors,
-                                audioArEnabled = audioArEnabled,
-                                onRecenter = { playerViewModel.calibrateAudioAr() }
-                            )
+                            val availableHeight = maxHeight
+                            val isCompactHeight = availableHeight < 600.dp
 
-                            // Album Art or Video Player
-                            if (playerState.isVideoMode && player != null && !isFullScreen) {
-                                // Give video container flexible weight to fill available space
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f) // ← Flexible height
-                                ) {
-                                    // Ambient Glow Effect
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .statusBarsPadding()
+                                    .navigationBarsPadding()
+                                    .padding(horizontal = if (isCompactHeight) 16.dp else 24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // Top Bar
+                                PlayerTopBar(
+                                    onBack = onBack,
+                                    onShowQueue = { showQueue = true },
+                                    dominantColors = dominantColors,
+                                    audioArEnabled = audioArEnabled,
+                                    onRecenter = { playerViewModel.calibrateAudioAr() }
+                                )
+
+                                // Album Art or Video Player
+                                if (playerState.isVideoMode && player != null && !isFullScreen) {
+                                    // Video container - limit height on compact screens so controls stay visible
+                                    Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 16.dp))
                                     Box(
+                                        contentAlignment = Alignment.Center,
                                         modifier = Modifier
-                                            .fillMaxSize(0.95f)
-                                            .background(
-                                                brush = Brush.radialGradient(
-                                                    colors = listOf(
-                                                        dominantColors.primary.copy(alpha = 0.5f),
-                                                        dominantColors.primary.copy(alpha = 0.15f),
-                                                        Color.Transparent
+                                            .fillMaxWidth()
+                                            .then(
+                                                if (isCompactHeight) {
+                                                    Modifier.weight(1f, fill = false)
+                                                        .fillMaxHeight(0.40f)
+                                                } else {
+                                                    Modifier.weight(1f)
+                                                }
+                                            )
+                                    ) {
+                                        // Ambient Glow Effect
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize(0.95f)
+                                                .background(
+                                                    brush = Brush.radialGradient(
+                                                        colors = listOf(
+                                                            dominantColors.primary.copy(alpha = 0.5f),
+                                                            dominantColors.primary.copy(alpha = 0.15f),
+                                                            Color.Transparent
+                                                        )
                                                     )
                                                 )
-                                            )
-                                    )
-                                    
-                                    // Main Player Box with AndroidView
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color.Black)
-                                            .clickable { playerViewModel.setFullScreen(true) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        AndroidView(
-                                            factory = { context ->
-                                                PlayerView(context).apply {
-                                                    this.player = player
-                                                    useController = false
-                                                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                                }
-                                            },
-                                            update = { playerView ->
-                                                playerView.player = player
-                                            },
-                                            modifier = Modifier.fillMaxSize()
                                         )
+                                        
+                                        // Main Player Box with AndroidView
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(Color.Black)
+                                                .clickable { playerViewModel.setFullScreen(true) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AndroidView(
+                                                factory = { context ->
+                                                    PlayerView(context).apply {
+                                                        this.player = player
+                                                        useController = false
+                                                        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                                    }
+                                                },
+                                                update = { playerView ->
+                                                    playerView.player = player
+                                                },
+                                                modifier = Modifier.fillMaxSize()
+                                            )
 
-                                        // Detach player when this PlayerView leaves composition
-                                        // to prevent surface leaks and flickering with fullscreen
-                                        DisposableEffect(Unit) {
-                                            onDispose {
-                                                // Critical: release the player reference to avoid
-                                                // dual-surface rendering when FullScreenVideoPlayer
-                                                // also binds to the same Player instance
+                                            // Detach player when this PlayerView leaves composition
+                                            // to prevent surface leaks and flickering with fullscreen
+                                            DisposableEffect(Unit) {
+                                                onDispose {
+                                                    // Critical: release the player reference to avoid
+                                                    // dual-surface rendering when FullScreenVideoPlayer
+                                                    // also binds to the same Player instance
+                                                }
                                             }
-                                        }
 
-                                        LoadingArtworkOverlay(isVisible = playerState.isLoading)
+                                            LoadingArtworkOverlay(isVisible = playerState.isLoading)
+                                        }
                                     }
+                                    Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 16.dp))
+                                } else {
+                                    // Album artwork (audio mode)
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    val artworkModifier = Modifier
+
+                                    AlbumArtwork(
+                                        imageUrl = song?.thumbnailUrl,
+                                        title = song?.title,
+                                        dominantColors = dominantColors,
+                                        isLoading = playerState.isLoading,
+                                        onSwipeLeft = onNext,
+                                        onSwipeRight = onPrevious,
+                                        initialShape = currentArtworkShape,
+                                        artworkSize = currentArtworkSize,
+                                        onShapeChange = { shape ->
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                sessionManager.setArtworkShape(shape.name)
+                                            }
+                                        },
+                                        onDoubleTapLeft = {
+                                            handleDoubleTapSeek(false)
+                                        },
+                                        onDoubleTapRight = {
+                                            handleDoubleTapSeek(true)
+                                        },
+                                        songId = song?.id,
+                                        modifier = artworkModifier
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
-                            } else {
-                                // Album artwork (audio mode)
-                                Spacer(modifier = Modifier.weight(1f))
-                                val artworkModifier = Modifier
 
-                                AlbumArtwork(
-                                    imageUrl = song?.thumbnailUrl,
-                                    title = song?.title,
+                                // Song Info with actions
+                                SongInfoSection(
+                                    song = song,
+                                    isFavorite = playerState.isLiked,
+                                    downloadState = playerState.downloadState,
+                                    onFavoriteClick = onToggleLike,
+                                    onDownloadClick = onDownload,
+                                    onMoreClick = { 
+                                        selectedSongForMenu = song
+                                        showActionsSheet = true 
+                                    },
+                                    onArtistClick = onArtistClick,
+                                    onAlbumClick = onAlbumClick,
                                     dominantColors = dominantColors,
-                                    isLoading = playerState.isLoading,
-                                    onSwipeLeft = onNext,
-                                    onSwipeRight = onPrevious,
-                                    initialShape = currentArtworkShape,
-                                    artworkSize = currentArtworkSize,
-                                    onShapeChange = { shape ->
+                                    compact = isCompactHeight
+                                )
+
+                                // Adaptive spacer between song info and seekbar
+                                Spacer(modifier = Modifier.height(
+                                    if (isCompactHeight) {
+                                        if (playerState.isVideoMode) 8.dp else 12.dp
+                                    } else {
+                                        if (playerState.isVideoMode) 16.dp else 24.dp
+                                    }
+                                ))
+
+                                // Progress & Waveform
+                                WaveformSeeker(
+                                    progressProvider = { playerState.progress },
+                                    isPlaying = playbackInfo.isPlaying,
+                                    onSeek = { progress ->
+                                        val newPosition = (progress * playerState.duration).toLong()
+                                        onSeekTo(newPosition)
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    activeColor = dominantColors.accent,
+                                    inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                                    initialStyle = currentSeekbarStyle,
+                                    onStyleChange = { style ->
                                         coroutineScope.launch(Dispatchers.IO) {
-                                            sessionManager.setArtworkShape(shape.name)
+                                            sessionManager.setSeekbarStyle(style.name)
                                         }
                                     },
-                                    onDoubleTapLeft = {
-                                        handleDoubleTapSeek(false)
-                                    },
-                                    onDoubleTapRight = {
-                                        handleDoubleTapSeek(true)
-                                    },
-                                    songId = song?.id,
-                                    modifier = artworkModifier
+                                    duration = playerState.duration,
+                                    sponsorSegments = sponsorSegments
                                 )
-                                Spacer(modifier = Modifier.weight(1f))
+
+                                // Time labels with quality badge
+                                TimeLabelsWithQuality(
+                                    currentPositionProvider = { playerState.currentPosition },
+                                    durationProvider = { playerState.duration },
+                                    dominantColors = dominantColors
+                                )
+
+                                Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
+
+                                // Playback Controls
+                                PlaybackControls(
+                                    isPlaying = playerState.isPlaying,
+                                    shuffleEnabled = playerState.shuffleEnabled,
+                                    repeatMode = playerState.repeatMode,
+                                    onPlayPause = onPlayPause,
+                                    onNext = onNext,
+                                    onPrevious = onPrevious,
+                                    onShuffleToggle = onShuffleToggle,
+                                    onRepeatToggle = onRepeatToggle,
+                                    dominantColors = dominantColors,
+                                    compact = isCompactHeight
+                                )
+
+                                Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 16.dp))
+
+                                // Bottom Actions
+                                BottomActions(
+                                    onLyricsClick = { showLyrics = true },
+                                    onCastClick = { showOutputDeviceSheet = true },
+                                    onQueueClick = { showQueue = true },
+                                    dominantColors = dominantColors,
+                                    isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
+                                    isVideoMode = playerState.isVideoMode,
+                                    onVideoToggle = onToggleVideoMode,
+                                    compact = isCompactHeight
+                                )
+
+                                Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
                             }
-
-                            // Song Info with actions
-                            SongInfoSection(
-                                song = song,
-                                isFavorite = playerState.isLiked,
-                                downloadState = playerState.downloadState,
-                                onFavoriteClick = onToggleLike,
-                                onDownloadClick = onDownload,
-                                onMoreClick = { 
-                                    selectedSongForMenu = song
-                                    showActionsSheet = true 
-                                },
-                                onArtistClick = onArtistClick,
-                                onAlbumClick = onAlbumClick,
-                                dominantColors = dominantColors
-                            )
-
-                            if (!playerState.isVideoMode) {
-                                Spacer(modifier = Modifier.height(24.dp))
-                            } else {
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-
-                            // Progress & Waveform
-                            WaveformSeeker(
-                                progressProvider = { playerState.progress },
-                                isPlaying = playbackInfo.isPlaying,
-                                onSeek = { progress ->
-                                    val newPosition = (progress * playerState.duration).toLong()
-                                    onSeekTo(newPosition)
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                activeColor = dominantColors.accent,
-                                inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                                initialStyle = currentSeekbarStyle,
-                                onStyleChange = { style ->
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        sessionManager.setSeekbarStyle(style.name)
-                                    }
-                                },
-                                duration = playerState.duration,
-                                sponsorSegments = sponsorSegments
-                            )
-
-                            // Time labels with quality badge
-                            TimeLabelsWithQuality(
-                                currentPositionProvider = { playerState.currentPosition },
-                                durationProvider = { playerState.duration },
-                                dominantColors = dominantColors
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // Playback Controls
-                            PlaybackControls(
-                                isPlaying = playerState.isPlaying,
-                                shuffleEnabled = playerState.shuffleEnabled,
-                                repeatMode = playerState.repeatMode,
-                                onPlayPause = onPlayPause,
-                                onNext = onNext,
-                                onPrevious = onPrevious,
-                                onShuffleToggle = onShuffleToggle,
-                                onRepeatToggle = onRepeatToggle,
-                                dominantColors = dominantColors
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Bottom Actions
-                            BottomActions(
-                                onLyricsClick = { showLyrics = true },
-                                onCastClick = { showOutputDeviceSheet = true },
-                                onQueueClick = { showQueue = true },
-                                dominantColors = dominantColors,
-                                isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-                                isVideoMode = playerState.isVideoMode,
-                                onVideoToggle = onToggleVideoMode
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
                         }
                     }
                 }
