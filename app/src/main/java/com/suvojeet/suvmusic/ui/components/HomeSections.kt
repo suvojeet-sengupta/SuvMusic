@@ -340,7 +340,31 @@ fun QuickPicksSection(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        HomeSectionHeader(title = section.title)
+        HomeSectionHeader(
+            title = section.title,
+            trailingContent = {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color.Transparent,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable {
+                            if (songs.isNotEmpty()) {
+                                onSongClick(songs, 0)
+                            }
+                        }
+                ) {
+                    Text(
+                        text = "Play all",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        )
         
         LazyRow(
             state = lazyListState,
