@@ -881,7 +881,7 @@ class YouTubeRepository @Inject constructor(
                             title = "My Supermix",
                             author = "YouTube Music",
                             thumbnailUrl = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked_music_@576.png",
-                            songs = songs.take(50) // Limit to 50 songs
+                            songs = songs.take(500) // Limit to 500 songs
                         )
                         // Don't auto-save Supermix
                         // libraryRepository.savePlaylist(playlist) 
