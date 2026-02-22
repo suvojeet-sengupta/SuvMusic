@@ -227,8 +227,8 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
-    // Message Codec - Using Protobuf
-    private val messageCodec = MessageCodec(MessageFormat.PROTOBUF, compressionEnabled = true)
+    // Message Codec - Starts with JSON (DEPRECATED), upgrades to Protobuf when supported
+    private val messageCodec = MessageCodec(MessageFormat.JSON, compressionEnabled = false)
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
@@ -679,10 +679,18 @@ class ListenTogetherClient @Inject constructor(
 
     private fun handleMessage(data: ByteArray) {
         try {
+            // Detect format and auto-upgrade codec if needed
+            val detectedFormat = MessageCodec.detectMessageFormat(data)
+            if (detectedFormat == MessageFormat.PROTOBUF && messageCodec.format == MessageFormat.JSON) {
+                messageCodec.format = MessageFormat.PROTOBUF
+                messageCodec.compressionEnabled = true
+                log(LogLevel.INFO, "Upgraded to Protobuf", "with compression")
+            }
+
             val (msgType, payloadBytes) = messageCodec.decode(data)
             
             // Decode specific payload
-            val payloadObj = messageCodec.decodePayload(msgType, payloadBytes, messageCodec.format)
+            val payloadObj = messageCodec.decodePayload(msgType, payloadBytes, detectedFormat)
             
             when (msgType) {
                 MessageTypes.ROOM_CREATED -> {
@@ -988,7 +996,7 @@ class ListenTogetherClient @Inject constructor(
             MessageTypes.CAPABILITIES,
             ClientCapabilities(
                 supportsProtobuf = true,
-                supportsCompression = messageCodec.compressionEnabled,
+                supportsCompression = true,
                 clientVersion = "1.2.0"
             )
         )
