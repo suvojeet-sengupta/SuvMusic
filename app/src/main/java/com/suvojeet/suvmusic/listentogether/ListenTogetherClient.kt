@@ -295,15 +295,17 @@ class ListenTogetherClient @Inject constructor(
 
     suspend fun getServerUrl(): String {
         val prefs = context.dataStore.data.first()
-        return prefs[ListenTogetherServerUrlKey] ?: DEFAULT_SERVER_URL
+        val url = prefs[ListenTogetherServerUrlKey] ?: DEFAULT_SERVER_URL
+        return if (url.startsWith("http") || url.startsWith("ws")) url else DEFAULT_SERVER_URL
     }
 
     suspend fun setServerUrl(url: String) {
-        context.dataStore.edit { preferences ->
-            preferences[ListenTogetherServerUrlKey] = url
+        val sanitized = url.trim()
+        if (sanitized.isNotBlank()) {
+            context.dataStore.edit { preferences ->
+                preferences[ListenTogetherServerUrlKey] = sanitized
+            }
         }
-        // If connected, we might want to reconnect or let the user do it manually.
-        // For now, we just save it.
     }
     
     private fun calculateBackoffDelay(attempt: Int): Long {
@@ -628,7 +630,7 @@ class ListenTogetherClient @Inject constructor(
         pingJob?.cancel()
         pingJob = null
         
-        val shouldReconnect = sessionToken != null || _roomState.value != null || pendingAction != null
+        val shouldReconnect = (sessionToken != null || _roomState.value != null) && pendingAction == null
         
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && shouldReconnect) {
             reconnectAttempts++
@@ -650,13 +652,14 @@ class ListenTogetherClient @Inject constructor(
             }
         } else {
             _connectionState.value = ConnectionState.ERROR
+            pendingAction = null // Clear pending action if we can't connect
             
             if (sessionToken != null) {
-                log(LogLevel.ERROR, "Reconnection failed", 
-                    "Max attempts reached, but session preserved for manual reconnect")
+                log(LogLevel.ERROR, "Connection failed", 
+                    "Max attempts reached or manual action interrupted. Session preserved.")
                 scope.launch { 
                     _events.emit(ListenTogetherEvent.ConnectionError(
-                        "Connection failed after $MAX_RECONNECT_ATTEMPTS attempts. ${t.message ?: "Unknown error"}"
+                        "Connection failed. ${t.message ?: "Unknown error"}"
                     ))
                 }
             } else {
