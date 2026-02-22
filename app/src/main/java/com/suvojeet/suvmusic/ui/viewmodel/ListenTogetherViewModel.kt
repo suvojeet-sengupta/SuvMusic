@@ -120,10 +120,6 @@ class ListenTogetherViewModel @Inject constructor(
         }
     }
     
-    fun sendChat(message: String) {
-        manager.sendChat(message)
-    }
-    
     fun kickUser(userId: String) {
         manager.kickUser(userId)
     }

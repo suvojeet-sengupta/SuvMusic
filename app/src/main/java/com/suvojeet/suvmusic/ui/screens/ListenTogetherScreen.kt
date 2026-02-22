@@ -276,7 +276,7 @@ fun SetupContent(
         Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = onCreateRoom,
-            enabled = username.isNotBlank() && connectionState != ConnectionState.CONNECTING,
+            enabled = username.isNotBlank() && connectionState != ConnectionState.CONNECTING && connectionState != ConnectionState.RECONNECTING,
             modifier = Modifier.fillMaxWidth().height(56.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = dominantColors.accent,
@@ -285,7 +285,7 @@ fun SetupContent(
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
-            if (connectionState == ConnectionState.CONNECTING) {
+            if (connectionState == ConnectionState.CONNECTING || connectionState == ConnectionState.RECONNECTING) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), color = dominantColors.onBackground)
             } else {
                 Icon(Icons.Default.Group, null)
@@ -328,7 +328,7 @@ fun SetupContent(
             Spacer(modifier = Modifier.width(12.dp))
             FilledTonalButton(
                 onClick = { onJoinRoom(roomCode) },
-                enabled = username.isNotBlank() && roomCode.length >= 4 && connectionState != ConnectionState.CONNECTING,
+                enabled = username.isNotBlank() && roomCode.length >= 4 && connectionState != ConnectionState.CONNECTING && connectionState != ConnectionState.RECONNECTING,
                 modifier = Modifier.height(64.dp), // Match height of text field approx
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = dominantColors.onBackground.copy(alpha = 0.1f),
@@ -337,7 +337,7 @@ fun SetupContent(
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                if (connectionState == ConnectionState.CONNECTING) {
+                if (connectionState == ConnectionState.CONNECTING || connectionState == ConnectionState.RECONNECTING) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = dominantColors.onBackground)
                 } else {
                     Icon(Icons.Default.Login, null)
