@@ -116,7 +116,7 @@ class ListenTogetherClient @Inject constructor(
     companion object {
         private const val TAG = "ListenTogether"
         // Server provided by: https://nyx.meowery.eu/
-        const val DEFAULT_SERVER_URL = "https://metroserver.meowery.eu/ws" 
+        const val DEFAULT_SERVER_URL = "wss://metroserver.meowery.eu/ws" 
         private const val MAX_RECONNECT_ATTEMPTS = 15
         private const val INITIAL_RECONNECT_DELAY_MS = 1000L
         private const val MAX_RECONNECT_DELAY_MS = 120000L
@@ -234,6 +234,7 @@ class ListenTogetherClient @Inject constructor(
     
     private var webSocket: WebSocket? = null
     private var pingJob: Job? = null
+    private var reconnectJob: Job? = null
     private var reconnectAttempts = 0
     
     // Session info for reconnection
@@ -381,6 +382,8 @@ class ListenTogetherClient @Inject constructor(
             return
         }
 
+        reconnectJob?.cancel()
+        reconnectJob = null
         _connectionState.value = ConnectionState.CONNECTING
         
         scope.launch {
@@ -636,7 +639,8 @@ class ListenTogetherClient @Inject constructor(
             log(LogLevel.INFO, "Attempting reconnect", 
                 "Attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS, waiting ${delayMs/1000}s, reason: ${t.message}")
             
-            scope.launch {
+            reconnectJob?.cancel()
+            reconnectJob = scope.launch {
                 _events.emit(ListenTogetherEvent.Reconnecting(reconnectAttempts, MAX_RECONNECT_ATTEMPTS))
                 delay(delayMs)
                 
@@ -993,14 +997,13 @@ class ListenTogetherClient @Inject constructor(
         storedRoomCode = null
         wasHost = false
         storedUsername = username
+        reconnectAttempts = 0
         
         if (_connectionState.value == ConnectionState.CONNECTED) {
             sendMessage(MessageTypes.CREATE_ROOM, CreateRoomPayload(username))
         } else {
             pendingAction = PendingAction.CreateRoom(username)
-            if (_connectionState.value == ConnectionState.DISCONNECTED || _connectionState.value == ConnectionState.ERROR) {
-                connect()
-            }
+            connect()
         }
     }
 
@@ -1010,14 +1013,13 @@ class ListenTogetherClient @Inject constructor(
         storedRoomCode = null
         wasHost = false
         storedUsername = username
+        reconnectAttempts = 0
         
         if (_connectionState.value == ConnectionState.CONNECTED) {
             sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(roomCode.uppercase(), username))
         } else {
             pendingAction = PendingAction.JoinRoom(roomCode, username)
-            if (_connectionState.value == ConnectionState.DISCONNECTED || _connectionState.value == ConnectionState.ERROR) {
-                connect()
-            }
+            connect()
         }
     }
 
