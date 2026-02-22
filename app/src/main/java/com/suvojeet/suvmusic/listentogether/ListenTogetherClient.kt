@@ -861,19 +861,6 @@ class ListenTogetherClient @Inject constructor(
                     }
                 }
                 
-                MessageTypes.CHAT_MESSAGE -> {
-                    val payload = payloadObj as ChatMessagePayload
-                    log(LogLevel.DEBUG, "Chat message", "${payload.username}: ${payload.message}")
-                    scope.launch { 
-                        _events.emit(ListenTogetherEvent.ChatReceived(
-                            payload.userId, 
-                            payload.username, 
-                            payload.message, 
-                            payload.timestamp
-                        ))
-                    }
-                }
-
                 MessageTypes.SUGGESTION_RECEIVED -> {
                     val payload = payloadObj as SuggestionReceivedPayload
                     if (_role.value == RoomRole.HOST) {
@@ -1092,12 +1079,6 @@ class ListenTogetherClient @Inject constructor(
 
     fun sendBufferReady(trackId: String) {
         sendMessage(MessageTypes.BUFFER_READY, BufferReadyPayload(trackId))
-    }
-
-    fun sendChat(message: String) {
-        if (_roomState.value != null) {
-            sendMessage(MessageTypes.CHAT, ChatPayload(message))
-        }
     }
 
     fun suggestTrack(trackInfo: TrackInfo) {

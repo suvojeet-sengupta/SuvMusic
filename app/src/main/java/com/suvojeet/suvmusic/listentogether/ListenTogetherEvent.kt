@@ -29,14 +29,6 @@ sealed class ListenTogetherEvent {
     data class BufferComplete(val trackId: String) : ListenTogetherEvent()
     data class SyncStateReceived(val state: SyncStatePayload) : ListenTogetherEvent()
     
-    // Chat events
-    data class ChatReceived(
-        val userId: String, 
-        val username: String, 
-        val message: String, 
-        val timestamp: Long
-    ) : ListenTogetherEvent()
-    
     // Error events
     data class ServerError(val code: String, val message: String) : ListenTogetherEvent()
 }
