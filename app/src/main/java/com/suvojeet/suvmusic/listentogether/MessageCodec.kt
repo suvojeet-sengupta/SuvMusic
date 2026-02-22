@@ -27,8 +27,8 @@ enum class MessageFormat {
  * Codec for encoding and decoding messages in different formats
  */
 class MessageCodec(
-    var format: MessageFormat = MessageFormat.PROTOBUF,
-    var compressionEnabled: Boolean = true
+    var format: MessageFormat = MessageFormat.JSON,
+    var compressionEnabled: Boolean = false
 ) {
     companion object {
         private const val TAG = "MessageCodec"
