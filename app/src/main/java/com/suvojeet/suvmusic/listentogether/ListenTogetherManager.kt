@@ -755,7 +755,6 @@ class ListenTogetherManager @Inject constructor(
         )
     }
     
-    fun sendChat(message: String) = client.sendChat(message)
     fun requestSync() = client.requestSync()
     fun suggestTrack(track: TrackInfo) = client.suggestTrack(track)
     fun approveSuggestion(id: String) = client.approveSuggestion(id)

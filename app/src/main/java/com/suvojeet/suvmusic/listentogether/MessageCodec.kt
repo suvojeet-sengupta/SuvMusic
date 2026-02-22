@@ -7,7 +7,7 @@ package com.suvojeet.suvmusic.listentogether
 
 import android.util.Log
 import com.google.protobuf.MessageLite
-import com.suvojeet.suvmusic.listentogether.proto.Listentogether
+import com.metrolist.music.listentogether.proto.Listentogether
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayInputStream
@@ -228,6 +228,9 @@ class MessageCodec(
                 .setUserId(payload.userId)
                 .setReason(payload.reason ?: "")
                 .build()
+            is TransferHostPayload -> Listentogether.TransferHostPayload.newBuilder()
+                .setNewHostId(payload.newHostId)
+                .build()
             is SuggestTrackPayload -> {
                 val builder = Listentogether.SuggestTrackPayload.newBuilder()
                 payload.trackInfo?.let { builder.setTrackInfo(trackInfoToProto(it)) }
@@ -357,10 +360,6 @@ class MessageCodec(
             MessageTypes.ERROR -> {
                 val pb = Listentogether.ErrorPayload.parseFrom(payloadBytes)
                 ErrorPayload(pb.code, pb.message)
-            }
-            MessageTypes.CHAT_MESSAGE -> {
-                val pb = Listentogether.ChatMessagePayload.parseFrom(payloadBytes)
-                ChatMessagePayload(pb.userId, pb.username, pb.message, pb.timestamp)
             }
             MessageTypes.ROOM_STATE -> {
                 val pb = Listentogether.RoomState.parseFrom(payloadBytes)
@@ -493,6 +492,7 @@ class MessageCodec(
             is PlaybackActionPayload -> PlaybackActionPayload.serializer()
             is BufferReadyPayload -> BufferReadyPayload.serializer()
             is KickUserPayload -> KickUserPayload.serializer()
+            is TransferHostPayload -> TransferHostPayload.serializer()
             is SuggestTrackPayload -> SuggestTrackPayload.serializer()
             is ApproveSuggestionPayload -> ApproveSuggestionPayload.serializer()
             is RejectSuggestionPayload -> RejectSuggestionPayload.serializer()
