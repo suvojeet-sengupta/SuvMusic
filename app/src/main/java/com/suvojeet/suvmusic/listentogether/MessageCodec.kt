@@ -285,7 +285,6 @@ class MessageCodec(
             MessageTypes.BUFFER_WAIT -> json.decodeFromString<BufferWaitPayload>(payloadString)
             MessageTypes.BUFFER_COMPLETE -> json.decodeFromString<BufferCompletePayload>(payloadString)
             MessageTypes.ERROR -> json.decodeFromString<ErrorPayload>(payloadString)
-            MessageTypes.CHAT_MESSAGE -> json.decodeFromString<ChatMessagePayload>(payloadString)
             MessageTypes.ROOM_STATE -> json.decodeFromString<RoomState>(payloadString)
             MessageTypes.HOST_CHANGED -> json.decodeFromString<HostChangedPayload>(payloadString)
             MessageTypes.KICKED -> json.decodeFromString<KickedPayload>(payloadString)
