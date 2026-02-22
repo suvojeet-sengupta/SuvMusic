@@ -21,6 +21,7 @@ object MessageTypes {
     const val CHAT = "chat"
     const val REQUEST_SYNC = "request_sync"
     const val RECONNECT = "reconnect"
+    const val CAPABILITIES = "capabilities"
     // Suggestions (Client -> Server)
     const val SUGGEST_TRACK = "suggest_track"
     const val APPROVE_SUGGESTION = "approve_suggestion"
@@ -303,6 +304,20 @@ data class SyncStatePayload(
 @Serializable
 data class ReconnectPayload(
     @SerialName("session_token") val sessionToken: String
+)
+
+@Serializable
+data class ClientCapabilities(
+    @SerialName("supports_protobuf") val supportsProtobuf: Boolean,
+    @SerialName("supports_compression") val supportsCompression: Boolean,
+    @SerialName("client_version") val clientVersion: String
+)
+
+@Serializable
+data class ServerCapabilities(
+    @SerialName("supports_protobuf") val supportsProtobuf: Boolean,
+    @SerialName("supports_compression") val supportsCompression: Boolean,
+    @SerialName("server_version") val serverVersion: String
 )
 
 @Serializable
