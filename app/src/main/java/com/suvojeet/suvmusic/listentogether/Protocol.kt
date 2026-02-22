@@ -18,10 +18,10 @@ object MessageTypes {
     const val BUFFER_READY = "buffer_ready"
     const val KICK_USER = "kick_user"
     const val PING = "ping"
-    const val CHAT = "chat"
     const val REQUEST_SYNC = "request_sync"
     const val RECONNECT = "reconnect"
     const val CAPABILITIES = "capabilities"
+    const val TRANSFER_HOST = "transfer_host"
     // Suggestions (Client -> Server)
     const val SUGGEST_TRACK = "suggest_track"
     const val APPROVE_SUGGESTION = "approve_suggestion"
@@ -40,7 +40,6 @@ object MessageTypes {
     const val ERROR = "error"
     const val PONG = "pong"
     const val ROOM_STATE = "room_state"
-    const val CHAT_MESSAGE = "chat_message"
     const val HOST_CHANGED = "host_changed"
     const val KICKED = "kicked"
     const val SYNC_STATE = "sync_state"
@@ -168,8 +167,8 @@ data class KickUserPayload(
 )
 
 @Serializable
-data class ChatPayload(
-    val message: String
+data class TransferHostPayload(
+    @SerialName("new_host_id") val newHostId: String
 )
 
 // Suggestions payloads
@@ -265,14 +264,6 @@ data class BufferCompletePayload(
 data class ErrorPayload(
     val code: String,
     val message: String
-)
-
-@Serializable
-data class ChatMessagePayload(
-    @SerialName("user_id") val userId: String,
-    val username: String,
-    val message: String,
-    val timestamp: Long
 )
 
 @Serializable

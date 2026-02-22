@@ -2,7 +2,8 @@ syntax = "proto3";
 
 package listentogether;
 
-option java_package = "com.suvojeet.suvmusic.listentogether.proto";
+option go_package = "github.com/nyxiereal/metroserver/proto";
+option java_package = "com.metrolist.music.listentogether.proto";
 option java_outer_classname = "Listentogether";
 option java_multiple_files = false;
 
@@ -86,8 +87,8 @@ message KickUserPayload {
   string reason = 2;
 }
 
-message ChatPayload {
-  string message = 1;
+message TransferHostPayload {
+  string new_host_id = 1;
 }
 
 message SuggestTrackPayload {
@@ -153,13 +154,6 @@ message BufferCompletePayload {
 message ErrorPayload {
   string code = 1;
   string message = 2;
-}
-
-message ChatMessagePayload {
-  string user_id = 1;
-  string username = 2;
-  string message = 3;
-  int64 timestamp = 4;
 }
 
 message HostChangedPayload {
