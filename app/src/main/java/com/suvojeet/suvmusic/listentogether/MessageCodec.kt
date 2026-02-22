@@ -27,8 +27,8 @@ enum class MessageFormat {
  * Codec for encoding and decoding messages in different formats
  */
 class MessageCodec(
-    var format: MessageFormat = MessageFormat.JSON,
-    var compressionEnabled: Boolean = false
+    var format: MessageFormat = MessageFormat.PROTOBUF,
+    var compressionEnabled: Boolean = true
 ) {
     companion object {
         private const val TAG = "MessageCodec"
@@ -243,6 +243,11 @@ class MessageCodec(
             is ReconnectPayload -> Listentogether.ReconnectPayload.newBuilder()
                 .setSessionToken(payload.sessionToken)
                 .build()
+            is ClientCapabilities -> Listentogether.ClientCapabilities.newBuilder()
+                .setSupportsProtobuf(payload.supportsProtobuf)
+                .setSupportsCompression(payload.supportsCompression)
+                .setClientVersion(payload.clientVersion)
+                .build()
             else -> throw IllegalArgumentException("Unsupported payload type: ${payload::class.simpleName}")
         }
     }
@@ -283,6 +288,7 @@ class MessageCodec(
             MessageTypes.KICKED -> json.decodeFromString<KickedPayload>(payloadString)
             MessageTypes.SYNC_STATE -> json.decodeFromString<SyncStatePayload>(payloadString)
             MessageTypes.RECONNECTED -> json.decodeFromString<ReconnectedPayload>(payloadString)
+            MessageTypes.CAPABILITIES -> json.decodeFromString<ServerCapabilities>(payloadString)
             MessageTypes.USER_RECONNECTED -> json.decodeFromString<UserReconnectedPayload>(payloadString)
             MessageTypes.USER_DISCONNECTED -> json.decodeFromString<UserDisconnectedPayload>(payloadString)
             MessageTypes.SUGGESTION_RECEIVED -> json.decodeFromString<SuggestionReceivedPayload>(payloadString)
@@ -332,7 +338,7 @@ class MessageCodec(
                     action = pb.action,
                     trackId = pb.trackId.takeIf { it.isNotEmpty() },
                     position = pb.position.takeIf { it > 0 },
-                    trackInfo = pb.trackInfo?.let { protoToTrackInfo(it) },
+                    trackInfo = if (pb.hasTrackInfo()) protoToTrackInfo(pb.trackInfo) else null,
                     insertNext = pb.insertNext.takeIf { it },
                     queue = pb.queueList?.map { protoToTrackInfo(it) },
                     queueTitle = pb.queueTitle.takeIf { it.isNotEmpty() },
@@ -371,7 +377,7 @@ class MessageCodec(
             MessageTypes.SYNC_STATE -> {
                 val pb = Listentogether.SyncStatePayload.parseFrom(payloadBytes)
                 SyncStatePayload(
-                    currentTrack = pb.currentTrack?.let { protoToTrackInfo(it) },
+                    currentTrack = if (pb.hasCurrentTrack()) protoToTrackInfo(pb.currentTrack) else null,
                     isPlaying = pb.isPlaying,
                     position = pb.position,
                     lastUpdate = pb.lastUpdate,
@@ -388,6 +394,14 @@ class MessageCodec(
                     pb.isHost
                 )
             }
+            MessageTypes.CAPABILITIES -> {
+                val pb = Listentogether.ServerCapabilities.parseFrom(payloadBytes)
+                ServerCapabilities(
+                    pb.supportsProtobuf,
+                    pb.supportsCompression,
+                    pb.serverVersion
+                )
+            }
             MessageTypes.USER_RECONNECTED -> {
                 val pb = Listentogether.UserReconnectedPayload.parseFrom(payloadBytes)
                 UserReconnectedPayload(pb.userId, pb.username)
@@ -402,14 +416,14 @@ class MessageCodec(
                     pb.suggestionId,
                     pb.fromUserId,
                     pb.fromUsername,
-                    protoToTrackInfo(pb.trackInfo)
+                    if (pb.hasTrackInfo()) protoToTrackInfo(pb.trackInfo) else throw IllegalStateException("Suggestion missing track info")
                 )
             }
             MessageTypes.SUGGESTION_APPROVED -> {
                 val pb = Listentogether.SuggestionApprovedPayload.parseFrom(payloadBytes)
                 SuggestionApprovedPayload(
                     pb.suggestionId,
-                    protoToTrackInfo(pb.trackInfo)
+                    if (pb.hasTrackInfo()) protoToTrackInfo(pb.trackInfo) else throw IllegalStateException("Approved suggestion missing track info")
                 )
             }
             MessageTypes.SUGGESTION_REJECTED -> {
@@ -460,7 +474,7 @@ class MessageCodec(
             roomCode = proto.roomCode,
             hostId = proto.hostId,
             users = proto.usersList.map { protoToUserInfo(it) },
-            currentTrack = proto.currentTrack?.let { protoToTrackInfo(it) },
+            currentTrack = if (proto.hasCurrentTrack()) protoToTrackInfo(proto.currentTrack) else null,
             isPlaying = proto.isPlaying,
             position = proto.position,
             lastUpdate = proto.lastUpdate,
@@ -483,6 +497,7 @@ class MessageCodec(
             is ApproveSuggestionPayload -> ApproveSuggestionPayload.serializer()
             is RejectSuggestionPayload -> RejectSuggestionPayload.serializer()
             is ReconnectPayload -> ReconnectPayload.serializer()
+            is ClientCapabilities -> ClientCapabilities.serializer()
             else -> throw IllegalArgumentException("Unknown type: ${value!!::class.simpleName}")
         } as kotlinx.serialization.KSerializer<T>
     }
