@@ -84,36 +84,41 @@ jobs:
     - name: Rename APK with version
       run: |
         APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-        mv "$APK_FILE" "app/build/outputs/apk/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}.apk"
+        mv "$APK_FILE" "app/build/outputs/apk/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}.apk"
 
     - name: Rename AAB with version
       run: |
         AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
-        mv "$AAB_FILE" "app/build/outputs/bundle/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}.aab"
+        mv "$AAB_FILE" "app/build/outputs/bundle/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}.aab"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-apk
-        path: app/build/outputs/apk/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}.apk
+        name: SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}-apk
+        path: app/build/outputs/apk/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}.apk
 
     - name: Upload AAB Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-aab
-        path: app/build/outputs/bundle/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}.aab
+        name: SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}-aab
+        path: app/build/outputs/bundle/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}.aab
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ steps.version.outputs.VERSION_NAME }}
-        name: SuvMusic v${{ steps.version.outputs.VERSION_NAME }}
+        tag_name: v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}
+        name: SuvMusic v${{ steps.version.outputs.VERSION_NAME }} (Build ${{ github.run_number }})
         body: |
-          ## 🎵 SuvMusic v${{ steps.version.outputs.VERSION_NAME }}
+          ## 🎵 SuvMusic v${{ steps.version.outputs.VERSION_NAME }} (Pre-release)
           
-          Beautiful Music App with Material Expressive Components
+          This is an automated pre-release build for version ${{ steps.version.outputs.VERSION_NAME }}.
+          
+          ### Build Info:
+          - **Version**: `${{ steps.version.outputs.VERSION_NAME }}`
+          - **Build Number**: `${{ github.run_number }}`
+          - **Commit**: `${{ github.sha }}`
           
           ### Features:
           - Stream music from YouTube/YouTube Music
@@ -127,5 +132,5 @@ jobs:
         draft: false
         prerelease: true
         files: |
-          app/build/outputs/apk/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}.apk
-          app/build/outputs/bundle/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}.aab
+          app/build/outputs/apk/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}.apk
+          app/build/outputs/bundle/release/SuvMusic-v${{ steps.version.outputs.VERSION_NAME }}-${{ github.run_number }}.aab
