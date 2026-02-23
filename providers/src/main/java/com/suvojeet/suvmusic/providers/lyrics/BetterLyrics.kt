@@ -58,6 +58,7 @@ object BetterLyrics {
                 parameter("al", album)
             }
         }
+        
         if (response.status == HttpStatusCode.OK) {
             response.body<TTMLResponse>().ttml
         } else {
@@ -78,10 +79,13 @@ object BetterLyrics {
         if (ttml == null) {
             val cleanTitle = title.replace(Regex("\\s*\\(.*?\\)"), "")
                 .replace(Regex("\\s*\\[.*?\\]"), "")
+                .replace(Regex("(?i)\\s*official\\s*video.*"), "")
+                .replace(Regex("(?i)\\s*lyric\\s*video.*"), "")
+                .replace(Regex("(?i)\\s*audio.*"), "")
                 .replace(Regex("\\s*-\\s*.*"), "") // Remove after dash (e.g. - Remastered)
                 .trim()
             
-            val cleanArtist = artist.split(",", "&", "feat.", "ft.").firstOrNull()?.trim() ?: artist
+            val cleanArtist = artist.split(",", "&", "feat.", "ft.", "Feat.", "Ft.").firstOrNull()?.trim() ?: artist
             
             if (cleanTitle != title || cleanArtist != artist) {
                 // Retry without duration/album to be more lenient
