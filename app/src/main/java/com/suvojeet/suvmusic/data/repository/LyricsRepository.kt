@@ -23,10 +23,6 @@ import com.suvojeet.suvmusic.util.encodeUrl
 import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 
-/**
- * Repository for fetching lyrics from multiple providers.
- * Priority: BetterLyrics → SimpMusic → LRCLIB → YouTube/JioSaavn
- */
 @Singleton
 class LyricsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
