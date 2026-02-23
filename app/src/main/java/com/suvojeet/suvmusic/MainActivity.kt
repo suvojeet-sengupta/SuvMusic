@@ -730,7 +730,8 @@ fun SuvMusicApp(
                             onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                             startDestination = Destination.Home.route, // Always start at Home
                             // Removed sharedTransitionScope
-                            isTv = isTv
+                            isTv = isTv,
+                            dominantColors = defaultDominantColors
                         )
                     }
 
