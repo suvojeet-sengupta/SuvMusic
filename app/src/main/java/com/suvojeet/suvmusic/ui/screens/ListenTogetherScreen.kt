@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -51,6 +52,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -290,7 +292,8 @@ fun SetupContent(
                 focusedLabelColor = dominantColors.accent,
                 unfocusedLabelColor = dominantColors.onBackground.copy(alpha = 0.5f),
                 cursorColor = dominantColors.accent,
-                leadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f)
+                focusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f),
+                unfocusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f)
             ),
             shape = RoundedCornerShape(16.dp)
         )
@@ -439,7 +442,9 @@ fun SetupContent(
                         focusedBorderColor = dominantColors.accent,
                         unfocusedBorderColor = dominantColors.onBackground.copy(alpha = 0.2f),
                         focusedTextColor = dominantColors.onBackground,
-                        unfocusedTextColor = dominantColors.onBackground
+                        unfocusedTextColor = dominantColors.onBackground,
+                        focusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f),
+                        unfocusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f)
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -963,7 +968,7 @@ fun RequestItem(
                 modifier = Modifier.size(32.dp).background(Color(0xFF4CAF50).copy(alpha = 0.2f), CircleShape)
             ) {
                 Icon(
-                    Icons.Filled.Check,
+                    Icons.Default.Check,
                     null,
                     modifier = Modifier.size(16.dp),
                     tint = Color(0xFF4CAF50)
@@ -1063,4 +1068,3 @@ fun Container(
         content()
     }
 }
-
