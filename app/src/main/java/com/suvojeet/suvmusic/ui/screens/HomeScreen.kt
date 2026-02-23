@@ -73,6 +73,7 @@ fun HomeScreen(
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onRecentsClick: () -> Unit = {},
+    onListenTogetherClick: () -> Unit = {},
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
@@ -146,7 +147,8 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
                                     .animateEnter(index = 0),
-                                onRecentsClick = onRecentsClick
+                                onRecentsClick = onRecentsClick,
+                                onListenTogetherClick = onListenTogetherClick
                             )
                         }
 
@@ -469,7 +471,8 @@ fun QuickAccessCard(
 @Composable
 private fun ProfileHeader(
     modifier: Modifier = Modifier,
-    onRecentsClick: () -> Unit = {}
+    onRecentsClick: () -> Unit = {},
+    onListenTogetherClick: () -> Unit = {}
 ) {
     val greeting = remember { getGreeting() }
     Row(
@@ -497,6 +500,23 @@ private fun ProfileHeader(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(onClick = onListenTogetherClick),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Group,
+                        contentDescription = "Listen Together",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
             Surface(
                 shape = androidx.compose.foundation.shape.CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
