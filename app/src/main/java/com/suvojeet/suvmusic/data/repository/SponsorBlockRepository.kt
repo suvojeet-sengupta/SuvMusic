@@ -17,7 +17,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 data class SponsorSegment(
     @SerializedName("category") val category: String,

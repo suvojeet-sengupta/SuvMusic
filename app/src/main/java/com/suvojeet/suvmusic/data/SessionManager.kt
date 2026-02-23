@@ -47,7 +47,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -275,15 +274,13 @@ class SessionManager @Inject constructor(
         return encryptedPrefs.getString("last_fm_session", null)
     }
 
-    fun getLastFmUsername(): String? = runBlocking {
-         context.dataStore.data.first()[LAST_FM_USERNAME_KEY]
+    suspend fun getLastFmUsername(): String? {
+         return context.dataStore.data.first()[LAST_FM_USERNAME_KEY]
     }
 
-    fun clearLastFmSession() {
+    suspend fun clearLastFmSession() {
         encryptedPrefs.edit().remove("last_fm_session").apply()
-        runBlocking {
-            context.dataStore.edit { it.remove(LAST_FM_USERNAME_KEY) }
-        }
+        context.dataStore.edit { it.remove(LAST_FM_USERNAME_KEY) }
     }
 
     val lastFmUsernameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -648,14 +645,17 @@ class SessionManager @Inject constructor(
         }
     }
 
-    suspend fun getPlayerCacheLimit(): Long = 
-        context.dataStore.data.first()[PLAYER_CACHE_LIMIT_KEY] ?: -1L
+    fun getPlayerCacheLimit(): Long {
+        return encryptedPrefs.getLong("player_cache_limit", -1L)
+    }
 
     val playerCacheLimitFlow: Flow<Long> = context.dataStore.data.map { preferences ->
-        preferences[PLAYER_CACHE_LIMIT_KEY] ?: -1L
+        getPlayerCacheLimit()
     }
 
     suspend fun setPlayerCacheLimit(limitBytes: Long) {
+        encryptedPrefs.edit().putLong("player_cache_limit", limitBytes).apply()
+        // Trigger datastore update for flow listeners
         context.dataStore.edit { preferences ->
             preferences[PLAYER_CACHE_LIMIT_KEY] = limitBytes
         }

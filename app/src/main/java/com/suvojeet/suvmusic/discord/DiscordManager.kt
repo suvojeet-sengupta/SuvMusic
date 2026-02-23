@@ -94,9 +94,12 @@ class DiscordManager @Inject constructor(
     }
 
     private fun disconnect() {
-        discordRPC?.close()
+        val rpc = discordRPC
         discordRPC = null
         _connectionStatus.value = "Disconnected"
+        scope.launch {
+            rpc?.close()
+        }
     }
     
     fun updatePresence(
