@@ -539,6 +539,9 @@ fun SuvMusicApp(
     val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsStateWithLifecycle(initialValue = true) // Start assuming true to avoid flicker if already done
     var showWelcomeDialog by remember { mutableStateOf(false) }
     
+    // Listen Together Sheet State
+    var showListenTogetherSheet by remember { mutableStateOf(false) }
+    
     // Check actual onboarding status on launch
     LaunchedEffect(Unit) {
         if (!sessionManager.isOnboardingCompleted()) {
@@ -731,7 +734,8 @@ fun SuvMusicApp(
                             startDestination = Destination.Home.route, // Always start at Home
                             // Removed sharedTransitionScope
                             isTv = isTv,
-                            dominantColors = defaultDominantColors
+                            dominantColors = defaultDominantColors,
+                            onListenTogetherClick = { showListenTogetherSheet = true }
                         )
                     }
 
@@ -739,6 +743,23 @@ fun SuvMusicApp(
                 }
             }
         }
+
+    // Listen Together Bottom Sheet
+    if (showListenTogetherSheet) {
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showListenTogetherSheet = false },
+            containerColor = defaultDominantColors.primary,
+            contentColor = defaultDominantColors.onBackground,
+            tonalElevation = 8.dp,
+            dragHandle = null, // Custom handle in screen
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+        ) {
+            com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen(
+                onDismiss = { showListenTogetherSheet = false },
+                dominantColors = defaultDominantColors
+            )
+        }
+    }
 
     // Expandable Player Sheet - Overlay
     // Sits above Scaffold, aligned to bottom

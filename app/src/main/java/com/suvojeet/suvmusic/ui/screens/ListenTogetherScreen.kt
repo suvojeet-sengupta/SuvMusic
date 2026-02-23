@@ -25,20 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Login
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -101,116 +88,107 @@ fun ListenTogetherScreen(
     val savedUsername by viewModel.savedUsername.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     
-    // Settings preferences
     val autoApproval by viewModel.autoApproval.collectAsState()
     val syncVolume by viewModel.syncVolume.collectAsState()
     val muteHost by viewModel.muteHost.collectAsState()
     
-    // Local state for username input to avoid stutter, sync with saved on init
     var username by remember { mutableStateOf("") }
     
-    // Sync when saved username loads
     androidx.compose.runtime.LaunchedEffect(savedUsername) {
         if (username.isEmpty() && savedUsername.isNotEmpty()) {
             username = savedUsername
         }
     }
     
-    // Save username when changed
     val saveUsername: (String) -> Unit = { newName ->
         username = newName
         viewModel.updateSavedUsername(newName)
     }
 
-    Box(
+    Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        dominantColors.secondary,
-                        dominantColors.primary
+            .fillMaxWidth()
+            .fillMaxHeight(0.9f)
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Drag Handle
+        Box(
+            modifier = Modifier
+                .padding(vertical = 12.dp)
+                .size(width = 40.dp, height = 4.dp)
+                .background(dominantColors.onBackground.copy(alpha = 0.2f), CircleShape)
+        )
+
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Listen Together",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = dominantColors.onBackground,
+                        letterSpacing = (-0.5).sp
                     )
                 )
-            )
-            .statusBarsPadding()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Listen Together",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = dominantColors.onBackground,
-                            letterSpacing = (-0.5).sp
-                        )
-                    )
-                    Text(
-                        text = if (uiState.isInRoom) "Connected Session" else "Sync with friends",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = dominantColors.onBackground.copy(alpha = 0.6f)
-                    )
-                }
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                ) {
-                    Icon(
-                        Icons.Default.Close, 
-                        "Close",
-                        modifier = Modifier.size(20.dp),
-                        tint = dominantColors.onBackground
-                    )
-                }
+                Text(
+                    text = if (uiState.isInRoom) "Connected Session" else "Sync with friends",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = dominantColors.onBackground.copy(alpha = 0.6f)
+                )
             }
-            
-            Box(modifier = Modifier.weight(1f)) {
-                if (uiState.isInRoom) {
-                    RoomContent(
-                        uiState = uiState,
-                        onLeaveRoom = { viewModel.leaveRoom() },
-                        onCopyCode = { code ->
-                            scope.launch {
-                                clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText("Room Code", code)))
-                            }
-                        },
-                        onSync = { viewModel.requestSync() },
-                        viewModel = viewModel,
-                        dominantColors = dominantColors
-                    )
-                } else {
-                    SetupContent(
-                        username = username,
-                        onUsernameChange = saveUsername,
-                        onCreateRoom = { viewModel.createRoom(username) },
-                        onJoinRoom = { code -> viewModel.joinRoom(code, username) },
-                        connectionState = uiState.connectionState,
-                        serverUrl = serverUrl,
-                        onServerUrlChange = { viewModel.updateServerUrl(it) },
-                        autoApproval = autoApproval,
-                        onAutoApprovalChange = { viewModel.updateAutoApproval(it) },
-                        syncVolume = syncVolume,
-                        onSyncVolumeChange = { viewModel.updateSyncVolume(it) },
-                        muteHost = muteHost,
-                        onMuteHostChange = { viewModel.updateMuteHost(it) },
-                        dominantColors = dominantColors
-                    )
-                }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
+            ) {
+                Icon(
+                    Icons.Default.Close, 
+                    "Close",
+                    modifier = Modifier.size(20.dp),
+                    tint = dominantColors.onBackground
+                )
+            }
+        }
+        
+        Box(modifier = Modifier.weight(1f)) {
+            if (uiState.isInRoom) {
+                RoomContent(
+                    uiState = uiState,
+                    onLeaveRoom = { viewModel.leaveRoom() },
+                    onCopyCode = { code ->
+                        scope.launch {
+                            clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText("Room Code", code)))
+                        }
+                    },
+                    onSync = { viewModel.requestSync() },
+                    viewModel = viewModel,
+                    dominantColors = dominantColors
+                )
+            } else {
+                SetupContent(
+                    username = username,
+                    onUsernameChange = saveUsername,
+                    onCreateRoom = { viewModel.createRoom(username) },
+                    onJoinRoom = { code -> viewModel.joinRoom(code, username) },
+                    connectionState = uiState.connectionState,
+                    serverUrl = serverUrl,
+                    onServerUrlChange = { viewModel.updateServerUrl(it) },
+                    autoApproval = autoApproval,
+                    onAutoApprovalChange = { viewModel.updateAutoApproval(it) },
+                    syncVolume = syncVolume,
+                    onSyncVolumeChange = { viewModel.updateSyncVolume(it) },
+                    muteHost = muteHost,
+                    onMuteHostChange = { viewModel.updateMuteHost(it) },
+                    dominantColors = dominantColors
+                )
             }
         }
     }
@@ -246,7 +224,6 @@ fun SetupContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 32.dp)
     ) {
-        // Hero Illustration placeholder or icon
         Box(
             modifier = Modifier
                 .padding(vertical = 32.dp)
@@ -300,7 +277,6 @@ fun SetupContent(
         
         Spacer(modifier = Modifier.height(32.dp))
         
-        // Host Card
         Card(
             onClick = onCreateRoom,
             enabled = username.isNotBlank() && connectionState != ConnectionState.CONNECTING && connectionState != ConnectionState.RECONNECTING,
@@ -391,7 +367,6 @@ fun SetupContent(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Server Settings Header
         Surface(
             onClick = { showSettings = !showSettings },
             color = Color.Transparent,
@@ -573,7 +548,6 @@ fun RoomContent(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = PaddingValues(bottom = 32.dp)
     ) {
-        // Pending Requests (Host Only)
         if (uiState.role == RoomRole.HOST && pendingRequests.isNotEmpty()) {
             item {
                 Surface(
@@ -602,7 +576,6 @@ fun RoomContent(
             }
         }
 
-        // Room Info Card
         item {
             Card(
                 colors = CardDefaults.cardColors(
@@ -656,7 +629,6 @@ fun RoomContent(
                     
                     Spacer(modifier = Modifier.height(20.dp))
                     
-                    // Host Badge
                     val hostUser = room.users.find { it.userId == room.hostId }
                     Surface(
                         color = dominantColors.accent.copy(alpha = 0.1f),
@@ -685,7 +657,6 @@ fun RoomContent(
             }
         }
 
-        // Stats Row
         item {
             var sessionDuration by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
             androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -730,7 +701,6 @@ fun RoomContent(
             }
         }
 
-        // Now Playing Section
         item {
             Text(
                 "NOW PLAYING",
@@ -821,7 +791,6 @@ fun RoomContent(
             }
         }
 
-        // Users List
         item {
             Text(
                 "CONNECTED LISTENERS",
@@ -837,7 +806,6 @@ fun RoomContent(
             UserItem(user, dominantColors)
         }
 
-        // Action Buttons
         item {
             Spacer(modifier = Modifier.height(40.dp))
             
@@ -987,7 +955,6 @@ fun UserItem(user: com.suvojeet.suvmusic.listentogether.UserInfo, dominantColors
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -1005,7 +972,6 @@ fun UserItem(user: com.suvojeet.suvmusic.listentogether.UserInfo, dominantColors
                     color = if (user.isHost) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f)
                 )
                 
-                // Connection Indicator
                 Box(
                     modifier = Modifier
                         .size(10.dp)

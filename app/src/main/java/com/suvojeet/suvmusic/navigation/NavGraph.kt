@@ -95,7 +95,8 @@ fun NavGraph(
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: String = Destination.Home.route,
     isTv: Boolean = false,
-    dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null
+    dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null,
+    onListenTogetherClick: () -> Unit = {}
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -169,9 +170,7 @@ fun NavGraph(
                     onRecentsClick = {
                         navController.navigate(Destination.Recents.route)
                     },
-                    onListenTogetherClick = {
-                        navController.navigate(Destination.ListenTogether.route)
-                    },
+                    onListenTogetherClick = onListenTogetherClick,
                     onExploreClick = { browseId, title ->
                         if (browseId == "FEmusic_moods_and_genres") {
                             navController.navigate(Destination.MoodAndGenres.route)
@@ -186,18 +185,6 @@ fun NavGraph(
                     currentSong = playbackInfo.currentSong
                 )
             }
-        }
-        
-        composable(Destination.ListenTogether.route) {
-            ListenTogetherScreen(
-                onDismiss = { navController.popBackStack() },
-                dominantColors = dominantColors ?: com.suvojeet.suvmusic.ui.components.DominantColors(
-                    primary = MaterialTheme.colorScheme.primary,
-                    secondary = MaterialTheme.colorScheme.secondary,
-                    accent = MaterialTheme.colorScheme.tertiary,
-                    onBackground = MaterialTheme.colorScheme.onBackground
-                )
-            )
         }
         
         composable(

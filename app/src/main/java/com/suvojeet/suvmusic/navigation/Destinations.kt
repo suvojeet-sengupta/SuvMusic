@@ -30,7 +30,6 @@ sealed class Destination(val route: String) {
     data object DiscordSettings : Destination("discord_settings")
     data object Credits : Destination("credits")
     data object Updater : Destination("updater")
-    data object ListenTogether : Destination("listen_together")
 
     data class Playlist(
         val playlistId: String,
