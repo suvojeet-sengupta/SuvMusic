@@ -14,11 +14,15 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
 
+import io.ktor.client.statement.bodyAsText
+import android.util.Log
+
 /**
  * SimpMusic lyrics API client.
  * API: https://api-lyrics.simpmusic.org
  */
 object SimpMusicLyrics {
+    private const val TAG = "SimpMusicLyrics"
     private const val BASE_URL = "https://api-lyrics.simpmusic.org/v1/"
 
     private val client by lazy {
