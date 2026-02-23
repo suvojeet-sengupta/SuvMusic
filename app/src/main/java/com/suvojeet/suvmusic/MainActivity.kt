@@ -71,6 +71,8 @@ import com.suvojeet.suvmusic.util.NetworkMonitor
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -295,6 +297,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SuvMusicApp(
     intent: Intent? = null,
