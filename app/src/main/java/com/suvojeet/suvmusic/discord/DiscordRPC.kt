@@ -19,7 +19,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -261,7 +260,7 @@ class DiscordRPC(
         }
     }
 
-    fun close() {
+    suspend fun close() {
         reconnectionJob?.cancel()
         heartbeatJob?.cancel()
         heartbeatJob = null
@@ -269,13 +268,11 @@ class DiscordRPC(
         resumeGatewayUrl = null
         sessionId = null
         connected = false
-        runBlocking {
-            try {
-                websocket?.close()
-                Log.i(tag, "Gateway: Connection to gateway closed")
-            } catch (e: Exception) {
-                Log.e(tag, "Error closing gateway", e)
-            }
+        try {
+            websocket?.close()
+            Log.i(tag, "Gateway: Connection to gateway closed")
+        } catch (e: Exception) {
+            Log.e(tag, "Error closing gateway", e)
         }
     }
 
