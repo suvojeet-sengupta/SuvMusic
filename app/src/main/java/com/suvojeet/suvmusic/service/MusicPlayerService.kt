@@ -165,10 +165,6 @@ class MusicPlayerService : MediaLibraryService() {
             .setBackBuffer(5_000, true)
             .build()
             
-        val isOffloadEnabled = kotlinx.coroutines.runBlocking { sessionManager.isAudioOffloadEnabled() }
-        val isSpatialAudioPreferred = kotlinx.coroutines.runBlocking { sessionManager.isAudioArEnabled() }
-        val ignoreAudioFocus = kotlinx.coroutines.runBlocking { sessionManager.isIgnoreAudioFocusDuringCallsEnabled() }
-
         val audioSink = androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(this)
             .setAudioProcessors(arrayOf(spatialAudioProcessor))
             .build()
@@ -231,7 +227,7 @@ class MusicPlayerService : MediaLibraryService() {
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                     .setUsage(C.USAGE_MEDIA)
                     .build(),
-                !ignoreAudioFocus
+                true // Handle audio focus by default
             )
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -239,24 +235,35 @@ class MusicPlayerService : MediaLibraryService() {
 
         player.apply {
             pauseAtEndOfMediaItems = false
-            if (isOffloadEnabled && !isSpatialAudioPreferred && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                trackSelectionParameters = trackSelectionParameters.buildUpon()
-                    .setAudioOffloadPreferences(
-                        androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
-                            .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
-                            .setIsGaplessSupportRequired(false)
-                            .build()
+            
+            // Apply initial settings asynchronously
+            serviceScope.launch {
+                val isOffloadEnabled = sessionManager.isAudioOffloadEnabled()
+                val isSpatialAudioPreferred = sessionManager.isAudioArEnabled()
+                val ignoreAudioFocus = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
+                
+                if (isOffloadEnabled && !isSpatialAudioPreferred && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    trackSelectionParameters = trackSelectionParameters.buildUpon()
+                        .setAudioOffloadPreferences(
+                            androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                                .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+                                .setIsGaplessSupportRequired(false)
+                                .build()
+                        )
+                        .build()
+                }
+
+                if (ignoreAudioFocus) {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                            .setUsage(C.USAGE_MEDIA)
+                            .build(),
+                        false // Don't handle audio focus
                     )
-                    .build()
-            } else {
-                 trackSelectionParameters = trackSelectionParameters.buildUpon()
-                    .setAudioOffloadPreferences(
-                        androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
-                            .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED)
-                            .build()
-                    )
-                    .build()
+                }
             }
+            
             addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     super.onMediaItemTransition(mediaItem, reason)

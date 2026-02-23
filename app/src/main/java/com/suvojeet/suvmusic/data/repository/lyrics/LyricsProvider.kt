@@ -15,7 +15,7 @@ interface LyricsProvider {
     /**
      * Check if this provider is enabled in user settings
      */
-    fun isEnabled(context: Context): Boolean
+    suspend fun isEnabled(context: Context): Boolean
 
     /**
      * Fetch lyrics for a song.

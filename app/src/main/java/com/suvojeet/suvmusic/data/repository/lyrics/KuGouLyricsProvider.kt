@@ -14,8 +14,8 @@ class KuGouLyricsProvider @Inject constructor(
 
     override val name = "Kugou"
 
-    override fun isEnabled(context: Context): Boolean {
-        return kotlinx.coroutines.runBlocking { sessionManager.doesEnableKuGou() }
+    override suspend fun isEnabled(context: Context): Boolean {
+        return sessionManager.doesEnableKuGou()
     }
 
     override suspend fun getLyrics(

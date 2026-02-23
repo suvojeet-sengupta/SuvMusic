@@ -37,8 +37,8 @@ object CacheModule {
         databaseProvider: DatabaseProvider,
         sessionManager: com.suvojeet.suvmusic.data.SessionManager
     ): Cache {
-        // Dynamic cache size from settings
-        val limitPreference = kotlinx.coroutines.runBlocking { sessionManager.getPlayerCacheLimit() }
+        // Dynamic cache size from settings (synchronous access)
+        val limitPreference = sessionManager.getPlayerCacheLimit()
         // If -1, use Long.MAX_VALUE for effectively unlimited
         val cacheSize = if (limitPreference == -1L) Long.MAX_VALUE else limitPreference
         
