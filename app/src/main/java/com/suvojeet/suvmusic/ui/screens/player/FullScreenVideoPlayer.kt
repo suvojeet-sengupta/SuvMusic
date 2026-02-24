@@ -136,6 +136,11 @@ fun FullScreenVideoPlayer(
         onDispose {
             insetsController?.show(WindowInsetsCompat.Type.systemBars())
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            
+            // Restore system brightness control
+            val layoutParams = activity?.window?.attributes
+            layoutParams?.screenBrightness = -1.0f
+            activity?.window?.attributes = layoutParams
         }
     }
 
@@ -146,7 +151,7 @@ fun FullScreenVideoPlayer(
 
     // Video quality dialog
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
-    var brightness by remember { mutableStateOf(0.7f) } // Default 70%
+    var brightness by remember { mutableStateOf(-1.0f) } // Default to system brightness (-1.0f)
     var volumeLevel by remember { mutableStateOf(0.7f) } // Default 70%
     var gestureStatusText by remember { mutableStateOf("") }
     var showGestureStatus by remember { mutableStateOf(false) }
