@@ -451,7 +451,7 @@ class MusicPlayer @Inject constructor(
                         isLiked = false,
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
-                        isVideoMode = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) false else it.isVideoMode,
+                        isVideoMode = it.isVideoMode,
                         videoNotFound = false // Reset error flag on track change
                     )
                 }
@@ -505,34 +505,33 @@ class MusicPlayer @Inject constructor(
                     
                     if (!needsResolution && currentUri != null) {
                         // Check if preloaded content mode matches current video mode
-                        // If we preloaded a video URL but user toggled to audio (or vice versa),
-                        // treat as stale and force re-resolution
-                        if (preloadedNextSongId == song.id && preloadedIsVideoMode != _playerState.value.isVideoMode) {
-                            // Mode mismatch — preloaded URL is for wrong mode, re-resolve
-                            android.util.Log.d("MusicPlayer", "Preloaded mode mismatch: preloaded=${preloadedIsVideoMode}, current=${_playerState.value.isVideoMode}")
-                        } else {
+                        val modeMismatch = preloadedNextSongId == song.id &&
+                            preloadedIsVideoMode != _playerState.value.isVideoMode
+
+                        if (!modeMismatch) {
                             // Already has valid stream, just ensure UI state is correct and play
                             _playerState.update { it.copy(isLoading = false) }
-                        
-                        // Reset preload state as we've seemingly consumed it
-                        preloadedNextSongId = null
-                        preloadedStreamUrl = null
-                        preloadedIsVideoMode = false
-                        isPreloading = false
-                        
-                        // Start aggressive caching for this preloaded/resolved song
-                        if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
-                            // Cancel previous job first just in case
-                            cachingJob?.cancel()
-                            startAggressiveCaching(song.id, currentUri)
+
+                            // Reset preload state as we've consumed it
+                            preloadedNextSongId = null
+                            preloadedStreamUrl = null
+                            preloadedIsVideoMode = false
+                            isPreloading = false
+
+                            // Start aggressive caching for this preloaded/resolved song
+                            if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
+                                cachingJob?.cancel()
+                                startAggressiveCaching(song.id, currentUri)
+                            }
+
+                            // Ensure playback continues for SEEK transitions (notification controls)
+                            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+                                controller.play()
+                            }
+                            return@let
                         }
-                        
-                        // Ensure playback continues for SEEK transitions (notification controls)
-                        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
-                            controller.play()
-                        }
-                        return@let
-                        }
+                        // Mode mismatch — fall through to re-resolve with correct mode
+                        android.util.Log.d("MusicPlayer", "Preloaded mode mismatch: preloaded=$preloadedIsVideoMode, current=${_playerState.value.isVideoMode}")
                     }
                     
                     // Check sleep timer (only for auto transitions)
