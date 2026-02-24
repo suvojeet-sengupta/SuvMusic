@@ -1449,16 +1449,57 @@ class MusicPlayer @Inject constructor(
         }
         
         // Extract bitrate (ExoPlayer provides it in bits per second, convert to kbps)
-        val bitrateKbps = if (audioFormat.bitrate > 0) {
+        var bitrateKbps: Int? = if (audioFormat.bitrate > 0) {
             audioFormat.bitrate / 1000
+        } else if (audioFormat.peakBitrate > 0) {
+            audioFormat.peakBitrate / 1000
+        } else if (audioFormat.averageBitrate > 0) {
+            audioFormat.averageBitrate / 1000
         } else {
-            // Fallback: estimate typical bitrates for known codecs
-            // YouTube uses VBR for Opus so ExoPlayer doesn't report bitrate
-            when (codec) {
-                "opus" -> 256  // YouTube Music typically uses ~256kbps Opus
-                "aac" -> 256   // Fallback for AAC
-                "mp3" -> 320   // Fallback for MP3
-                "flac" -> null // Lossless, no bitrate shown
+            null
+        }
+
+        // If ExoPlayer doesn't report it, try extracting actual quality from URL tags
+        if (bitrateKbps == null) {
+            val uriString = player.currentMediaItem?.localConfiguration?.uri?.toString() ?: ""
+            
+            // YouTube Music formats based on itag
+            if (uriString.contains("youtube.com") || uriString.contains("googlevideo.com")) {
+                val itagMatch = Regex("[?&]itag=(\\d+)").find(uriString)
+                if (itagMatch != null) {
+                    val itag = itagMatch.groupValues[1]
+                    bitrateKbps = when (itag) {
+                        "251" -> 160 // Opus High
+                        "250" -> 64  // Opus Low
+                        "249" -> 48  // Opus Very Low
+                        "141", "256", "258" -> 256 // AAC High
+                        "140" -> 128 // AAC Medium
+                        "139" -> 48  // AAC Low
+                        else -> null
+                    }
+                }
+            }
+            
+            // For JioSaavn or others where Bitrate is often in the streaming URL
+            if (bitrateKbps == null && (uriString.contains("jiosaavn.com") || uriString.contains("saavn.com"))) {
+                bitrateKbps = when {
+                    uriString.contains("320") -> 320
+                    uriString.contains("160") -> 160
+                    uriString.contains("96") -> 96
+                    else -> null
+                }
+            }
+            
+            // For Downloaded/Local Files, try to extract from media metadata if available, but usually ExoPlayer handles local files.
+        }
+
+        // Final fallback if everything fails
+        if (bitrateKbps == null) {
+            bitrateKbps = when (codec) {
+                "opus" -> 160  // YouTube Music high quality Opus is 160kbps, not 256
+                "aac" -> 128   // Typical AAC quality
+                "mp3" -> 320   
+                "flac" -> null // Lossless, exact bitrate varies
                 else -> null
             }
         }
