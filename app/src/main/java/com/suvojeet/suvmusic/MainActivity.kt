@@ -754,6 +754,7 @@ fun SuvMusicApp(
             onPlayPause = { playerViewModel.togglePlayPause() },
             onNext = { playerViewModel.seekToNext() },
             onPrevious = { playerViewModel.seekToPrevious() },
+            onClose = { playerViewModel.stop() },
             bottomPadding = bottomPaddingPx,
             isExpanded = isPlayerExpanded,
             userAlpha = miniPlayerAlpha,
