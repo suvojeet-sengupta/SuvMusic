@@ -18,7 +18,7 @@
     <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform" />
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-007EC6?style=for-the-badge" alt="License" />
+    <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="License" />
   </a>
   <a href="https://github.com/suvojeet-sengupta">
     <img src="https://img.shields.io/badge/Made%20in-India-FF9933?style=for-the-badge&logo=india&logoColor=white" alt="Made in India" />
@@ -147,6 +147,16 @@ SuvMusic features a custom **C++ Audio Engine** (via JNI) to handle CPU-intensiv
 
 ---
 
+## Acknowledgments & Credits
+
+While SuvMusic features a completely original UI/UX and custom native audio engine, it leverages core logic from the following open-source projects:
+
+-   **[Metrolist](https://github.com/MetrolistGroup/Metrolist)**: Core logic for "Listen Together" protocol.
+-   **[NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)**: High-performance metadata extraction.
+-   **[SimpMusic](https://github.com/SimpMusic/SimpMusic)**: Lyrics provider implementation logic.
+
+---
+
 ## Developer
 
 **Suvojeet Sengupta**
@@ -166,7 +176,7 @@ SuvMusic features a custom **C++ Audio Engine** (via JNI) to handle CPU-intensiv
 
 Copyright © 2026 Suvojeet Sengupta.
 <br />
-This project is licensed under the **[MIT License](LICENSE)**.
+This project is licensed under the **[GNU General Public License v3.0](LICENSE)**.
 
 > [!IMPORTANT]
 > **Disclaimer:** This application is strictly for educational and research purposes. It interacts with third-party services (YouTube Music, JioSaavn). The developer does not endorse piracy. Please respect intellectual property rights.
