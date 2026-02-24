@@ -328,8 +328,8 @@ fun FullScreenVideoPlayer(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            dominantColors.primary.copy(alpha = 0.2f),
-                            Color.Black
+                            dominantColors.primary.copy(alpha = 0.4f),
+                            Color.Black.copy(alpha = 0.9f)
                         ),
                         radius = 1500f
                     )
@@ -343,6 +343,8 @@ fun FullScreenVideoPlayer(
                     this.player = player
                     useController = false
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                     this.resizeMode = resizeMode
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
