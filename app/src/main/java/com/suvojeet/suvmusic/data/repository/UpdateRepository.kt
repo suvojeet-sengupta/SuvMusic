@@ -337,15 +337,22 @@ class UpdateRepository @Inject constructor(
     
     /**
      * Parse version name to version code.
-     * e.g., "1.0.3" -> 10003 (major * 10000 + minor * 100 + patch)
+     * Supports both 3-digit (1.0.0) and 4-digit (1.0.0.0) formats.
+     * Format: major * 1000000 + minor * 10000 + patch * 100 + build
      */
     private fun parseVersionCode(versionName: String): Int {
         return try {
-            val parts = versionName.split(".")
+            // Remove any non-numeric suffixes (like -beta or -nightly) for code calculation
+            val cleanVersion = versionName.split("-")[0].split("+")[0]
+            val parts = cleanVersion.split(".")
+            
             val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
             val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
             val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
-            major * 10000 + minor * 100 + patch
+            val build = parts.getOrNull(3)?.toIntOrNull() ?: 0
+            
+            // Using a larger multiplier to accommodate 4 parts safely
+            major * 1000000 + minor * 10000 + patch * 100 + build
         } catch (e: Exception) {
             0
         }
