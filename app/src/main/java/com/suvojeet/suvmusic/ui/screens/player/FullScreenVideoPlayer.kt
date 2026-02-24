@@ -78,8 +78,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.media3.ui.PlayerView
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.media3.ui.AspectRatioFrameLayout
 import com.suvojeet.suvmusic.data.model.VideoDownloadQuality
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
@@ -139,6 +145,20 @@ fun FullScreenVideoPlayer(
     }
 
     // Video quality dialog
+    var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
+    var brightness by remember { mutableStateOf(0.7f) } // Default 70%
+    var volumeLevel by remember { mutableStateOf(0.7f) } // Default 70%
+    var gestureStatusText by remember { mutableStateOf("") }
+    var showGestureStatus by remember { mutableStateOf(false) }
+    var gestureIcon by remember { mutableStateOf(Icons.Default.Settings) }
+
+    LaunchedEffect(showGestureStatus) {
+        if (showGestureStatus) {
+            delay(1500)
+            showGestureStatus = false
+        }
+    }
+
     if (showQualityDialog) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showQualityDialog = false },
@@ -245,13 +265,55 @@ fun FullScreenVideoPlayer(
                 detectTapGestures(
                     onTap = { areControlsVisible = !areControlsVisible },
                     onDoubleTap = { offset ->
-                        if (offset.x > size.width / 2) {
+                        val isForward = offset.x > size.width / 2
+                        if (isForward) {
                             viewModel.seekTo(playerState.currentPosition + 10000)
+                            gestureStatusText = "+10s"
+                            gestureIcon = Icons.Default.Forward10
                         } else {
                             viewModel.seekTo(playerState.currentPosition - 10000)
+                            gestureStatusText = "-10s"
+                            gestureIcon = Icons.Default.Replay10
                         }
+                        showGestureStatus = true
                     }
                 )
+            }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, dragAmount ->
+                    val isVolume = change.position.x > size.width / 2
+                    if (isVolume) {
+                        volumeLevel = (volumeLevel - dragAmount / size.height).coerceIn(0f, 1f)
+                        gestureStatusText = "Volume: ${(volumeLevel * 100).toInt()}%"
+                        gestureIcon = Icons.Default.VolumeUp
+                        // In a real app, use AudioManager to set actual system volume
+                    } else {
+                        brightness = (brightness - dragAmount / size.height).coerceIn(0f, 1f)
+                        gestureStatusText = "Brightness: ${(brightness * 100).toInt()}%"
+                        gestureIcon = Icons.Default.BrightnessLow
+                        // In a real app, update Window brightness
+                        val activity = context as? Activity
+                        val layoutParams = activity?.window?.attributes
+                        layoutParams?.screenBrightness = brightness
+                        activity?.window?.attributes = layoutParams
+                    }
+                    showGestureStatus = true
+                }
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, _, zoom, _ ->
+                    if (zoom > 1.1f) {
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        gestureStatusText = "Zoom: Fill"
+                        gestureIcon = Icons.Default.AspectRatio
+                        showGestureStatus = true
+                    } else if (zoom < 0.9f) {
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        gestureStatusText = "Zoom: Fit"
+                        gestureIcon = Icons.Default.AspectRatio
+                        showGestureStatus = true
+                    }
+                }
             }
     ) {
         // Ambient Background
@@ -270,12 +332,13 @@ fun FullScreenVideoPlayer(
         )
 
         // Video Player
-        AndroidView(
+        AndroidView<PlayerView>(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     this.player = player
                     useController = false
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
+                    this.resizeMode = resizeMode
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -284,11 +347,45 @@ fun FullScreenVideoPlayer(
             },
             update = { playerView ->
                 playerView.player = player
+                playerView.resizeMode = resizeMode
             },
             modifier = Modifier
                 .fillMaxSize()
                 .align(Alignment.Center)
         )
+
+        // Gesture Feedback Overlay
+        AnimatedVisibility(
+            visible = showGestureStatus,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = gestureIcon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = gestureStatusText,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+            }
+        }
 
         // Controls Overlay
         AnimatedVisibility(
@@ -333,6 +430,24 @@ fun FullScreenVideoPlayer(
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.7f),
                             maxLines = 1
+                        )
+                    }
+
+                    // Resize Toggle
+                    IconButton(onClick = {
+                        resizeMode = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
+                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        } else {
+                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
+                        gestureStatusText = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) "Fill" else "Fit"
+                        gestureIcon = Icons.Default.AspectRatio
+                        showGestureStatus = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.AspectRatio,
+                            contentDescription = "Resize",
+                            tint = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) dominantColors.primary else Color.White
                         )
                     }
 
