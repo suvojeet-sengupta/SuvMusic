@@ -23,6 +23,9 @@
     <!-- Wake lock for continuous playback -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     
+    <!-- Permission to install updates -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    
     <!-- Vibration permission for Music Haptics -->
     <uses-permission android:name="android.permission.VIBRATE" />
     
