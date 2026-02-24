@@ -977,27 +977,45 @@ class SettingsViewModel @Inject constructor(
      */
     fun installUpdate() {
         val apkFile = downloadedApkFile ?: return
+        if (!apkFile.exists()) {
+             _uiState.update { it.copy(updateState = UpdateState.Error("APK file not found")) }
+             return
+        }
         
         try {
-            val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.provider",
-                    apkFile
-                )
-            } else {
-                Uri.fromFile(apkFile)
-            }
-            
             val intent = Intent(Intent.ACTION_VIEW).apply {
+                val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        apkFile
+                    )
+                } else {
+                    Uri.fromFile(apkFile)
+                }
+                
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            
+            // On Android 11+ we can check if we have the permission
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    // Start the settings activity for user to grant the permission
+                    val settingsIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(settingsIntent)
+                    // The user will have to return and click "Install" again or 
+                    // we could rely on the system's own prompt
+                }
             }
             
             context.startActivity(intent)
         } catch (e: Exception) {
             _uiState.update { 
-                it.copy(updateState = UpdateState.Error("Failed to install: ${e.message}"))
+                it.copy(updateState = UpdateState.Error("Installation failed: ${e.localizedMessage}"))
             }
         }
     }

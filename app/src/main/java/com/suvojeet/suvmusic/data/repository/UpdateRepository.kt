@@ -41,87 +41,109 @@ class UpdateRepository @Inject constructor(
      * Check for updates from GitHub Releases.
      * Returns AppUpdate if available, null otherwise.
      */
-    /**
-     * Check for updates from GitHub Releases.
-     * Returns AppUpdate if available, null otherwise.
-     */
     suspend fun checkForUpdate(channel: com.suvojeet.suvmusic.data.model.UpdateChannel): Result<AppUpdate?> = withContext(Dispatchers.IO) {
         try {
-            // Logic:
-            // STABLE -> /releases/latest (GitHub returns latest non-prerelease)
-            // NIGHTLY -> /releases (List, iterate to find latest pre-release)
+            // Fetch releases list (max 5) to find the latest based on channel
+            val url = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases?per_page=10"
             
-            val isStable = channel == com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE
-            val url = if (isStable) {
-                API_URL // .../releases/latest
-            } else {
-                 // Fetch more to ensure we find a pre-release if latest is stable
-                 "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases?per_page=5"
-            }
-
             val request = Request.Builder()
                 .url(url)
                 .header("Accept", "application/vnd.github.v3+json")
+                .header("User-Agent", "SuvMusic-App") // Required by GitHub API
                 .build()
             
             val response = client.newCall(request).execute()
             
             if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("Failed to check for updates: ${response.code}"))
+                if (response.code == 403) {
+                    return@withContext Result.failure(Exception("GitHub API Rate limit exceeded. Try again later."))
+                }
+                return@withContext Result.failure(Exception("Failed to check for updates: HTTP ${response.code}"))
             }
             
             val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
+            val releasesArray = gson.fromJson(body, com.google.gson.JsonArray::class.java)
             
-            // For Nightly (/releases), response is an Array. For Stable (/releases/latest), it's an Object.
-            val json = if (!isStable) {
-                val array = gson.fromJson(body, com.google.gson.JsonArray::class.java)
-                // Filter for the first pre-release
-                var foundRelease: JsonObject? = null
-                for (element in array) {
-                    val release = element.asJsonObject
-                    if (release.get("prerelease")?.asBoolean == true) {
-                        foundRelease = release
+            if (releasesArray.size() == 0) {
+                return@withContext Result.success(null)
+            }
+            
+            // Filter releases based on channel
+            val selectedRelease = when (channel) {
+                com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE -> {
+                    // Find the first release that is NOT a pre-release
+                    var latestStable: JsonObject? = null
+                    for (element in releasesArray) {
+                        val release = element.asJsonObject
+                        if (release.get("prerelease")?.asBoolean == false && release.get("draft")?.asBoolean == false) {
+                            latestStable = release
+                            break
+                        }
+                    }
+                    latestStable
+                }
+                com.suvojeet.suvmusic.data.model.UpdateChannel.NIGHTLY -> {
+                    // Just pick the absolute latest non-draft release
+                    var latestNightly: JsonObject? = null
+                    for (element in releasesArray) {
+                        val release = element.asJsonObject
+                        if (release.get("draft")?.asBoolean == false) {
+                            latestNightly = release
+                            break
+                        }
+                    }
+                    latestNightly
+                }
+            } ?: return@withContext Result.success(null)
+
+            // Parse version from tag_name (e.g., "v1.2.0-beta.1" -> "1.2.0-beta.1")
+            val tagName = selectedRelease.get("tag_name")?.asString ?: return@withContext Result.failure(Exception("No tag found"))
+            val versionName = tagName.removePrefix("v")
+            
+            // Parse release notes, date, and pre-release status
+            val releaseNotes = selectedRelease.get("body")?.asString ?: "No release notes available"
+            val publishedAt = selectedRelease.get("published_at")?.asString ?: ""
+            val isPreRelease = selectedRelease.get("prerelease")?.asBoolean ?: false
+            
+            // Find APK download URL from assets (prioritize arm64-v8a or universal if possible)
+            val assets = selectedRelease.getAsJsonArray("assets")
+            var downloadUrl = ""
+            
+            // Prioritize architectures: Universal > arm64-v8a > Others
+            val priorityKeywords = listOf("universal", "arm64-v8a", "arm64", "v8a")
+            
+            // First pass: try to find priority assets
+            for (keyword in priorityKeywords) {
+                for (asset in assets) {
+                    val assetObj = asset.asJsonObject
+                    val name = assetObj.get("name")?.asString?.lowercase() ?: ""
+                    if (name.endsWith(".apk") && name.contains(keyword)) {
+                        downloadUrl = assetObj.get("browser_download_url")?.asString ?: ""
                         break
                     }
                 }
-                foundRelease ?: return@withContext Result.failure(Exception("No nightly releases found"))
-            } else {
-                gson.fromJson(body, JsonObject::class.java)
+                if (downloadUrl.isNotEmpty()) break
             }
             
-            // Parse version from tag_name (e.g., "v1.0.3" -> "1.0.3")
-            val tagName = json.get("tag_name")?.asString ?: return@withContext Result.failure(Exception("No tag found"))
-            val versionName = tagName.removePrefix("v")
-            
-            // Parse release notes
-            val releaseNotes = json.get("body")?.asString ?: "No release notes available"
-            
-            // Parse published date
-            val publishedAt = json.get("published_at")?.asString ?: ""
-            
-            // Check if pre-release
-            val isPreRelease = json.get("prerelease")?.asBoolean ?: false
-            
-            // Find APK download URL from assets
-            val assets = json.getAsJsonArray("assets")
-            var downloadUrl = ""
-            
-            for (asset in assets) {
-                val assetObj = asset.asJsonObject
-                val name = assetObj.get("name")?.asString ?: ""
-                if (name.endsWith(".apk")) {
-                    downloadUrl = assetObj.get("browser_download_url")?.asString ?: ""
-                    break
+            // Second pass: fallback to any .apk if no priority found
+            if (downloadUrl.isEmpty()) {
+                for (asset in assets) {
+                    val assetObj = asset.asJsonObject
+                    val name = assetObj.get("name")?.asString?.lowercase() ?: ""
+                    if (name.endsWith(".apk")) {
+                        downloadUrl = assetObj.get("browser_download_url")?.asString ?: ""
+                        break
+                    }
                 }
             }
             
             if (downloadUrl.isEmpty()) {
-                return@withContext Result.failure(Exception("No APK found in release"))
+                return@withContext Result.failure(Exception("No APK found in the latest ${channel.name.lowercase()} release"))
             }
             
-            // Parse version code from version name (e.g., "1.0.3" -> assume each part)
+            val currentVersionName = getCurrentVersionName()
             val remoteVersionCode = parseVersionCode(versionName)
-            val currentVersionCode = parseVersionCode(getCurrentVersionName())
+            val currentVersionCode = getCurrentVersionCode()
             
             val update = AppUpdate(
                 versionName = versionName,
@@ -132,26 +154,81 @@ class UpdateRepository @Inject constructor(
                 isPreRelease = isPreRelease
             )
             
-            // Check if update is available
-            val remotePublishedTime = parsePublishedDate(publishedAt)
-            val localLastUpdateTime = getLocalLastUpdateTime()
+            // Robust version comparison
+            val isNewer = isVersionNewer(
+                currentVersion = currentVersionName,
+                remoteVersion = versionName,
+                currentCode = currentVersionCode,
+                remoteCode = remoteVersionCode,
+                currentTimestamp = getLocalLastUpdateTime(),
+                remoteTimestamp = parsePublishedDate(publishedAt)
+            )
 
-            if (remoteVersionCode > currentVersionCode) {
-                 // Newer version code (Standard upgrade)
-                Result.success(update)
-            } else if (!isStable && remoteVersionCode == currentVersionCode && remotePublishedTime > localLastUpdateTime) {
-                // Same version but newer build (Nightly logic: e.g. updated assets/re-release with same tag or internal build number bump not reflected in tag)
-                // Note: GitHub "published_at" changes when release is published.
-                Result.success(update)
-            } else if (remoteVersionCode == currentVersionCode && remotePublishedTime > localLastUpdateTime && !isStable) {
-                // Redundant check/clarity: For Nightly, checking timestamp is crucial if version numbers match.
+            if (isNewer) {
                 Result.success(update)
             } else {
-                Result.success(null) // No update available
+                Result.success(null)
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * Determines if the remote version is newer than the current version.
+     */
+    private fun isVersionNewer(
+        currentVersion: String,
+        remoteVersion: String,
+        currentCode: Int,
+        remoteCode: Int,
+        currentTimestamp: Long,
+        remoteTimestamp: Long
+    ): Boolean {
+        // 1. Primary: Compare version codes
+        if (remoteCode > currentCode) return true
+        if (remoteCode < currentCode) return false
+        
+        // 2. Secondary: If codes match, check version name strings (e.g. 1.2.0 vs 1.2.0-beta.1)
+        // If they are exactly the same, check timestamp
+        if (currentVersion == remoteVersion) {
+            // For Nightly, same version might mean a re-published build
+            return remoteTimestamp > currentTimestamp + 60000 // 1 minute buffer
+        }
+        
+        // Use a simple semantic-like comparison for version names if codes match
+        return try {
+            compareVersions(remoteVersion, currentVersion) > 0
+        } catch (e: Exception) {
+            // Fallback to timestamp if semantic parsing fails
+            remoteTimestamp > currentTimestamp
+        }
+    }
+
+    private fun compareVersions(v1: String, v2: String): Int {
+        val parts1 = v1.split(".", "-", "+")
+        val parts2 = v2.split(".", "-", "+")
+        val length = maxOf(parts1.size, parts2.size)
+        
+        for (i in 0 until length) {
+            val p1 = parts1.getOrNull(i)
+            val p2 = parts2.getOrNull(i)
+            
+            if (p1 == p2) continue
+            if (p1 == null) return -1
+            if (p2 == null) return 1
+            
+            val i1 = p1.toIntOrNull()
+            val i2 = p2.toIntOrNull()
+            
+            if (i1 != null && i2 != null) {
+                if (i1 != i2) return i1.compareTo(i2)
+            } else {
+                val res = p1.compareTo(p2, ignoreCase = true)
+                if (res != 0) return res
+            }
+        }
+        return 0
     }
 
     private fun parsePublishedDate(dateString: String): Long {
