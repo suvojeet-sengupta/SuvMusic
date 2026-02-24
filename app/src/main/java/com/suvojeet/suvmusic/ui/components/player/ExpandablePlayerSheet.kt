@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -87,6 +88,7 @@ fun ExpandablePlayerSheet(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onClose: () -> Unit,
     bottomPadding: Float,
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
@@ -154,6 +156,7 @@ fun ExpandablePlayerSheet(
                 progress = playerState.progress,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
+                onClose = onClose,
                 userAlpha = userAlpha,
                 onTap = {
                     coroutineScope.launch {
@@ -298,6 +301,7 @@ private fun CollapsedMiniPlayer(
     progress: Float,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
+    onClose: () -> Unit,
     onTap: () -> Unit,
     userAlpha: Float = 1f,
     modifier: Modifier = Modifier
@@ -408,6 +412,22 @@ private fun CollapsedMiniPlayer(
                         tint = dominantColors.onBackground,
                         modifier = Modifier.size(24.dp)
                     )
+                }
+
+                if (!playerState.isPlaying) {
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = dominantColors.onBackground,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
 
