@@ -984,7 +984,9 @@ fun PlayerScreen(
                 song = menuSong,
                 isVisible = showActionsSheet,
                 onDismiss = { 
-                    activeOverlay = PlayerOverlay.None
+                    if (activeOverlay is PlayerOverlay.Actions) {
+                        activeOverlay = PlayerOverlay.None
+                    }
                 },
                 dominantColors = dominantColors,
                 isDownloaded = if (menuSong.id == song?.id) playerState.downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED else playerViewModel.isDownloaded(menuSong.id),
