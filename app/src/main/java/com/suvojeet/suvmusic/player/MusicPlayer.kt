@@ -1144,6 +1144,8 @@ class MusicPlayer @Inject constructor(
     }
     
     private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true): MediaItem {
+        var audioStreamUrl: String? = null
+        
         val uri = when (song.source) {
             SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
             SongSource.JIOSAAVN -> {
@@ -1165,10 +1167,17 @@ class MusicPlayer @Inject constructor(
             else -> {
                 if (resolveStream) {
                     if (_playerState.value.isVideoMode) {
+                        // Use getVideoStreamResult for dual-stream support (separate audio for 720p/1080p)
                         val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
                             resolvedVideoIds.put(song.id, it) 
                         }
-                        youTubeRepository.getVideoStreamUrl(videoId) ?: "https://placeholder.invalid/${song.id}"
+                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                        if (videoResult != null) {
+                            audioStreamUrl = videoResult.audioUrl
+                            videoResult.videoUrl
+                        } else {
+                            "https://placeholder.invalid/${song.id}"
+                        }
                     } else {
                         // Retry once if first attempt fails
                         youTubeRepository.getStreamUrl(song.id)
@@ -1185,10 +1194,17 @@ class MusicPlayer @Inject constructor(
             }
         }
         
-        return MediaItem.Builder()
+        // Use video-quality-aware cache key when in video mode (matches resolveAndPlayCurrentItem)
+        val cacheKey = if (_playerState.value.isVideoMode && resolveStream) {
+            "${song.id}_${_playerState.value.videoQuality.name}"
+        } else {
+            song.id
+        }
+        
+        val builder = MediaItem.Builder()
             .setUri(uri)
             .setMediaId(song.id)
-            .setCustomCacheKey(song.id) // CRITICAL: Stable cache key
+            .setCustomCacheKey(cacheKey)
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(song.title)
@@ -1197,7 +1213,19 @@ class MusicPlayer @Inject constructor(
                     .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
                     .build()
             )
-            .build()
+        
+        // Pass audio URL for dual-stream merging (video-only + audio-only)
+        if (!audioStreamUrl.isNullOrEmpty()) {
+            builder.setRequestMetadata(
+                MediaItem.RequestMetadata.Builder()
+                    .setExtras(android.os.Bundle().apply {
+                        putString("audioStreamUrl", audioStreamUrl)
+                    })
+                    .build()
+            )
+        }
+        
+        return builder.build()
     }
     
     fun play() {
