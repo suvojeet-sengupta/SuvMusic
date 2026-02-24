@@ -756,7 +756,15 @@ fun PlayerScreen(
                                             modifier = Modifier
                                                 .fillMaxSize()
                                                 .clip(RoundedCornerShape(12.dp))
-                                                .background(Color.Black)
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            dominantColors.primary.copy(alpha = 0.6f),
+                                                            Color.Black.copy(alpha = 0.9f),
+                                                            dominantColors.primary.copy(alpha = 0.6f)
+                                                        )
+                                                    )
+                                                )
                                                 .clickable { playerViewModel.setFullScreen(true) },
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -766,6 +774,8 @@ fun PlayerScreen(
                                                         this.player = player
                                                         useController = false
                                                         setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                                        setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                                                     }
                                                 },
                                                 update = { playerView ->
