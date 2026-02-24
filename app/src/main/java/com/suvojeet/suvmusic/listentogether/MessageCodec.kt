@@ -7,7 +7,7 @@ package com.suvojeet.suvmusic.listentogether
 
 import android.util.Log
 import com.google.protobuf.MessageLite
-import com.metrolist.music.listentogether.proto.Listentogether
+import com.suvojeet.suvmusic.listentogether.proto.Listentogether
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayInputStream
