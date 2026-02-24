@@ -81,10 +81,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.media.AudioManager
-import android.provider.Settings
 import android.widget.Toast
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.data.model.PlayerState
@@ -116,8 +112,7 @@ import com.suvojeet.suvmusic.ui.screens.player.components.QueueView
 import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
 import com.suvojeet.suvmusic.ui.components.VideoErrorDialog
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
-import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
-import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
+import com.suvojeet.suvmusic.ui.screens.player.components.VolumeControl
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import kotlinx.coroutines.Dispatchers
@@ -126,7 +121,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
-import kotlin.math.roundToInt
 
 /**
  * Premium full-screen player with Apple Music-style design.
@@ -217,18 +211,18 @@ fun PlayerScreen(
     val bassBoost by playerViewModel.getBassBoost().collectAsState(initial = 0f)
     val virtualizer by playerViewModel.getVirtualizer().collectAsState(initial = 0f)
     
-    // Keep Screen On Logic
+    // Keep Screen On Logic — only clear the flag if *we* were the ones who added it
     DisposableEffect(keepScreenOn) {
         val window = (context as? Activity)?.window
+        val didAddFlag = keepScreenOn
         if (keepScreenOn) {
             window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
         
         onDispose {
-            // Always clear flag when leaving player screen (or when setting changes)
-            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            if (didAddFlag) {
+                window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
         }
     }
     
@@ -274,21 +268,31 @@ fun PlayerScreen(
         isDarkTheme = isAppInDarkTheme
     )
     
-    val dominantColors = extractedColors
+    val rawColors = extractedColors
+
+    // Smooth color transitions when the song changes — crossfade instead of snapping
+    val animatedPrimary by animateColorAsState(rawColors.primary, tween(800), label = "primary")
+    val animatedSecondary by animateColorAsState(rawColors.secondary, tween(800), label = "secondary")
+    val animatedAccent by animateColorAsState(rawColors.accent, tween(800), label = "accent")
+    val animatedOnBg by animateColorAsState(rawColors.onBackground, tween(800), label = "onBg")
+
+    val dominantColors = DominantColors(
+        primary = animatedPrimary,
+        secondary = animatedSecondary,
+        accent = animatedAccent,
+        onBackground = animatedOnBg
+    )
     
+    // Fix status bar: capture previous state and restore it on dispose
     DisposableEffect(Unit) {
         val window = (view.context as Activity).window
         val insetsController = WindowCompat.getInsetsController(window, view)
+        val previousLightStatusBars = insetsController.isAppearanceLightStatusBars
         
-        // In dark mode, force light icons (for dark background)
-        // In light mode, force dark icons (for light background)
         insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme
         
         onDispose {
-            // Restore based on app theme
-            // If app is dark, we want light icons (false)
-            // If app is light, we want dark icons (true)
-            insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme
+            insetsController.isAppearanceLightStatusBars = previousLightStatusBars
         }
     }
     
@@ -303,20 +307,23 @@ fun PlayerScreen(
         }
     }
 
-    // UI States
-    var showQueue by remember { mutableStateOf(false) }
-    var showLyrics by remember { mutableStateOf(false) }
-    var showCommentsSheet by remember { mutableStateOf(false) }
-    var showActionsSheet by remember { mutableStateOf(false) }
-    var selectedSongForMenu by remember { mutableStateOf<com.suvojeet.suvmusic.core.model.Song?>(null) }
-    var showInfoSheet by remember { mutableStateOf(false) }
-    var showSleepTimerSheet by remember { mutableStateOf(false) }
-    var showOutputDeviceSheet by remember { mutableStateOf(false) }
-    var showPlaybackSpeedSheet by remember { mutableStateOf(false) }
-    var showListenTogetherSheet by remember { mutableStateOf(false) }
-    var showEqualizerSheet by remember { mutableStateOf(false) }
+    // Single overlay state — only one sheet/overlay can be visible at a time
+    var activeOverlay by remember { mutableStateOf<PlayerOverlay>(PlayerOverlay.None) }
 
-    // Ringtone states
+    // Convenience booleans derived from the sealed state (read-only)
+    val showQueue = activeOverlay is PlayerOverlay.Queue
+    val showLyrics = activeOverlay is PlayerOverlay.Lyrics
+    val showCommentsSheet = activeOverlay is PlayerOverlay.Comments
+    val showActionsSheet = activeOverlay is PlayerOverlay.Actions
+    val selectedSongForMenu = (activeOverlay as? PlayerOverlay.Actions)?.targetSong
+    val showInfoSheet = activeOverlay is PlayerOverlay.SongInfo
+    val showSleepTimerSheet = activeOverlay is PlayerOverlay.SleepTimer
+    val showOutputDeviceSheet = activeOverlay is PlayerOverlay.OutputDevice
+    val showPlaybackSpeedSheet = activeOverlay is PlayerOverlay.PlaybackSpeed
+    val showListenTogetherSheet = activeOverlay is PlayerOverlay.ListenTogether
+    val showEqualizerSheet = activeOverlay is PlayerOverlay.Equalizer
+
+    // Ringtone states (independent — these run in parallel with overlays)
     var showRingtoneTrimmer by remember { mutableStateOf(false) }
     var showRingtoneProgress by remember { mutableStateOf(false) }
     var ringtoneProgress by remember { mutableStateOf(0f) }
@@ -330,18 +337,10 @@ fun PlayerScreen(
 
     // Back Handler to handle overlays and minimize player
     BackHandler(enabled = true) {
-        when {
-            showQueue -> showQueue = false
-            showLyrics -> showLyrics = false
-            showListenTogetherSheet -> showListenTogetherSheet = false
-            showCommentsSheet -> showCommentsSheet = false
-            showActionsSheet -> showActionsSheet = false
-            showInfoSheet -> showInfoSheet = false
-            showSleepTimerSheet -> showSleepTimerSheet = false
-            showOutputDeviceSheet -> showOutputDeviceSheet = false
-            showPlaybackSpeedSheet -> showPlaybackSpeedSheet = false
-            showEqualizerSheet -> showEqualizerSheet = false
-            else -> onBack()
+        if (activeOverlay != PlayerOverlay.None) {
+            activeOverlay = PlayerOverlay.None
+        } else {
+            onBack()
         }
     }
 
@@ -357,13 +356,15 @@ fun PlayerScreen(
         } else {
             (current - seekAmount).coerceAtLeast(0)
         }
+        // Update UI optimistically — no seek fired yet
         pendingSeekPosition = newPos
-        onSeekTo(newPos)
 
-        // Reset pending position after 1 sec to sync back with real player
+        // Debounce the actual Media3 seek so rapid taps consolidate into one call
         seekDebounceJob?.cancel()
         seekDebounceJob = coroutineScope.launch {
-            delay(1000)
+            delay(400) // short window to batch consecutive taps
+            onSeekTo(newPos)
+            delay(600) // let player catch up before clearing optimistic state
             pendingSeekPosition = null
         }
     }
@@ -375,49 +376,7 @@ fun PlayerScreen(
     // Use pure black for dark mode, pure white for light mode
     val playerBackgroundColor = if (isAppInDarkTheme) Color.Black else Color.White
 
-    // Volume control states
-    val audioManager = remember {
-        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
-    
-    var maxVolume by remember {
-        mutableStateOf(audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC))
-    }
-    
-    var currentVolume by remember {
-        mutableStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC))
-    }
-    
-    var showVolumeIndicator by remember { mutableStateOf(false) }
-    var lastVolumeChangeTime by remember { mutableStateOf(0L) }
-    
-    // Listen for System Volume Changes
-    SystemVolumeObserver(context = context) { newVol, newMax ->
-        maxVolume = newMax
-        if (currentVolume != newVol) {
-            currentVolume = newVol
-            lastVolumeChangeTime = System.currentTimeMillis()
-        }
-    }
-
-    // Listen for Volume Key Events (Manual Trigger)
-    LaunchedEffect(volumeKeyEvents) {
-        volumeKeyEvents?.collect {
-            // Update current volume (it might have changed, or not if at boundaries)
-            currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            // Show indicator
-            lastVolumeChangeTime = System.currentTimeMillis()
-        }
-    }
-
-    // Auto-hide volume indicator
-    LaunchedEffect(lastVolumeChangeTime) {
-        if (lastVolumeChangeTime > 0) {
-            showVolumeIndicator = true
-            kotlinx.coroutines.delay(2000) // 2 seconds delay
-            showVolumeIndicator = false
-        }
-    }
+    // Volume state is fully managed inside VolumeControl — no top-level reads here
 
     if (isInPip) {
         // Simplified PiP UI — show video if in video mode, else album art
@@ -512,14 +471,16 @@ fun PlayerScreen(
         ) {
             // Main Player Content - Use BoxWithConstraints for dynamic adaptive layout
             // This responds to floating windows and resizing on tablets
+            // BoxWithConstraints outside AnimatedVisibility to avoid re-measuring
+            // constraints on every frame of the enter/exit animation
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize()
+            ) {
             AnimatedVisibility(
                 visible = !showQueue,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                BoxWithConstraints(
-                    modifier = Modifier.fillMaxSize()
-                ) {
                     // Use width-based breakpoint (500dp threshold)
                     // This works for: landscape, tablets, floating windows
                     val useWideLayout = maxWidth > 500.dp
@@ -597,7 +558,7 @@ fun PlayerScreen(
                                         color = dominantColors.onBackground.copy(alpha = 0.7f),
                                         letterSpacing = 2.sp
                                     )
-                                    IconButton(onClick = { showQueue = true }) {
+                                    IconButton(onClick = { activeOverlay = PlayerOverlay.Queue }) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                                             contentDescription = "Queue",
@@ -626,8 +587,7 @@ fun PlayerScreen(
                                     onFavoriteClick = onToggleLike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { 
-                                        selectedSongForMenu = song
-                                        showActionsSheet = true 
+                                        activeOverlay = PlayerOverlay.Actions(song)
                                     },
                                     onArtistClick = onArtistClick,
                                     onAlbumClick = onAlbumClick,
@@ -681,11 +641,10 @@ fun PlayerScreen(
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                // Bottom Actions
                                 BottomActions(
-                                    onLyricsClick = { showLyrics = true },
-                                    onCastClick = { showOutputDeviceSheet = true },
-                                    onQueueClick = { showQueue = true },
+                                    onLyricsClick = { activeOverlay = PlayerOverlay.Lyrics },
+                                    onCastClick = { activeOverlay = PlayerOverlay.OutputDevice },
+                                    onQueueClick = { activeOverlay = PlayerOverlay.Queue },
                                     dominantColors = dominantColors,
                                     isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                                     isVideoMode = playerState.isVideoMode,
@@ -713,7 +672,7 @@ fun PlayerScreen(
                                 // Top Bar
                                 PlayerTopBar(
                                     onBack = onBack,
-                                    onShowQueue = { showQueue = true },
+                                    onShowQueue = { activeOverlay = PlayerOverlay.Queue },
                                     dominantColors = dominantColors,
                                     audioArEnabled = audioArEnabled,
                                     onRecenter = { playerViewModel.calibrateAudioAr() }
@@ -756,41 +715,34 @@ fun PlayerScreen(
                                             modifier = Modifier
                                                 .fillMaxSize()
                                                 .clip(RoundedCornerShape(12.dp))
-                                                .background(
-                                                    Brush.verticalGradient(
-                                                        colors = listOf(
-                                                            dominantColors.primary.copy(alpha = 0.6f),
-                                                            Color.Black.copy(alpha = 0.9f),
-                                                            dominantColors.primary.copy(alpha = 0.6f)
-                                                        )
-                                                    )
-                                                )
+                                                .background(Color.Black)
                                                 .clickable { playerViewModel.setFullScreen(true) },
                                             contentAlignment = Alignment.Center
                                         ) {
+                                            // Capture the PlayerView reference for proper cleanup
+                                            var embeddedPlayerView by remember { mutableStateOf<PlayerView?>(null) }
+
                                             AndroidView(
                                                 factory = { context ->
                                                     PlayerView(context).apply {
                                                         this.player = player
                                                         useController = false
                                                         setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                                                        setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                                        embeddedPlayerView = this
                                                     }
                                                 },
                                                 update = { playerView ->
                                                     playerView.player = player
+                                                    embeddedPlayerView = playerView
                                                 },
                                                 modifier = Modifier.fillMaxSize()
                                             )
 
-                                            // Detach player when this PlayerView leaves composition
-                                            // to prevent surface leaks and flickering with fullscreen
+                                            // Release the Player reference so FullScreenVideoPlayer
+                                            // can take exclusive ownership of the video surface.
                                             DisposableEffect(Unit) {
                                                 onDispose {
-                                                    // Critical: release the player reference to avoid
-                                                    // dual-surface rendering when FullScreenVideoPlayer
-                                                    // also binds to the same Player instance
+                                                    embeddedPlayerView?.player = null
                                                 }
                                             }
 
@@ -837,8 +789,7 @@ fun PlayerScreen(
                                     onFavoriteClick = onToggleLike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { 
-                                        selectedSongForMenu = song
-                                        showActionsSheet = true 
+                                        activeOverlay = PlayerOverlay.Actions(song)
                                     },
                                     onArtistClick = onArtistClick,
                                     onAlbumClick = onAlbumClick,
@@ -903,9 +854,9 @@ fun PlayerScreen(
 
                                 // Bottom Actions
                                 BottomActions(
-                                    onLyricsClick = { showLyrics = true },
-                                    onCastClick = { showOutputDeviceSheet = true },
-                                    onQueueClick = { showQueue = true },
+                                    onLyricsClick = { activeOverlay = PlayerOverlay.Lyrics },
+                                    onCastClick = { activeOverlay = PlayerOverlay.OutputDevice },
+                                    onQueueClick = { activeOverlay = PlayerOverlay.Queue },
                                     dominantColors = dominantColors,
                                     isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                                     isVideoMode = playerState.isVideoMode,
@@ -936,7 +887,7 @@ fun PlayerScreen(
                     isFavorite = playerState.isLiked,
                     isRadioMode = isRadioMode,
                     isLoadingMore = isLoadingMoreSongs,
-                    onBack = { showQueue = false },
+                    onBack = { activeOverlay = PlayerOverlay.None },
                     onSongClick = { index -> onPlayFromQueue(index) },
                     onPlayPause = onPlayPause,
                     onToggleShuffle = onShuffleToggle,
@@ -944,8 +895,7 @@ fun PlayerScreen(
                     onToggleAutoplay = onToggleAutoplay,
                     onToggleLike = onToggleLike,
                     onMoreClick = { targetSong -> 
-                        selectedSongForMenu = targetSong
-                        showActionsSheet = true 
+                        activeOverlay = PlayerOverlay.Actions(targetSong)
                     },
                     onLoadMore = onLoadMoreRadioSongs,
                     onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
@@ -976,7 +926,7 @@ fun PlayerScreen(
                     isFetching = isFetchingLyrics,
                     currentTimeProvider = { playerState.currentPosition },
                     artworkUrl = song?.thumbnailUrl,
-                    onClose = { showLyrics = false },
+                    onClose = { activeOverlay = PlayerOverlay.None },
                     isDarkTheme = isAppInDarkTheme,
                     onSeekTo = onSeekTo,
                     songTitle = song?.title ?: "",
@@ -1006,7 +956,7 @@ fun PlayerScreen(
                 isVisible = showCommentsSheet,
                 comments = comments,
                 isLoading = isFetchingComments,
-                onDismiss = { showCommentsSheet = false },
+                onDismiss = { activeOverlay = PlayerOverlay.None },
                 accentColor = dominantColors.accent,
                 isLoggedIn = isLoggedIn,
                 isPostingComment = isPostingComment,
@@ -1016,22 +966,11 @@ fun PlayerScreen(
             )
         }
 
-        // Volume Indicator Overlay (Moved to end to appear on top)
+        // Volume Indicator Overlay — self-contained, no state leaks into PlayerScreen
         if (volumeSliderEnabled) {
-            VolumeIndicator(
-                isVisible = showVolumeIndicator,
-                currentVolume = currentVolume,
-                maxVolume = maxVolume,
+            VolumeControl(
                 dominantColors = dominantColors,
-                onVolumeChange = { newVolume ->
-                    audioManager.setStreamVolume(
-                        AudioManager.STREAM_MUSIC,
-                        newVolume,
-                        0
-                    )
-                    currentVolume = newVolume
-                    lastVolumeChangeTime = System.currentTimeMillis()
-                },
+                volumeKeyEvents = volumeKeyEvents,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 16.dp)
@@ -1045,8 +984,7 @@ fun PlayerScreen(
                 song = menuSong,
                 isVisible = showActionsSheet,
                 onDismiss = { 
-                    showActionsSheet = false
-                    selectedSongForMenu = null
+                    activeOverlay = PlayerOverlay.None
                 },
                 dominantColors = dominantColors,
                 isDownloaded = if (menuSong.id == song?.id) playerState.downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED else playerViewModel.isDownloaded(menuSong.id),
@@ -1079,33 +1017,29 @@ fun PlayerScreen(
                     Toast.makeText(context, "Added to queue", Toast.LENGTH_SHORT).show()
                 },
                 onViewInfo = {
-                    showActionsSheet = false
-                    showInfoSheet = true
+                    activeOverlay = PlayerOverlay.SongInfo
                 },
                 onAddToPlaylist = {
-                    showActionsSheet = false
+                    activeOverlay = PlayerOverlay.None
                     playlistViewModel.showAddToPlaylistSheet(menuSong)
                 },
                 onViewComments = {
-                    showActionsSheet = false
-                    showCommentsSheet = true
+                    activeOverlay = PlayerOverlay.Comments
                 },
                 onSleepTimer = {
-                    showActionsSheet = false
-                    showSleepTimerSheet = true
+                    activeOverlay = PlayerOverlay.SleepTimer
                 },
                 onStartRadio = {
                     playerViewModel.startRadio(menuSong)
                 },
                 onListenTogether = {
-                    showListenTogetherSheet = true
+                    activeOverlay = PlayerOverlay.ListenTogether
                 },
                 onPlaybackSpeed = {
-                    showPlaybackSpeedSheet = true
+                    activeOverlay = PlayerOverlay.PlaybackSpeed
                 },
                 onEqualizerClick = {
-                    showActionsSheet = false
-                    showEqualizerSheet = true
+                    activeOverlay = PlayerOverlay.Equalizer
                 },
                 currentSpeed = playerState.playbackSpeed,
                 onMoveUp = if (showQueue && playerState.queue.indexOf(menuSong) > 0) {
@@ -1119,8 +1053,7 @@ fun PlayerScreen(
                 } else null,
                 isFromQueue = showQueue,
                 onSetRingtone = {
-                    // Show trimmer directly without permission check
-                    showActionsSheet = false
+                    activeOverlay = PlayerOverlay.None
                     showRingtoneTrimmer = true
                 }
             )
@@ -1182,7 +1115,7 @@ fun PlayerScreen(
                 SongInfoSheet(
                     song = song,
                     isVisible = showInfoSheet,
-                    onDismiss = { showInfoSheet = false },
+                    onDismiss = { activeOverlay = PlayerOverlay.None },
                     onArtistClick = onArtistClick,
                     audioCodec = playerState.audioCodec,
                     audioBitrate = playerState.audioBitrate
@@ -1228,7 +1161,7 @@ fun PlayerScreen(
                 onSelectOption = { option, minutes -> 
                     onSetSleepTimer(option, minutes)
                 },
-                onDismiss = { showSleepTimerSheet = false },
+                onDismiss = { activeOverlay = PlayerOverlay.None },
                 accentColor = dominantColors.accent
             )
 
@@ -1237,7 +1170,7 @@ fun PlayerScreen(
                 isVisible = showOutputDeviceSheet,
                 devices = playerState.availableDevices,
                 onDeviceSelected = onSwitchDevice,
-                onDismiss = { showOutputDeviceSheet = false },
+                onDismiss = { activeOverlay = PlayerOverlay.None },
                 onRefreshDevices = onRefreshDevices,
                 accentColor = dominantColors.accent
             )
@@ -1247,7 +1180,7 @@ fun PlayerScreen(
                 isVisible = showPlaybackSpeedSheet,
                 currentSpeed = playerState.playbackSpeed,
                 currentPitch = playerState.pitch,
-                onDismiss = { showPlaybackSpeedSheet = false },
+                onDismiss = { activeOverlay = PlayerOverlay.None },
                 onApply = { speed, pitch ->
                     onSetPlaybackParameters(speed, pitch)
                 }
@@ -1261,7 +1194,7 @@ fun PlayerScreen(
             ) {
                 com.suvojeet.suvmusic.ui.components.EqualizerSheet(
                     isVisible = true,
-                    onDismiss = { showEqualizerSheet = false },
+                    onDismiss = { activeOverlay = PlayerOverlay.None },
                     dominantColor = dominantColors.accent,
                     onEnabledChange = { enabled -> playerViewModel.setEqEnabled(enabled) },
                     onBandChange = { band, gain -> playerViewModel.setEqBandGain(band, gain) },
@@ -1285,7 +1218,7 @@ fun PlayerScreen(
                 exit = slideOutVertically { it }
             ) {
                 ListenTogetherScreen(
-                    onDismiss = { showListenTogetherSheet = false },
+                    onDismiss = { activeOverlay = PlayerOverlay.None },
                     dominantColors = dominantColors
                 )
             }
@@ -1311,6 +1244,6 @@ fun PlayerScreen(
                 onDismiss = { playerViewModel.setFullScreen(false) }
             )
         }
-        }
     }
+}
 }
