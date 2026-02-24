@@ -7,69 +7,55 @@
   <h1>SuvMusic</h1>
   <h3>High-Fidelity Music Streaming for Android</h3>
 
-  <!-- Status Badges -->
-  <a href="https://github.com/suvojeet-sengupta/SuvMusic/graphs/commit-activity">
-    <img src="https://img.shields.io/badge/Maintained-Yes-success?style=for-the-badge" alt="Maintenance" />
-  </a>
-  <a href="https://kotlinlang.org">
-    <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" />
-  </a>
-  <a href="https://developer.android.com">
-    <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform" />
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="License" />
-  </a>
-  <a href="https://github.com/suvojeet-sengupta">
-    <img src="https://img.shields.io/badge/Made%20in-India-FF9933?style=for-the-badge&logo=india&logoColor=white" alt="Made in India" />
-  </a>
-
-  <br />
-  <br />
-
   <p align="center">
-    <strong>SuvMusic</strong> is a premium, open-source music player launched in January 2026. It bridges the gap between YouTube Music's vast catalog and high-fidelity audio. Experience ad-free streaming, real-time lyrics, and collaborative listening in a beautifully designed Material 3 interface.
+    <strong>SuvMusic</strong> is a premium, open-source music streaming application designed for high-resolution audio enthusiasts. Built with <strong>Jetpack Compose</strong> and a custom <strong>C++ Native Audio Engine</strong>, it provides an ad-free experience with advanced features bridging the gap between cloud streaming and professional local playback.
   </p>
 
-  <!-- CTA Buttons -->
-  <a href="https://github.com/suvojeet-sengupta/SuvMusic/releases/latest">
-    <img src="https://img.shields.io/github/v/release/suvojeet-sengupta/SuvMusic?style=for-the-badge&color=FA2D48&label=DOWNLOAD%20APK&logo=android" alt="Download APK" />
-  </a>
-  <a href="https://t.me/TechToli">
-    <img src="https://img.shields.io/badge/Join_Telegram-Community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram" />
-  </a>
+  <!-- Status Badges -->
+  <div align="center">
+    <a href="https://github.com/suvojeet-sengupta/SuvMusic/releases/latest">
+      <img src="https://img.shields.io/github/v/release/suvojeet-sengupta/SuvMusic?style=for-the-badge&color=FA2D48&label=DOWNLOAD%20APK&logo=android" alt="Download APK" />
+    </a>
+    <a href="https://t.me/TechToli">
+      <img src="https://img.shields.io/badge/Join_Telegram-Community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram" />
+    </a>
+  </div>
+
+  <br />
+
+  <div align="center">
+    <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License" />
+    <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
+    <img src="https://img.shields.io/badge/UI-Jetpack_Compose-4285F4?style=flat-square&logo=android&logoColor=white" alt="Compose" />
+    <img src="https://img.shields.io/badge/Engine-Native_C++-00599C?style=flat-square&logo=c%2B%2B&logoColor=white" alt="C++" />
+  </div>
 </div>
 
 ---
 
-## Key Features
+## Core Features
 
-> [!NOTE]
-> SuvMusic is designed to provide a premium, ad-free experience without compromising on audio quality or features.
+### Audio Engineering & Performance
+- **Native Audio Engine**: High-fidelity playback powered by a custom C++ JNI layer for low-latency digital signal processing.
+- **WSOLA Time-Stretching**: High-quality pitch and speed adjustments without digital artifacts or distortion.
+- **Parametric EQ & Spatial Audio**: 10-band ISO standard equalizer and real-time 3D sound positioning with ITD/ILD head shadowing models.
+- **High-Resolution Streaming**: Stream Opus audio up to 256kbps with dual-source resolution for consistent quality.
 
-### Core Capabilities
-
-| **High-Fidelity Audio** | **Listen Together** |
-|:---:|:---:|
-| <img src="https://img.shields.io/badge/Quality-Opus_256kbps-blue?style=flat-square" /> | <img src="https://img.shields.io/badge/Sync-Realtime-green?style=flat-square" /> |
-| Stream high-quality Opus audio up to **256kbps** with loudness normalization and dual-source resolution. | Host rooms to listen with friends in perfect sync, regardless of network conditions. |
-
-| **Synced Lyrics** | **Smart Downloads** |
-|:---:|:---:|
-| <img src="https://img.shields.io/badge/Providers-LRCLIB_%7C_Kugou-orange?style=flat-square" /> | <img src="https://img.shields.io/badge/Storage-Smart_Cache-purple?style=flat-square" /> |
-| Word-by-word synchronized lyrics from **LRCLIB**, **Better Lyrics**, **Simp Music**, and **Kugou**. | Batch download albums and playlists with background service support. |
+### UI & User Experience
+- **Material 3 Interface**: Dynamic theming engine that adjusts system-wide colors based on album artwork.
+- **Dynamic Island Mini-Player**: Interactive, floating overlay for background playback control.
+- **Gesture Controls**: Integrated video player gestures—Double tap to seek, Vertical swipes for volume/brightness, and Pinch-to-zoom for fill/fit modes.
+- **Synchronized Lyrics**: Real-time, word-by-word lyrics integration from LRCLIB, Kugou, and SimpMusic providers.
 
 ### Advanced Functionality
-
--   <img src="https://img.shields.io/badge/Feature-Spotify_Import-1DB954?style=flat-square&logo=spotify&logoColor=white" /> **Seamless Migration**: Import your existing playlists directly from Spotify.
--   <img src="https://img.shields.io/badge/Feature-Music_Haptics-FF4081?style=flat-square" /> **Tactile Feedback**: Vibrations synchronized to the beat of your music.
--   <img src="https://img.shields.io/badge/Feature-Dynamic_Island-black?style=flat-square" /> **Mini Player**: Floating, interactive overlay for system-wide control.
--   <img src="https://img.shields.io/badge/Feature-Pitch_&_Speed-teal?style=flat-square" /> **Native Audio Engine**: High-quality playback speed and pitch control powered by C++ WSOLA.
--   <img src="https://img.shields.io/badge/Design-Material_3-6200EE?style=flat-square&logo=material-design&logoColor=white" /> **Modern UI**: Fully dynamic theming with "Pure Black" OLED mode.
+- **Listen Together**: Real-time synchronized listening rooms with low-latency network protocols.
+- **Music Haptics**: Beat-synchronized tactile feedback for immersive listening.
+- **Spotify Migration**: Direct playlist importing from Spotify accounts.
+- **Smart Asset Management**: Batch download capabilities with background service support and persistent caching.
 
 ---
 
-## App Showcase
+## Showcase
 
 <div align="center">
   <table>
@@ -83,100 +69,54 @@
       <td><img src="screenshots/Screenshot_20260128-151120.png" width="100%" alt="Settings"></td>
       <td><img src="screenshots/Screenshot_20260128-151123.png" width="100%" alt="Search"></td>
     </tr>
-     <tr>
-      <td><img src="screenshots/Screenshot_20260128-151128.png" width="100%" alt="Downloads"></td>
-      <td><img src="screenshots/Screenshot_20260128-151158.png" width="100%" alt="Artist Page"></td>
-      <td><img src="screenshots/Screenshot_20260128-151202.png" width="100%" alt="Album Details"></td>
-    </tr>
   </table>
 </div>
 
 ---
 
-## Technical Stack
+## Technical Specifications
 
-The project leverages modern Android development standards.
+SuvMusic is engineered using modern Android development standards.
 
-<div align="center">
-
-| Architecture | UI / UX |
-| :--- | :--- |
-| ![Kotlin](https://img.shields.io/badge/Kotlin-2.3-7F52FF?style=flat-square&logo=kotlin&logoColor=white) <br> ![Hilt](https://img.shields.io/badge/DI-Hilt-orange?style=flat-square&logo=dagger&logoColor=white) <br> ![Coroutines](https://img.shields.io/badge/Async-Coroutines-red?style=flat-square) | ![Compose](https://img.shields.io/badge/UI-Jetpack_Compose-4285F4?style=flat-square&logo=android&logoColor=white) <br> ![Material3](https://img.shields.io/badge/Design-Material_3-purple?style=flat-square) <br> ![Coil](https://img.shields.io/badge/Image-Coil-blue?style=flat-square) |
-
-| Data & Network | Media |
-| :--- | :--- |
-| ![Room](https://img.shields.io/badge/DB-Room-green?style=flat-square) <br> ![Retrofit](https://img.shields.io/badge/Network-Retrofit-26A5E4?style=flat-square) <br> ![OkHttp](https://img.shields.io/badge/HTTP-OkHttp-square?style=flat-square) | ![Media3](https://img.shields.io/badge/Player-Media3_ExoPlayer-black?style=flat-square) <br> ![NewPipe](https://img.shields.io/badge/Extraction-NewPipe-red?style=flat-square) |
-
-### High-Performance Native Engine
-
-SuvMusic features a custom **C++ Audio Engine** (via JNI) to handle CPU-intensive DSP tasks with near-zero latency and high battery efficiency:
-
--   **WSOLA Time-Stretching**: Natural-sounding pitch and speed adjustments without robotic artifacts.
--   **Parametric EQ**: 10-band ISO-standard graphic equalizer with Butterworth filters.
--   **Spatial Audio**: Real-time 3D sound positioning with ITD/ILD head shadowing models.
--   **Dynamic Limiter**: Advanced look-ahead peak limiting and volume normalization.
-
-</div>
+- **Frontend**: 100% Jetpack Compose for a reactive and fluid user interface.
+- **Architecture**: Clean Architecture with MVVM, Hilt Dependency Injection, Room Database, and Kotlin Coroutines.
+- **Audio Core**: Custom C23 Native Engine via JNI for high-performance DSP (Limiter, Soft Clipping, EQ).
+- **Networking**: Retrofit & OkHttp with custom extractors for high-fidelity stream resolution.
 
 ---
 
 ## Installation
 
 1.  Navigate to the **[Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases)** page.
-2.  Download the latest APK file.
-3.  Install the APK on your Android device (ensure "Unknown Sources" is enabled).
-
-> [!TIP]
-> For the best experience, enable "High Fidelity" streaming in settings after installation.
+2.  Download the latest stable APK file.
+3.  Install the APK on an Android device (Android 8.0 or higher required).
 
 ---
 
-## Support & Contribution
+## Acknowledgments
 
-<div align="center">
+SuvMusic is an independent project featuring original UI/UX and a custom audio engine. The project utilizes specific core logic from the following open-source resources to maintain compatibility:
 
-<a href="https://github.com/suvojeet-sengupta/SuvMusic/issues">
-  <img src="https://img.shields.io/badge/GitHub-Report_Issue-black?style=for-the-badge&logo=github&logoColor=white" alt="Report Issue" />
-</a>
-&nbsp;
-<a href="https://buymeacoffee.com/suvojeet_sengupta">
-  <img src="https://img.shields.io/badge/Support-Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee" />
-</a>
-
-</div>
-
----
-
-## Acknowledgments & Credits
-
-While SuvMusic features a completely original UI/UX and custom native audio engine, it leverages core logic from the following open-source projects:
-
--   **[Metrolist](https://github.com/MetrolistGroup/Metrolist)**: Core logic for "Listen Together" protocol.
--   **[NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)**: High-performance metadata extraction.
--   **[SimpMusic](https://github.com/SimpMusic/SimpMusic)**: Lyrics provider implementation logic.
+- **[Metrolist](https://github.com/MetrolistGroup/Metrolist)**: Core logic for the 'Listen Together' protocol.
+- **[NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)**: High-performance metadata extraction.
+- **[SimpMusic](https://github.com/SimpMusic/SimpMusic)**: Lyrics provider implementation logic.
 
 ---
 
 ## Developer
 
 **Suvojeet Sengupta**
-<br />
-*Senior Android Engineer*
+Senior Android Engineer
 
-<a href="https://github.com/suvojeet-sengupta">
-  <img src="https://img.shields.io/badge/GitHub-@suvojeet--sengupta-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" />
-</a>
-<a href="https://www.linkedin.com/in/suvojeet-sengupta/">
-  <img src="https://img.shields.io/badge/LinkedIn-@suvojeet--sengupta-0077B5?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn" />
-</a>
+[![GitHub](https://img.shields.io/badge/GitHub-@suvojeet--sengupta-181717?style=for-the-badge&logo=github)](https://github.com/suvojeet-sengupta)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-@suvojeet--sengupta-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/suvojeet-sengupta/)
+[![Buy Me A Coffee](https://img.shields.io/badge/Support-Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/suvojeet_sengupta)
 
 ---
 
 ## License
 
 Copyright © 2026 Suvojeet Sengupta.
-<br />
-This project is licensed under the **[GNU General Public License v3.0](LICENSE)**.
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
 
-> [!IMPORTANT]
-> **Disclaimer:** This application is strictly for educational and research purposes. It interacts with third-party services (YouTube Music, JioSaavn). The developer does not endorse piracy. Please respect intellectual property rights.
+**Disclaimer**: This application is intended for educational and research purposes. It interacts with third-party services. Please respect intellectual property rights and applicable terms of service.
