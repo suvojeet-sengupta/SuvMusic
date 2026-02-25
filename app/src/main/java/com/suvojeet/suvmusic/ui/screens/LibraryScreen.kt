@@ -49,6 +49,10 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
+import com.suvojeet.suvmusic.ui.screens.SuvCodeDisplayDialog
+import com.suvojeet.suvmusic.utils.SuvCodeGenerator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -104,6 +108,7 @@ fun LibraryScreen(
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
     onDownloadsClick: () -> Unit = {},
+    onScanSuvCodeClick: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -113,6 +118,12 @@ fun LibraryScreen(
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var isCreatingPlaylist by remember { mutableStateOf(false) }
     var showImportSpotifyDialog by remember { mutableStateOf(false) } // Keep logic but might hide UI entry for now
+    
+    // SuvCode Dialog State
+    var showSuvCodeDialog by remember { mutableStateOf(false) }
+    var suvCodeContent by remember { mutableStateOf("") }
+    var suvCodeTitle by remember { mutableStateOf("") }
+
     
     // Playlist Menu State
     var showPlaylistMenu by remember { mutableStateOf(false) }
@@ -320,6 +331,16 @@ fun LibraryScreen(
         )
     }
 
+    // SuvCode Dialog
+    if (showSuvCodeDialog) {
+        SuvCodeDisplayDialog(
+            isVisible = showSuvCodeDialog,
+            onDismiss = { showSuvCodeDialog = false },
+            title = suvCodeTitle,
+            urlContent = suvCodeContent
+        )
+    }
+
     // Playlist Menu Bottom Sheet
     if (showPlaylistMenu && selectedPlaylist != null) {
         val playlist = selectedPlaylist!!
@@ -331,7 +352,7 @@ fun LibraryScreen(
             thumbnailUrl = playlist.thumbnailUrl,
             isUserPlaylist = playlist.id.startsWith("PL") || playlist.id.startsWith("VL"),
             onShuffle = { viewModel.shufflePlay(playlist.id) },
-            onStartRadio = { viewModel.shufflePlay(playlist.id) },
+            onStartRadio = { viewModel.shufflePlay(playlist.id) }, // You might want a real radio here
             onPlayNext = { viewModel.playNext(playlist.id) },
             onAddToQueue = { viewModel.addToQueue(playlist.id) },
             onAddToPlaylist = { },
@@ -344,6 +365,11 @@ fun LibraryScreen(
                 }
                 val shareIntent = Intent.createChooser(sendIntent, null)
                 context.startActivity(shareIntent)
+            },
+            onShowSuvCode = {
+                suvCodeTitle = playlist.name
+                suvCodeContent = SuvCodeGenerator.createPlaylistUrl(playlist.id)
+                showSuvCodeDialog = true
             },
             onRename = { },
             onDelete = { viewModel.deletePlaylist(playlist.id) }
@@ -391,6 +417,33 @@ fun LibraryScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Text("Create playlist", style = MaterialTheme.typography.titleMedium)
+                }
+
+                // Scan SuvMusic Code Item
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showAddMenu = false
+                            onScanSuvCodeClick()
+                        }
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                         Icon(Icons.Default.QrCodeScanner, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text("Scan SuvMusic Code", style = MaterialTheme.typography.titleMedium)
+                        Text("Scan a code to add an item", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
 
                 // Import Spotify Item
