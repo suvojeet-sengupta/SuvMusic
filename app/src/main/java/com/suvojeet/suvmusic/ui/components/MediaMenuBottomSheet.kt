@@ -64,6 +64,7 @@ fun MediaMenuBottomSheet(
     onAddToPlaylist: () -> Unit,
     onDownload: () -> Unit,
     onShare: () -> Unit,
+    onShowSuvCode: (() -> Unit)? = null,
     onRename: () -> Unit = {},
     onDelete: () -> Unit = {},
     showShare: Boolean = true
@@ -195,6 +196,15 @@ fun MediaMenuBottomSheet(
                     subtitle = "Make available for offline playback",
                     onClick = { onDownload(); onDismiss() }
                 )
+                
+                if (onShowSuvCode != null) {
+                    MenuActionItem(
+                        icon = Icons.Default.QrCode,
+                        title = "Show SuvMusic Code",
+                        subtitle = "Scan to share instantly",
+                        onClick = { onShowSuvCode(); onDismiss() }
+                    )
+                }
                 
                 if (isUserPlaylist) {
                     MenuActionItem(

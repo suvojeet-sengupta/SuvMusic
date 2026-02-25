@@ -31,6 +31,7 @@ sealed class Destination(val route: String) {
     data object Credits : Destination("credits")
     data object Updater : Destination("updater")
     data object ListenTogether : Destination("listen_together")
+    data object SuvCodeScanner : Destination("suv_code_scanner")
 
     data class Playlist(
         val playlistId: String,
