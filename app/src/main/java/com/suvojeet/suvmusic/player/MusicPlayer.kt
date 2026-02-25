@@ -769,15 +769,17 @@ class MusicPlayer @Inject constructor(
                 .setUri(finalUri)
                 .setMediaId(song.id)
                 .setCustomCacheKey(cacheKey) // CRITICAL: Stable cache key
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(song.title)
-                        .setArtist(song.artist)
-                        .setAlbumTitle(song.album)
-                        .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
-                        .build()
-                )
-            
+                                    .setMediaMetadata(
+                                        MediaMetadata.Builder()
+                                            .setTitle(song.title)
+                                            .setArtist(song.artist)
+                                            .setAlbumTitle(song.album)
+                                            .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                                            .setIsPlayable(true)
+                                            .setIsBrowsable(false)
+                                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                            .build()
+                                    )            
             // Pass audio URL for dual-stream merging (video-only + audio-only)
             if (!audioStreamUrl.isNullOrEmpty()) {
                 mediaItemBuilder.setRequestMetadata(
@@ -1082,6 +1084,9 @@ class MusicPlayer @Inject constructor(
                             .setArtist(song.artist)
                             .setAlbumTitle(song.album)
                             .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                            .setIsPlayable(true)
+                            .setIsBrowsable(false)
+                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                             .build()
                     )
                     .build()
@@ -1205,15 +1210,17 @@ class MusicPlayer @Inject constructor(
             .setUri(uri)
             .setMediaId(song.id)
             .setCustomCacheKey(cacheKey)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(song.title)
-                    .setArtist(song.artist)
-                    .setAlbumTitle(song.album)
-                    .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
-                    .build()
-            )
-        
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(song.title)
+                                        .setArtist(song.artist)
+                                        .setAlbumTitle(song.album)
+                                        .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                                        .setIsPlayable(true)
+                                        .setIsBrowsable(false)
+                                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                        .build()
+                                )        
         // Pass audio URL for dual-stream merging (video-only + audio-only)
         if (!audioStreamUrl.isNullOrEmpty()) {
             builder.setRequestMetadata(
@@ -1708,6 +1715,9 @@ class MusicPlayer @Inject constructor(
                             .setArtist(song.artist)
                             .setAlbumTitle(song.album)
                             .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                            .setIsPlayable(true)
+                            .setIsBrowsable(false)
+                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                             .build()
                     )
                 
