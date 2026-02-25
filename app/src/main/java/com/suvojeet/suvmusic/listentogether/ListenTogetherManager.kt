@@ -675,6 +675,9 @@ class ListenTogetherManager @Inject constructor(
             .setArtist(song.artist)
             .setAlbumTitle(song.album)
             .setArtworkUri(if (song.thumbnailUrl != null) Uri.parse(song.thumbnailUrl) else null)
+            .setIsPlayable(true)
+            .setIsBrowsable(false)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
             .build()
             
         return MediaItem.Builder()
@@ -693,6 +696,9 @@ class ListenTogetherManager @Inject constructor(
             .setArtist(track.artist)
             .setAlbumTitle(track.album)
             .setArtworkUri(if (track.thumbnail != null) Uri.parse(track.thumbnail) else null)
+            .setIsPlayable(true)
+            .setIsBrowsable(false)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
             .build()
             
         return MediaItem.Builder()
