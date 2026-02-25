@@ -416,9 +416,27 @@ class MusicPlayerService : MediaLibraryService() {
                     .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
                     .build()
                 
+                // Fix for Android Auto: Grant all player commands to ensure controls are visible.
+                // Media3's default onConnect might be too restrictive for external controllers.
+                val playerCommands = connectionResult.availablePlayerCommands.buildUpon()
+                    .add(Player.COMMAND_PLAY_PAUSE)
+                    .add(Player.COMMAND_STOP)
+                    .add(Player.COMMAND_SEEK_TO_NEXT)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+                    .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                    .add(Player.COMMAND_SEEK_TO_DEFAULT_POSITION)
+                    .add(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+                    .add(Player.COMMAND_SET_REPEAT_MODE)
+                    .add(Player.COMMAND_SET_SHUFFLE_MODE)
+                    .add(Player.COMMAND_GET_TIMELINE)
+                    .add(Player.COMMAND_GET_CURRENT_MEDIA_ITEM)
+                    .add(Player.COMMAND_GET_METADATA)
+                    .build()
+                
                 return MediaSession.ConnectionResult.accept(
                     sessionCommands, 
-                    connectionResult.availablePlayerCommands
+                    playerCommands
                 )
             }
 
@@ -478,7 +496,14 @@ class MusicPlayerService : MediaLibraryService() {
             override fun onGetLibraryRoot(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, params: LibraryParams?): com.google.common.util.concurrent.ListenableFuture<LibraryResult<MediaItem>> {
                 val rootItem = MediaItem.Builder()
                     .setMediaId(ROOT_ID)
-                    .setMediaMetadata(MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).setTitle("SuvMusic").build())
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setIsBrowsable(true)
+                            .setIsPlayable(false)
+                            .setTitle("SuvMusic")
+                            .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                            .build()
+                    )
                     .build()
                 return com.google.common.util.concurrent.Futures.immediateFuture(LibraryResult.ofItem(rootItem, params))
             }
@@ -772,7 +797,14 @@ class MusicPlayerService : MediaLibraryService() {
     private fun createBrowsableMediaItem(mediaId: String, title: String): MediaItem {
         return MediaItem.Builder()
             .setMediaId(mediaId)
-            .setMediaMetadata(MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).setTitle(title).build())
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setIsBrowsable(true)
+                    .setIsPlayable(false)
+                    .setTitle(title)
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                    .build()
+            )
             .build()
     }
 
@@ -788,6 +820,7 @@ class MusicPlayerService : MediaLibraryService() {
             .setArtworkUri(artworkUri)
             .setIsBrowsable(false)
             .setIsPlayable(true)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
             .build()
         return MediaItem.Builder().setMediaId(song.id).setUri(contentUri).setMediaMetadata(metadata).build()
     }
