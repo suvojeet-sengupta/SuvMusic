@@ -29,6 +29,10 @@
     <!-- Vibration permission for Music Haptics -->
     <uses-permission android:name="android.permission.VIBRATE" />
     
+    <!-- Camera for SuvMusic Code scanning -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    
     <!-- TV features -->
 
     <!-- Package visibility for Android 11+ -->
@@ -66,6 +70,10 @@
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc"/>
+
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode" />
         
         <receiver
             android:name=".glance.SuvMusicWidgetReceiver"

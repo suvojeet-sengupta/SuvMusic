@@ -30,6 +30,7 @@ protobuf = "4.33.5"
 mlkit-barcode = "17.3.0"
 zxing = "3.5.4"
 camerax = "1.5.3"
+jaudiotagger = "3.0.1"
 
 
 [libraries]
@@ -135,6 +136,9 @@ androidx-camera-core = { group = "androidx.camera", name = "camera-core", versio
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+
+# Tagging
+jaudiotagger = { group = "net.jthink", name = "jaudiotagger", version.ref = "jaudiotagger" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

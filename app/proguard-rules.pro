@@ -33,6 +33,7 @@
 
 # Keep data models
 -keep class com.suvojeet.suvmusic.data.model.** { *; }
+-keep class com.suvojeet.suvmusic.core.model.** { *; }
 
 # Keep Hilt
 -keep class dagger.hilt.** { *; }
@@ -70,9 +71,15 @@
 -dontwarn io.ktor.**
 -dontwarn kotlinx.coroutines.**
 
-# SLF4J (used by Ktor, but we don't need it on Android)
+# Slf4j (used by Ktor, but we don't need it on Android)
 -dontwarn org.slf4j.**
 -dontwarn org.apache.log4j.**
+
+# JAudioTagger
+-keep class org.jaudiotagger.** { *; }
+-dontwarn org.jaudiotagger.**
+-dontwarn javax.imageio.**
+-dontwarn java.awt.**
 
 # Kotlinx Serialization
 -keepattributes *Annotation*, InnerClasses
