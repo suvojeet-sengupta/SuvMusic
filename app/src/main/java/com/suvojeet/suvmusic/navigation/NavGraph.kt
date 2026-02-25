@@ -37,6 +37,7 @@ import com.suvojeet.suvmusic.ui.screens.SupportScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
 import com.suvojeet.suvmusic.ui.screens.MiscScreen
 import com.suvojeet.suvmusic.ui.screens.LyricsProvidersScreen
+import com.suvojeet.suvmusic.ui.screens.SuvCodeScannerScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.media3.common.Player
@@ -327,6 +328,9 @@ fun NavGraph(
                 },
                 onDownloadsClick = {
                     navController.navigate(Destination.Downloads.route)
+                },
+                onScanSuvCodeClick = {
+                    navController.navigate(Destination.SuvCodeScanner.route)
                 }
             )
         }
@@ -343,6 +347,25 @@ fun NavGraph(
                     val shuffledSongs = songs.shuffled()
                     onPlaySong(shuffledSongs, 0)
                 }
+            )
+        }
+        
+        composable(Destination.SuvCodeScanner.route) {
+            SuvCodeScannerScreen(
+                onScanSuccess = { scannedUrl ->
+                    // Expected URL format: suvmusic://playlist/{id} or suvmusic://album/{id}
+                    if (scannedUrl.startsWith("suvmusic://playlist/")) {
+                        val id = scannedUrl.removePrefix("suvmusic://playlist/")
+                        // Pop scanner and navigate to playlist
+                        navController.popBackStack()
+                        navController.navigate(Destination.Playlist(playlistId = id).route)
+                    } else if (scannedUrl.startsWith("suvmusic://album/")) {
+                        val id = scannedUrl.removePrefix("suvmusic://album/")
+                        navController.popBackStack()
+                        navController.navigate(Destination.Album(albumId = id).route)
+                    }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
         
