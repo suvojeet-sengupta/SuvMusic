@@ -13,6 +13,7 @@ import com.google.gson.reflect.TypeToken
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.service.DownloadService
+import com.suvojeet.suvmusic.util.TaggingUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -610,6 +611,38 @@ class DownloadRepository @Inject constructor(
     }
 
     /**
+     * Downloads thumbnail bytes for tagging.
+     */
+    private suspend fun downloadThumbnailBytes(url: String): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url(url).build()
+            downloadClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    return@withContext response.body.bytes()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download thumbnail bytes", e)
+        }
+        null
+    }
+
+    /**
+     * Tags a file with metadata and optional album art.
+     */
+    private suspend fun tagAudioFile(file: File, song: Song) {
+        val thumbUrl = song.thumbnailUrl
+        val artBytes = if (!thumbUrl.isNullOrEmpty() && thumbUrl.startsWith("http")) {
+            val highResUrl = getHighResThumbnailUrl(thumbUrl, song.id)
+            downloadThumbnailBytes(highResUrl)
+        } else null
+        
+        withContext(Dispatchers.IO) {
+            TaggingUtils.embedMetadata(file, song, artBytes)
+        }
+    }
+
+    /**
      * Sanitize filename to remove invalid characters
      */
     private fun sanitizeFileName(name: String): String {
@@ -815,8 +848,8 @@ class DownloadRepository @Inject constructor(
     }
 
     // New method to download using Shared Cache (DataSource)
-    private fun downloadUsingSharedCache(song: Song, streamUrl: String): Boolean {
-        return try {
+    private suspend fun downloadUsingSharedCache(song: Song, streamUrl: String): Boolean = withContext(Dispatchers.IO) {
+        try {
             val uri = android.net.Uri.parse(streamUrl)
             val dataSpec = androidx.media3.datasource.DataSpec.Builder()
                 .setUri(uri)
@@ -827,52 +860,59 @@ class DownloadRepository @Inject constructor(
             // Open the source (this reads from cache if available, or network if not)
             val length = dataSource.open(dataSpec)
             val contentLength = if (length != androidx.media3.common.C.LENGTH_UNSET.toLong()) length else -1L
-             Log.d(TAG, "Content lengthfrom DataSource: $contentLength")
+            Log.d(TAG, "Content length from DataSource: $contentLength")
             
-             // Initialize progress
-            _downloadProgress.value = _downloadProgress.value + (song.id to 0f)
+            // Initialize progress
+            _downloadProgress.update { it + (song.id to 0f) }
             
-            // We need to read from dataSource and write to our target file
-            // We can wrap the DataSource in an InputStream to reuse existing save logic
+            // Step 1: Download to a temporary file in cacheDir first so we can tag it
+            val tempFile = File(context.cacheDir, "${song.id}_download.m4a")
             val inputStream = androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec)
             
-            val downloadedUri = saveFileWithProgress(song.id, song.artist, song.title, inputStream, contentLength, song.customFolderPath) { progress ->
-                 _downloadProgress.value = _downloadProgress.value + (song.id to progress)
+            FileOutputStream(tempFile).use { outputStream ->
+                copyWithProgress(inputStream, outputStream, contentLength) { progress ->
+                    _downloadProgress.update { it + (song.id to progress) }
+                }
+            }
+            dataSource.close()
+            
+            // Step 2: Tag the temp file with metadata and album art
+            tagAudioFile(tempFile, song)
+            
+            // Step 3: Move/Save tagged file to public storage
+            val downloadedUri = tempFile.inputStream().use { input ->
+                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath)
             }
             
-            dataSource.close()
+            // Cleanup temp file
+            if (tempFile.exists()) tempFile.delete()
             
             if (downloadedUri == null) {
                 _downloadingIds.update { it - song.id }
                 _downloadProgress.update { it - song.id }
-                return false
+                return@withContext false
             }
             
-             Log.d(TAG, "Download complete: saved to $downloadedUri")
+            Log.d(TAG, "Download complete: saved to $downloadedUri")
 
-            // Download high-quality thumbnail if available (same as before)
+            // Download thumbnail for app UI cache (thumbnails dir)
             val currentThumbnailUrl = song.thumbnailUrl
             var localThumbnailUrl = currentThumbnailUrl
             if (!currentThumbnailUrl.isNullOrEmpty() && currentThumbnailUrl.startsWith("http")) {
                 try {
                     val highResThumbnailUrl = getHighResThumbnailUrl(currentThumbnailUrl, song.id)
-                    val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
-                    val thumbResponse = downloadClient.newCall(thumbRequest).execute()
-                    if (thumbResponse.isSuccessful) {
+                    val thumbBytes = downloadThumbnailBytes(highResUrl = highResThumbnailUrl)
+                    if (thumbBytes != null) {
                         val thumbnailsDir = File(context.filesDir, "thumbnails")
-                         if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
+                        if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
                         val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        val thumbBytes = thumbResponse.body.bytes()
-                        if (thumbBytes != null) {
-                             FileOutputStream(thumbFile).use { output ->
-                                output.write(thumbBytes)
-                            }
-                            localThumbnailUrl = thumbFile.toUri().toString()
+                        FileOutputStream(thumbFile).use { output ->
+                            output.write(thumbBytes)
                         }
+                        localThumbnailUrl = thumbFile.toUri().toString()
                     }
-                    thumbResponse.close()
                 } catch (e: Exception) {
-                     Log.e(TAG, "Failed to download thumbnail", e)
+                    Log.e(TAG, "Failed to download thumbnail to app cache", e)
                 }
             }
 
@@ -885,18 +925,18 @@ class DownloadRepository @Inject constructor(
                 originalSource = song.source 
             )
 
-            _downloadedSongs.value = _downloadedSongs.value + downloadedSong
+            _downloadedSongs.update { it + downloadedSong }
             saveDownloads()
             
-            _downloadingIds.value = _downloadingIds.value - song.id
+            _downloadingIds.update { it - song.id }
             Log.d(TAG, "Song ${song.title} download successful!")
             true
             
         } catch (e: Exception) {
-             Log.e(TAG, "Error in downloadUsingSharedCache", e)
-             _downloadingIds.value = _downloadingIds.value - song.id
-             _downloadProgress.value = _downloadProgress.value - song.id
-             false
+            Log.e(TAG, "Error in downloadUsingSharedCache", e)
+            _downloadingIds.update { it - song.id }
+            _downloadProgress.update { it - song.id }
+            false
         }
     }
 
@@ -1005,39 +1045,40 @@ class DownloadRepository @Inject constructor(
                 }
             }
             
+            // Tag the temp file before moving
+            tagAudioFile(tempFile, song)
+            
             // Move temp file to final location
-            val finalUri = saveFileToPublicDownloads(song.id, song.artist, song.title, tempFile.inputStream(), song.customFolderPath)
+            val finalUri = tempFile.inputStream().use { input ->
+                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath)
+            }
             tempFile.delete()
             
             if (finalUri == null) {
                 Log.e(TAG, "Failed to save final file")
-                _downloadingIds.value = _downloadingIds.value - song.id
-                _downloadProgress.value = _downloadProgress.value - song.id
+                _downloadingIds.update { it - song.id }
+                _downloadProgress.update { it - song.id }
                 return@withContext false
             }
             
             Log.d(TAG, "Progressive download complete: $finalUri")
             
-            // Download thumbnail
+            // Download thumbnail for app UI cache
             val currentThumbnailUrl = song.thumbnailUrl
             var localThumbnailUrl = currentThumbnailUrl
             if (!currentThumbnailUrl.isNullOrEmpty() && currentThumbnailUrl.startsWith("http")) {
                 try {
                     val highResThumbnailUrl = getHighResThumbnailUrl(currentThumbnailUrl, song.id)
-                    val thumbRequest = Request.Builder().url(highResThumbnailUrl).build()
-                    val thumbResponse = downloadClient.newCall(thumbRequest).execute()
-                    if (thumbResponse.isSuccessful) {
+                    val thumbBytes = downloadThumbnailBytes(highResUrl = highResThumbnailUrl)
+                    if (thumbBytes != null) {
                         val thumbnailsDir = File(context.filesDir, "thumbnails")
                         if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
                         val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        thumbResponse.body.bytes().let { bytes ->
-                            FileOutputStream(thumbFile).use { it.write(bytes) }
-                            localThumbnailUrl = thumbFile.toUri().toString()
-                        }
+                        FileOutputStream(thumbFile).use { it.write(thumbBytes) }
+                        localThumbnailUrl = thumbFile.toUri().toString()
                     }
-                    thumbResponse.close()
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to download thumbnail", e)
+                    Log.e(TAG, "Failed to download thumbnail to app cache", e)
                 }
             }
             
