@@ -1782,14 +1782,17 @@ class YouTubeRepository @Inject constructor(
      * Fetch more comments for the current video.
      */
     suspend fun getMoreComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
-        if (videoId != currentVideoIdForComments || currentCommentsExtractor == null || currentCommentsPage == null || !currentCommentsPage!!.hasNextPage()) {
+        val page = currentCommentsPage
+        val extractor = currentCommentsExtractor
+        if (videoId != currentVideoIdForComments || extractor == null || page == null || !page.hasNextPage()) {
             return@withContext emptyList()
         }
 
         try {
-            currentCommentsPage = currentCommentsExtractor!!.getPage(currentCommentsPage!!.nextPage)
+            val nextPage = extractor.getPage(page.nextPage)
+            currentCommentsPage = nextPage
             
-            currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
+            nextPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
                 Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",

@@ -93,6 +93,11 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Tab
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+
 @Composable
 fun DownloadsScreen(
     onBackClick: () -> Unit,
@@ -107,6 +112,32 @@ fun DownloadsScreen(
     val downloadItems by viewModel.downloadItems.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedSongIds by viewModel.selectedSongIds.collectAsState()
+    val pendingIntent by viewModel.pendingIntent.collectAsState()
+    
+    // Launcher for Scoped Storage permission requests (Android 10+)
+    val intentSenderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            // Permission granted, refresh or retry delete
+            viewModel.refreshDownloads()
+        }
+        viewModel.consumePendingIntent()
+    }
+
+    LaunchedEffect(pendingIntent) {
+        pendingIntent?.let { intent ->
+            try {
+                intentSenderLauncher.launch(
+                    IntentSenderRequest.Builder(intent).build()
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                viewModel.consumePendingIntent()
+            }
+        }
+    }
+    
     var showMenu by remember { mutableStateOf(false) }
     // 0 = Songs, 1 = Videos
     var selectedTab by remember { mutableStateOf(0) }
