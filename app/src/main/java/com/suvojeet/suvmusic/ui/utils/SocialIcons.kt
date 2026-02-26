@@ -112,4 +112,81 @@ object SocialIcons {
             lineTo(20.665f, 3.717f)
             close()
         }.build()
+
+    val BuyMeACoffee: ImageVector
+        get() = ImageVector.Builder(
+            name = "BuyMeACoffee",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).path(
+            fill = SolidColor(Color.White)
+        ) {
+            moveTo(20.216f, 4.771f)
+            curveTo(20.088f, 4.417f, 19.782f, 4.144f, 19.394f, 4.041f)
+            curveTo(18.239f, 3.744f, 16.634f, 3.578f, 15.011f, 3.518f)
+            curveTo(15.006f, 3.518f, 15.001f, 3.518f, 14.996f, 3.518f)
+            horizontalLineTo(3.262f)
+            curveTo(2.456f, 3.518f, 1.802f, 4.172f, 1.802f, 4.978f)
+            verticalLineTo(13.623f)
+            curveTo(1.802f, 15.894f, 3.577f, 17.771f, 5.828f, 17.892f)
+            curveTo(6.346f, 17.919f, 6.864f, 17.933f, 7.382f, 17.933f)
+            curveTo(9.08f, 17.933f, 10.741f, 17.768f, 12.308f, 17.476f)
+            curveTo(14.283f, 17.108f, 15.808f, 15.392f, 15.808f, 13.382f)
+            verticalLineTo(6.126f)
+            curveTo(17.39f, 6.183f, 18.913f, 6.355f, 20.046f, 6.632f)
+            curveTo(21.02f, 6.87f, 21.611f, 7.747f, 21.611f, 8.752f)
+            curveTo(21.611f, 9.757f, 21.02f, 10.634f, 20.046f, 10.872f)
+            curveTo(19.851f, 10.92f, 19.673f, 10.963f, 19.51f, 11.001f)
+            verticalLineTo(12.784f)
+            curveTo(19.697f, 12.751f, 19.897f, 12.71f, 20.108f, 12.659f)
+            curveTo(21.848f, 12.234f, 23.081f, 10.672f, 23.081f, 8.752f)
+            curveTo(23.081f, 6.832f, 21.848f, 5.27f, 20.216f, 4.771f)
+            close()
+            moveTo(14.338f, 13.382f)
+            curveTo(14.338f, 14.659f, 13.361f, 15.748f, 12.115f, 15.981f)
+            curveTo(10.638f, 16.257f, 9.068f, 16.413f, 7.382f, 16.413f)
+            curveTo(6.945f, 16.413f, 6.508f, 16.402f, 6.071f, 16.379f)
+            curveTo(4.568f, 16.298f, 3.322f, 15.083f, 3.322f, 13.623f)
+            verticalLineTo(5.038f)
+            horizontalLineTo(14.338f)
+            verticalLineTo(13.382f)
+            close()
+            moveTo(4.453f, 18.441f)
+            horizontalLineTo(13.254f)
+            verticalLineTo(19.921f)
+            curveTo(13.254f, 20.727f, 12.6f, 21.381f, 11.794f, 21.381f)
+            horizontalLineTo(5.913f)
+            curveTo(5.107f, 21.381f, 4.453f, 20.727f, 4.453f, 19.921f)
+            verticalLineTo(18.441f)
+            close()
+        }.build()
+
+    val UPI: ImageVector
+        get() = ImageVector.Builder(
+            name = "UPI",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).path(
+            fill = SolidColor(Color.White)
+        ) {
+            moveTo(12f, 2f)
+            lineTo(22f, 12f)
+            lineTo(12f, 22f)
+            lineTo(2f, 12f)
+            close()
+            moveTo(11f, 8f)
+            horizontalLineTo(13f)
+            verticalLineTo(16f)
+            horizontalLineTo(11f)
+            close()
+            moveTo(8f, 11f)
+            horizontalLineTo(16f)
+            verticalLineTo(13f)
+            horizontalLineTo(8f)
+            close()
+        }.build()
 }
