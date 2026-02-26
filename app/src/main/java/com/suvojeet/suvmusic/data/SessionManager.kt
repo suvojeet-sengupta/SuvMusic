@@ -470,10 +470,10 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun getNavBarAlpha(): Float = 
-        context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 0.9f
+        context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 0.8f
 
     val navBarAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        preferences[NAV_BAR_ALPHA_KEY] ?: 0.9f
+        preferences[NAV_BAR_ALPHA_KEY] ?: 0.8f
     }
 
     suspend fun setNavBarAlpha(alpha: Float) {

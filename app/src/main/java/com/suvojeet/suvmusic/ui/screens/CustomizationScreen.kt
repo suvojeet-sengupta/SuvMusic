@@ -123,6 +123,7 @@ fun CustomizationScreen(
     }
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
+    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.8f)
     val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD)
 
     val scope = rememberCoroutineScope()
@@ -251,12 +252,26 @@ fun CustomizationScreen(
                         ) {
                             // Mini Player Transparency
                             TransparencySliderItem(
-                                title = "Transparency Level",
+                                title = "Mini Player Transparency",
                                 icon = Icons.Default.MusicNote,
                                 alpha = miniPlayerAlpha,
                                 onAlphaChange = { newAlpha ->
                                     scope.launch {
                                         sessionManager.setMiniPlayerAlpha(newAlpha)
+                                    }
+                                }
+                            )
+
+                            HorizontalDivider()
+
+                            // Nav Bar Transparency
+                            TransparencySliderItem(
+                                title = "Navigation Bar Transparency",
+                                icon = Icons.Default.Square, // Or a more suitable icon
+                                alpha = navBarAlpha,
+                                onAlphaChange = { newAlpha ->
+                                    scope.launch {
+                                        sessionManager.setNavBarAlpha(newAlpha)
                                     }
                                 }
                             )
