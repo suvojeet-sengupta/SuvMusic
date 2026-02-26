@@ -316,7 +316,7 @@ fun SuvMusicApp(
     // Collect volume slider enabled preference
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
-    val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.STANDARD)
+    val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.PILL)
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
@@ -626,7 +626,7 @@ fun SuvMusicApp(
 
                             
                             // Bottom navigation
-                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.8f)
+                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.15f)
                             
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,
