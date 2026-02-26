@@ -485,14 +485,14 @@ class SessionManager @Inject constructor(
     suspend fun getMiniPlayerStyle(): MiniPlayerStyle {
         val styleName = context.dataStore.data.first()[MINI_PLAYER_STYLE_KEY]
         return styleName?.let {
-            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.PILL }
-        } ?: MiniPlayerStyle.PILL
+            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.FLOATING_PILL }
+        } ?: MiniPlayerStyle.FLOATING_PILL
     }
     
     val miniPlayerStyleFlow: Flow<MiniPlayerStyle> = context.dataStore.data.map { preferences ->
         preferences[MINI_PLAYER_STYLE_KEY]?.let {
-            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.PILL }
-        } ?: MiniPlayerStyle.PILL
+            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.FLOATING_PILL }
+        } ?: MiniPlayerStyle.FLOATING_PILL
     }
     
     suspend fun setMiniPlayerStyle(style: MiniPlayerStyle) {
