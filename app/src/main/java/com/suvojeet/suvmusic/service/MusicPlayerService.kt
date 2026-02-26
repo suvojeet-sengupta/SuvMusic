@@ -712,7 +712,6 @@ class MusicPlayerService : MediaLibraryService() {
     @UnstableApi
     private inner class CustomNotificationProvider : MediaNotification.Provider {
         private val defaultProvider = androidx.media3.session.DefaultMediaNotificationProvider.Builder(this@MusicPlayerService)
-            .setBitmapLoader(CoilBitmapLoader(this@MusicPlayerService))
             .build()
         override fun createNotification(
             session: MediaSession,
