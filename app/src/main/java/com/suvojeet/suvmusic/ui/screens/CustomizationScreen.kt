@@ -237,7 +237,7 @@ fun CustomizationScreen(
             CustomizationSection(title = "Interface Transparency") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Preview Card
-                    MiniPlayerPreview(alpha = miniPlayerAlpha)
+                    MiniPlayerPreview(alpha = miniPlayerAlpha, style = currentMiniPlayerStyle)
 
                     OutlinedCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -452,7 +452,7 @@ private fun TransparencySliderItem(
 }
 
 @Composable
-private fun MiniPlayerPreview(alpha: Float) {
+private fun MiniPlayerPreview(alpha: Float, style: com.suvojeet.suvmusic.data.model.MiniPlayerStyle) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -478,32 +478,37 @@ private fun MiniPlayerPreview(alpha: Float) {
         }
 
         // Mini Player Mockup
+        val isPill = style == com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL
+        val shape = if (isPill) RoundedCornerShape(32.dp) else RoundedCornerShape(14.dp)
+        val horizontalPadding = if (isPill) 24.dp else 12.dp
+        
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .height(64.dp)
-                .clip(RoundedCornerShape(14.dp)),
+                .fillMaxWidth(if (isPill) 0.85f else 0.95f)
+                .height(if (isPill) 56.dp else 64.dp)
+                .clip(shape),
             color = Color.Transparent,
-            shape = RoundedCornerShape(14.dp)
+            shape = shape
         ) {
             val effectiveAlpha = 1f - (alpha * 0.7f)
             Box(
                 modifier = Modifier
-                                    .background(
-                                        brush = Brush.horizontalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = effectiveAlpha),
-                                                MaterialTheme.colorScheme.secondary.copy(alpha = effectiveAlpha)
-                                            )
-                                        )
-                                    )                    .padding(horizontal = 12.dp),
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = effectiveAlpha),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = effectiveAlpha)
+                            )
+                        )
+                    )
+                    .padding(horizontal = horizontalPadding),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .size(if (isPill) 38.dp else 42.dp)
+                            .clip(if (isPill) CircleShape else RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                     )
                     Spacer(modifier = Modifier.width(12.dp))
