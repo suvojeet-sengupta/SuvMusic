@@ -21,7 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.AddToQueue
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
@@ -65,7 +64,6 @@ fun MediaMenuBottomSheet(
     onAddToPlaylist: () -> Unit,
     onDownload: () -> Unit,
     onShare: () -> Unit,
-    onShowSuvCode: (() -> Unit)? = null,
     onRename: () -> Unit = {},
     onDelete: () -> Unit = {},
     showShare: Boolean = true
@@ -197,15 +195,6 @@ fun MediaMenuBottomSheet(
                     subtitle = "Make available for offline playback",
                     onClick = { onDownload(); onDismiss() }
                 )
-                
-                if (onShowSuvCode != null) {
-                    MenuActionItem(
-                        icon = Icons.Default.QrCode,
-                        title = "Show SuvMusic Code",
-                        subtitle = "Scan to share instantly",
-                        onClick = { onShowSuvCode(); onDismiss() }
-                    )
-                }
                 
                 if (isUserPlaylist) {
                     MenuActionItem(
