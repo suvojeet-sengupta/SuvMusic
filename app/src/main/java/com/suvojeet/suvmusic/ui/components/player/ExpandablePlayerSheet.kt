@@ -507,15 +507,15 @@ private fun PillMiniPlayer(
 ) {
     Surface(
         modifier = modifier
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(32.dp))
             .clickable(onClick = onTap),
         color = Color.Transparent,
         shape = RoundedCornerShape(32.dp),
-        tonalElevation = 8.dp,
-        shadowElevation = 12.dp
+        tonalElevation = 4.dp,
+        shadowElevation = 6.dp
     ) {
-        val effectiveAlpha = 1f - (userAlpha * 0.7f)
+        val effectiveAlpha = (0.85f - (userAlpha * 0.6f)).coerceIn(0.2f, 0.95f)
         Box(
             modifier = Modifier
                 .background(
