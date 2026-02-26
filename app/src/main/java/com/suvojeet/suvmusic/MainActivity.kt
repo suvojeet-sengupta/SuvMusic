@@ -675,7 +675,7 @@ fun SuvMusicApp(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(
-                                bottom = if (showBottomNav && !isTv) (currentBottomPadding + miniPlayerHeight) else miniPlayerHeight
+                                bottom = if (showBottomNav && !isTv) currentBottomPadding else 0.dp
                             )
                     ) {
                         NavGraph(
