@@ -596,7 +596,7 @@ fun SuvMusicApp(
             },
             icon = {
                  androidx.compose.material3.Icon(
-                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_music_note), // Ensure this resource exists or use vector
+                    imageVector = androidx.compose.material.icons.Icons.Default.MusicNote,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
