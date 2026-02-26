@@ -673,26 +673,27 @@ fun SearchScreen(
         
         // Song Menu Sheet
         if (showSongMenu && selectedSong != null) {
+            val song = selectedSong!!
             SongMenuBottomSheet(
                 isVisible = showSongMenu,
                 onDismiss = { showSongMenu = false },
-                song = selectedSong!!,
-                onPlayNext = { viewModel.playNext(selectedSong!!) },
-                onAddToQueue = { viewModel.addToQueue(selectedSong!!) },
+                song = song,
+                onPlayNext = { viewModel.playNext(song) },
+                onAddToQueue = { viewModel.addToQueue(song) },
                 onAddToPlaylist = { 
-                    viewModel.addToPlaylist(selectedSong!!)
+                    viewModel.addToPlaylist(song)
                 },
-                onDownload = { viewModel.downloadSong(selectedSong!!) },
+                onDownload = { viewModel.downloadSong(song) },
                 onShare = {
                     val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this song: ${selectedSong!!.title} by ${selectedSong!!.artist}\n\nhttps://music.youtube.com/watch?v=${selectedSong!!.id}")
+                        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this song: ${song.title} by ${song.artist}\n\nhttps://music.youtube.com/watch?v=${song.id}")
                     }
                     context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Song"))
                 },
-                onViewArtist = if (selectedSong!!.artistId != null) { 
-                    { onArtistClick(selectedSong!!.artistId!!) } 
-                } else null,
+                onViewArtist = song.artistId?.let { id ->
+                    { onArtistClick(id) } 
+                },
                 onViewAlbum = null // Album navigation via ID not supported yet as Song doesn't have albumId
             )
         }
@@ -701,8 +702,9 @@ fun SearchScreen(
         val playlistMgmtState by playlistViewModel.uiState.collectAsState()
         
         if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
+            val song = playlistMgmtState.selectedSong!!
             AddToPlaylistSheet(
-                song = playlistMgmtState.selectedSong!!,
+                song = song,
                 isVisible = playlistMgmtState.showAddToPlaylistSheet,
                 playlists = playlistMgmtState.userPlaylists,
                 isLoading = playlistMgmtState.isLoadingPlaylists,

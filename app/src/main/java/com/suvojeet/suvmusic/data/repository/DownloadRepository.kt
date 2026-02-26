@@ -1152,17 +1152,37 @@ class DownloadRepository @Inject constructor(
                     "content" -> {
                         // For content:// URIs, try ContentResolver first
                         try {
-                            val rowsDeleted = context.contentResolver.delete(uri, null, null)
-                            deleted = rowsDeleted > 0
-                            Log.d(TAG, "Deleted via ContentResolver: $deleted (rows: $rowsDeleted)")
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                // Android 11+ prefer using createDeleteRequest
+                                // We throw FilePermissionException so the ViewModel/Activity can handle it
+                                val deleteRequest = MediaStore.createDeleteRequest(context.contentResolver, listOf(uri))
+                                throw com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException(
+                                    "Permission needed to delete file",
+                                    deleteRequest
+                                )
+                            } else {
+                                val rowsDeleted = context.contentResolver.delete(uri, null, null)
+                                deleted = rowsDeleted > 0
+                                Log.d(TAG, "Deleted via ContentResolver: $deleted (rows: $rowsDeleted)")
+                            }
+                        } catch (e: SecurityException) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is android.app.RecoverableSecurityException) {
+                                throw com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException(
+                                    e.message ?: "Permission needed to delete file",
+                                    e.userAction.actionIntent
+                                )
+                            } else {
+                                throw e
+                            }
                         } catch (e: Exception) {
+                            if (e is com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException) throw e
                             Log.w(TAG, "ContentResolver delete failed", e)
                         }
                     }
                 }
             }
             
-            // If URI delete didn't work, try finding the file in public Music folder
+            // If URI delete didn't work (non-MediaStore or pre-Q), try finding the file in public Music folder
             if (!deleted) {
                 deleted = deleteFromFolder(getPublicMusicFolder(), song)
             }
@@ -1584,11 +1604,27 @@ class DownloadRepository @Inject constructor(
         downloadSongs(listOf(song))
     }
     
-    suspend fun deleteDownloads(songIds: List<String>) {
-        withContext(Dispatchers.IO) {
-            songIds.forEach { id ->
-                deleteDownload(id)
+    suspend fun deleteDownloads(songIds: List<String>) = withContext(Dispatchers.IO) {
+        if (songIds.isEmpty()) return@withContext
+        
+        // On Android 11+, we can request deletion for multiple URIs at once
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val uris = _downloadedSongs.value
+                .filter { it.id in songIds && it.localUri?.scheme == "content" }
+                .mapNotNull { it.localUri }
+            
+            if (uris.isNotEmpty()) {
+                val deleteRequest = MediaStore.createDeleteRequest(context.contentResolver, uris)
+                throw com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException(
+                    "Permission needed to delete multiple files",
+                    deleteRequest
+                )
             }
+        }
+        
+        // Fallback for older versions or if no content URIs (will delete one by one)
+        songIds.forEach { id ->
+            deleteDownload(id)
         }
     }
     

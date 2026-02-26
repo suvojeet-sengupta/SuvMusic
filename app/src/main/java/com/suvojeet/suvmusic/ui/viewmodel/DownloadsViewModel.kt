@@ -12,12 +12,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 @HiltViewModel
 class DownloadsViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository
 ) : ViewModel() {
     
+    private val _pendingIntent = MutableStateFlow<android.app.PendingIntent?>(null)
+    val pendingIntent = _pendingIntent.asStateFlow()
+
+    fun consumePendingIntent() {
+        _pendingIntent.value = null
+    }
     
     val downloadedSongs: StateFlow<List<Song>> = downloadRepository.downloadedSongs
     val queueState: StateFlow<List<Song>> = downloadRepository.queueState
@@ -82,9 +89,15 @@ class DownloadsViewModel @Inject constructor(
     
     fun deleteDownload(songId: String) {
         viewModelScope.launch {
-            downloadRepository.deleteDownload(songId)
-            // If deleted song was selected, remove it from selection
-            _selectedSongIds.value = _selectedSongIds.value - songId
+            try {
+                downloadRepository.deleteDownload(songId)
+                // If deleted song was selected, remove it from selection
+                _selectedSongIds.value = _selectedSongIds.value - songId
+            } catch (e: com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException) {
+                _pendingIntent.value = e.pendingIntent
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
     
@@ -108,9 +121,15 @@ class DownloadsViewModel @Inject constructor(
     
     fun deleteSelected() {
         viewModelScope.launch {
-            val idsToDelete = _selectedSongIds.value.toList()
-            downloadRepository.deleteDownloads(idsToDelete)
-            clearSelection()
+            try {
+                val idsToDelete = _selectedSongIds.value.toList()
+                downloadRepository.deleteDownloads(idsToDelete)
+                clearSelection()
+            } catch (e: com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException) {
+                _pendingIntent.value = e.pendingIntent
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
     

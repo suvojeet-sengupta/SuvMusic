@@ -771,6 +771,19 @@ class MusicPlayerService : MediaLibraryService() {
                     val skipTo = sponsorBlockRepository.checkSkip(currentPos)
                     if (skipTo != null) {
                         player.seekTo((skipTo * 1000).toLong())
+                    } else {
+                        // Adaptive polling: 
+                        // If next segment is far away, we can sleep longer
+                        val nextSegmentStart = sponsorBlockRepository.getNextSegmentStart(currentPos)
+                        if (nextSegmentStart != null) {
+                            val timeUntilNext = nextSegmentStart - currentPos
+                            if (timeUntilNext > 2.0f) {
+                                // Sleep for a bit less than time until next segment (max 5s)
+                                val sleepMs = (timeUntilNext * 1000 * 0.8f).toLong().coerceIn(200, 5000)
+                                delay(sleepMs)
+                                continue
+                            }
+                        }
                     }
                 }
                 delay(200L)
