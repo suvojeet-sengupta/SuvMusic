@@ -407,7 +407,7 @@ class PlaylistViewModel @Inject constructor(
                     id = history.songId,
                     title = history.songTitle,
                     artist = history.artist,
-                    album = history.album ?: "",
+                    album = history.album,
                     duration = history.duration,
                     thumbnailUrl = history.thumbnailUrl,
                     source = try { 
