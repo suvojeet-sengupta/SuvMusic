@@ -1,9 +1,15 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,13 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Coffee
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -119,7 +120,7 @@ fun SupportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Support & Feedback", fontWeight = FontWeight.Bold) },
+                title = { Text("Support & Feedback", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -133,53 +134,69 @@ fun SupportScreen(
                 )
             )
         },
-        containerColor = surfaceColor
+        containerColor = Color.Transparent // We use the gradient background
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            surfaceColor,
+                            surfaceContainerColor.copy(alpha = 0.5f)
+                        )
+                    )
+                )
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             Spacer(modifier = Modifier.height(8.dp))
             
             // Header illustration
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .size(110.dp)
+                    .clip(RoundedCornerShape(30.dp))
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
-                                primaryColor.copy(alpha = 0.2f),
-                                primaryColor.copy(alpha = 0.1f)
+                                primaryColor.copy(alpha = 0.3f),
+                                primaryColor.copy(alpha = 0.05f)
                             )
                         )
                     )
             ) {
-                Text(
-                    text = "💖",
-                    fontSize = 48.sp
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = primaryColor,
+                    modifier = Modifier.size(56.dp)
                 )
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
             Text(
-                text = "Support Development",
-                style = MaterialTheme.typography.headlineSmall,
+                text = "Support SuvMusic",
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = onSurfaceColor
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             
             // Professional English Text
             Text(
-                text = "SuvMusic is a free and open-source project developed with passion. Maintaining and adding new features requires significant time and effort.\n\nIf you enjoy using this app and want to support its continued development, please consider contributing.\n\nWhether it's buying a coffee or starring the repository on GitHub, every bit of support is deeply appreciated! ❤️",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "SuvMusic is an ad-free, open-source project created with passion for the music community. Maintaining the app and adding new features takes significant time and resources.\n\nIf you enjoy SuvMusic, please consider supporting its growth. Every contribution, whether it's through a donation or a star on GitHub, helps keep this project alive and thriving! 🚀",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    lineHeight = 24.sp
+                ),
                 color = onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 24.dp)
@@ -188,6 +205,8 @@ fun SupportScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // === DONATION / SUPPORT SECTION ===
+            SupportSectionTitle("Contribute & Support", primaryColor)
+            
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -198,25 +217,53 @@ fun SupportScreen(
             ) {
                 Column {
                     SupportItem(
-                        icon = Icons.Default.Coffee, // Or similar
+                        icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.BuyMeACoffee,
                         title = "Buy Me a Coffee",
-                        subtitle = "Support the developer directly",
-                        accentColor = Color(0xFFFFDD00), // Yellowish for coffee/gold
+                        subtitle = "Support directly via BuyMeACoffee",
+                        accentColor = Color(0xFFFFDD00),
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/suvojeet_sengupta"))
                             context.startActivity(intent)
                         }
                     )
+                    
+                    SupportItem(
+                        icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.UPI,
+                        title = "Pay via UPI",
+                        subtitle = "suvojitsengupta21-3@okicici",
+                        accentColor = Color(0xFF097969), // UPI Green
+                        onClick = {
+                            val upiId = "suvojitsengupta21-3@okicici"
+                            val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("UPI ID", upiId)
+                            clipboardManager.setPrimaryClip(clip)
+                            
+                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                                Toast.makeText(context, "UPI ID copied to clipboard", Toast.LENGTH_SHORT).show()
+                            }
+                            
+                            // Try to open UPI app
+                            try {
+                                val uri = Uri.parse("upi://pay?pa=$upiId&pn=Suvojeet%20Sengupta")
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // If no UPI app, we already copied it
+                            }
+                        }
+                    )
+
                     SupportItem(
                         icon = Icons.Default.Star,
                         title = "Star on GitHub",
-                        subtitle = "Show love on our repo",
-                        accentColor = Color(0xFF4CAF50), // GitHub Green-ish
+                        subtitle = "Show love on our repository",
+                        accentColor = Color(0xFF4CAF50),
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta/SuvMusic"))
                             context.startActivity(intent)
                         }
                     )
+                    
                     SupportItem(
                         icon = Icons.Default.Share,
                         title = "Share SuvMusic",
@@ -391,52 +438,60 @@ private fun SupportItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .clickable(
+                    onClick = onClick,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple(bounded = true)
+                )
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(accentColor.copy(alpha = 0.1f)),
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(accentColor.copy(alpha = 0.12f))
+                    .padding(10.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
             
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        lineHeight = 16.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
             
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                modifier = Modifier.size(20.dp)
             )
         }
         if (showDivider) {
             HorizontalDivider(
-                modifier = Modifier.padding(start = 70.dp, end = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                modifier = Modifier.padding(start = 78.dp, end = 16.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
             )
         }
     }
