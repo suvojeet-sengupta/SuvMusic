@@ -143,7 +143,7 @@ class UpdateRepository @Inject constructor(
             
             val currentVersionName = getCurrentVersionName()
             val remoteVersionCode = parseVersionCode(versionName)
-            val currentVersionCode = getCurrentVersionCode()
+            val currentVersionCode = parseVersionCode(currentVersionName)
             
             val update = AppUpdate(
                 versionName = versionName,
@@ -185,50 +185,59 @@ class UpdateRepository @Inject constructor(
         currentTimestamp: Long,
         remoteTimestamp: Long
     ): Boolean {
-        // 1. Primary: Compare version codes
+        // 1. Primary: Compare version codes (generated from version names)
         if (remoteCode > currentCode) return true
         if (remoteCode < currentCode) return false
         
-        // 2. Secondary: If codes match, check version name strings (e.g. 1.2.0 vs 1.2.0-beta.1)
-        // If they are exactly the same, check timestamp
+        // 2. Secondary: If codes match, check if they are exactly the same
         if (currentVersion == remoteVersion) {
             // For Nightly, same version might mean a re-published build
-            return remoteTimestamp > currentTimestamp + 60000 // 1 minute buffer
+            // But only if the remote build is significantly newer than the local install
+            // And only if it's a pre-release/nightly build
+            // Actually, to avoid annoying users, if version matches exactly, we should NOT update
+            // unless we have a specific reason. Most users don't want to re-download the same thing.
+            return false 
         }
         
-        // Use a simple semantic-like comparison for version names if codes match
+        // 3. Tertiary: Compare suffixes (e.g. 1.3.0.0-nightly vs 1.3.0.0)
+        // Usually, 1.3.0.0 is considered NEWER than 1.3.0.0-beta
         return try {
             compareVersions(remoteVersion, currentVersion) > 0
         } catch (e: Exception) {
-            // Fallback to timestamp if semantic parsing fails
-            remoteTimestamp > currentTimestamp
+            false
         }
     }
 
     private fun compareVersions(v1: String, v2: String): Int {
-        val parts1 = v1.split(".", "-", "+")
-        val parts2 = v2.split(".", "-", "+")
-        val length = maxOf(parts1.size, parts2.size)
+        // Remove 'v' prefix if present
+        val cleanV1 = v1.removePrefix("v")
+        val cleanV2 = v2.removePrefix("v")
+
+        // Split into numeric part and qualifier part (e.g. "1.2.0" and "beta.1")
+        val parts1 = cleanV1.split("-", limit = 2)
+        val parts2 = cleanV2.split("-", limit = 2)
         
+        val numeric1 = parts1[0].split(".")
+        val numeric2 = parts2[0].split(".")
+        
+        // Compare numeric parts
+        val length = maxOf(numeric1.size, numeric2.size)
         for (i in 0 until length) {
-            val p1 = parts1.getOrNull(i)
-            val p2 = parts2.getOrNull(i)
-            
-            if (p1 == p2) continue
-            if (p1 == null) return -1
-            if (p2 == null) return 1
-            
-            val i1 = p1.toIntOrNull()
-            val i2 = p2.toIntOrNull()
-            
-            if (i1 != null && i2 != null) {
-                if (i1 != i2) return i1.compareTo(i2)
-            } else {
-                val res = p1.compareTo(p2, ignoreCase = true)
-                if (res != 0) return res
-            }
+            val n1 = numeric1.getOrNull(i)?.toIntOrNull() ?: 0
+            val n2 = numeric2.getOrNull(i)?.toIntOrNull() ?: 0
+            if (n1 != n2) return n1.compareTo(n2)
         }
-        return 0
+        
+        // If numeric parts are identical, check qualifiers
+        val q1 = parts1.getOrNull(1)
+        val q2 = parts2.getOrNull(1)
+        
+        if (q1 == q2) return 0
+        if (q1 == null) return 1 // v1 has no qualifier, so it's a stable release, newer than v2's pre-release
+        if (q2 == null) return -1 // v2 has no qualifier, so it's newer
+        
+        // Both have qualifiers, compare them lexicographically
+        return q1.compareTo(q2, ignoreCase = true)
     }
 
     private fun parsePublishedDate(dateString: String): Long {
@@ -305,22 +314,6 @@ class UpdateRepository @Inject constructor(
             Result.success(apkFile)
         } catch (e: Exception) {
             Result.failure(e)
-        }
-    }
-    
-    /**
-     * Get current app version code.
-     */
-    private fun getCurrentVersionCode(): Int {
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
-            } else {
-                @Suppress("DEPRECATION")
-                context.packageManager.getPackageInfo(context.packageName, 0).versionCode
-            }
-        } catch (e: PackageManager.NameNotFoundException) {
-            0
         }
     }
     
