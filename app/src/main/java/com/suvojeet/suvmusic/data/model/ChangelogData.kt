@@ -21,7 +21,7 @@ object ChangelogData {
                 "Allowed UI content to flow behind Navigation Bar (Glass Effect)",
                 "Added 'Pay via UPI' in Support screen (suvojitsengupta21-3@okicici)",
                 "Improved Support screen layout with better gradients",
-                "Fixed 'Resources$NotFoundException' crash on launch",
+                "Fixed 'Resources\$NotFoundException' crash on launch",
                 "Removed QR code scanning and generation to optimize app size",
                 "Added transparency customization (0-85%) for mini player and nav bar",
                 "Removed blank backgrounds from mini player for all styles",
