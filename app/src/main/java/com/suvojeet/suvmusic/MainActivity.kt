@@ -513,7 +513,7 @@ fun SuvMusicApp(
     // With bottom sheet, "Player screen" is just the expanded state.
     // We hide the sheet if the current route is one where we don't want player (e.g. login?)
     // or if dismissed.
-    val showMiniPlayer = !isMiniPlayerDismissed && currentRoute != Destination.YouTubeLogin.route
+    val showMiniPlayer = !isMiniPlayerDismissed && currentRoute != Destination.YouTubeLogin.route && hasSong
     
     // Don't show global volume indicator on PlayerScreen (it has its own) - 
     // For now, simpler to just show it if we have a song, unless we are in expanded state?
