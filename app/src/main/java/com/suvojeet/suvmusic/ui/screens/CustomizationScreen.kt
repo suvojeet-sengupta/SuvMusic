@@ -123,8 +123,8 @@ fun CustomizationScreen(
     }
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
-    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.8f)
-    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.STANDARD)
+    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.15f)
+    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL)
 
     val scope = rememberCoroutineScope()
     
@@ -254,10 +254,11 @@ fun CustomizationScreen(
                             TransparencySliderItem(
                                 title = "Mini Player Transparency",
                                 icon = Icons.Default.MusicNote,
-                                alpha = miniPlayerAlpha,
-                                onAlphaChange = { newAlpha ->
+                                alpha = 1f - miniPlayerAlpha, // Show transparency
+                                onAlphaChange = { transparency ->
                                     scope.launch {
-                                        sessionManager.setMiniPlayerAlpha(newAlpha)
+                                        // Store opacity
+                                        sessionManager.setMiniPlayerAlpha(1f - transparency)
                                     }
                                 }
                             )
@@ -268,10 +269,11 @@ fun CustomizationScreen(
                             TransparencySliderItem(
                                 title = "Navigation Bar Transparency",
                                 icon = Icons.Default.Square, // Or a more suitable icon
-                                alpha = navBarAlpha,
-                                onAlphaChange = { newAlpha ->
+                                alpha = 1f - navBarAlpha, // Show transparency to user
+                                onAlphaChange = { transparency ->
                                     scope.launch {
-                                        sessionManager.setNavBarAlpha(newAlpha)
+                                        // Store opacity (1 - transparency)
+                                        sessionManager.setNavBarAlpha(1f - transparency)
                                     }
                                 }
                             )
@@ -505,7 +507,7 @@ private fun MiniPlayerPreview(alpha: Float, style: com.suvojeet.suvmusic.data.mo
             color = Color.Transparent,
             shape = shape
         ) {
-            val effectiveAlpha = 1f - alpha
+            val effectiveAlpha = alpha
             Box(
                 modifier = Modifier
                     .background(
