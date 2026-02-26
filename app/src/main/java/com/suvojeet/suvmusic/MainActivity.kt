@@ -50,6 +50,7 @@ import androidx.navigation.compose.rememberNavController
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.ThemeMode
+import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.navigation.NavGraph
 import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
@@ -312,6 +313,7 @@ fun SuvMusicApp(
     // Collect volume slider enabled preference
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
+    val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.STANDARD)
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
@@ -673,7 +675,7 @@ fun SuvMusicApp(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(
-                                bottom = if (showBottomNav && !isTv) currentBottomPadding else 0.dp
+                                bottom = if (showBottomNav && !isTv) (currentBottomPadding + miniPlayerHeight) else miniPlayerHeight
                             )
                     ) {
                         NavGraph(
@@ -758,6 +760,7 @@ fun SuvMusicApp(
             bottomPadding = bottomPaddingPx,
             isExpanded = isPlayerExpanded,
             userAlpha = miniPlayerAlpha,
+            style = miniPlayerStyle,
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
             },
