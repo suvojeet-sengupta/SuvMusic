@@ -47,6 +47,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Lock
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.data.model.ThemeMode
@@ -398,7 +401,7 @@ fun SuvMusicApp(
             },
             icon = {
                 androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Lock,
+                    imageVector = Icons.Default.Lock,
                     contentDescription = null
                 )
             }
@@ -596,7 +599,7 @@ fun SuvMusicApp(
             },
             icon = {
                  androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.MusicNote,
+                    imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
