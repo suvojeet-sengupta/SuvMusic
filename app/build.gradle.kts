@@ -215,16 +215,6 @@ dependencies {
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
     
-    // Barcode Scanning & Generation
-    implementation(libs.mlkit.barcode.scanning)
-    implementation(libs.zxing.core)
-
-    // CameraX
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-    
     // Tagging
     implementation(libs.jaudiotagger)
     
