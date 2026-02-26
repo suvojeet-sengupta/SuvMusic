@@ -123,7 +123,7 @@ fun CustomizationScreen(
     }
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
-    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.15f)
+    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.85f)
     val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL)
 
     val scope = rememberCoroutineScope()

@@ -626,7 +626,7 @@ fun SuvMusicApp(
 
                             
                             // Bottom navigation
-                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.15f)
+                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.85f)
                             
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,

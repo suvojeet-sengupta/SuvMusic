@@ -60,7 +60,7 @@ fun ExpressiveBottomNav(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    alpha: Float = 0.9f
+    alpha: Float = 0.85f
 ) {
     val navItems = listOf(
         BottomNavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),

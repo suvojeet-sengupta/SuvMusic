@@ -17,7 +17,7 @@ object ChangelogData {
                 "Added visually striking What's New screen",
                 "Improved Updater UI with gradient backgrounds and animations",
                 "Set default mini player style to Floating Pill",
-                "Enhanced Navigation Bar with 85% default transparency",
+                "Enhanced Navigation Bar with 15% default transparency",
                 "Allowed UI content to flow behind Navigation Bar (Glass Effect)",
                 "Added 'Pay via UPI' in Support screen (suvojitsengupta21-3@okicici)",
                 "Improved Support screen layout with better gradients",
