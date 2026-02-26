@@ -117,7 +117,8 @@ data class SettingsUiState(
     val eqEnabled: Boolean = false,
     val eqBands: FloatArray = FloatArray(10) { 0f },
     val forceMaxRefreshRateEnabled: Boolean = true,
-    val navBarAlpha: Float = 0.8f
+    val navBarAlpha: Float = 0.15f,
+    val navBarBlur: Float = 15f
 )
 
 @HiltViewModel
@@ -462,6 +463,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.navBarBlurFlow.collect { blur ->
+                _uiState.update { it.copy(navBarBlur = blur) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -535,6 +542,7 @@ class SettingsViewModel @Inject constructor(
             val eqBands = sessionManager.getEqBands()
             val forceMaxRefreshRate = sessionManager.forceMaxRefreshRateFlow.first()
             val navBarAlpha = sessionManager.getNavBarAlpha()
+            val navBarBlur = sessionManager.getNavBarBlur()
 
 
             _uiState.update { 
@@ -606,7 +614,8 @@ class SettingsViewModel @Inject constructor(
                     eqEnabled = eqEnabled,
                     eqBands = eqBands,
                     forceMaxRefreshRateEnabled = forceMaxRefreshRate,
-                    navBarAlpha = navBarAlpha
+                    navBarAlpha = navBarAlpha,
+                    navBarBlur = navBarBlur
                 )
             }
         }
@@ -1289,6 +1298,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setNavBarAlpha(alpha)
             _uiState.update { it.copy(navBarAlpha = alpha) }
+        }
+    }
+
+    fun setNavBarBlur(blur: Float) {
+        viewModelScope.launch {
+            sessionManager.setNavBarBlur(blur)
+            _uiState.update { it.copy(navBarBlur = blur) }
         }
     }
 

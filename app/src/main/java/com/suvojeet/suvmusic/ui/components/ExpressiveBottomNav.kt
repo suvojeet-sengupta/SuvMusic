@@ -60,7 +60,8 @@ fun ExpressiveBottomNav(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    alpha: Float = 0.9f
+    alpha: Float = 0.9f,
+    blur: Float = 15f
 ) {
     val navItems = listOf(
         BottomNavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
@@ -76,6 +77,15 @@ fun ExpressiveBottomNav(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .then(
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && blur > 0f) {
+                    Modifier.graphicsLayer {
+                        renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                            blur, blur, android.graphics.Shader.TileMode.DECAL
+                        ).asComposeRenderEffect()
+                    }
+                } else Modifier
+            )
             .background(backgroundColor)
             .navigationBarsPadding()
     ) {

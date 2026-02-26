@@ -124,6 +124,7 @@ fun CustomizationScreen(
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
     val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.15f)
+    val navBarBlur by sessionManager.navBarBlurFlow.collectAsState(initial = 15f)
     val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL)
 
     val scope = rememberCoroutineScope()
@@ -274,6 +275,20 @@ fun CustomizationScreen(
                                     scope.launch {
                                         // Store opacity (1 - transparency)
                                         sessionManager.setNavBarAlpha(1f - transparency)
+                                    }
+                                }
+                            )
+
+                            HorizontalDivider()
+
+                            // Nav Bar Blur
+                            TransparencySliderItem(
+                                title = "Navigation Bar Blur",
+                                icon = Icons.Rounded.RoundedCorner, // Using RoundedCorner as blur icon
+                                alpha = navBarBlur / 100f, // Use alpha parameter as raw value / 100
+                                onAlphaChange = { blurValue ->
+                                    scope.launch {
+                                        sessionManager.setNavBarBlur(blurValue * 100f)
                                     }
                                 }
                             )

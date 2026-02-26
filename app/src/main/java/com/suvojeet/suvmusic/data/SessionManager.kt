@@ -123,6 +123,7 @@ class SessionManager @Inject constructor(
         private val VOLUME_NORMALIZATION_ENABLED_KEY = booleanPreferencesKey("volume_normalization_enabled")
         private val MINI_PLAYER_ALPHA_KEY = floatPreferencesKey("mini_player_alpha")
         private val NAV_BAR_ALPHA_KEY = floatPreferencesKey("nav_bar_alpha")
+        private val NAV_BAR_BLUR_KEY = floatPreferencesKey("nav_bar_blur")
         private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
         
         private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
@@ -479,6 +480,19 @@ class SessionManager @Inject constructor(
     suspend fun setNavBarAlpha(alpha: Float) {
         context.dataStore.edit { preferences ->
             preferences[NAV_BAR_ALPHA_KEY] = alpha
+        }
+    }
+
+    suspend fun getNavBarBlur(): Float = 
+        context.dataStore.data.first()[NAV_BAR_BLUR_KEY] ?: 15f
+
+    val navBarBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[NAV_BAR_BLUR_KEY] ?: 15f
+    }
+
+    suspend fun setNavBarBlur(blur: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[NAV_BAR_BLUR_KEY] = blur
         }
     }
     
