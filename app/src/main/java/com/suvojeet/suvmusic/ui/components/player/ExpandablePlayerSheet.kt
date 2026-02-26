@@ -94,7 +94,7 @@ fun ExpandablePlayerSheet(
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    userAlpha: Float = 1f,
+    userAlpha: Float = 0f,
     style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
     expandedContent: @Composable (onCollapse: () -> Unit) -> Unit
 ) {
@@ -306,7 +306,7 @@ private fun CollapsedMiniPlayer(
     onNext: () -> Unit,
     onClose: () -> Unit,
     onTap: () -> Unit,
-    userAlpha: Float = 1f,
+    userAlpha: Float = 0f,
     style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
     modifier: Modifier = Modifier
 ) {
@@ -349,7 +349,7 @@ private fun StandardMiniPlayer(
     onNext: () -> Unit,
     onClose: () -> Unit,
     onTap: () -> Unit,
-    userAlpha: Float = 1f,
+    userAlpha: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -362,9 +362,9 @@ private fun StandardMiniPlayer(
         tonalElevation = 4.dp,
         shadowElevation = 8.dp
     ) {
-        // Gradient background using dominant colors with transparency
-        // Max transparency limited to 0.7 (70%) so it stays visible
-        val effectiveAlpha = 1f - (userAlpha * 0.7f)
+        // userAlpha 0f means 0% transparency (fully opaque, alpha 1f)
+        // userAlpha 0.85f means 85% transparency (alpha 0.15f)
+        val effectiveAlpha = 1f - userAlpha
         Box(
             modifier = Modifier
                 .background(
@@ -502,7 +502,7 @@ private fun PillMiniPlayer(
     onNext: () -> Unit,
     onClose: () -> Unit,
     onTap: () -> Unit,
-    userAlpha: Float = 1f,
+    userAlpha: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -515,7 +515,9 @@ private fun PillMiniPlayer(
         tonalElevation = 4.dp,
         shadowElevation = 6.dp
     ) {
-        val effectiveAlpha = (0.85f - (userAlpha * 0.6f)).coerceIn(0.2f, 0.95f)
+        // userAlpha 0f (0%) -> effectiveAlpha 1f (Opaque)
+        // userAlpha 0.85f (85%) -> effectiveAlpha 0.15f
+        val effectiveAlpha = 1f - userAlpha
         Box(
             modifier = Modifier
                 .background(

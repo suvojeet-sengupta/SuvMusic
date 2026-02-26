@@ -440,7 +440,7 @@ private fun TransparencySliderItem(
         Slider(
             value = alpha,
             onValueChange = onAlphaChange,
-            valueRange = 0f..1f,
+            valueRange = 0f..0.85f,
             steps = 0,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
@@ -490,7 +490,7 @@ private fun MiniPlayerPreview(alpha: Float, style: com.suvojeet.suvmusic.data.mo
             color = Color.Transparent,
             shape = shape
         ) {
-            val effectiveAlpha = 1f - (alpha * 0.7f)
+            val effectiveAlpha = 1f - alpha
             Box(
                 modifier = Modifier
                     .background(
