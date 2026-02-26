@@ -22,9 +22,11 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
     private val imageLoader = ImageLoader(context)
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // Define minimum size for Bitmap to avoid Palette crash
-    // 512px is sufficient for quality notification and color analysis
-    private val DEFAULT_BITMAP_SIZE = 512
+    // Define standard size for Bitmap to avoid Palette crash and system scaling issues.
+    // 320px is the standard maximum for MediaSession metadata on many Android versions.
+    // Reducing from 512px to 320px prevents MediaMetadata$Builder.scaleBitmap from being called
+    // by the system, which is often where the "recycled source" crash occurs.
+    private val DEFAULT_BITMAP_SIZE = 320
 
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
         val future = SettableFuture.create<Bitmap>()
@@ -33,7 +35,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             try {
                 // Try loading the original URI
                 val bitmap = loadBitmapInternal(uri)
-                if (bitmap != null) {
+                if (bitmap != null && !bitmap.isRecycled) {
                     future.set(bitmap)
                     return@launch
                 }
@@ -48,7 +50,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                     if (fallbackUri != uri) {
                         try {
                             val fallbackBitmap = loadBitmapInternal(fallbackUri)
-                            if (fallbackBitmap != null) {
+                            if (fallbackBitmap != null && !fallbackBitmap.isRecycled) {
                                 future.set(fallbackBitmap)
                                 return@launch
                             }
@@ -63,8 +65,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             
             // If all else fails, return a default placeholder
             try {
-                val placeholder = createPlaceholderBitmap()
-                future.set(placeholder)
+                future.set(createPlaceholderBitmap())
             } catch (e: Exception) {
                 future.setException(e)
             }
@@ -75,8 +76,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
     /**
      * Creates a safe Bitmap from a Drawable.
-     * If the Drawable has no dimensions (e.g., ColorDrawable), a 512x512 canvas is created.
-     * This prevents the "Region must intersect" error in SystemUI.
+     * If the Drawable has no dimensions (e.g., ColorDrawable), a 320x320 canvas is created.
      */
     private fun createFallbackBitmap(drawable: Drawable): Bitmap {
         val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else DEFAULT_BITMAP_SIZE
@@ -101,7 +101,20 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             try {
                 val bitmap = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size)
                 if (bitmap != null) {
-                    future.set(bitmap)
+                    // Wrap in BitmapDrawable and use our safe conversion to ensure sizing and ownership
+                    val drawable = BitmapDrawable(context.resources, bitmap)
+                    val safeBitmap = createSafeBitmapFromDrawable(drawable)
+                    
+                    // Recycle the temporary raw bitmap if it's different from safeBitmap
+                    if (safeBitmap != null && safeBitmap != bitmap && !bitmap.isRecycled) {
+                        bitmap.recycle()
+                    }
+                    
+                    if (safeBitmap != null) {
+                        future.set(safeBitmap)
+                    } else {
+                        future.setException(Exception("Failed to create safe bitmap from decoded data"))
+                    }
                 } else {
                     future.setException(Exception("Failed to decode bitmap from byte array"))
                 }
@@ -117,17 +130,14 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
         return try {
             val request = ImageRequest.Builder(context)
                 .data(uri)
-                .allowHardware(false)
+                .allowHardware(false) // Required for drawing to Canvas
                 .build()
 
             val result = imageLoader.execute(request)
             val drawable = result.drawable ?: return null
 
             // Always create a fresh bitmap by drawing to canvas.
-            // This is the safest approach because:
-            // 1. Coil can recycle cached bitmaps at any time (race condition)
-            // 2. bitmap.copy() can fail or return null if bitmap is recycled mid-copy
-            // 3. Drawing to a fresh canvas ensures we own the bitmap entirely
+            // This ensures we own the bitmap entirely and Coil won't recycle it from under us.
             createSafeBitmapFromDrawable(drawable)
         } catch (e: Exception) {
             null
@@ -152,9 +162,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 height = drawable.intrinsicHeight.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
             }
 
-            // Limit maximum dimension to DEFAULT_BITMAP_SIZE (512px)
-            // This prevents MediaMetadata$Builder.scaleBitmap from being called by the system
-            // which is often where the "recycled source" crash occurs.
+            // Limit maximum dimension to DEFAULT_BITMAP_SIZE (320px)
             if (width > DEFAULT_BITMAP_SIZE || height > DEFAULT_BITMAP_SIZE) {
                 val ratio = width.toFloat() / height.toFloat()
                 if (width > height) {
@@ -178,13 +186,13 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 drawable.setBounds(0, 0, width, height)
                 drawable.draw(canvas)
             } catch (e: Exception) {
-                // Drawing failed (bitmap recycled during draw), return placeholder
+                // Drawing failed (e.g., source bitmap recycled during draw), return placeholder
                 if (!freshBitmap.isRecycled) freshBitmap.recycle()
                 return createPlaceholderBitmap()
             }
 
-            // Verify the bitmap is valid before returning
-            if (freshBitmap.isRecycled || freshBitmap.width <= 0 || freshBitmap.height <= 0) {
+            // Final safety check: if for some reason the fresh bitmap is invalid, return placeholder
+            if (freshBitmap.isRecycled) {
                 return createPlaceholderBitmap()
             }
 
@@ -198,10 +206,15 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
      * Creates a simple placeholder bitmap when all else fails.
      */
     private fun createPlaceholderBitmap(): Bitmap {
-        val bitmap = Bitmap.createBitmap(DEFAULT_BITMAP_SIZE, DEFAULT_BITMAP_SIZE, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(android.graphics.Color.DKGRAY)
-        return bitmap
+        return try {
+            val bitmap = Bitmap.createBitmap(DEFAULT_BITMAP_SIZE, DEFAULT_BITMAP_SIZE, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(android.graphics.Color.DKGRAY)
+            bitmap
+        } catch (e: Exception) {
+            // Absolute fallback - should not happen unless OOM
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
     }
 
     private fun getFallbackUris(uri: Uri): List<Uri> {
