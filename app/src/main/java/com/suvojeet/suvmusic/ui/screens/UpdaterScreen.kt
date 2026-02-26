@@ -44,7 +44,6 @@ fun UpdaterScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
     val surfaceColor = MaterialTheme.colorScheme.surface
     val primaryColor = MaterialTheme.colorScheme.primary
 
@@ -150,7 +149,8 @@ fun UpdaterScreen(
                     onClick = onViewChangelog,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
                         brush = Brush.linearGradient(
                             listOf(primaryColor.copy(alpha = 0.5f), primaryColor.copy(alpha = 0.1f))
                         )
@@ -165,60 +165,60 @@ fun UpdaterScreen(
 
                 // Release Notes from Server (if available)
                 AnimatedVisibility(
-                visible = uiState.updateState is UpdateState.UpdateAvailable || uiState.updateState is UpdateState.Downloading || uiState.updateState == UpdateState.Downloaded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                val update = when (val s = uiState.updateState) {
-                    is UpdateState.UpdateAvailable -> s.update
-                    is UpdateState.Downloading -> null // Keep showing if we were just here
-                    else -> null
-                }
+                    visible = uiState.updateState is UpdateState.UpdateAvailable || uiState.updateState is UpdateState.Downloading || uiState.updateState == UpdateState.Downloaded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    val update = when (val s = uiState.updateState) {
+                        is UpdateState.UpdateAvailable -> s.update
+                        else -> null
+                    }
 
-                if (update != null) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .padding(20.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
+                    if (update != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .padding(20.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "What's New in v${update.versionName}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
                             Text(
-                                text = "What's New in v${update.versionName}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                text = update.releaseNotes,
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 22.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Text(
-                            text = update.releaseNotes,
-                            style = MaterialTheme.typography.bodyMedium,
-                            lineHeight = 22.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                Text(
+                    text = "SuvMusic checks for updates automatically. You can also manually check for the latest improvements and bug fixes.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
+                )
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            Text(
-                text = "SuvMusic checks for updates automatically. You can also manually check for the latest improvements and bug fixes.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
-            )
         }
     }
 }
