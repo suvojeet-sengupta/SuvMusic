@@ -105,7 +105,7 @@ class DynamicSeekbarView @JvmOverloads constructor(
         path.moveTo(0f, centerY)
         var x = 0f
         while (x <= width) {
-            val y = centerY + sin(x * 0.1f).toFloat() * amplitude
+            val y = centerY + sin(x * 0.1f) * amplitude
             path.lineTo(x, y)
             x += 5f
         }
@@ -117,7 +117,7 @@ class DynamicSeekbarView @JvmOverloads constructor(
         path.moveTo(0f, centerY)
         x = 0f
         while (x <= progressX) {
-            val y = centerY + sin(x * 0.1f).toFloat() * amplitude
+            val y = centerY + sin(x * 0.1f) * amplitude
             path.lineTo(x, y)
             x += 5f
         }

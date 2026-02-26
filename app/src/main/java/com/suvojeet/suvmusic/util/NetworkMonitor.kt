@@ -18,7 +18,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class NetworkMonitor @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     private val connectivityManager = 
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager

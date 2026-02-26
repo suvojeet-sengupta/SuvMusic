@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -52,6 +53,7 @@ data class DailyListening(
     val minutesListen: Long
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ListeningStatsViewModel @Inject constructor(
     private val listeningHistoryRepository: ListeningHistoryRepository
