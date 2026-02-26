@@ -116,7 +116,8 @@ data class SettingsUiState(
     // Equalizer
     val eqEnabled: Boolean = false,
     val eqBands: FloatArray = FloatArray(10) { 0f },
-    val forceMaxRefreshRateEnabled: Boolean = true
+    val forceMaxRefreshRateEnabled: Boolean = true,
+    val navBarAlpha: Float = 0.8f
 )
 
 @HiltViewModel
@@ -455,6 +456,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.navBarAlphaFlow.collect { alpha ->
+                _uiState.update { it.copy(navBarAlpha = alpha) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -527,6 +534,7 @@ class SettingsViewModel @Inject constructor(
             val eqEnabled = sessionManager.isEqEnabled()
             val eqBands = sessionManager.getEqBands()
             val forceMaxRefreshRate = sessionManager.forceMaxRefreshRateFlow.first()
+            val navBarAlpha = sessionManager.getNavBarAlpha()
 
 
             _uiState.update { 
@@ -597,7 +605,8 @@ class SettingsViewModel @Inject constructor(
                     crossfeedEnabled = crossfeedEnabled,
                     eqEnabled = eqEnabled,
                     eqBands = eqBands,
-                    forceMaxRefreshRateEnabled = forceMaxRefreshRate
+                    forceMaxRefreshRateEnabled = forceMaxRefreshRate,
+                    navBarAlpha = navBarAlpha
                 )
             }
         }
@@ -1273,6 +1282,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setForceMaxRefreshRate(enabled)
             _uiState.update { it.copy(forceMaxRefreshRateEnabled = enabled) }
+        }
+    }
+
+    fun setNavBarAlpha(alpha: Float) {
+        viewModelScope.launch {
+            sessionManager.setNavBarAlpha(alpha)
+            _uiState.update { it.copy(navBarAlpha = alpha) }
         }
     }
 
