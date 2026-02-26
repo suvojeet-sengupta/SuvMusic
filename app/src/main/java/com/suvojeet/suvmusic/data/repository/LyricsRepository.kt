@@ -25,7 +25,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 
 @Singleton
 class LyricsRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient,
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,

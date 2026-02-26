@@ -849,7 +849,7 @@ class JioSaavnRepository @Inject constructor(
             .build()
         
         return okHttpClient.newCall(request).execute().use { response ->
-            response.body?.string() ?: ""
+            response.body.string()
         }
     }
     
