@@ -999,7 +999,7 @@ class DownloadRepository @Inject constructor(
                 return@withContext false
             }
             
-            val contentLength = response.body.contentLength() ?: -1L
+            val contentLength = response.body.contentLength()
             Log.d(TAG, "Content length: $contentLength bytes")
             
             // Estimate bytes for 30 seconds (assuming ~128kbps = 16KB/s)
