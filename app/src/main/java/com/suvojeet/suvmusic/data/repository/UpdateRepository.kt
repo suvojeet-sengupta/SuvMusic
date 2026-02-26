@@ -22,7 +22,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class UpdateRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     private val client = OkHttpClient.Builder()
         .followRedirects(true)
@@ -61,7 +61,7 @@ class UpdateRepository @Inject constructor(
                 return@withContext Result.failure(Exception("Failed to check for updates: HTTP ${response.code}"))
             }
             
-            val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
+            val body = response.body.string()
             val releasesArray = gson.fromJson(body, com.google.gson.JsonArray::class.java)
             
             if (releasesArray.size() == 0) {
