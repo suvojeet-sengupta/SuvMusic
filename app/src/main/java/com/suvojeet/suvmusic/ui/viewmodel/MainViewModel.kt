@@ -43,13 +43,12 @@ data class MainUiState(
 )
 
 @HiltViewModel
-class MainViewModel @OptIn(androidx.media3.common.util.UnstableApi::class)
-@Inject constructor(
+class MainViewModel @Inject constructor(
     private val updateRepository: UpdateRepository,
     private val sessionManager: SessionManager,
     private val lastFmRepository: LastFmRepository,
     private val playerCache: Cache,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -72,7 +71,6 @@ class MainViewModel @OptIn(androidx.media3.common.util.UnstableApi::class)
         checkAndClearCache()
     }
 
-    @OptIn(androidx.media3.common.util.UnstableApi::class)
     private fun checkAndClearCache() {
         viewModelScope.launch(Dispatchers.IO) {
             val intervalDays = sessionManager.getPlayerCacheAutoClearInterval()
