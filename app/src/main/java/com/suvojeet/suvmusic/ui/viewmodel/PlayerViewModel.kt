@@ -63,7 +63,7 @@ class PlayerViewModel @Inject constructor(
     private val discordManager: DiscordManager,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
     private val spatialAudioProcessor: com.suvojeet.suvmusic.player.SpatialAudioProcessor,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
@@ -1110,7 +1110,7 @@ class PlayerViewModel @Inject constructor(
                             title = obj.getString("title"),
                             artist = obj.getString("artist"),
                             album = obj.optString("album", ""),
-                            thumbnailUrl = obj.optString("thumbnailUrl", null),
+                            thumbnailUrl = if (obj.isNull("thumbnailUrl")) null else obj.optString("thumbnailUrl", null as String?),
                             duration = obj.getLong("duration"),
                             source = try { 
                                 SongSource.valueOf(obj.getString("source")) 

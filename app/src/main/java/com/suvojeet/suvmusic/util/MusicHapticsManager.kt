@@ -36,7 +36,7 @@ import kotlin.math.abs
  */
 @Singleton
 class MusicHapticsManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val sessionManager: SessionManager
 ) {
     private val scope = CoroutineScope(Dispatchers.Default)
