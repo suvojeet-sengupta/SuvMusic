@@ -623,7 +623,7 @@ fun SuvMusicApp(
 
                             
                             // Bottom navigation
-                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.9f)
+                            val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.8f)
                             
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,
@@ -675,7 +675,7 @@ fun SuvMusicApp(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(
-                                bottom = if (showBottomNav && !isTv) currentBottomPadding else 0.dp
+                                bottom = 0.dp // Allow content to flow behind nav bar for glass effect
                             )
                     ) {
                         NavGraph(

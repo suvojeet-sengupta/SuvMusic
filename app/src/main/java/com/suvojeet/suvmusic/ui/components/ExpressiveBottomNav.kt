@@ -69,8 +69,8 @@ fun ExpressiveBottomNav(
         BottomNavItem(Destination.Settings, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
     
-    // Spotify-style solid/transparent dark background
-    // Use MaterialTheme.colorScheme.surface to adapt to light/dark mode
+    // Spotify-style transparent dark background
+    // Use MaterialTheme.colorScheme.surface with alpha for transparency
     val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = alpha)
     
     Box(
