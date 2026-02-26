@@ -37,6 +37,7 @@ import com.suvojeet.suvmusic.ui.screens.SupportScreen
 import com.suvojeet.suvmusic.ui.screens.YouTubeLoginScreen
 import com.suvojeet.suvmusic.ui.screens.MiscScreen
 import com.suvojeet.suvmusic.ui.screens.LyricsProvidersScreen
+import com.suvojeet.suvmusic.ui.screens.ChangelogScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.media3.common.Player
@@ -367,7 +368,14 @@ fun NavGraph(
 
         composable(Destination.Updater.route) {
             com.suvojeet.suvmusic.ui.screens.UpdaterScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onViewChangelog = { navController.navigate(Destination.Changelog.route) }
+            )
+        }
+
+        composable(Destination.Changelog.route) {
+            com.suvojeet.suvmusic.ui.screens.ChangelogScreen(
+                onBack = { navController.popBackStack() }
             )
         }
         
