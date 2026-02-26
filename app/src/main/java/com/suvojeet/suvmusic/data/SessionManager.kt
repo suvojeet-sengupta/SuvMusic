@@ -62,10 +62,12 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class SessionManager @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
+    @Suppress("DEPRECATION")
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
     
+    @Suppress("DEPRECATION")
     private val encryptedPrefs = EncryptedSharedPreferences.create(
         context,
         "suvmusic_secure_session",
