@@ -87,8 +87,8 @@ class SponsorBlockRepository @Inject constructor(
 
         api.getSegments(videoId).enqueue(object : Callback<List<SponsorSegment>> {
             override fun onResponse(call: Call<List<SponsorSegment>>, response: Response<List<SponsorSegment>>) {
-                if (response.isSuccessful && response.body() != null) {
-                    val segments = response.body()!!
+                val segments = response.body()
+                if (response.isSuccessful && segments != null) {
                     _currentSegments.value = segments
                     Log.d("SponsorBlock", "Loaded ${segments.size} segments")
                 } else {
@@ -100,6 +100,23 @@ class SponsorBlockRepository @Inject constructor(
                 Log.e("SponsorBlock", "Failed to load: ${t.message}")
             }
         })
+    }
+
+    /**
+     * Finds the start time of the next segment that should be skipped.
+     * Returns null if no segments are ahead.
+     */
+    fun getNextSegmentStart(currentSeconds: Float): Float? {
+        if (!isEnabled) return null
+        
+        val segments = _currentSegments.value
+        if (segments.isEmpty()) return null
+        
+        val currentEnabledCategories = enabledCategories
+        
+        return segments
+            .filter { currentEnabledCategories.contains(it.category) && it.start > currentSeconds }
+            .minOfOrNull { it.start }
     }
 
     /**
