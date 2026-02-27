@@ -23,6 +23,14 @@ android {
         versionName = "1.3.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Optimize for relevant architectures (removes unnecessary x86/x86_64)
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+
+        // Limit resources to supported languages to reduce APK bloat
+        resourceConfigurations += listOf("en", "hi")
 
         // Load Last.fm keys from local.properties or environment
         val localProperties = Properties()
