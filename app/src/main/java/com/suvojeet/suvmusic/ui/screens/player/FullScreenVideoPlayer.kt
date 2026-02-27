@@ -41,6 +41,9 @@ import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -155,7 +158,7 @@ fun FullScreenVideoPlayer(
     var volumeLevel by remember { mutableStateOf(0.7f) } // Default 70%
     var gestureStatusText by remember { mutableStateOf("") }
     var showGestureStatus by remember { mutableStateOf(false) }
-    var gestureIcon by remember { mutableStateOf(Icons.Default.Settings) }
+    var gestureIcon by remember { mutableStateOf(Icons.Filled.Settings) }
 
     LaunchedEffect(showGestureStatus) {
         if (showGestureStatus) {
@@ -274,11 +277,11 @@ fun FullScreenVideoPlayer(
                         if (isForward) {
                             viewModel.seekTo(playerState.currentPosition + 10000)
                             gestureStatusText = "+10s"
-                            gestureIcon = Icons.Default.Forward10
+                            gestureIcon = Icons.Filled.Forward10
                         } else {
                             viewModel.seekTo(playerState.currentPosition - 10000)
                             gestureStatusText = "-10s"
-                            gestureIcon = Icons.Default.Replay10
+                            gestureIcon = Icons.Filled.Replay10
                         }
                         showGestureStatus = true
                     }
@@ -290,14 +293,27 @@ fun FullScreenVideoPlayer(
                     if (isVolume) {
                         volumeLevel = (volumeLevel - dragAmount / size.height).coerceIn(0f, 1f)
                         gestureStatusText = "Volume: ${(volumeLevel * 100).toInt()}%"
-                        gestureIcon = Icons.Default.VolumeUp
-                        // In a real app, use AudioManager to set actual system volume
+                        gestureIcon = Icons.Filled.VolumeUp
+                        
+                        // Set system volume
+                        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                        audioManager?.let {
+                            val max = it.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                            val newVolume = (volumeLevel * max).toInt()
+                            it.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, newVolume, 0)
+                        }
                     } else {
+                        // If it's the first drag, initialize brightness from current window if it's -1
+                        val activity = context as? Activity
+                        if (brightness < 0) {
+                            val currentBrightness = activity?.window?.attributes?.screenBrightness ?: 0.5f
+                            brightness = if (currentBrightness < 0) 0.5f else currentBrightness
+                        }
+                        
                         brightness = (brightness - dragAmount / size.height).coerceIn(0f, 1f)
                         gestureStatusText = "Brightness: ${(brightness * 100).toInt()}%"
-                        gestureIcon = Icons.Default.BrightnessLow
-                        // In a real app, update Window brightness
-                        val activity = context as? Activity
+                        gestureIcon = Icons.Filled.BrightnessHigh
+                        
                         val layoutParams = activity?.window?.attributes
                         layoutParams?.screenBrightness = brightness
                         activity?.window?.attributes = layoutParams
@@ -310,12 +326,12 @@ fun FullScreenVideoPlayer(
                     if (zoom > 1.1f) {
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                         gestureStatusText = "Zoom: Fill"
-                        gestureIcon = Icons.Default.AspectRatio
+                        gestureIcon = Icons.Filled.AspectRatio
                         showGestureStatus = true
                     } else if (zoom < 0.9f) {
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         gestureStatusText = "Zoom: Fit"
-                        gestureIcon = Icons.Default.AspectRatio
+                        gestureIcon = Icons.Filled.AspectRatio
                         showGestureStatus = true
                     }
                 }
@@ -417,7 +433,7 @@ fun FullScreenVideoPlayer(
                 ) {
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
+                            imageVector = Icons.Filled.KeyboardArrowDown,
                             contentDescription = "Minimize",
                             tint = Color.White,
                             modifier = Modifier.size(28.dp)
@@ -448,11 +464,11 @@ fun FullScreenVideoPlayer(
                             AspectRatioFrameLayout.RESIZE_MODE_FIT
                         }
                         gestureStatusText = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) "Fill" else "Fit"
-                        gestureIcon = Icons.Default.AspectRatio
+                        gestureIcon = Icons.Filled.AspectRatio
                         showGestureStatus = true
                     }) {
                         Icon(
-                            imageVector = Icons.Default.AspectRatio,
+                            imageVector = Icons.Filled.AspectRatio,
                             contentDescription = "Resize",
                             tint = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) dominantColors.primary else Color.White
                         )
@@ -478,7 +494,7 @@ fun FullScreenVideoPlayer(
                     // Quality picker
                     IconButton(onClick = { showQualityDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            imageVector = Icons.Filled.Settings,
                             contentDescription = "Quality",
                             tint = Color.White
                         )
@@ -499,13 +515,13 @@ fun FullScreenVideoPlayer(
                                 modifier = Modifier.size(22.dp)
                             )
                             videoDownloaded -> Icon(
-                                imageVector = Icons.Default.CheckCircle,
+                                imageVector = Icons.Filled.CheckCircle,
                                 contentDescription = "Downloaded",
                                 tint = dominantColors.accent,
                                 modifier = Modifier.size(24.dp)
                             )
                             else -> Icon(
-                                imageVector = Icons.Default.SaveAlt,
+                                imageVector = Icons.Filled.SaveAlt,
                                 contentDescription = "Download Video",
                                 tint = Color.White
                             )
@@ -522,7 +538,7 @@ fun FullScreenVideoPlayer(
                         }
                     }) {
                         Icon(
-                            imageVector = Icons.Default.ScreenRotation,
+                            imageVector = Icons.Filled.ScreenRotation,
                             contentDescription = "Rotate",
                             tint = Color.White
                         )
@@ -541,7 +557,7 @@ fun FullScreenVideoPlayer(
                         modifier = Modifier.size(52.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Replay10,
+                            imageVector = Icons.Filled.Replay10,
                             contentDescription = "Rewind 10s",
                             tint = Color.White,
                             modifier = Modifier.size(36.dp)
@@ -568,7 +584,7 @@ fun FullScreenVideoPlayer(
                                         modifier = Modifier.size(64.dp)
                                     ) {
                                         Icon(
-                                            imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            imageVector = if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                             contentDescription = "Play/Pause",
                                             tint = Color.White,
                                             modifier = Modifier.size(48.dp)
@@ -585,7 +601,7 @@ fun FullScreenVideoPlayer(
                         modifier = Modifier.size(52.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Forward10,
+                            imageVector = Icons.Filled.Forward10,
                             contentDescription = "Forward 10s",
                             tint = Color.White,
                             modifier = Modifier.size(36.dp)
