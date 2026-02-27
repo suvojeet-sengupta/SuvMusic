@@ -199,7 +199,7 @@ class YouTubeSearchService @Inject constructor(
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext emptyList()
+            val body = response.body.string()
             
             // Response format: window.google.ac.h(["query",[["suggestion1",0],["suggestion2",0],...]])
             val jsonStart = body.indexOf("[[")
@@ -265,7 +265,7 @@ class YouTubeSearchService @Inject constructor(
                 .build()
 
             val response = okHttpClient.newCall(request).execute()
-            val responseBody = response.body?.string() ?: return@withContext emptyList()
+            val responseBody = response.body.string()
             
             parseSongsFromNextResponse(responseBody)
         } catch (e: Exception) {
