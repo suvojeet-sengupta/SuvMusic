@@ -942,7 +942,7 @@ class YouTubeRepository @Inject constructor(
             // Get playlist metadata with proper method calls
             val playlistName = try { playlistExtractor.getName() } catch (e: Exception) { null }
             val uploaderName = try { playlistExtractor.getUploaderName() } catch (e: Exception) { null }
-            val description = try { (playlistExtractor as org.schabi.newpipe.extractor.playlist.PlaylistExtractor).description?.content } catch (e: Exception) { null }
+            val description = try { (playlistExtractor as org.schabi.newpipe.extractor.playlist.PlaylistExtractor).description.content } catch (e: Exception) { null }
             val thumbnailUrl = try { 
                 playlistExtractor.thumbnails.lastOrNull()?.url 
             } catch (e: Exception) { null }
@@ -1442,7 +1442,7 @@ class YouTubeRepository @Inject constructor(
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
-            val responseBody = response.body.string() ?: return@withContext null
+            val responseBody = response.body.string()
             
             // Parse the response to get playlist ID
             val jsonResponse = JSONObject(responseBody)
@@ -1708,7 +1708,7 @@ class YouTubeRepository @Inject constructor(
             val nextResponse = okHttpClient.newCall(nextRequest).execute()
             if (!nextResponse.isSuccessful) return@withContext null
             
-            val nextJson = JSONObject(nextResponse.body.string() ?: return@withContext null)
+            val nextJson = JSONObject(nextResponse.body.string())
             val lyricsBrowseId = extractLyricsBrowseId(nextJson) ?: return@withContext null
             
             // 2. Fetch the Lyrics using the browse ID
@@ -1739,7 +1739,7 @@ class YouTubeRepository @Inject constructor(
             val browseResponse = okHttpClient.newCall(browseRequest).execute()
             if (!browseResponse.isSuccessful) return@withContext null
              
-            val browseJson = JSONObject(browseResponse.body.string() ?: return@withContext null)
+            val browseJson = JSONObject(browseResponse.body.string())
             parseLyricsFromBrowse(browseJson)
             
         } catch (e: Exception) {

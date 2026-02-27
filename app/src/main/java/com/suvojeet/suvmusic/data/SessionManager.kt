@@ -58,6 +58,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 /**
  * Manages session data for YouTube Music authentication.
  */
+@Suppress("DEPRECATION")
 @Singleton
 class SessionManager @Inject constructor(
     @param:ApplicationContext private val context: Context

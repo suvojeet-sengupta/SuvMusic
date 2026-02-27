@@ -844,7 +844,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWaveLinePreview
         var x = 0f
         while (x <= width) {
             val y = centerY + sin(x * 0.1f) * amplitude
-            lineTo(x, y.toFloat())
+            lineTo(x, y)
             x += 3f
         }
     }
@@ -856,7 +856,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWaveLinePreview
         var x = 0f
         while (x <= progressX) {
             val y = centerY + sin(x * 0.1f) * amplitude
-            lineTo(x, y.toFloat())
+            lineTo(x, y)
             x += 3f
         }
     }
