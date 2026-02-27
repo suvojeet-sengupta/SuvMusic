@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 
 /**
  * Modifier to animate item entrance with a staggered slide-up and fade-in effect.
@@ -25,14 +26,14 @@ fun Modifier.animateEnter(
     LaunchedEffect(Unit) {
         val delay = index * delayPerItem
         
-        // Parallel animations
-        val fadeJob = launch {
+        // Parallel animations using launch inside the LaunchedEffect scope
+        launch {
             alpha.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = 200, delayMillis = delay)
             )
         }
-        val slideJob = launch {
+        launch {
             translationY.animateTo(
                 targetValue = 0f,
                 animationSpec = tween(durationMillis = 200, delayMillis = delay)
