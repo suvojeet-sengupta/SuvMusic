@@ -52,7 +52,7 @@ object WaveLineStyle {
             while (x <= progressX) {
                 val waveAmp = if (isPlaying) amplitude else amplitude * 0.4f
                 val y = centerY + sin(x * frequency + (if (isPlaying) phase else 0f)) * waveAmp
-                lineTo(x, y.toFloat())
+                lineTo(x, y)
                 x += 2f
             }
         }
@@ -92,7 +92,7 @@ object WaveLineStyle {
             var x = 0f
             while (x <= width) {
                 val y = centerY + sin(x * 0.1f) * amplitude
-                lineTo(x, y.toFloat())
+                lineTo(x, y)
                 x += 3f
             }
         }
@@ -108,7 +108,7 @@ object WaveLineStyle {
             var x = 0f
             while (x <= progressX) {
                 val y = centerY + sin(x * 0.1f) * amplitude
-                lineTo(x, y.toFloat())
+                lineTo(x, y)
                 x += 3f
             }
         }
