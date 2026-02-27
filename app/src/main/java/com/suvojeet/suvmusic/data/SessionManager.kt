@@ -199,6 +199,7 @@ class SessionManager @Inject constructor(
         private val VIRTUALIZER_KEY = floatPreferencesKey("virtualizer")
 
         private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
+        private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
     }
     
     // --- Developer Mode (Hidden) ---
@@ -1009,6 +1010,16 @@ class SessionManager @Inject constructor(
     suspend fun setForceMaxRefreshRate(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[FORCE_MAX_REFRESH_RATE_KEY] = enabled
+        }
+    }
+
+    val iosLiquidGlassEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[IOS_LIQUID_GLASS_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setIosLiquidGlassEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[IOS_LIQUID_GLASS_ENABLED_KEY] = enabled
         }
     }
 
