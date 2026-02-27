@@ -627,6 +627,7 @@ fun SuvMusicApp(
                             
                             // Bottom navigation
                             val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.85f)
+                            val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
                             
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,
@@ -639,7 +640,8 @@ fun SuvMusicApp(
                                         restoreState = true
                                     }
                                 },
-                                alpha = navBarAlpha
+                                alpha = navBarAlpha,
+                                iosLiquidGlassEnabled = iosLiquidGlassEnabled
                             )
                         }
                     }
