@@ -75,33 +75,47 @@ fun ExpressiveBottomNav(
     // Use MaterialTheme.colorScheme.surface with alpha for transparency
     val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = if (iosLiquidGlassEnabled) 0.4f else alpha)
     
-    val containerModifier = if (iosLiquidGlassEnabled) {
+    val outerModifier = if (iosLiquidGlassEnabled) {
         modifier
             .navigationBarsPadding()
             .padding(horizontal = 24.dp, vertical = 12.dp)
-            .clip(RoundedCornerShape(32.dp))
-            .background(backgroundColor)
-            .border(
-                width = 0.5.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.2f),
-                        Color.White.copy(alpha = 0.05f)
-                    )
-                ),
-                shape = RoundedCornerShape(32.dp)
-            )
-            .blur(30.dp)
     } else {
         modifier
             .fillMaxWidth()
-            .background(backgroundColor)
             .navigationBarsPadding()
     }
 
     Box(
-        modifier = containerModifier
+        modifier = outerModifier
     ) {
+        // Background layer
+        if (iosLiquidGlassEnabled) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(backgroundColor)
+                    .blur(30.dp)
+                    .border(
+                        width = 0.5.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.2f),
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(32.dp)
+                    )
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(backgroundColor)
+            )
+        }
+
+        // Content layer (Icons and Text)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
