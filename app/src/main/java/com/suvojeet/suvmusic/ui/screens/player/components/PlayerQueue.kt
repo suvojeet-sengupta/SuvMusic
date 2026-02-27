@@ -375,7 +375,11 @@ fun QueueView(
                     HeaderItem("Up Next", dominantColors)
                 }
                 
-                itemsIndexed(upNextSongs, key = { index, song -> "upnext_${song.id}_$index" }) { index, song ->
+                itemsIndexed(
+                    items = upNextSongs,
+                    key = { index, song -> "upnext_${song.id}_$index" },
+                    contentType = { _, _ -> "queue_item" }
+                ) { index, song ->
                     QueueItem(
                         song = song,
                         isCurrent = song.id == currentSong?.id,
@@ -414,7 +418,11 @@ fun QueueView(
                     HeaderItem(title, dominantColors)
                 }
                 
-                itemsIndexed(autoPlaySongs, key = { index, song -> "auto_${song.id}_$index" }) { indexInList, song ->
+                itemsIndexed(
+                    items = autoPlaySongs,
+                    key = { index, song -> "auto_${song.id}_$index" },
+                    contentType = { _, _ -> "queue_item" }
+                ) { indexInList, song ->
                     val actualIndex = upNextSongs.size + indexInList
                     QueueItem(
                         song = song,
