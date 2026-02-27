@@ -397,30 +397,28 @@ fun CustomizationScreen(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            // Mini Player Transparency
+                            // Mini Player Opacity
                             TransparencySliderItem(
-                                title = "Mini Player Transparency",
+                                title = "Mini Player Opacity",
                                 icon = Icons.Default.MusicNote,
-                                alpha = 1f - miniPlayerAlpha, // Show transparency
-                                onAlphaChange = { transparency ->
+                                alpha = miniPlayerAlpha,
+                                onAlphaChange = { opacity ->
                                     scope.launch {
-                                        // Store opacity
-                                        sessionManager.setMiniPlayerAlpha(1f - transparency)
+                                        sessionManager.setMiniPlayerAlpha(opacity)
                                     }
                                 }
                             )
 
                             HorizontalDivider()
 
-                            // Nav Bar Transparency
+                            // Nav Bar Opacity
                             TransparencySliderItem(
-                                title = "Navigation Bar Transparency",
+                                title = "Navigation Bar Opacity",
                                 icon = Icons.Default.Square, // Or a more suitable icon
-                                alpha = 1f - navBarAlpha, // Show transparency to user
-                                onAlphaChange = { transparency ->
+                                alpha = navBarAlpha,
+                                onAlphaChange = { opacity ->
                                     scope.launch {
-                                        // Store opacity (1 - transparency)
-                                        sessionManager.setNavBarAlpha(1f - transparency)
+                                        sessionManager.setNavBarAlpha(opacity)
                                     }
                                 }
                             )
@@ -676,7 +674,7 @@ private fun TransparencySliderItem(
         Slider(
             value = alpha,
             onValueChange = onAlphaChange,
-            valueRange = 0f..0.85f,
+            valueRange = 0f..1f,
             steps = 0,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
