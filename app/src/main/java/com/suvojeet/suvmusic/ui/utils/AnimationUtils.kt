@@ -1,11 +1,9 @@
 package com.suvojeet.suvmusic.ui.utils
 
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
@@ -21,25 +19,30 @@ fun Modifier.animateEnter(
     delayPerItem: Int = 15, // Faster stagger
     slideDistance: Float = 30f // Reduced distance for snappier feel
 ): Modifier = composed {
-    val visibleState = remember { MutableTransitionState(false).apply { targetState = true } }
-    val transition = rememberTransition(visibleState, label = "enter_transition")
-    
-    val alpha by transition.animateFloat(
-        transitionSpec = {
-            tween(durationMillis = 180, delayMillis = index * delayPerItem) // Faster fade in
-        },
-        label = "alpha"
-    ) { visible -> if (visible) 1f else 0f }
-    
-    val translationY by transition.animateFloat(
-        transitionSpec = {
-            tween(durationMillis = 180, delayMillis = index * delayPerItem)
-        },
-        label = "translationY"
-    ) { visible -> if (visible) 0f else slideDistance }
+    val alpha = remember { Animatable(0f) }
+    val translationY = remember { Animatable(slideDistance) }
+
+    LaunchedEffect(Unit) {
+        val delay = index * delayPerItem
+        
+        // Parallel animations
+        val fadeJob = launch {
+            alpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 200, delayMillis = delay)
+            )
+        }
+        val slideJob = launch {
+            translationY.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 200, delayMillis = delay)
+            )
+        }
+    }
 
     this.graphicsLayer {
-        this.alpha = alpha
-        this.translationY = translationY
+        this.alpha = alpha.value
+        this.translationY = translationY.value
+        this.clip = false // Optimization: avoid clipping during entrance if not needed
     }
 }
