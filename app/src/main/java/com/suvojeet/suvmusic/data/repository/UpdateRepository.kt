@@ -279,7 +279,7 @@ class UpdateRepository @Inject constructor(
                 return@withContext Result.failure(Exception("Download failed: ${response.code}"))
             }
             
-            val body = response.body ?: return@withContext Result.failure(Exception("Empty response body"))
+            val body = response.body
             val contentLength = body.contentLength()
             
             // Create updates directory in cache

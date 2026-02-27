@@ -15,7 +15,7 @@ import javax.inject.Singleton
 
 @Singleton
 class DiscordManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     private var discordRPC: DiscordRPC? = null
