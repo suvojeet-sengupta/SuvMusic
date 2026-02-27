@@ -26,10 +26,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.InvertColors
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Square
 import androidx.compose.material.icons.rounded.RoundedCorner
 import androidx.compose.material3.Card
@@ -45,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -124,12 +128,19 @@ fun CustomizationScreen(
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
     val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.85f)
+    val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsState(initial = false)
+    val dynamicColor by sessionManager.dynamicColorFlow.collectAsState(initial = true)
+    val pureBlack by sessionManager.pureBlackEnabledFlow.collectAsState(initial = false)
+    val appTheme by sessionManager.appThemeFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.AppTheme.DEFAULT)
+    val themeMode by sessionManager.themeModeFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.ThemeMode.SYSTEM)
     val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL)
 
     val scope = rememberCoroutineScope()
     
     // Style Selection Dialog/Sheet
     var showMiniPlayerStyleSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showThemeModeSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showAppThemeSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
     
     if (showMiniPlayerStyleSheet) {
         androidx.compose.material3.ModalBottomSheet(
@@ -169,6 +180,82 @@ fun CustomizationScreen(
         }
     }
 
+    if (showThemeModeSheet) {
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showThemeModeSheet = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Theme Mode",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                com.suvojeet.suvmusic.data.model.ThemeMode.entries.forEach { mode ->
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                        leadingContent = {
+                            androidx.compose.material3.RadioButton(
+                                selected = themeMode == mode,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                scope.launch {
+                                    sessionManager.setThemeMode(mode)
+                                    showThemeModeSheet = false
+                                }
+                            },
+                        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    if (showAppThemeSheet) {
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showAppThemeSheet = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "App Theme",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                com.suvojeet.suvmusic.data.model.AppTheme.entries.forEach { theme ->
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text(theme.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                        leadingContent = {
+                            androidx.compose.material3.RadioButton(
+                                selected = appTheme == theme,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                scope.launch {
+                                    sessionManager.setAppTheme(theme)
+                                    showAppThemeSheet = false
+                                }
+                            },
+                        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
 
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -196,8 +283,68 @@ fun CustomizationScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             
+            // Section: App Theme
+            CustomizationSection(title = "App Theme", icon = Icons.Default.Palette) {
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    )
+                ) {
+                    Column {
+                        SettingItem(
+                            title = "Theme Mode",
+                            subtitle = when(themeMode) {
+                                com.suvojeet.suvmusic.data.model.ThemeMode.DARK -> "Dark"
+                                com.suvojeet.suvmusic.data.model.ThemeMode.LIGHT -> "Light"
+                                com.suvojeet.suvmusic.data.model.ThemeMode.SYSTEM -> "System"
+                            },
+                            icon = Icons.Default.DarkMode,
+                            onClick = { showThemeModeSheet = true }
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        SettingItem(
+                            title = "App Theme",
+                            subtitle = appTheme.name.lowercase().replaceFirstChar { it.uppercase() },
+                            icon = Icons.Default.Palette,
+                            onClick = { showAppThemeSheet = true }
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        SwitchSettingItem(
+                            title = "Dynamic Color",
+                            subtitle = "Use colors from your wallpaper (Android 12+)",
+                            icon = Icons.Default.Palette,
+                            checked = dynamicColor,
+                            onCheckedChange = { checked ->
+                                scope.launch {
+                                    sessionManager.setDynamicColor(checked)
+                                }
+                            }
+                        )
+                        
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        
+                        SwitchSettingItem(
+                            title = "Pure Black",
+                            subtitle = "Use pitch black for dark theme (AMOLED)",
+                            icon = Icons.Default.InvertColors,
+                            checked = pureBlack,
+                            onCheckedChange = { checked ->
+                                scope.launch {
+                                    sessionManager.setPureBlackEnabled(checked)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
             // Section: Player Design
-            CustomizationSection(title = "Player Design") {
+            CustomizationSection(title = "Player Design", icon = Icons.Default.MusicNote) {
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.outlinedCardColors(
@@ -235,7 +382,7 @@ fun CustomizationScreen(
             }
             
             // Section: Interface Transparency
-            CustomizationSection(title = "Interface Transparency") {
+            CustomizationSection(title = "Interface Transparency", icon = Icons.Default.Circle) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Preview Card
                     MiniPlayerPreview(alpha = miniPlayerAlpha, style = currentMiniPlayerStyle)
@@ -280,12 +427,25 @@ fun CustomizationScreen(
 
                             HorizontalDivider()
 
-                            // Mini Player Style
                             SettingItem(
                                 title = "Mini Player Style",
                                 subtitle = currentMiniPlayerStyle.label,
                                 icon = Icons.Default.MusicNote, 
                                 onClick = { showMiniPlayerStyleSheet = true }
+                            )
+
+                            HorizontalDivider()
+
+                            SwitchSettingItem(
+                                title = "iOS Liquid Glass Navbar",
+                                subtitle = "Adds a glass-like blur effect to the navigation bar",
+                                icon = Icons.Default.Circle, // Or a more glass-like icon
+                                checked = iosLiquidGlassEnabled,
+                                onCheckedChange = { checked ->
+                                    scope.launch {
+                                        sessionManager.setIosLiquidGlassEnabled(checked)
+                                    }
+                                }
                             )
                         }
                     }
@@ -327,16 +487,75 @@ fun CustomizationScreen(
 @Composable
 private fun CustomizationSection(
     title: String,
+    icon: ImageVector? = null,
     content: @Composable () -> Unit
 ) {
     Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         content()
+    }
+}
+
+@Composable
+private fun SwitchSettingItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
     }
 }
 

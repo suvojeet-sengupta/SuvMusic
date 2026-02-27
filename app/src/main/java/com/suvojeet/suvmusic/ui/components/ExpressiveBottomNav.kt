@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -45,7 +47,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,7 +61,8 @@ fun ExpressiveBottomNav(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    alpha: Float = 0.85f
+    alpha: Float = 0.85f,
+    iosLiquidGlassEnabled: Boolean = false
 ) {
     val navItems = listOf(
         BottomNavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
@@ -71,13 +73,34 @@ fun ExpressiveBottomNav(
     
     // Spotify-style transparent dark background
     // Use MaterialTheme.colorScheme.surface with alpha for transparency
-    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = alpha)
+    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = if (iosLiquidGlassEnabled) 0.4f else alpha)
     
-    Box(
-        modifier = modifier
+    val containerModifier = if (iosLiquidGlassEnabled) {
+        modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(backgroundColor)
+            .border(
+                width = 0.5.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.2f),
+                        Color.White.copy(alpha = 0.05f)
+                    )
+                ),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .blur(30.dp)
+    } else {
+        modifier
             .fillMaxWidth()
             .background(backgroundColor)
             .navigationBarsPadding()
+    }
+
+    Box(
+        modifier = containerModifier
     ) {
         Row(
             modifier = Modifier
