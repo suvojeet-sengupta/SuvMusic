@@ -361,7 +361,11 @@ fun SearchScreen(
                 if (uiState.resultFilter != ResultFilter.ALL && !uiState.isLoading) {
                     when (uiState.resultFilter) {
                         ResultFilter.SONGS, ResultFilter.VIDEOS -> {
-                            itemsIndexed(uiState.results) { index, song ->
+                            itemsIndexed(
+                                items = uiState.results,
+                                key = { index, song -> "song_${song.id}_$index" },
+                                contentType = { _, _ -> "song_result" }
+                            ) { index, song ->
                                 SearchResultItem(
                                     song = song,
                                     onClick = {
@@ -377,7 +381,11 @@ fun SearchScreen(
                             }
                         }
                         ResultFilter.ARTISTS -> {
-                            items(uiState.artistResults) { artist ->
+                            items(
+                                items = uiState.artistResults,
+                                key = { it.id },
+                                contentType = { "artist_result" }
+                            ) { artist ->
                                 ArtistSearchListItem(
                                     artist = artist,
                                     onClick = { onArtistClick(artist.id) }
@@ -385,7 +393,11 @@ fun SearchScreen(
                             }
                         }
                         ResultFilter.ALBUMS -> {
-                            items(uiState.albumResults) { album ->
+                            items(
+                                items = uiState.albumResults,
+                                key = { it.id },
+                                contentType = { "album_result" }
+                            ) { album ->
                                 AlbumSearchListItem(
                                     album = album,
                                     onClick = { 
@@ -396,7 +408,11 @@ fun SearchScreen(
                             }
                         }
                         ResultFilter.COMMUNITY_PLAYLISTS, ResultFilter.FEATURED_PLAYLISTS -> {
-                            items(uiState.playlistResults) { playlist ->
+                            items(
+                                items = uiState.playlistResults,
+                                key = { it.id },
+                                contentType = { "playlist_result" }
+                            ) { playlist ->
                                 PlaylistSearchListItem(
                                     playlist = playlist,
                                     onClick = { 
@@ -425,7 +441,11 @@ fun SearchScreen(
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     modifier = Modifier.padding(vertical = 12.dp)
                                 ) {
-                                    items(uiState.artistResults) { artist ->
+                                    items(
+                                        items = uiState.artistResults,
+                                        key = { it.id },
+                                        contentType = { "artist_card" }
+                                    ) { artist ->
                                         ArtistSearchCard(
                                             artist = artist,
                                             onClick = { onArtistClick(artist.id) }
@@ -459,7 +479,11 @@ fun SearchScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     modifier = Modifier.padding(vertical = 12.dp)
                                 ) {
-                                    items(uiState.playlistResults) { playlist ->
+                                    items(
+                                        items = uiState.playlistResults,
+                                        key = { it.id },
+                                        contentType = { "playlist_card" }
+                                    ) { playlist ->
                                         PlaylistSearchCard(
                                             playlist = playlist,
                                             onClick = { 
@@ -496,7 +520,11 @@ fun SearchScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     modifier = Modifier.padding(vertical = 12.dp)
                                 ) {
-                                    items(uiState.albumResults) { album ->
+                                    items(
+                                        items = uiState.albumResults,
+                                        key = { it.id },
+                                        contentType = { "album_card" }
+                                    ) { album ->
                                         AlbumSearchCard(
                                             album = album,
                                             onClick = { 
@@ -528,7 +556,11 @@ fun SearchScreen(
                                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
                             )
                         }
-                        itemsIndexed(uiState.results) { index, song ->
+                        itemsIndexed(
+                            items = uiState.results,
+                            key = { index, song -> "main_song_${song.id}_$index" },
+                            contentType = { _, _ -> "song_result" }
+                        ) { index, song ->
                             SearchResultItem(
                                 song = song,
                                 onClick = {
@@ -586,7 +618,11 @@ fun SearchScreen(
                         }
                     }
                     
-                    items(uiState.recentSearches) { item ->
+                    items(
+                        items = uiState.recentSearches,
+                        key = { it.id },
+                        contentType = { it.javaClass.simpleName }
+                    ) { item ->
                         when (item) {
                             is RecentSearchItem.SongItem -> {
                                 SearchResultItem(
