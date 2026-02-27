@@ -64,18 +64,22 @@ class SessionManager @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
     @Suppress("DEPRECATION")
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val masterKey by lazy {
+        MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+    }
     
     @Suppress("DEPRECATION")
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        "suvmusic_secure_session",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val encryptedPrefs by lazy {
+        EncryptedSharedPreferences.create(
+            context,
+            "suvmusic_secure_session",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 
     companion object {
         private val COOKIES_KEY = stringPreferencesKey("cookies")
