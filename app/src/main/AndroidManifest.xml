@@ -82,7 +82,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.SuvMusic"
+            android:theme="@style/Theme.SuvMusic.SplashScreen"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
             android:launchMode="singleTop"
             android:supportsPictureInPicture="true">

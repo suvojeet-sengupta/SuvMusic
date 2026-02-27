@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Base application theme -->
     <style name="Theme.SuvMusic" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash Screen theme -->
+    <style name="Theme.SuvMusic.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.SuvMusic</item>
+    </style>
 </resources>
