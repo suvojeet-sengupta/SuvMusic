@@ -82,6 +82,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.suvojeet.suvmusic.pip.PipHelper
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
@@ -97,7 +98,7 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
-
+    
     @Inject
     lateinit var musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer
 
@@ -125,6 +126,7 @@ class MainActivity : ComponentActivity() {
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         enableMaxRefreshRate()
@@ -135,14 +137,12 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
         
         setContent {
-            val sessionManager = remember { SessionManager(this) }
             val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
             val dynamicColor by sessionManager.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true)
             val appTheme by sessionManager.appThemeFlow.collectAsStateWithLifecycle(initialValue = AppTheme.DEFAULT)
             val pureBlackEnabled by sessionManager.pureBlackEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
             val forceMaxRefreshRate by sessionManager.forceMaxRefreshRateFlow.collectAsStateWithLifecycle(initialValue = true)
             val systemDarkTheme = isSystemInDarkTheme()
-            
             LaunchedEffect(forceMaxRefreshRate) {
                 if (forceMaxRefreshRate) {
                     enableMaxRefreshRate()
