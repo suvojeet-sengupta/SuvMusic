@@ -65,7 +65,7 @@ class YouTubeSearchService @Inject constructor(
                         artist = item.uploaderName ?: "Unknown Artist",
                         album = "",
                         duration = item.duration * 1000L,
-                        thumbnailUrl = item.thumbnails?.maxByOrNull { it.width * it.height }?.url,
+                        thumbnailUrl = item.thumbnails.maxByOrNull { it.width * it.height }?.url,
                         artistId = artistId,
                         isVideo = filter == FILTER_VIDEOS,
                         isMembersOnly = false // Default to false until we verify the field name
@@ -100,8 +100,8 @@ class YouTubeSearchService @Inject constructor(
                     Artist(
                         id = channelId,
                         name = item.name ?: "Unknown Artist",
-                        thumbnailUrl = item.thumbnails?.lastOrNull()?.url,
-                        subscribers = item.subscriberCount?.let { 
+                        thumbnailUrl = item.thumbnails.lastOrNull()?.url,
+                        subscribers = item.subscriberCount.let { 
                             if (it >= 1_000_000) "${it / 1_000_000}M subscribers"
                             else if (it >= 1_000) "${it / 1_000}K subscribers"
                             else "$it subscribers"
@@ -138,7 +138,7 @@ class YouTubeSearchService @Inject constructor(
                         id = playlistId,
                         title = item.name ?: "Unknown Playlist",
                         author = item.uploaderName ?: "",
-                        thumbnailUrl = item.thumbnails?.lastOrNull()?.url,
+                        thumbnailUrl = item.thumbnails.lastOrNull()?.url,
                         songs = emptyList() // Will be loaded when clicked
                     )
                 } catch (e: Exception) {
@@ -171,7 +171,7 @@ class YouTubeSearchService @Inject constructor(
                         id = albumId,
                         title = item.name ?: "Unknown Album",
                         artist = item.uploaderName ?: "Unknown Artist",
-                        thumbnailUrl = item.thumbnails?.lastOrNull()?.url,
+                        thumbnailUrl = item.thumbnails.lastOrNull()?.url,
                         year = "" // NewPipe often doesn't give year in search results
                     )
                 } catch (e: Exception) {

@@ -52,7 +52,7 @@ import javax.inject.Singleton
 @Singleton
 @OptIn(UnstableApi::class)
 class MusicPlayer @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,

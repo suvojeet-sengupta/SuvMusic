@@ -10,7 +10,7 @@ import javax.inject.Singleton
 
 @Singleton
 class TTSManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = null

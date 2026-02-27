@@ -199,7 +199,7 @@ class SpotifyImportHelper @Inject constructor(
             
             val response = okHttpClient.newCall(request).execute()
             if (response.isSuccessful) {
-                val json = response.body?.string()
+                val json = response.body.string()
                 if (json != null) {
                     val jsonObj = gson.fromJson(json, JsonObject::class.java)
                     if (jsonObj.has("name")) {
@@ -214,9 +214,10 @@ class SpotifyImportHelper @Inject constructor(
 
         // Pagination Loop
         while (nextUrl != null) {
+            val currentNextUrl: String = nextUrl
             try {
                 val request = Request.Builder()
-                    .url(nextUrl!!)
+                    .url(currentNextUrl)
                     .addHeader("Authorization", "Bearer $accessToken")
                     .build()
 
@@ -226,7 +227,7 @@ class SpotifyImportHelper @Inject constructor(
                     break
                 }
 
-                val json = response.body?.string() ?: break
+                val json = response.body.string()
                 val jsonObj = gson.fromJson(json, JsonObject::class.java)
 
                 // Get items

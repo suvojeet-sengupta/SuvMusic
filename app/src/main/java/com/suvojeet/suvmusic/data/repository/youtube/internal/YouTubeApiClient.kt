@@ -65,7 +65,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string()
         } catch (e: Exception) {
             ""
         }
@@ -102,7 +102,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string()
         } catch (e: Exception) {
             ""
         }
@@ -141,7 +141,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string()
         } catch (e: Exception) {
             ""
         }
@@ -177,7 +177,7 @@ class YouTubeApiClient @Inject constructor(
             .build()
 
         return try {
-            okHttpClient.newCall(request).execute().body.string() ?: ""
+            okHttpClient.newCall(request).execute().body.string()
         } catch (e: Exception) {
             ""
         }
