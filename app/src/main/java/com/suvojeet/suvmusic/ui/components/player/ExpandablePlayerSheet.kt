@@ -56,6 +56,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -119,13 +120,13 @@ fun ExpandablePlayerSheet(
     }
 
     val density = LocalDensity.current
-    val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
-    val screenHeightPx = with(density) { screenHeightDp.toPx() }
+    val view = LocalView.current
+    val screenHeightPx = view.height.toFloat()
     val miniPlayerHeightPx = with(density) { MiniPlayerHeight.toPx() }
 
     // Total drag range from (MiniPlayer + Nav Bar) to Full Screen
     val collapsedHeightPx = miniPlayerHeightPx + bottomPadding
-    val dragRange = screenHeightPx - collapsedHeightPx
+    val dragRange = (screenHeightPx - collapsedHeightPx).coerceAtLeast(1f)
 
     // Back Handler to collapse on system back gesture
     BackHandler(enabled = isExpanded) {
