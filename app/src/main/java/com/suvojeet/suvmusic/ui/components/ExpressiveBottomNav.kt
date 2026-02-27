@@ -71,24 +71,24 @@ fun ExpressiveBottomNav(
         BottomNavItem(Destination.Settings, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
     
-    // Spotify-style transparent dark background
-    // Use MaterialTheme.colorScheme.surface with alpha for transparency
+    // Use MaterialTheme.colorScheme.surface with alpha for opacity
     val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = if (iosLiquidGlassEnabled) 0.4f else alpha)
     
-    val outerModifier = if (iosLiquidGlassEnabled) {
+    val rootModifier = if (iosLiquidGlassEnabled) {
         modifier
             .navigationBarsPadding()
             .padding(horizontal = 24.dp, vertical = 12.dp)
     } else {
         modifier
             .fillMaxWidth()
+            .background(backgroundColor) // Apply background BEFORE padding to cover the whole bottom
             .navigationBarsPadding()
     }
 
     Box(
-        modifier = outerModifier
+        modifier = rootModifier
     ) {
-        // Background layer
+        // Background layer for Liquid Glass
         if (iosLiquidGlassEnabled) {
             Box(
                 modifier = Modifier
@@ -106,12 +106,6 @@ fun ExpressiveBottomNav(
                         ),
                         shape = RoundedCornerShape(32.dp)
                     )
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(backgroundColor)
             )
         }
 
