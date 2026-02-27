@@ -133,6 +133,18 @@ fun CreditsScreen(
                         context.startActivity(intent)
                     }
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LibraryCard(
+                    name = "𝕵𝖊𝖊𝖛𝖊𝖘𝖍 (@JazzeeBlaze)",
+                    description = "The creative mind behind the beautiful app logo and branding design.",
+                    isSpecial = true,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/JazzeeBlaze"))
+                        context.startActivity(intent)
+                    }
+                )
             }
 
             // --- Third-Party Services ---
