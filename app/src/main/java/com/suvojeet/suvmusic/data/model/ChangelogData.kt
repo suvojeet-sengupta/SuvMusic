@@ -10,9 +10,26 @@ data class ChangelogEntry(
 object ChangelogData {
     val entries = listOf(
         ChangelogEntry(
+            version = "1.3.1.1",
+            date = "February 27, 2026",
+            isLatest = true,
+            changes = listOf(
+                "Implemented official Android Splash Screen API for smoother startup",
+                "Added Adaptive Icon support (Circle.png) with 20% inset for all shapes",
+                "Optimized app startup by lazy-loading encrypted session data",
+                "Hardware acceleration for Mesh Gradient Background (lower CPU/GPU usage)",
+                "Significant UI smoothness improvements in Search and Player Queue",
+                "Fixed redundant dependency initialization in MainActivity",
+                "Optimized theme-switching performance to reduce UI lag",
+                "Fixed coroutine compilation errors in entrance animations",
+                "Updated Splash Screen logo to match new branding",
+                "Added branding credit to 𝕵𝖊𝖊𝖛𝖊𝖘𝖍 (@JazzeeBlaze) in Credits screen"
+            )
+        ),
+        ChangelogEntry(
             version = "1.3.1.0",
             date = "February 26, 2026",
-            isLatest = true,
+            isLatest = false,
             changes = listOf(
                 "Added visually striking What's New screen",
                 "Improved Updater UI with gradient backgrounds and animations",
