@@ -14,6 +14,7 @@ import javax.inject.Singleton
  * Handles YouTube stream URL fetching and caching.
  * Manages audio/video streams for playback and downloads.
  */
+@Suppress("DEPRECATION")
 @Singleton
 class YouTubeStreamingService @Inject constructor(
     private val sessionManager: SessionManager
@@ -231,14 +232,13 @@ class YouTubeStreamingService @Inject constructor(
                 if (bestMuxedStream != null) {
                     android.util.Log.d("YouTubeStreaming", "Using muxed stream: ${bestMuxedStream.resolution}")
                     
-                    bestMuxedStream.content?.let { url ->
-                        streamCache.put(videoCacheKey, CachedStream(url, System.currentTimeMillis()))
-                        videoResult = VideoStreamResult(
-                            videoUrl = url,
-                            audioUrl = null,  // Muxed stream - no separate audio needed
-                            resolution = bestMuxedStream.resolution
-                        )
-                    }
+                    val url = bestMuxedStream.content
+                    streamCache.put(videoCacheKey, CachedStream(url, System.currentTimeMillis()))
+                    videoResult = VideoStreamResult(
+                        videoUrl = url,
+                        audioUrl = null,  // Muxed stream - no separate audio needed
+                        resolution = bestMuxedStream.resolution
+                    )
                 }
             }
             
@@ -353,8 +353,8 @@ class YouTubeStreamingService @Inject constructor(
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
-            val title = streamExtractor.name ?: "Unknown Title"
-            val artist = streamExtractor.uploaderName ?: "Unknown Artist"
+            val title = streamExtractor.name
+            val artist = streamExtractor.uploaderName
             val thumbnailUrl = streamExtractor.thumbnails.maxByOrNull { it.width * it.height }?.url
 
             val duration = streamExtractor.length * 1000 // Convert to milliseconds
@@ -402,7 +402,7 @@ class YouTubeStreamingService @Inject constructor(
                                     artist = item.uploaderName ?: "Unknown Artist",
                                     album = "",
                                     duration = item.duration * 1000L,
-                                    thumbnailUrl = item.thumbnails?.lastOrNull()?.url
+                                    thumbnailUrl = item.thumbnails.lastOrNull()?.url
                                 )?.let { results.add(it) }
                             }
                         } catch (e: Exception) {

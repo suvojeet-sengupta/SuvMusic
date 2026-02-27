@@ -10,7 +10,7 @@ import java.io.File
 import javax.inject.Inject
 
 class LocalLyricsProvider @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     val name = "Local Storage"
 

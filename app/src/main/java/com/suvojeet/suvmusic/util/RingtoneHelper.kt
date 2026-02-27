@@ -42,7 +42,7 @@ import kotlin.coroutines.resume
 class RingtoneHelper @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val downloadRepository: DownloadRepository,
-    @DownloadDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
+    @param:DownloadDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
 ) {
     
     companion object {
