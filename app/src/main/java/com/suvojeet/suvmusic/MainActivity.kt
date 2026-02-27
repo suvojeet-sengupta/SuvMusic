@@ -162,10 +162,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val darkTheme = when (themeMode) {
-                ThemeMode.DARK -> true
-                ThemeMode.LIGHT -> false
-                ThemeMode.SYSTEM -> systemDarkTheme
+            val darkTheme = remember(themeMode, systemDarkTheme) {
+                when (themeMode) {
+                    ThemeMode.DARK -> true
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.SYSTEM -> systemDarkTheme
+                }
             }
             
             SuvMusicTheme(
