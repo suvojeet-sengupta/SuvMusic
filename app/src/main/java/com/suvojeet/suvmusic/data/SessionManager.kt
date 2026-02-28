@@ -194,6 +194,23 @@ class SessionManager @Inject constructor(
 
         private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
         private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
+        private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
+    }
+    
+    // --- Download Location ---
+    
+    suspend fun getDownloadLocation(): String? = 
+        context.dataStore.data.first()[DOWNLOAD_LOCATION_KEY]
+    
+    val downloadLocationFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[DOWNLOAD_LOCATION_KEY]
+    }
+    
+    suspend fun setDownloadLocation(uri: String?) {
+        context.dataStore.edit { preferences ->
+            if (uri == null) preferences.remove(DOWNLOAD_LOCATION_KEY)
+            else preferences[DOWNLOAD_LOCATION_KEY] = uri
+        }
     }
     
     // --- Developer Mode (Hidden) ---
