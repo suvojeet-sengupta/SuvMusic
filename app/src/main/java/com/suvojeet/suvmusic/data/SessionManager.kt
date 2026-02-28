@@ -1204,8 +1204,33 @@ class SessionManager @Inject constructor(
     private val _isLoggedInFlow = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isLoggedInFlow: Flow<Boolean> = _isLoggedInFlow
 
+    private var _encryptedPrefs: android.content.SharedPreferences? = null
+    private val encryptedPrefs: android.content.SharedPreferences
+        get() {
+            if (_encryptedPrefs == null) {
+                synchronized(this) {
+                    if (_encryptedPrefs == null) {
+                        _encryptedPrefs = createEncryptedPrefs()
+                    }
+                }
+            }
+            return _encryptedPrefs!!
+        }
+
+    private fun createEncryptedPrefs(): android.content.SharedPreferences {
+        return EncryptedSharedPreferences.create(
+            context,
+            "suvmusic_secure_session",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
     init {
         migrationScope.launch {
+            // Warm up encrypted prefs on background thread
+            val prefs = encryptedPrefs 
             migrateCookies()
             // Initial login check on background thread
             _isLoggedInFlow.value = isLoggedIn()
@@ -1222,17 +1247,25 @@ class SessionManager @Inject constructor(
     }
     
     fun getCookies(): String? {
-        return encryptedPrefs.getString("cookies", null)
+        return try {
+            encryptedPrefs.getString("cookies", null)
+        } catch (e: Exception) {
+            null
+        }
     }
     
     suspend fun saveCookies(cookies: String) {
-        encryptedPrefs.edit().putString("cookies", cookies).apply()
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("cookies", cookies).apply()
+        }
         context.dataStore.edit { it.remove(COOKIES_KEY) }
         _isLoggedInFlow.value = true
     }
     
     suspend fun clearCookies() {
-        encryptedPrefs.edit().remove("cookies").apply()
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().remove("cookies").apply()
+        }
         context.dataStore.edit { preferences ->
             preferences.remove(COOKIES_KEY)
         }

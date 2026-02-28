@@ -9,11 +9,14 @@ class NativeSpatialAudio @Inject constructor() {
     private var isLibraryLoaded = false
 
     init {
-        try {
-            System.loadLibrary("suvmusic_native")
-            isLibraryLoaded = true
-        } catch (e: UnsatisfiedLinkError) {
-            android.util.Log.e("NativeSpatialAudio", "Failed to load native library", e)
+        // Load native library on a background thread to avoid potential I/O block on main thread
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                System.loadLibrary("suvmusic_native")
+                isLibraryLoaded = true
+            } catch (e: UnsatisfiedLinkError) {
+                android.util.Log.e("NativeSpatialAudio", "Failed to load native library", e)
+            }
         }
     }
 
