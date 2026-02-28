@@ -48,7 +48,7 @@ class MainViewModel @Inject constructor(
     private val updateRepository: UpdateRepository,
     private val sessionManager: SessionManager,
     private val lastFmRepository: LastFmRepository,
-    private val playerCache: Cache,
+    private val playerCache: dagger.Lazy<androidx.media3.datasource.cache.Cache>,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -85,8 +85,9 @@ class MainViewModel @Inject constructor(
                 val intervalMillis = intervalDays * 24 * 60 * 60 * 1000L
                 if (System.currentTimeMillis() - lastCleared > intervalMillis) {
                     try {
-                        playerCache.keys.forEach { key ->
-                            playerCache.removeResource(key)
+                        val cache = playerCache.get()
+                        cache.keys.forEach { key ->
+                            cache.removeResource(key)
                         }
                         sessionManager.updateLastCacheClearedTimestamp()
                     } catch (e: Exception) {
