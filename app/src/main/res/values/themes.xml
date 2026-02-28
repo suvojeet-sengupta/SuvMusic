@@ -6,7 +6,7 @@
     <!-- Splash Screen theme -->
     <style name="Theme.SuvMusic.SplashScreen" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_foreground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.SuvMusic</item>
     </style>
 </resources>
