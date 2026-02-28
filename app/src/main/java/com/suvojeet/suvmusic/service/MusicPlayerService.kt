@@ -238,29 +238,35 @@ class MusicPlayerService : MediaLibraryService() {
             
             // Apply initial settings asynchronously
             serviceScope.launch {
-                val isOffloadEnabled = sessionManager.isAudioOffloadEnabled()
-                val isSpatialAudioPreferred = sessionManager.isAudioArEnabled()
-                val ignoreAudioFocus = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
-                
-                if (isOffloadEnabled && !isSpatialAudioPreferred && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    trackSelectionParameters = trackSelectionParameters.buildUpon()
-                        .setAudioOffloadPreferences(
-                            androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
-                                .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
-                                .setIsGaplessSupportRequired(false)
+                try {
+                    val isOffloadEnabled = sessionManager.isAudioOffloadEnabled()
+                    val isSpatialAudioPreferred = sessionManager.isAudioArEnabled()
+                    val ignoreAudioFocus = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
+                    
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        if (isOffloadEnabled && !isSpatialAudioPreferred && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            trackSelectionParameters = trackSelectionParameters.buildUpon()
+                                .setAudioOffloadPreferences(
+                                    androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                                        .setAudioOffloadMode(androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+                                        .setIsGaplessSupportRequired(false)
+                                        .build()
+                                )
                                 .build()
-                        )
-                        .build()
-                }
+                        }
 
-                if (ignoreAudioFocus) {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                            .setUsage(C.USAGE_MEDIA)
-                            .build(),
-                        false // Don't handle audio focus
-                    )
+                        if (ignoreAudioFocus) {
+                            setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                                    .setUsage(C.USAGE_MEDIA)
+                                    .build(),
+                                false // Don't handle audio focus
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MusicPlayerService", "Failed to apply initial settings", e)
                 }
             }
             

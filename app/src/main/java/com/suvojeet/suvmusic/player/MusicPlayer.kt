@@ -134,8 +134,10 @@ class MusicPlayer @Inject constructor(
             pause()
         }
 
-        // Initial device scan
-        updateAvailableDevices()
+        // Initial device scan on background thread
+        scope.launch(Dispatchers.Default) {
+            updateAvailableDevices()
+        }
         
         // Register receiver for device changes
         registerDeviceReceiver()
