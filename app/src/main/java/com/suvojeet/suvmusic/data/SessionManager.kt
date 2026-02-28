@@ -195,6 +195,22 @@ class SessionManager @Inject constructor(
         private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
         private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
+        private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
+    }
+    
+    // --- Logging ---
+    
+    suspend fun isLoggingEnabled(): Boolean = 
+        context.dataStore.data.first()[LOGGING_ENABLED_KEY] ?: false
+    
+    val loggingEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[LOGGING_ENABLED_KEY] ?: false
+    }
+    
+    suspend fun setLoggingEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[LOGGING_ENABLED_KEY] = enabled
+        }
     }
     
     // --- Download Location ---

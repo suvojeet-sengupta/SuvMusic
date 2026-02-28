@@ -1,7 +1,14 @@
 package com.suvojeet.suvmusic
 
 import android.app.Application
+import android.content.Context
+import com.suvojeet.suvmusic.BuildConfig
+import com.suvojeet.suvmusic.R
 import dagger.hilt.android.HiltAndroidApp
+import org.acra.ACRA
+import org.acra.config.*
+import org.acra.data.StringFormat
+import org.acra.ktx.initAcra
 
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -28,6 +35,35 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             private set
     }
 
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+
+        try {
+            initAcra {
+                buildConfigClass = BuildConfig::class.java
+                reportFormat = StringFormat.JSON
+                
+                mail {
+                    mailTo = "suvojitsengupta21@gmail.com"
+                    reportAsFile = true
+                    reportFileName = "suvmusic_crash_report.txt"
+                    subject = "SuvMusic Crash Report"
+                    body = "Please describe what you were doing when the app crashed to help me fix it faster.\n\n"
+                    enabled = true
+                }
+                
+                notification {
+                    resTitle = R.string.acra_crash_title
+                    resText = R.string.acra_crash_text
+                    resChannelName = R.string.app_name
+                    enabled = true
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -36,7 +72,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             setupWorkers()
         }
     }
-
+    
     override val workManagerConfiguration: androidx.work.Configuration
         get() = androidx.work.Configuration.Builder()
             .setWorkerFactory(workerFactory)
