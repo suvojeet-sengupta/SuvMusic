@@ -39,7 +39,8 @@ sealed class MainEvent {
 data class MainUiState(
     val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = "",
-    val isInPictureInPictureMode: Boolean = false
+    val isInPictureInPictureMode: Boolean = false,
+    val isReady: Boolean = false
 )
 
 @HiltViewModel
@@ -61,14 +62,19 @@ class MainViewModel @Inject constructor(
     private var downloadedApkFile: File? = null
 
     init {
-        // Load current version
+        // Load current version and check for basic initialization status
         _uiState.update { it.copy(currentVersion = updateRepository.getCurrentVersionName()) }
         
-        // Auto-check for updates on app startup
-        checkForUpdates()
-        
-        // Auto-clear cache if needed
-        checkAndClearCache()
+        viewModelScope.launch {
+            // Check for updates asynchronously
+            checkForUpdates()
+            
+            // Auto-clear cache if needed
+            checkAndClearCache()
+            
+            // App is now "ready" to remove splash screen (basic setup complete)
+            _uiState.update { it.copy(isReady = true) }
+        }
     }
 
     private fun checkAndClearCache() {

@@ -1190,6 +1190,7 @@ class SessionManager @Inject constructor(
         saveUserAvatar(account.avatarUrl)
         setAuthUserIndex(account.authUserIndex)
         saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl, account.authUserIndex)
+        _isLoggedInFlow.value = isLoggedIn()
     }
     
     fun removeAccount(email: String) {
@@ -1200,9 +1201,14 @@ class SessionManager @Inject constructor(
     
     private val migrationScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    private val _isLoggedInFlow = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isLoggedInFlow: Flow<Boolean> = _isLoggedInFlow
+
     init {
         migrationScope.launch {
             migrateCookies()
+            // Initial login check on background thread
+            _isLoggedInFlow.value = isLoggedIn()
         }
     }
 
@@ -1211,6 +1217,7 @@ class SessionManager @Inject constructor(
         if (oldCookies != null) {
             encryptedPrefs.edit().putString("cookies", oldCookies).apply()
             context.dataStore.edit { it.remove(COOKIES_KEY) }
+            _isLoggedInFlow.value = true
         }
     }
     
@@ -1221,6 +1228,7 @@ class SessionManager @Inject constructor(
     suspend fun saveCookies(cookies: String) {
         encryptedPrefs.edit().putString("cookies", cookies).apply()
         context.dataStore.edit { it.remove(COOKIES_KEY) }
+        _isLoggedInFlow.value = true
     }
     
     suspend fun clearCookies() {
@@ -1228,6 +1236,7 @@ class SessionManager @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences.remove(COOKIES_KEY)
         }
+        _isLoggedInFlow.value = false
     }
     
     fun isLoggedIn(): Boolean = !getCookies().isNullOrBlank()
