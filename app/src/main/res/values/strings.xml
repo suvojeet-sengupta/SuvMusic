@@ -49,4 +49,8 @@
     <string name="notification_action_like">Like</string>
     <string name="notification_action_repeat">Repeat</string>
     <string name="notification_action_shuffle">Shuffle</string>
+
+    <!-- ACRA Crash Reporting -->
+    <string name="acra_crash_title">SuvMusic crashed</string>
+    <string name="acra_crash_text">SuvMusic crashed. Click here to share the crash log with the developer.</string>
 </resources>

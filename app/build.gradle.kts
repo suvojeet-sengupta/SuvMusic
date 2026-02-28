@@ -137,6 +137,13 @@ dependencies {
     // Core Library Desugaring for Java 8+ APIs on older Android
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.4")
     
+    // Logging & Crash Reporting
+    implementation(libs.acra.core)
+    implementation(libs.acra.mail)
+    implementation(libs.acra.notification)
+    implementation(libs.acra.dialog)
+    implementation(libs.acra.core.ktx)
+    
     // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.documentfile)
