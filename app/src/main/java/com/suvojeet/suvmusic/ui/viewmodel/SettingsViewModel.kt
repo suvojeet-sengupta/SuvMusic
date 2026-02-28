@@ -118,7 +118,8 @@ data class SettingsUiState(
     val eqBands: FloatArray = FloatArray(10) { 0f },
     val forceMaxRefreshRateEnabled: Boolean = true,
     val navBarAlpha: Float = 0.8f,
-    val downloadLocation: String? = null
+    val downloadLocation: String? = null,
+    val loggingEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -168,6 +169,9 @@ class SettingsViewModel @Inject constructor(
 
     // Download Location
     val downloadLocationFlow = sessionManager.downloadLocationFlow
+    
+    // Logging
+    val loggingEnabledFlow = sessionManager.loggingEnabledFlow
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -472,6 +476,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.loggingEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(loggingEnabled = enabled) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -546,6 +556,7 @@ class SettingsViewModel @Inject constructor(
             val forceMaxRefreshRate = sessionManager.forceMaxRefreshRateFlow.first()
             val navBarAlpha = sessionManager.getNavBarAlpha()
             val downloadLocation = sessionManager.getDownloadLocation()
+            val loggingEnabled = sessionManager.isLoggingEnabled()
 
 
             _uiState.update { 
@@ -618,7 +629,8 @@ class SettingsViewModel @Inject constructor(
                     eqBands = eqBands,
                     forceMaxRefreshRateEnabled = forceMaxRefreshRate,
                     navBarAlpha = navBarAlpha,
-                    downloadLocation = downloadLocation
+                    downloadLocation = downloadLocation,
+                    loggingEnabled = loggingEnabled
                 )
             }
         }
@@ -1315,6 +1327,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setDownloadLocation(uriString)
             _uiState.update { it.copy(downloadLocation = uriString) }
+        }
+    }
+
+    fun setLoggingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setLoggingEnabled(enabled)
+            _uiState.update { it.copy(loggingEnabled = enabled) }
         }
     }
 

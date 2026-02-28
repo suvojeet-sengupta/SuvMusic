@@ -308,6 +308,16 @@ fun SettingsScreen(
                                 scope.launch { viewModel.setDynamicIslandEnabled(enabled) }
                             }
                         )
+
+                        HorizontalDivider()
+
+                        SettingsSwitchItem(
+                            icon = Icons.Default.Warning,
+                            title = "Crash Reporting & Logging",
+                            subtitle = "Help developer fix issues by sharing logs",
+                            checked = uiState.loggingEnabled,
+                            onCheckedChange = { viewModel.setLoggingEnabled(it) }
+                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }

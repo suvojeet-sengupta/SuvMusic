@@ -30,12 +30,20 @@ hiltWork = "1.2.0"
 protobuf = "4.33.5"
 jaudiotagger = "3.0.1"
 documentfile = "1.1.0"
+acra = "5.13.1"
 
 
 [libraries]
 # Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+acra-http = { group = "ch.acra", name = "acra-http", version.ref = "acra" }
+acra-toast = { group = "ch.acra", name = "acra-toast", version.ref = "acra" }
+acra-notification = { group = "ch.acra", name = "acra-notification", version.ref = "acra" }
+acra-dialog = { group = "ch.acra", name = "acra-dialog", version.ref = "acra" }
+acra-mail = { group = "ch.acra", name = "acra-mail", version.ref = "acra" }
+acra-core = { group = "ch.acra", name = "acra-core", version.ref = "acra" }
+acra-core-ktx = { group = "ch.acra", name = "acra-core-ktx", version.ref = "acra" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 # Jsoup (HTML Parser)
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
