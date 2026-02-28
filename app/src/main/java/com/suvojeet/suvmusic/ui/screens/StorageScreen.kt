@@ -1,5 +1,8 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,10 +41,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun StorageScreen(
     downloadRepository: DownloadRepository,
+    settingsViewModel: SettingsViewModel,
     onBackClick: () -> Unit,
     onPlayerCacheClick: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val uiState by settingsViewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
     var storageInfo by remember { mutableStateOf<DownloadRepository.StorageInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
@@ -48,6 +56,21 @@ fun StorageScreen(
     var showClearImageCacheDialog by remember { mutableStateOf(false) }
     var isClearing by remember { mutableStateOf(false) }
     
+    // Folder picker launcher
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        uri?.let {
+            // Persist permission
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or 
+                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            settingsViewModel.setDownloadLocation(it.toString())
+        }
+    }
+
     // Load storage info
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -154,6 +177,19 @@ fun StorageScreen(
                         onClick = null // No specific detail screen for downloads here, currently managed in Library
                     )
                     
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Download Location Item
+                    StorageItem(
+                        icon = Icons.Default.Folder,
+                        title = "Download Location",
+                        subtitle = if (uiState.downloadLocation == null) "Default (Music/SuvMusic)" else "Custom folder set",
+                        size = if (uiState.downloadLocation == null) "" else "Custom",
+                        color = MaterialTheme.colorScheme.secondary,
+                        onClick = { folderPickerLauncher.launch(null) },
+                        showChevron = true
+                    )
+
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Player Cache Item (Clickable to go to detail screen)

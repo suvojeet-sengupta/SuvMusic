@@ -117,7 +117,8 @@ data class SettingsUiState(
     val eqEnabled: Boolean = false,
     val eqBands: FloatArray = FloatArray(10) { 0f },
     val forceMaxRefreshRateEnabled: Boolean = true,
-    val navBarAlpha: Float = 0.8f
+    val navBarAlpha: Float = 0.8f,
+    val downloadLocation: String? = null
 )
 
 @HiltViewModel
@@ -164,6 +165,9 @@ class SettingsViewModel @Inject constructor(
     // Lyrics Settings Flows
     val lyricsLineSpacing = sessionManager.lyricsLineSpacingFlow
     val lyricsFontSize = sessionManager.lyricsFontSizeFlow
+
+    // Download Location
+    val downloadLocationFlow = sessionManager.downloadLocationFlow
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
@@ -462,6 +466,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.downloadLocationFlow.collect { location ->
+                _uiState.update { it.copy(downloadLocation = location) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -535,6 +545,7 @@ class SettingsViewModel @Inject constructor(
             val eqBands = sessionManager.getEqBands()
             val forceMaxRefreshRate = sessionManager.forceMaxRefreshRateFlow.first()
             val navBarAlpha = sessionManager.getNavBarAlpha()
+            val downloadLocation = sessionManager.getDownloadLocation()
 
 
             _uiState.update { 
@@ -606,7 +617,8 @@ class SettingsViewModel @Inject constructor(
                     eqEnabled = eqEnabled,
                     eqBands = eqBands,
                     forceMaxRefreshRateEnabled = forceMaxRefreshRate,
-                    navBarAlpha = navBarAlpha
+                    navBarAlpha = navBarAlpha,
+                    downloadLocation = downloadLocation
                 )
             }
         }
@@ -1298,6 +1310,14 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(sponsorBlockEnabled = enabled) }
         }
     }
+
+    fun setDownloadLocation(uriString: String?) {
+        viewModelScope.launch {
+            sessionManager.setDownloadLocation(uriString)
+            _uiState.update { it.copy(downloadLocation = uriString) }
+        }
+    }
+
     fun toggleSponsorCategory(categoryKey: String, isEnabled: Boolean) {
         viewModelScope.launch {
             sessionManager.toggleSponsorCategory(categoryKey, isEnabled)
