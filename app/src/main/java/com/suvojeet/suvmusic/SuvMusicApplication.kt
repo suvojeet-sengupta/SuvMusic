@@ -28,8 +28,10 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
     override fun onCreate() {
         super.onCreate()
         instance = this
-        // Initialize any app-wide components here
-        setupWorkers()
+        // Initialize any app-wide components here on a background thread
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            setupWorkers()
+        }
     }
 
     override val workManagerConfiguration: androidx.work.Configuration
