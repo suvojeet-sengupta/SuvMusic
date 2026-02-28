@@ -30,6 +30,11 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     
     <!-- TV features -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.type.television" android:required="false" />
+    <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- Package visibility for Android 11+ -->
     <queries>
