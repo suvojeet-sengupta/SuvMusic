@@ -126,8 +126,14 @@ class MainActivity : ComponentActivity() {
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        // Keep splash screen on until ViewModel reports isReady = true
+        splashScreen.setKeepOnScreenCondition {
+            !mainViewModel.uiState.value.isReady
+        }
+        
         enableEdgeToEdge()
         enableMaxRefreshRate()
         
@@ -182,6 +188,7 @@ class MainActivity : ComponentActivity() {
                     audioManager = audioManager,
                     volumeKeyEvents = _volumeKeyEvents,
                     downloadRepository = downloadRepository,
+                    sessionManager = sessionManager, // Pass the injected instance
                     onPlaybackStateChanged = { hasSong -> 
                         isSongPlaying = hasSong
                         // Update PiP params whenever playback state changes
@@ -308,11 +315,11 @@ fun SuvMusicApp(
     audioManager: AudioManager,
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
+    sessionManager: SessionManager, // Injected instance passed from MainActivity
     onPlaybackStateChanged: (Boolean) -> Unit,
     onVolumeSliderEnabledChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val sessionManager = remember { SessionManager(context) }
     val snackbarHostState = remember { SnackbarHostState() }
     
     // Collect volume slider enabled preference
@@ -324,9 +331,10 @@ fun SuvMusicApp(
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val mainViewModel: MainViewModel = hiltViewModel()
     val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
-    
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-    
+
+    val isLoggedIn by sessionManager.isLoggedInFlow.collectAsStateWithLifecycle(initialValue = false)
+
+    val scope = androidx.compose.runtime.rememberCoroutineScope()    
     // Optimized states to reduce recompositions
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
@@ -723,7 +731,7 @@ fun SuvMusicApp(
                             isFetchingLyrics = isFetchingLyrics,
                             comments = comments,
                             isFetchingComments = isFetchingComments,
-                            isLoggedIn = playerViewModel.isLoggedIn(),
+                            isLoggedIn = isLoggedIn,
                             isPostingComment = isPostingComment,
                             onPostComment = { commentText -> playerViewModel.postComment(commentText) },
                             isLoadingMoreComments = isLoadingMoreComments,
@@ -818,7 +826,7 @@ fun SuvMusicApp(
                     isFetchingLyrics = isFetchingLyrics,
                     comments = comments,
                     isFetchingComments = isFetchingComments,
-                    isLoggedIn = playerViewModel.isLoggedIn(),
+                    isLoggedIn = isLoggedIn,
                     isPostingComment = isPostingComment,
                     onPostComment = { commentText -> playerViewModel.postComment(commentText) },
                     isLoadingMoreComments = isLoadingMoreComments,
