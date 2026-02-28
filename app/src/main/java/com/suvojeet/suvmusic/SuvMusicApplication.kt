@@ -9,6 +9,9 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.util.DebugLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Application class for SuvMusic.
@@ -29,7 +32,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
         super.onCreate()
         instance = this
         // Initialize any app-wide components here on a background thread
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             setupWorkers()
         }
     }
