@@ -583,8 +583,10 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
+                                    isDisliked = playerState.isDisliked,
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
+                                    onDislikeClick = onToggleDislike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { 
                                         activeOverlay = PlayerOverlay.Actions(song)
@@ -784,8 +786,10 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
+                                    isDisliked = playerState.isDisliked,
                                     downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
+                                    onDislikeClick = onToggleDislike,
                                     onDownloadClick = onDownload,
                                     onMoreClick = { 
                                         activeOverlay = PlayerOverlay.Actions(song)
