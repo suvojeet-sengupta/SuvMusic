@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -220,6 +221,7 @@ fun WaveformSeeker(
                 )
                 .fillMaxWidth()
                 .height(60.dp)
+                .graphicsLayer { clip = false }
                 .padding(horizontal = 8.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(
