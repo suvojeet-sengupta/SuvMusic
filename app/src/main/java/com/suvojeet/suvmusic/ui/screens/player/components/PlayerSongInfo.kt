@@ -17,7 +17,9 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,8 +50,10 @@ import androidx.compose.foundation.clickable
 fun SongInfoSection(
     song: Song?,
     isFavorite: Boolean,
+    isDisliked: Boolean = false,
     downloadState: DownloadState,
     onFavoriteClick: () -> Unit,
+    onDislikeClick: () -> Unit = {},
     onDownloadClick: () -> Unit,
     onMoreClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
@@ -200,6 +204,19 @@ fun SongInfoSection(
                     imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                     contentDescription = "Like",
                     tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.9f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            // Dislike Button — signals the recommendation engine to avoid similar songs
+            IconButton(
+                onClick = onDislikeClick,
+                modifier = iconButtonModifier
+            ) {
+                Icon(
+                    imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                    contentDescription = "Dislike",
+                    tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.9f),
                     modifier = Modifier.size(22.dp)
                 )
             }

@@ -18,6 +18,7 @@ import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
 import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
@@ -62,6 +63,7 @@ class PlayerViewModel @Inject constructor(
     private val recommendationEngine: RecommendationEngine,
     private val smartQueueManager: SmartQueueManager,
     private val sponsorBlockRepository: SponsorBlockRepository,
+    private val listeningHistoryRepository: ListeningHistoryRepository,
     private val discordManager: DiscordManager,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
     private val spatialAudioProcessor: com.suvojeet.suvmusic.player.SpatialAudioProcessor,
@@ -266,6 +268,9 @@ class PlayerViewModel @Inject constructor(
                         checkLikeStatus(song)
                         checkDownloadStatus(song)
                         
+                        // Notify recommendation engine of song change for adaptive recommendations
+                        recommendationEngine.onSongPlayed(song)
+                        
                         // Reset sync state for new song
                         if (song.id != lastSyncedVideoId) {
                             currentSongPlayTime = 0
@@ -449,6 +454,28 @@ class PlayerViewModel @Inject constructor(
     
     fun toggleAutoplay() {
         musicPlayer.toggleAutoplay()
+    }
+
+    /**
+     * Start a personalized radio session. If a song is currently playing, it's used
+     * as the seed. Otherwise, the RecommendationEngine picks a seed from the user's
+     * top-played / liked songs, giving a fully personalized "Your Radio" experience.
+     */
+    fun startPersonalizedRadio() {
+        val currentSong = playerState.value.currentSong
+        if (currentSong != null) {
+            startRadio(currentSong)
+        } else {
+            viewModelScope.launch {
+                try {
+                    val recommendations = recommendationEngine.getPersonalizedRecommendations(5)
+                    val seed = recommendations.firstOrNull() ?: return@launch
+                    startRadio(seed, recommendations)
+                } catch (e: Exception) {
+                    Log.e("PlayerViewModel", "Failed to start personalized radio", e)
+                }
+            }
+        }
     }
 
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {
@@ -1024,6 +1051,9 @@ class PlayerViewModel @Inject constructor(
                 // Notify recommendation engine of like change
                 recommendationEngine.onSongLikeChanged(song, rating == "LIKE")
                 
+                // Persist like status in local listening history for taste profile
+                listeningHistoryRepository.markAsLiked(song.id, rating == "LIKE")
+                
                 if (rating == "LIKE") {
                     if (youTubeRepository.isOnline()) {
                         youTubeRepository.getLikedMusic(fetchAll = false)
@@ -1046,12 +1076,24 @@ class PlayerViewModel @Inject constructor(
         // Optimistic update
         musicPlayer.updateDislikeStatus(!currentDislikeState)
         
+        // Notify recommendation engine — disliked songs are excluded from future recommendations
+        recommendationEngine.onSongDisliked(song, !currentDislikeState)
+        
         viewModelScope.launch {
             val rating = if (!currentDislikeState) "DISLIKE" else "INDIFFERENT"
             val success = youTubeRepository.rateSong(song.id, rating)
             if (!success) {
                 // Revert on failure
                 musicPlayer.updateDislikeStatus(currentDislikeState)
+                recommendationEngine.onSongDisliked(song, currentDislikeState)
+            } else if (!currentDislikeState) {
+                // On successful dislike: auto-skip to next (like YT Music behavior)
+                // This gives instant feedback that the dislike was registered
+                val isRadio = _isRadioMode.value
+                val isAutoplay = playerState.value.isAutoplayEnabled
+                if (isRadio || isAutoplay) {
+                    musicPlayer.seekToNext()
+                }
             }
         }
     }

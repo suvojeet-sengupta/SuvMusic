@@ -109,6 +109,26 @@ class TasteProfileBuilder @Inject constructor(
         // --- Liked Songs ---
         val likedIds = allHistory.filter { it.isLiked }.map { it.songId }.toSet()
 
+        // --- Liked Artists (artists of liked songs) ---
+        val likedArtistSet = allHistory
+            .filter { it.isLiked }
+            .map { it.artist.trim().lowercase() }
+            .filter { it.isNotBlank() }
+            .toSet()
+
+        // --- Disliked Artists (artists with high skip rate across all their songs) ---
+        val artistSkipRatios = allHistory
+            .groupBy { it.artist.trim().lowercase() }
+            .filter { it.key.isNotBlank() && it.value.size >= 2 }
+            .mapValues { (_, songs) ->
+                val totalPlays = songs.sumOf { it.playCount }.toFloat()
+                val totalSkips = songs.sumOf { it.skipCount }.toFloat()
+                if (totalPlays > 0) totalSkips / totalPlays else 0f
+            }
+        val dislikedArtistSet = artistSkipRatios
+            .filter { it.value > 0.6f } // Artist skipped more than 60% of the time
+            .keys
+
         // --- Recent Songs ---
         val recentSongs = try {
             listeningHistoryDao.getRecentlyPlayed(RECENT_SONGS_LIMIT).first()
@@ -138,6 +158,9 @@ class TasteProfileBuilder @Inject constructor(
             avgCompletionRate = avgCompletion,
             frequentlySkippedIds = skippedIds,
             likedSongIds = likedIds,
+            dislikedSongIds = emptySet(), // Tracked in-memory by RecommendationEngine
+            likedArtists = likedArtistSet,
+            dislikedArtists = dislikedArtistSet,
             recentSongIds = recentSongs,
             topPlayedSongIds = topPlayedIds,
             sourceDistribution = sourceDistribution,

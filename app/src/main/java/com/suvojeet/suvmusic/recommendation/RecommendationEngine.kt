@@ -47,6 +47,18 @@ class RecommendationEngine @Inject constructor(
         private const val TAG = "RecommendationEngine"
     }
 
+    /**
+     * In-memory set of disliked song IDs (synced when user presses dislike).
+     * These songs are completely excluded from all recommendations.
+     */
+    private val dislikedSongIds = mutableSetOf<String>()
+
+    /**
+     * In-memory set of disliked artists (derived from disliked songs).
+     * Songs by these artists receive a heavy penalty.
+     */
+    private val dislikedArtists = mutableSetOf<String>()
+
     // ============================================================================================
     // PUBLIC API — Home Screen
     // ============================================================================================
@@ -478,10 +490,31 @@ class RecommendationEngine @Inject constructor(
 
     /**
      * Call when the user likes/unlikes a song.
+     * Liked songs get a boost; unliked songs lose the boost.
      */
     fun onSongLikeChanged(song: Song, isLiked: Boolean) {
         tasteProfileBuilder.invalidate()
         cache.invalidateRecommendations()
+        Log.d(TAG, "Like changed: '${song.title}' by ${song.artist} -> liked=$isLiked")
+    }
+
+    /**
+     * Call when the user dislikes/un-dislikes a song.
+     * Disliked songs are excluded from all recommendations.
+     * Also penalizes the artist in future scoring.
+     */
+    fun onSongDisliked(song: Song, isDisliked: Boolean) {
+        if (isDisliked) {
+            dislikedSongIds.add(song.id)
+            song.artist.trim().lowercase().let { if (it.isNotBlank()) dislikedArtists.add(it) }
+        } else {
+            dislikedSongIds.remove(song.id)
+            // Don't remove artist — one un-dislike shouldn't undo full artist penalty
+        }
+        tasteProfileBuilder.invalidate()
+        cache.invalidateRecommendations()
+        cache.invalidateUpNext()
+        Log.d(TAG, "Dislike changed: '${song.title}' by ${song.artist} -> disliked=$isDisliked")
     }
 
     /**
@@ -490,6 +523,8 @@ class RecommendationEngine @Inject constructor(
     fun onAuthStateChanged() {
         tasteProfileBuilder.invalidate()
         cache.invalidateAll()
+        dislikedSongIds.clear()
+        dislikedArtists.clear()
     }
 
     // ============================================================================================
@@ -500,17 +535,19 @@ class RecommendationEngine @Inject constructor(
      * Score and rank song candidates using the taste profile.
      *
      * Scoring factors:
-     * - Artist affinity: +0.35 weight (highest — "I like this artist")
-     * - Freshness: +0.20 weight (not recently played = more interesting)
+     * - Artist affinity: +0.30 weight ("I listen to this artist a lot")
+     * - Freshness: +0.15 weight (not recently played = more interesting)
      * - Skip avoidance: -0.15 penalty (frequently skipped songs ranked lower)
+     * - Dislike penalty: -HARD EXCLUDE or -0.25 (user explicitly disliked)
+     * - Liked boost: +0.10 weight (user explicitly liked this song)
+     * - Liked artist boost: +0.10 weight (user liked other songs by this artist)
      * - Time-of-day relevance: +0.10 weight (songs associated with current time)
-     * - Liked bonus: +0.10 weight (user explicitly liked similar)
-     * - Variety bonus: +0.10 weight (not from an over-represented artist)
+     * - Variety: -0.10 penalty (over-represented artists in results)
      */
     private fun scoreAndRank(candidates: List<Song>, profile: UserTasteProfile): List<Song> {
         if (!profile.hasEnoughData || candidates.isEmpty()) {
-            // Not enough data to personalize — return in original order (YT Music's order)
-            return candidates
+            // Not enough data to personalize — filter disliked, return in YT Music's order
+            return candidates.filter { it.id !in dislikedSongIds }
         }
 
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -518,48 +555,59 @@ class RecommendationEngine @Inject constructor(
 
         data class ScoredSong(val song: Song, val score: Float)
 
-        val scored = candidates.map { song ->
-            var score = 0.5f // Base score
+        val scored = candidates
+            .filter { it.id !in dislikedSongIds } // Hard exclude disliked songs
+            .map { song ->
+                var score = 0.5f // Base score
 
-            val artistKey = song.artist.trim().lowercase()
+                val artistKey = song.artist.trim().lowercase()
 
-            // --- Artist Affinity (0.35) ---
-            val artistAffinity = profile.artistAffinities[artistKey] ?: 0f
-            score += artistAffinity * 0.35f
+                // --- Artist Affinity (0.30) ---
+                val artistAffinity = profile.artistAffinities[artistKey] ?: 0f
+                score += artistAffinity * 0.30f
 
-            // --- Freshness (0.20) —-- prefer songs NOT recently played
-            val isRecent = song.id in profile.recentSongIds
-            if (!isRecent) {
-                score += 0.20f
-            } else {
-                // Recently played — small penalty to avoid stale repeat
-                val recencyIndex = profile.recentSongIds.indexOf(song.id)
-                score -= 0.10f * (1f - recencyIndex.toFloat() / profile.recentSongIds.size)
+                // --- Freshness (0.15) — prefer songs NOT recently played
+                val isRecent = song.id in profile.recentSongIds
+                if (!isRecent) {
+                    score += 0.15f
+                } else {
+                    val recencyIndex = profile.recentSongIds.indexOf(song.id)
+                    score -= 0.08f * (1f - recencyIndex.toFloat() / profile.recentSongIds.size.coerceAtLeast(1))
+                }
+
+                // --- Skip Avoidance (-0.15) --- penalize frequently skipped
+                if (song.id in profile.frequentlySkippedIds) {
+                    score -= 0.15f
+                }
+
+                // --- Disliked Artist Penalty (-0.25) ---
+                if (artistKey in dislikedArtists || artistKey in profile.dislikedArtists) {
+                    score -= 0.25f
+                }
+
+                // --- Liked Boost (0.10) --- if this exact song is liked
+                if (song.id in profile.likedSongIds) {
+                    score += 0.10f
+                }
+
+                // --- Liked Artist Boost (0.10) --- if user liked other songs by this artist
+                if (artistKey in profile.likedArtists) {
+                    score += 0.10f
+                }
+
+                // --- Time-of-Day Relevance (0.10) ---
+                val timeWeight = profile.timeOfDayWeights[currentHour] ?: 0.5f
+                score += timeWeight * 0.10f
+
+                // --- Variety (-0.10) --- penalize over-represented artists in results
+                val artistCount = artistCounts.getOrDefault(artistKey, 0)
+                artistCounts[artistKey] = artistCount + 1
+                if (artistCount > 2) {
+                    score -= 0.10f * (artistCount - 2)
+                }
+
+                ScoredSong(song, score.coerceIn(0f, 1f))
             }
-
-            // --- Skip Avoidance (-0.15) --- penalize frequently skipped
-            if (song.id in profile.frequentlySkippedIds) {
-                score -= 0.15f
-            }
-
-            // --- Time-of-Day Relevance (0.10) ---
-            val timeWeight = profile.timeOfDayWeights[currentHour] ?: 0.5f
-            score += timeWeight * 0.10f
-
-            // --- Liked Boost (0.10) --- if this exact song is liked
-            if (song.id in profile.likedSongIds) {
-                score += 0.10f
-            }
-
-            // --- Variety (0.10) --- penalize over-represented artists in results
-            val artistCount = artistCounts.getOrDefault(artistKey, 0)
-            artistCounts[artistKey] = artistCount + 1
-            if (artistCount > 2) {
-                score -= 0.10f * (artistCount - 2) // Progressive penalty
-            }
-
-            ScoredSong(song, score.coerceIn(0f, 1f))
-        }
 
         return scored.sortedByDescending { it.score }.map { it.song }
     }

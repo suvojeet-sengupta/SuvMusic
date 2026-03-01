@@ -20,6 +20,15 @@ data class UserTasteProfile(
     /** Songs the user has liked */
     val likedSongIds: Set<String> = emptySet(),
     
+    /** Songs the user has disliked — strongly penalized or excluded */
+    val dislikedSongIds: Set<String> = emptySet(),
+    
+    /** Artists of liked songs — boosted in scoring */
+    val likedArtists: Set<String> = emptySet(),
+    
+    /** Artists of disliked songs — penalized in scoring */
+    val dislikedArtists: Set<String> = emptySet(),
+    
     /** Recently played song IDs for recency boost & dedup */
     val recentSongIds: List<String> = emptyList(),
     
