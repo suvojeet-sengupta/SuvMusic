@@ -94,6 +94,33 @@ fun AlbumScreen(
     val isScrolled by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100 }
     }
+
+    // Scroll Direction Tracking for Hiding TopBar
+    var isScrollingDown by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var previousIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var previousScrollOffset by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+
+    androidx.compose.runtime.LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { 
+            Pair(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) 
+        }.collect { (currentIndex, currentOffset) ->
+            if (currentIndex > previousIndex) {
+                isScrollingDown = true
+            } else if (currentIndex < previousIndex) {
+                isScrollingDown = false
+            } else {
+                if (currentOffset > previousScrollOffset + 10) {
+                    isScrollingDown = true
+                } else if (currentOffset < previousScrollOffset - 10) {
+                    isScrollingDown = false
+                }
+            }
+            previousIndex = currentIndex
+            previousScrollOffset = currentOffset
+        }
+    }
+    
+    val isTopBarVisible = !isScrolled || !isScrollingDown
     
     // Dialog/Menu states
     var showMenu by remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -209,13 +236,19 @@ fun AlbumScreen(
                 }
                 
                 // Top Bar (Fixed at top)
-                AlbumTopBar(
-                    title = album.title,
-                    isScrolled = isScrolled,
-                    onBackClick = onBackClick,
-                    isDarkTheme = isDarkTheme,
-                    contentColor = contentColor
-                )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isTopBarVisible,
+                    enter = androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
+                    exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { -it })
+                ) {
+                    AlbumTopBar(
+                        title = album.title,
+                        isScrolled = isScrolled,
+                        onBackClick = onBackClick,
+                        isDarkTheme = isDarkTheme,
+                        contentColor = contentColor
+                    )
+                }
                 
                 // Media Menu Bottom Sheet
                 if (showMenu) {
@@ -304,15 +337,15 @@ private fun AlbumTopBar(
     contentColor: Color
 ) {
     // Determine background color when scrolled
-    val scrolledColor = if (isDarkTheme) Color(0xFF1D1D1D) else Color.White
+    val scrolledColor = if (isDarkTheme) Color(0xFF1D1D1D).copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f)
+    val targetColor = if (isScrolled) scrolledColor else Color.Transparent
+    val backgroundColor by androidx.compose.animation.animateColorAsState(targetValue = targetColor, label = "AlbumTopBarBackground")
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(backgroundColor)
             .statusBarsPadding()
-            .background(
-                if (isScrolled) scrolledColor else Color.Transparent
-            )
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
