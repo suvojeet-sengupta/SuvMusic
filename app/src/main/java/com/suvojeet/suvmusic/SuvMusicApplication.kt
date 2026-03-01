@@ -42,16 +42,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             initAcra {
                 buildConfigClass = BuildConfig::class.java
                 reportFormat = StringFormat.JSON
-                
-                mail {
-                    mailTo = "suvojitsengupta21@gmail.com"
-                    reportAsFile = true
-                    reportFileName = "suvmusic_crash_report.txt"
-                    subject = "SuvMusic Crash Report"
-                    body = "Please describe what you were doing when the app crashed to help me fix it faster.\n\n"
-                    enabled = true
-                }
-                
+
                 notification {
                     resTitle = R.string.acra_crash_title
                     resText = R.string.acra_crash_text

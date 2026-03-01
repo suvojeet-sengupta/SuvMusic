@@ -139,7 +139,6 @@ dependencies {
     
     // Logging & Crash Reporting
     implementation(libs.acra.core)
-    implementation(libs.acra.mail)
     implementation(libs.acra.notification)
     implementation(libs.acra.dialog)
     

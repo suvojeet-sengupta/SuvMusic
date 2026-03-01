@@ -4,4 +4,6 @@
     <cache-path name="updates" path="updates/" />
     <!-- Cache directory for shared images -->
     <cache-path name="images" path="images/" />
+    <!-- Cache directory for crash logs -->
+    <cache-path name="crash_logs" path="crash_logs/" />
 </paths>
