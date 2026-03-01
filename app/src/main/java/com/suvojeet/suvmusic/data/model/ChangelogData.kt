@@ -10,9 +10,28 @@ data class ChangelogEntry(
 object ChangelogData {
     val entries = listOf(
         ChangelogEntry(
+            version = "1.3.1.2",
+            date = "March 1, 2026",
+            isLatest = true,
+            changes = listOf(
+                "Integrated ACRA crash reporting with Telegram and download log sharing",
+                "Added iOS-style liquid glass bottom navigation (toggleable in Settings)",
+                "Support for setting custom download locations in Settings",
+                "Significant startup performance: fixed 3-second hang in MainActivity",
+                "Enhanced splash screen transitions and fixed background morphing on Xiaomi",
+                "Increased default navigation bar opacity to 90% for improved visual aesthetics",
+                "Dynamic TopBar behavior: hides on scroll in Album/Playlist screens",
+                "Fixed full-screen playback on Android 12 by using actual view height",
+                "Initial Android TV feature support declarations in AndroidManifest.xml",
+                "Restored classic app logo and related branding",
+                "Fixed ACRA 5.13 notification configuration to ensure reliable crash reporting",
+                "Reduced APK footprint and installation lag via resource optimization"
+            )
+        ),
+        ChangelogEntry(
             version = "1.3.1.1",
             date = "February 27, 2026",
-            isLatest = true,
+            isLatest = false,
             changes = listOf(
                 "Implemented official Android Splash Screen API for smoother startup",
                 "Added Adaptive Icon support (Circle.png) with 20% inset for all shapes",

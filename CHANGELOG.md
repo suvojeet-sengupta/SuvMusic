@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.3.1.2] - 2026-03-01
+
+### Added
+- **Crash Reporting**: Integrated ACRA for robust crash reporting and log sharing via Telegram or direct download.
+- **Custom Download Location**: Users can now specify a custom storage path for downloads in Settings.
+- **Liquid Glass Navigation**: New iOS-inspired liquid glass bottom navigation bar (toggleable in Settings).
+- **Android TV Support**: Added initial feature declarations for better compatibility with Android TV devices.
+
+### Changed
+- **UI Refinements**: Set default navigation bar opacity to 90% for a sleeker look.
+- **Dynamic TopBar**: The TopBar now hides on scroll in Album and Playlist screens to prevent status bar overlap.
+- **Branding**: Restored the classic app logo and related branding elements.
+
+### Fixed
+- **Splash Screen**: Resolved splash background morphing on Xiaomi devices and corrected adaptive icon rendering.
+- **Full-Screen Playback**: Fixed view height calculations to ensure a true full-screen player experience on Android 12+.
+- **Stability**: Fixed conflicting declarations in SessionManager and resolved various compilation errors in services.
+- **ACRA Configuration**: Corrected notification DSL property names for ACRA 5.13 compatibility.
+
+### Performance
+- **Startup Optimization**: Eliminated a 3-second startup hang in MainActivity and optimized splash screen transitions.
+- **APK Size**: Reduced APK footprint and installation time using `abiFilters` and `resourceConfigs`.
+- **Resource Efficiency**: Optimized app logo size to eliminate lag during installation.
+
 ## [1.0.4] - 2026-01-25
 
 ### Added
