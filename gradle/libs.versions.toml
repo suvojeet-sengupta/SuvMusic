@@ -43,7 +43,6 @@ acra-notification = { group = "ch.acra", name = "acra-notification", version.ref
 acra-dialog = { group = "ch.acra", name = "acra-dialog", version.ref = "acra" }
 acra-mail = { group = "ch.acra", name = "acra-mail", version.ref = "acra" }
 acra-core = { group = "ch.acra", name = "acra-core", version.ref = "acra" }
-acra-core-ktx = { group = "ch.acra", name = "acra-core-ktx", version.ref = "acra" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 # Jsoup (HTML Parser)
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
