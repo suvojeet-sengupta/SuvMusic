@@ -2,11 +2,11 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
@@ -23,7 +23,6 @@ import com.suvojeet.suvmusic.ui.components.DominantColors
 @Composable
 fun PlayerTopBar(
     onBack: () -> Unit,
-    onShowQueue: () -> Unit,
     dominantColors: DominantColors,
     audioArEnabled: Boolean = false,
     onRecenter: () -> Unit = {}
@@ -51,26 +50,17 @@ fun PlayerTopBar(
             letterSpacing = 2.sp
         )
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (audioArEnabled) {
-                IconButton(onClick = onRecenter) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Recenter Audio",
-                        tint = dominantColors.onBackground
-                    )
-                }
-            }
-            
-            IconButton(onClick = onShowQueue) {
+        if (audioArEnabled) {
+            IconButton(onClick = onRecenter) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                    contentDescription = "Queue",
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Recenter Audio",
                     tint = dominantColors.onBackground
                 )
             }
+        } else {
+            // Spacer to balance the back button and keep title centered
+            Spacer(modifier = Modifier.size(48.dp))
         }
     }
 }
