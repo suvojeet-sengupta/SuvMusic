@@ -44,9 +44,9 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
                 reportFormat = StringFormat.JSON
 
                 notification {
-                    resTitle = R.string.acra_crash_title
-                    resText = R.string.acra_crash_text
-                    resChannelName = R.string.app_name
+                    title = base.getString(R.string.acra_crash_title)
+                    text = base.getString(R.string.acra_crash_text)
+                    channelName = base.getString(R.string.app_name)
                     enabled = true
                 }
             }
