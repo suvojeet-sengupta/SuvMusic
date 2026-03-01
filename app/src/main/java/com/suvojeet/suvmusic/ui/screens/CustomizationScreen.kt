@@ -127,7 +127,7 @@ fun CustomizationScreen(
     }
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
-    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.85f)
+    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
     val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsState(initial = false)
     val dynamicColor by sessionManager.dynamicColorFlow.collectAsState(initial = true)
     val pureBlack by sessionManager.pureBlackEnabledFlow.collectAsState(initial = false)
