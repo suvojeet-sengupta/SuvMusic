@@ -28,6 +28,7 @@ import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
+import com.suvojeet.suvmusic.recommendation.SmartQueueManager
 import com.suvojeet.suvmusic.service.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -59,6 +60,7 @@ class PlayerViewModel @Inject constructor(
     private val sleepTimerManager: SleepTimerManager,
     private val sessionManager: SessionManager,
     private val recommendationEngine: RecommendationEngine,
+    private val smartQueueManager: SmartQueueManager,
     private val sponsorBlockRepository: SponsorBlockRepository,
     private val discordManager: DiscordManager,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
@@ -382,6 +384,11 @@ class PlayerViewModel @Inject constructor(
         radioBaseSongId = null
         _isRadioMode.value = false
         musicPlayer.updateRadioMode(false)
+        smartQueueManager.reset()
+        
+        // Notify recommendation engine of the new song context
+        recommendationEngine.onSongPlayed(song)
+        
         musicPlayer.playSong(song, queue, startIndex)
     }
     
@@ -423,6 +430,8 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun seekToNext() {
+        // Notify recommendation engine of skip (current song was skipped)
+        playerState.value.currentSong?.let { recommendationEngine.onSongSkipped(it) }
         musicPlayer.seekToNext()
     }
     
@@ -547,8 +556,8 @@ class PlayerViewModel @Inject constructor(
     
     /**
      * Start a radio based on the given song.
-     * Uses YT Music recommendations when logged in, local history-based recommendations when not.
-     * Creates an endless queue that auto-loads more songs as you near the end.
+     * Uses the SmartQueueManager backed by the enhanced RecommendationEngine
+     * for YT Music-quality recommendations.
      * @param song The seed song for the radio.
      * @param initialQueue Optional list of songs to start with (e.g. search results).
      */
@@ -557,6 +566,9 @@ class PlayerViewModel @Inject constructor(
             _isRadioMode.value = true
             musicPlayer.updateRadioMode(true)
             radioBaseSongId = song.id
+            
+            // Notify recommendation engine of the new context
+            recommendationEngine.onSongPlayed(song)
             
             // Play immediately with provided queue or just the selected song
             if (initialQueue != null && initialQueue.isNotEmpty()) {
@@ -567,38 +579,16 @@ class PlayerViewModel @Inject constructor(
             }
             
             try {
-                val radioSongs = mutableListOf<Song>()
-                
-                // 1. Try YT Music recommendations first (works for any song with an ID)
-                val relatedSongs = youTubeRepository.getRelatedSongs(song.id)
-                if (relatedSongs.isNotEmpty()) {
-                    // De-duplicate and filter current song
-                    val filtered = relatedSongs.filter { it.id != song.id }
-                        .distinctBy { it.id }
-                    radioSongs.addAll(filtered.take(30))
-                }
-                
-                // 2. If not enough songs or not a YouTube song, use local recommendation engine
-                if (radioSongs.size < 10) {
-                    val localRecommendations = recommendationEngine.getPersonalizedRecommendations(30)
-                    // Filter out songs already in queue (currently just the playing song)
-                    // and any we just fetched
-                    val existingIds = mutableSetOf(song.id)
-                    existingIds.addAll(radioSongs.map { it.id })
-                    
-                    val newSongs = localRecommendations.filter { it.id !in existingIds }
-                    radioSongs.addAll(newSongs)
-                }
-                
-                // 3. Last resort fallback: trending songs
-                if (radioSongs.isEmpty()) {
-                    val fallback = youTubeRepository.search("trending music", YouTubeRepository.FILTER_SONGS)
-                    radioSongs.addAll(fallback.filter { it.id != song.id }.take(10))
-                }
+                // Use SmartQueueManager to build intelligent radio queue
+                val radioSongs = smartQueueManager.buildRadioQueue(
+                    seedSong = song,
+                    initialQueue = initialQueue ?: emptyList()
+                )
                 
                 // Add recommendations to queue
                 if (radioSongs.isNotEmpty()) {
                     musicPlayer.addToQueue(radioSongs)
+                    radioBaseSongId = smartQueueManager.lastSeedId ?: song.id
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error starting radio", e)
@@ -631,7 +621,7 @@ class PlayerViewModel @Inject constructor(
     
     /**
      * Load more songs for autoplay/radio queue.
-     * Called automatically when near end of queue (infinite scroll) or when autoplay needs more songs.
+     * Uses SmartQueueManager for intelligent, personalized song selection linked to YT Music.
      */
     fun loadMoreAutoplaySongs() {
         val state = playerState.value
@@ -643,51 +633,26 @@ class PlayerViewModel @Inject constructor(
         if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
         
         val currentSong = state.currentSong ?: return
-        var baseSongId = radioBaseSongId ?: currentSong.id
         
         _isLoadingMoreSongs.value = true
         viewModelScope.launch {
             try {
-                var moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
-                
-                // Filter out songs already in queue
-                val currentQueue = playerState.value.queue
-                val existingIds = currentQueue.map { it.id }.toSet()
-                var newSongs = moreSongs.filter { it.id !in existingIds }
-                
-                // If no new songs found from the tail, try using the currently playing song as seed
-                // This ensures we stay related to what the user is actually listening to
-                if (newSongs.isEmpty() && baseSongId != currentSong.id) {
-                    baseSongId = currentSong.id
-                    moreSongs = youTubeRepository.getRelatedSongs(baseSongId)
-                    newSongs = moreSongs.filter { it.id !in existingIds }
-                }
-                
-                // Fallback: try a random song from the middle of the queue as seed
-                if (newSongs.isEmpty() && currentQueue.size > 2) {
-                    val randomSeed = currentQueue[currentQueue.indices.random()]
-                    if (randomSeed.id != baseSongId) {
-                        moreSongs = youTubeRepository.getRelatedSongs(randomSeed.id)
-                        newSongs = moreSongs.filter { it.id !in existingIds }
-                    }
-                }
-                
-                // Last resort fallback: use local recommendation engine
-                if (newSongs.isEmpty()) {
-                    val localRecs = recommendationEngine.getPersonalizedRecommendations(20)
-                    newSongs = localRecs.filter { it.id !in existingIds }
-                }
+                val newSongs = smartQueueManager.ensureQueueHealth(
+                    currentSong = currentSong,
+                    currentIndex = state.currentIndex,
+                    queue = state.queue,
+                    isRadioMode = radioMode,
+                    isAutoplayEnabled = isAutoplayEnabled
+                )
                 
                 if (newSongs.isNotEmpty()) {
-                    val batchToAdd = newSongs.take(10)
-                    musicPlayer.addToQueue(batchToAdd)
-                    // Update base song for next batch (use last added song for variety)
-                    radioBaseSongId = batchToAdd.lastOrNull()?.id ?: baseSongId
+                    musicPlayer.addToQueue(newSongs)
+                    radioBaseSongId = smartQueueManager.lastSeedId ?: currentSong.id
                 } else {
-                    Log.w("PlayerViewModel", "Could not find more related songs from any source")
+                    Log.w("PlayerViewModel", "SmartQueueManager could not find more songs")
                 }
             } catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error loading more radio songs", e)
+                Log.e("PlayerViewModel", "Error loading more autoplay songs", e)
             } finally {
                 _isLoadingMoreSongs.value = false
             }
@@ -710,6 +675,7 @@ class PlayerViewModel @Inject constructor(
         _isRadioMode.value = false
         musicPlayer.updateRadioMode(false)
         radioBaseSongId = null
+        smartQueueManager.reset()
     }
     
     /**
@@ -1054,6 +1020,9 @@ class PlayerViewModel @Inject constructor(
                 if (isCurrent) {
                     musicPlayer.updateLikeStatus(!currentLikeState)
                 }
+                
+                // Notify recommendation engine of like change
+                recommendationEngine.onSongLikeChanged(song, rating == "LIKE")
                 
                 if (rating == "LIKE") {
                     if (youTubeRepository.isOnline()) {
