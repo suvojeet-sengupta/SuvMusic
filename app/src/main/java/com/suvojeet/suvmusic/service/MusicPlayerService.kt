@@ -104,6 +104,10 @@ class MusicPlayerService : MediaLibraryService() {
     
     // Cache for Home Sections to handle "SECTION_Index" lookup
     private var cachedHomeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList()
+    
+    // Cache for search results so onSearch & onGetSearchResult stay consistent
+    private var cachedSearchQuery: String? = null
+    private var cachedSearchResults: List<com.suvojeet.suvmusic.core.model.Song> = emptyList()
 
     private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
         android.util.Log.e("MusicPlayerService", "Coroutine exception", throwable)
@@ -539,7 +543,7 @@ class MusicPlayerService : MediaLibraryService() {
                                 children.add(createBrowsableMediaItem(PLAYLISTS_ID, "Your Playlists"))
                             }
                             DOWNLOADS_ID -> {
-                                downloadRepository.downloadedSongs.value.forEach { children.add(createPlayableMediaItem(it)) }
+                                downloadRepository.downloadedSongs.first().forEach { children.add(createPlayableMediaItem(it)) }
                             }
                             LOCAL_ID -> {
                                 localAudioRepository.getAllLocalSongs().forEach { children.add(createPlayableMediaItem(it)) }
@@ -577,7 +581,8 @@ class MusicPlayerService : MediaLibraryService() {
                         }
                         future.set(LibraryResult.ofItemList(ImmutableList.copyOf(children), params))
                     } catch (e: Exception) {
-                        future.setException(e)
+                        android.util.Log.e("MusicPlayerService", "onGetChildren failed for $parentId", e)
+                        future.set(LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN))
                     }
                 }
                 return future
@@ -588,10 +593,13 @@ class MusicPlayerService : MediaLibraryService() {
                 serviceScope.launch {
                     try {
                         val results = youTubeRepository.search(query)
+                        cachedSearchQuery = query
+                        cachedSearchResults = results
                         mediaLibrarySession?.notifySearchResultChanged(browser, query, results.size, params)
                         future.set(LibraryResult.ofVoid(params))
                     } catch (e: Exception) {
-                        future.setException(e)
+                        android.util.Log.e("MusicPlayerService", "onSearch failed for '$query'", e)
+                        future.set(LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN))
                     }
                 }
                 return future
@@ -601,11 +609,17 @@ class MusicPlayerService : MediaLibraryService() {
                  val future = com.google.common.util.concurrent.SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
                  serviceScope.launch {
                      try {
-                         val results = youTubeRepository.search(query)
+                         // Reuse cached results if the query matches, otherwise re-search
+                         val results = if (query == cachedSearchQuery && cachedSearchResults.isNotEmpty()) {
+                             cachedSearchResults
+                         } else {
+                             youTubeRepository.search(query)
+                         }
                          val mediaItems = results.map { createPlayableMediaItem(it) }
                          future.set(LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params))
                      } catch(e: Exception) {
-                         future.setException(e)
+                         android.util.Log.e("MusicPlayerService", "onGetSearchResult failed for '$query'", e)
+                         future.set(LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN))
                      }
                  }
                  return future
@@ -614,18 +628,40 @@ class MusicPlayerService : MediaLibraryService() {
             override fun onAddMediaItems(mediaSession: MediaSession, controller: MediaSession.ControllerInfo, mediaItems: MutableList<MediaItem>): com.google.common.util.concurrent.ListenableFuture<MutableList<MediaItem>> {
                  val updatedMediaItemsFuture = com.google.common.util.concurrent.SettableFuture.create<MutableList<MediaItem>>()
                  serviceScope.launch {
-                     val updatedList = mediaItems.map { item ->
-                        if (item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
-                            val videoId = item.mediaId
-                            val streamUrl = youTubeRepository.getStreamUrl(videoId)
-                            if (streamUrl != null) {
-                                item.buildUpon().setUri(Uri.parse(streamUrl)).build()
-                            } else {
-                                item
-                            }
-                        } else {
-                            item
-                        }
+                     val updatedList = mediaItems.mapNotNull { item ->
+                         // Android Auto voice search: "Play <song>" → searchQuery is set
+                         val searchQuery = item.requestMetadata.searchQuery
+                         if (!searchQuery.isNullOrEmpty() && item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
+                             try {
+                                 val results = youTubeRepository.search(searchQuery)
+                                 if (results.isNotEmpty()) {
+                                     val song = results.first()
+                                     val streamUrl = youTubeRepository.getStreamUrl(song.id)
+                                     if (streamUrl != null) {
+                                         createPlayableMediaItem(song).buildUpon()
+                                             .setUri(Uri.parse(streamUrl))
+                                             .build()
+                                     } else {
+                                         createPlayableMediaItem(song)
+                                     }
+                                 } else {
+                                     null
+                                 }
+                             } catch (e: Exception) {
+                                 android.util.Log.e("MusicPlayerService", "Voice search failed for '$searchQuery'", e)
+                                 null
+                             }
+                         } else if (item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
+                             val videoId = item.mediaId
+                             val streamUrl = youTubeRepository.getStreamUrl(videoId)
+                             if (streamUrl != null) {
+                                 item.buildUpon().setUri(Uri.parse(streamUrl)).build()
+                             } else {
+                                 item
+                             }
+                         } else {
+                             item
+                         }
                      }.toMutableList()
                      updatedMediaItemsFuture.set(updatedList)
                  }
@@ -664,13 +700,16 @@ class MusicPlayerService : MediaLibraryService() {
                                 val index = lastState.index.coerceIn(0, mediaItems.size - 1)
                                 future.set(MediaSession.MediaItemsWithStartPosition(mediaItems, index, lastState.position))
                             } else {
-                                future.setException(UnsupportedOperationException("No media items found"))
+                                // Return empty list so Android Auto shows browse tree instead of error
+                                future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
                             }
                         } else {
-                            future.setException(UnsupportedOperationException("No last playback state found"))
+                            // No saved state — return empty so Auto can browse instead of crashing
+                            future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
                         }
                     } catch (e: Exception) {
-                        future.setException(e)
+                        android.util.Log.e("MusicPlayerService", "onPlaybackResumption failed", e)
+                        future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
                     }
                 }
                 return future
