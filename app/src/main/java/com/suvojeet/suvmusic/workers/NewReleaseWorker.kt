@@ -50,7 +50,7 @@ class NewReleaseWorker @AssistedInject constructor(
                         // Heuristic: Check if this is truly "new". 
                         // YouTube Music doesn't give exact release date easily in standard browse, 
                         // but usually "Year" is available.
-                        // We will notify IF the ID is different from last known AND year is recent (e.g. 2024+)
+                        // We will notify IF the ID is different from last known AND year is recent (e.g. ${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)}+)
                         // Note: For now, we trust the "Last Known ID" check mainly.
                         
                         // Condition: ID changed AND ID is not empty AND we had a previous record (or it's the first run, we might skip to avoid spamming on first install).

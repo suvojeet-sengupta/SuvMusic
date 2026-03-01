@@ -321,7 +321,8 @@ class YouTubeRepository @Inject constructor(
         if (!sessionManager.isLoggedIn()) {
             val preferredLanguages = sessionManager.getPreferredLanguages()
             val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
-            return@withContext search("trending music 2024", FILTER_SONGS)
+            val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+            return@withContext search("trending music $year", FILTER_SONGS)
         }
         try {
             val preferredLanguages = sessionManager.getPreferredLanguages()
@@ -369,7 +370,8 @@ class YouTubeRepository @Inject constructor(
                     // Ignore
                 }
             }
-            search("trending music 2024", FILTER_SONGS)
+            val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+            search("trending music $year", FILTER_SONGS)
         }
     }
 
@@ -409,15 +411,16 @@ class YouTubeRepository @Inject constructor(
             }
             
             // 4. Fallback: Rich content via search for non-logged in users
+            val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
             
             // Define all available sections with their associated languages
             val allSections = listOf(
-                Triple("Trending Now", "trending music 2024", setOf("English")),
-                Triple("Top Hits", "top hits 2024", setOf("English")),
+                Triple("Trending Now", "trending music $year", setOf("English")),
+                Triple("Top Hits", "top hits $year", setOf("English")),
                 Triple("Bollywood Hits", "bollywood hits latest", setOf("Hindi")),
                 Triple("Bengali Hits", "latest bengali hits", setOf("Bengali")),
-                Triple("Pop Hits", "pop hits 2024", setOf("English")),
-                Triple("Hip Hop & Rap", "hip hop hits 2026", setOf("English")),
+                Triple("Pop Hits", "pop hits $year", setOf("English")),
+                Triple("Hip Hop & Rap", "hip hop hits $year", setOf("English")),
                 Triple("Chill Vibes", "chill lofi beats", setOf("English", "Hindi", "Punjabi", "Spanish")), // Universal
                 Triple("Punjabi Hits", "punjabi hits latest", setOf("Punjabi")),
                 Triple("90s Nostalgia", "90s bollywood hits", setOf("Hindi")),
@@ -1825,7 +1828,8 @@ class YouTubeRepository @Inject constructor(
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
                         put("clientName", "WEB")
-                        put("clientVersion", "2.20240101.00.00")
+                        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                        put("clientVersion", "2.$year${"0101"}.00.00")
                         put("hl", "en")
                         put("gl", "US")
                     })

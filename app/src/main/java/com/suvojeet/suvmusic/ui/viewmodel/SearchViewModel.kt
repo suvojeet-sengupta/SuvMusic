@@ -75,7 +75,7 @@ data class SearchUiState(
     val resultFilter: ResultFilter = ResultFilter.ALL,
     val trendingSearches: List<String> = listOf(
         "Arijit Singh",
-        "Trending 2024",
+        "Trending ${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)}",
         "Lo-fi beats", 
         "Workout music",
         "Party songs",
