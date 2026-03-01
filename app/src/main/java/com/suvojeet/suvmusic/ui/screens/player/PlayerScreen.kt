@@ -672,7 +672,6 @@ fun PlayerScreen(
                                 // Top Bar
                                 PlayerTopBar(
                                     onBack = onBack,
-                                    onShowQueue = { activeOverlay = PlayerOverlay.Queue },
                                     dominantColors = dominantColors,
                                     audioArEnabled = audioArEnabled,
                                     onRecenter = { playerViewModel.calibrateAudioAr() }
