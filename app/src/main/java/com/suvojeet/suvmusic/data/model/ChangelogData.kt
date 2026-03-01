@@ -10,9 +10,18 @@ data class ChangelogEntry(
 object ChangelogData {
     val entries = listOf(
         ChangelogEntry(
+            version = "1.3.1.2",
+            date = "March 1, 2026",
+            isLatest = true,
+            changes = listOf(
+                "Increased default navigation bar opacity to 90% for improved visual aesthetics",
+                "Fixed ACRA 5.13 notification configuration to ensure reliable crash reporting"
+            )
+        ),
+        ChangelogEntry(
             version = "1.3.1.1",
             date = "February 27, 2026",
-            isLatest = true,
+            isLatest = false,
             changes = listOf(
                 "Implemented official Android Splash Screen API for smoother startup",
                 "Added Adaptive Icon support (Circle.png) with 20% inset for all shapes",
