@@ -142,7 +142,6 @@ dependencies {
     implementation(libs.acra.mail)
     implementation(libs.acra.notification)
     implementation(libs.acra.dialog)
-    implementation(libs.acra.core.ktx)
     
     // Core
     implementation(libs.androidx.core.ktx)
