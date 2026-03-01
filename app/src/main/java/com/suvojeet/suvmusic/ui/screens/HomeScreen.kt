@@ -306,6 +306,47 @@ fun HomeScreen(
                         }
 
                         // Create a Mix Section (Quick Access)
+                        // Personalized Recommendation Sections (artist mixes, discovery, forgotten favorites, time-based)
+                        if (uiState.personalizedSections.isNotEmpty()) {
+                            itemsIndexed(
+                                items = uiState.personalizedSections,
+                                key = { _, section -> "personalized_${section.title}" },
+                                contentType = { _, section -> "personalized_${section.type}" }
+                            ) { index, section ->
+                                val enterModifier = Modifier.animateEnter(index = index + uiState.filteredSections.size + 6)
+                                
+                                when (section.type) {
+                                    com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks -> {
+                                        com.suvojeet.suvmusic.ui.components.QuickPicksSection(
+                                            section = section,
+                                            onSongClick = onSongClick,
+                                            onPlaylistClick = onPlaylistClick,
+                                            onAlbumClick = onAlbumClick,
+                                            onSongMoreClick = { song ->
+                                                selectedSong = song
+                                                showSongMenu = true
+                                            },
+                                            modifier = enterModifier,
+                                        )
+                                    }
+                                    else -> {
+                                        com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                            section = section,
+                                            onSongClick = onSongClick,
+                                            onPlaylistClick = onPlaylistClick,
+                                            onAlbumClick = onAlbumClick,
+                                            onSongMoreClick = { song ->
+                                                selectedSong = song
+                                                showSongMenu = true
+                                            },
+                                            modifier = enterModifier,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Create a Mix Section (Quick Access)
                         item(key = "create_mix", contentType = "create_mix") {
                              // Spotify often has these functional cards in-between
                              Column(modifier = Modifier.padding(horizontal = 16.dp)) {
