@@ -180,7 +180,7 @@ fun NavGraph(
                             navController.navigate(Destination.Explore.buildRoute(browseId, title))
                         }
                     },
-                    onStartRadio = { playerViewModel.startPersonalizedRadio() },
+                    onStartRadio = { onStartRadio(null, null) },
                     onCreateMixClick = {
                         navController.navigate(Destination.PickMusic.route)
                     },
