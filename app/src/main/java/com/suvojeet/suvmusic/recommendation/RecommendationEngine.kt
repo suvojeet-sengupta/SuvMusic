@@ -19,6 +19,9 @@ import com.suvojeet.suvmusic.core.data.local.entity.DislikedArtist as DislikedAr
 import com.suvojeet.suvmusic.core.data.local.entity.DislikedSong as DislikedSongEntity
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Advanced recommendation engine deeply integrated with YouTube Music's recommendation system.
@@ -333,6 +336,101 @@ class RecommendationEngine @Inject constructor(
     }
 
     // ============================================================================================
+    // PUBLIC API — Specialized Recommendations
+    // ============================================================================================
+
+    /**
+     * Get "Based on Recent Plays" recommendations.
+     * Multiple seeds from the last few played songs for broader coverage.
+     */
+    suspend fun getRecentBasedSuggestions(limit: Int = 10): List<Song> {
+        val cached = cache.getSongs(RecommendationCache.Keys.BASED_ON_RECENT)
+        if (cached != null) return cached.take(limit)
+
+        val profile = tasteProfileBuilder.getProfile()
+        val recentIds = profile.recentSongIds.take(3)
+        if (recentIds.isEmpty()) return emptyList()
+
+        val candidates = mutableListOf<Song>()
+        val seenIds = recentIds.toMutableSet()
+        val seenFingerprints = mutableSetOf<String>()
+
+        coroutineScope {
+            val jobs = recentIds.map { songId ->
+                async(Dispatchers.IO) {
+                    try {
+                        youTubeRepository.getRelatedSongs(songId)
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                }
+            }
+            val results = jobs.awaitAll().flatten()
+            candidates.addAll(deduplicate(results, seenIds, seenFingerprints))
+        }
+
+        val scored = scoreAndRank(candidates, profile)
+        cache.putSongs(RecommendationCache.Keys.BASED_ON_RECENT, scored)
+        return scored.take(limit)
+    }
+
+    /**
+     * Get artist-specific mix recommendations.
+     * Fetches songs related to the user's top artists from YouTube Music.
+     */
+    suspend fun getArtistMixRecommendations(artist: String, limit: Int = 20): List<Song> {
+        val cacheKey = "${RecommendationCache.Keys.ARTIST_MIX}_${artist.lowercase().hashCode()}"
+        val cached = cache.getSongs(cacheKey)
+        if (cached != null) return cached.take(limit)
+
+        val candidates = mutableListOf<Song>()
+        try {
+            val results = youTubeRepository.search("$artist mix", YouTubeRepository.FILTER_SONGS)
+            candidates.addAll(results)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get artist mix for $artist", e)
+        }
+
+        if (candidates.size < limit / 2) {
+            try {
+                val more = youTubeRepository.search(artist, YouTubeRepository.FILTER_SONGS)
+                val seenIds = candidates.map { it.id }.toMutableSet()
+                val seenFingerprints = candidates.map { getSongFingerprint(it) }.toMutableSet()
+                candidates.addAll(deduplicate(more, seenIds, seenFingerprints))
+            } catch (e: Exception) {
+                // Continue
+            }
+        }
+
+        val profile = tasteProfileBuilder.getProfile()
+        val scored = scoreAndRank(candidates, profile)
+        cache.putSongs(cacheKey, scored)
+        return scored.take(limit)
+    }
+
+    /**
+     * Get mood-based recommendations that combine YT Music mood data with personal taste.
+     */
+    suspend fun getMoodRecommendations(mood: String, limit: Int = 20): List<Song> {
+        val cacheKey = "${RecommendationCache.Keys.MOOD_PREFIX}${mood.lowercase().hashCode()}"
+        val cached = cache.getSongs(cacheKey)
+        if (cached != null) return cached.take(limit)
+
+        val candidates = mutableListOf<Song>()
+        try {
+            val moodSongs = youTubeRepository.search("$mood music", YouTubeRepository.FILTER_SONGS)
+            candidates.addAll(moodSongs)
+        } catch (e: Exception) {
+            // Fallback
+        }
+
+        val profile = tasteProfileBuilder.getProfile()
+        val scored = scoreAndRank(candidates, profile)
+        cache.putSongs(cacheKey, scored)
+        return scored.take(limit)
+    }
+
+    // ============================================================================================
     // Signal: Notify the engine of user actions
     // ============================================================================================
 
@@ -456,6 +554,36 @@ class RecommendationEngine @Inject constructor(
         return deduplicate(songs, seenIds, seenFingerprints).take(15)
     }
 
+    private suspend fun fetchArtistMixes(profile: UserTasteProfile): List<HomeSection> {
+        if (!profile.hasEnoughData) return emptyList()
+
+        val topArtists = profile.artistAffinities.keys.take(3)
+        val sections = mutableListOf<HomeSection>()
+
+        coroutineScope {
+            val jobs = topArtists.map { artist ->
+                async(Dispatchers.IO) {
+                    try {
+                        val songs = getArtistMixRecommendations(artist, 15)
+                        if (songs.isNotEmpty()) {
+                            val displayName = artist.replaceFirstChar { it.titlecase() }
+                            HomeSection(
+                                title = "Your $displayName Mix",
+                                items = songs.map { HomeItem.SongItem(it) },
+                                type = HomeSectionType.HorizontalCarousel
+                            )
+                        } else null
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+            jobs.awaitAll().filterNotNull().let { sections.addAll(it) }
+        }
+
+        return sections
+    }
+
     private suspend fun fetchDiscoveryMix(
         profile: UserTasteProfile,
         seenIds: MutableSet<String>,
@@ -501,6 +629,40 @@ class RecommendationEngine @Inject constructor(
         return filtered.take(15)
     }
 
+    private suspend fun fetchForgottenFavorites(profile: UserTasteProfile): List<Song> {
+        if (!profile.hasEnoughData) return emptyList()
+
+        return withContext(Dispatchers.IO) {
+            try {
+                // Get songs played often but not recently (> 30 days ago)
+                val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+                val allHistory = listeningHistoryDao.getAllHistory()
+                val forgotten = allHistory
+                    .filter { it.playCount >= 3 && it.lastPlayed < thirtyDaysAgo && it.completionRate > 50f }
+                    .sortedByDescending { it.playCount }
+                    .take(10)
+
+                // Convert to Song objects (reconstruct from history data)
+                forgotten.mapNotNull { history ->
+                    try {
+                        Song.fromYouTube(
+                            videoId = history.songId,
+                            title = history.songTitle,
+                            artist = history.artist,
+                            album = history.album,
+                            duration = history.duration,
+                            thumbnailUrl = history.thumbnailUrl
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
+
     private suspend fun fetchTimeBasedRecommendations(
         profile: UserTasteProfile,
         seenIds: MutableSet<String>,
@@ -540,7 +702,4 @@ class RecommendationEngine @Inject constructor(
             else -> "Into the deep night"
         }
     }
-
-    // (Rest of the methods like getRecentBasedSuggestions, getArtistMixRecommendations, etc. remain with similar enhancements)
-
 }
