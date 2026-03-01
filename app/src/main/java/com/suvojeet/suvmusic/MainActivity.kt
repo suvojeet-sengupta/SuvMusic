@@ -717,8 +717,11 @@ fun SuvMusicApp(
                             onDismissVideoError = { playerViewModel.dismissVideoError() },
                             onStartRadio = { song, initialQueue ->
                                 val targetSong = song ?: playbackInfo.currentSong
-                                targetSong?.let { 
-                                    playerViewModel.startRadio(it, initialQueue)
+                                if (targetSong != null) {
+                                    playerViewModel.startRadio(targetSong, initialQueue)
+                                } else {
+                                    // No song playing — start fully personalized radio from recommendations
+                                    playerViewModel.startPersonalizedRadio()
                                 }
                             },
                             onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
