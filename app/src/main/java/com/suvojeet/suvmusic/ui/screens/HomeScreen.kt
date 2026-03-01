@@ -21,9 +21,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -160,6 +163,18 @@ fun HomeScreen(
                                 onMoodSelected = viewModel::onMoodSelected,
                                 modifier = Modifier.animateEnter(index = 1)
                             )
+                        }
+
+                        // Personalized "For You" Banner — shown when logged in
+                        if (uiState.isLoggedIn) {
+                            item(key = "for_you_banner", contentType = "for_you_banner") {
+                                ForYouBanner(
+                                    onStartRadio = onStartRadio,
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .animateEnter(index = 2)
+                                )
+                            }
                         }
 
                         // Recommended Artists (Last.fm)
@@ -308,6 +323,15 @@ fun HomeScreen(
                         // Create a Mix Section (Quick Access)
                         // Personalized Recommendation Sections (artist mixes, discovery, forgotten favorites, time-based)
                         if (uiState.personalizedSections.isNotEmpty()) {
+                            // Personalized section header with sparkle
+                            item(key = "personalized_header", contentType = "personalized_header") {
+                                PersonalizedSectionHeader(
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .animateEnter(index = uiState.filteredSections.size + 6)
+                                )
+                            }
+
                             itemsIndexed(
                                 items = uiState.personalizedSections,
                                 key = { _, section -> "personalized_${section.title}" },
@@ -805,6 +829,160 @@ private fun AppFooter(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
             fontWeight = FontWeight.Normal
+        )
+    }
+}
+
+/**
+ * "For You" banner — a visually distinct personalized section shown when logged in.
+ * Provides quick access to personalized radio and shows the user that content is tailored.
+ */
+@Composable
+private fun ForYouBanner(
+    onStartRadio: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(100.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = Color.Transparent,
+        tonalElevation = 0.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Sparkle icon
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.tertiary
+                                )
+                            ),
+                            RoundedCornerShape(14.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Made for you",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Personalized based on your listening",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // Start Radio chip
+                Surface(
+                    modifier = Modifier
+                        .bounceClick(
+                            shape = RoundedCornerShape(24.dp),
+                            onClick = onStartRadio
+                        ),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Radio",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Personalized section header with sparkle icon, visually separates
+ * AI-powered recommendations from standard YouTube home sections.
+ */
+@Composable
+private fun PersonalizedSectionHeader(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Gradient sparkle icon
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                        )
+                    ),
+                    RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        Text(
+            text = "Personalized for you",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = (-0.5).sp
         )
     }
 }
