@@ -1,26 +1,40 @@
 package com.suvojeet.suvmusic.recommendation
 
+import com.suvojeet.suvmusic.core.data.local.dao.DislikedItemDao
 import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
+import com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
 import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
+import com.suvojeet.suvmusic.core.data.local.entity.SongGenre
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Builds and maintains a [UserTasteProfile] from the local listening history database.
  * The profile is used by [RecommendationEngine] to score and rank song candidates.
+ *
+ * **Genre vectors** are built from song title/artist keyword matching via [GenreTaxonomy]
+ * and cached in Room via [SongGenreDao] to avoid redundant inference.
  */
 @Singleton
 class TasteProfileBuilder @Inject constructor(
-    private val listeningHistoryDao: ListeningHistoryDao
+    private val listeningHistoryDao: ListeningHistoryDao,
+    private val dislikedItemDao: DislikedItemDao,
+    private val songGenreDao: SongGenreDao
 ) {
-    /** Cached profile — rebuilt when stale */
+    /** Cached profile + build timestamp — atomic pair to avoid stale reads */
     @Volatile
-    private var cachedProfile: UserTasteProfile? = null
-    private var lastBuildTime: Long = 0L
+    private var profileSnapshot: Pair<UserTasteProfile?, Long> = Pair(null, 0L)
+
+    /**
+     * Counter for play events since last invalidation.
+     * Only invalidate on every Nth play to reduce rebuild frequency.
+     */
+    private val playEventCounter = AtomicInteger(0)
 
     companion object {
         /** Rebuild profile if older than 10 minutes */
@@ -31,6 +45,10 @@ class TasteProfileBuilder @Inject constructor(
         private const val RECENT_SONGS_LIMIT = 50
         /** How many top songs/artists to track */
         private const val TOP_LIMIT = 30
+        /** How many recent songs to use for the session genre vector */
+        private const val SESSION_GENRE_WINDOW = 10
+        /** Only invalidate on every Nth play event to reduce rebuild frequency */
+        private const val INVALIDATE_EVERY_N_PLAYS = 5
     }
 
     /**
@@ -38,22 +56,43 @@ class TasteProfileBuilder @Inject constructor(
      */
     suspend fun getProfile(forceRefresh: Boolean = false): UserTasteProfile {
         val now = System.currentTimeMillis()
-        val existing = cachedProfile
-        if (!forceRefresh && existing != null && (now - lastBuildTime) < PROFILE_TTL_MS) {
+        val (existing, buildTime) = profileSnapshot
+        if (!forceRefresh && existing != null && (now - buildTime) < PROFILE_TTL_MS) {
             return existing
         }
         return buildProfile().also {
-            cachedProfile = it
-            lastBuildTime = now
+            // Single atomic write — both profile and timestamp update together
+            profileSnapshot = Pair(it, now)
         }
     }
 
     /**
      * Invalidate the cached profile (e.g., after a new song play).
+     * Atomic: resets both profile reference and timestamp in a single write.
      */
     fun invalidate() {
-        cachedProfile = null
-        lastBuildTime = 0L
+        profileSnapshot = Pair(null, 0L)
+    }
+
+    /**
+     * Called on every song play event. Only triggers a full invalidation
+     * every [INVALIDATE_EVERY_N_PLAYS] plays to avoid excessive rebuilds
+     * while still keeping the profile reasonably fresh.
+     */
+    fun onSongPlayed() {
+        val count = playEventCounter.incrementAndGet()
+        if (count % INVALIDATE_EVERY_N_PLAYS == 0) {
+            invalidate()
+        }
+    }
+
+    /**
+     * Immediate invalidation for significant events (like/unlike, dislike).
+     * These are rare and semantically important, so bypass the counter.
+     */
+    fun invalidateImmediate() {
+        playEventCounter.set(0)
+        invalidate()
     }
 
     private suspend fun buildProfile(): UserTasteProfile = withContext(Dispatchers.IO) {
@@ -129,6 +168,13 @@ class TasteProfileBuilder @Inject constructor(
             .filter { it.value > 0.6f } // Artist skipped more than 60% of the time
             .keys
 
+        // --- Disliked Songs (from persistent DB) ---
+        val dislikedSongIdSet = try {
+            dislikedItemDao.getAllDislikedSongIds().toSet()
+        } catch (e: Exception) {
+            emptySet()
+        }
+
         // --- Recent Songs ---
         val recentSongs = try {
             listeningHistoryDao.getRecentlyPlayed(RECENT_SONGS_LIMIT).first()
@@ -152,20 +198,125 @@ class TasteProfileBuilder @Inject constructor(
         val totalPlays = sourceCounts.values.sum().coerceAtLeast(1f)
         val sourceDistribution = sourceCounts.mapValues { it.value / totalPlays }
 
+        // --- Genre Vectors ---
+        val genreVectors = buildGenreVectors(allHistory, skippedIds, recentSongs)
+
         UserTasteProfile(
             artistAffinities = normalizedArtists,
             timeOfDayWeights = timeWeights,
             avgCompletionRate = avgCompletion,
             frequentlySkippedIds = skippedIds,
             likedSongIds = likedIds,
-            dislikedSongIds = emptySet(), // Tracked in-memory by RecommendationEngine
+            dislikedSongIds = dislikedSongIdSet,
             likedArtists = likedArtistSet,
             dislikedArtists = dislikedArtistSet,
             recentSongIds = recentSongs,
             topPlayedSongIds = topPlayedIds,
             sourceDistribution = sourceDistribution,
             totalSongsInHistory = totalSongs,
-            hasEnoughData = totalSongs >= MIN_SONGS_FOR_PERSONALIZATION
+            hasEnoughData = totalSongs >= MIN_SONGS_FOR_PERSONALIZATION,
+            genreAffinityVector = genreVectors.first,
+            recentGenreVector = genreVectors.second,
+            skipGenreVector = genreVectors.third
         )
+    }
+
+    /**
+     * Build three genre vectors:
+     * 1. Full affinity vector (weighted by play count across all history)
+     * 2. Recent session vector (last 10 songs — mood/session recency)
+     * 3. Skip genre vector (genres the user frequently skips)
+     *
+     * Uses [GenreTaxonomy.inferGenreVector] for keyword-based inference
+     * and caches results in Room via [SongGenreDao].
+     */
+    private suspend fun buildGenreVectors(
+        allHistory: List<ListeningHistory>,
+        skippedIds: Set<String>,
+        recentSongIds: List<String>
+    ): Triple<FloatArray, FloatArray, FloatArray> {
+        val genreCount = GenreTaxonomy.GENRE_COUNT
+
+        // Batch-fetch cached genre vectors from Room
+        val allSongIds = allHistory.map { it.songId }
+        val cachedGenres = songGenreDao.getGenres(allSongIds).associateBy { it.songId }
+
+        // Infer missing genres and batch-insert into Room cache
+        val newGenres = mutableListOf<SongGenre>()
+        val songGenreMap = mutableMapOf<String, FloatArray>()
+
+        for (entry in allHistory) {
+            val cached = cachedGenres[entry.songId]
+            if (cached != null) {
+                songGenreMap[entry.songId] = cached.toFloatArray()
+            } else {
+                val inferred = GenreTaxonomy.inferGenreVector(entry.songTitle, entry.artist)
+                songGenreMap[entry.songId] = inferred
+                if (GenreTaxonomy.isNonZero(inferred)) {
+                    newGenres.add(SongGenre.fromFloatArray(entry.songId, inferred))
+                }
+            }
+        }
+
+        // Persist newly inferred genres
+        if (newGenres.isNotEmpty()) {
+            try {
+                songGenreDao.insertGenres(newGenres)
+            } catch (_: Exception) {
+                // Non-critical — cache miss won't break scoring
+            }
+        }
+
+        // 1. Full genre affinity: weighted sum of all genres by play count
+        val fullVector = FloatArray(genreCount)
+        var totalWeight = 0f
+        for (entry in allHistory) {
+            val genreVec = songGenreMap[entry.songId] ?: continue
+            val weight = entry.playCount.toFloat()
+            for (i in 0 until genreCount) {
+                fullVector[i] += genreVec[i] * weight
+            }
+            totalWeight += weight
+        }
+        // Normalize
+        if (totalWeight > 0f) {
+            val maxVal = fullVector.max().coerceAtLeast(1f)
+            for (i in fullVector.indices) {
+                fullVector[i] = (fullVector[i] / maxVal).coerceIn(0f, 1f)
+            }
+        }
+
+        // 2. Recent session genre vector (last SESSION_GENRE_WINDOW songs)
+        val recentVector = FloatArray(genreCount)
+        val recentWindow = recentSongIds.take(SESSION_GENRE_WINDOW)
+        for (songId in recentWindow) {
+            val genreVec = songGenreMap[songId] ?: continue
+            for (i in 0 until genreCount) {
+                recentVector[i] += genreVec[i]
+            }
+        }
+        if (recentWindow.isNotEmpty()) {
+            val maxVal = recentVector.max().coerceAtLeast(1f)
+            for (i in recentVector.indices) {
+                recentVector[i] = (recentVector[i] / maxVal).coerceIn(0f, 1f)
+            }
+        }
+
+        // 3. Skip genre vector (from frequently skipped songs)
+        val skipVector = FloatArray(genreCount)
+        for (songId in skippedIds) {
+            val genreVec = songGenreMap[songId] ?: continue
+            for (i in 0 until genreCount) {
+                skipVector[i] += genreVec[i]
+            }
+        }
+        if (skippedIds.isNotEmpty()) {
+            val maxVal = skipVector.max().coerceAtLeast(1f)
+            for (i in skipVector.indices) {
+                skipVector[i] = (skipVector[i] / maxVal).coerceIn(0f, 1f)
+            }
+        }
+
+        return Triple(fullVector, recentVector, skipVector)
     }
 }

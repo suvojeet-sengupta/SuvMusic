@@ -191,8 +191,8 @@ fun PlayerScreen(
     
     // Queue Selection & Sections
     val selectedQueueIndices by playerViewModel.selectedQueueIndices.collectAsState()
+    val playedSongs by playerViewModel.playedSongs.collectAsState()
     val upNextSongs by playerViewModel.upNextSongs.collectAsState()
-    val autoPlaySongs by playerViewModel.autoPlaySongs.collectAsState()
     
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
@@ -887,8 +887,8 @@ fun PlayerScreen(
                 QueueView(
                     currentSong = song,
                     queue = playerState.queue,
+                    playedSongs = playedSongs,
                     upNextSongs = upNextSongs,
-                    autoPlaySongs = autoPlaySongs,
                     selectedQueueIndices = selectedQueueIndices,
                     onToggleSelection = { index -> playerViewModel.toggleQueueSelection(index) },
                     onSelectAll = { playerViewModel.selectAllQueueItems() },

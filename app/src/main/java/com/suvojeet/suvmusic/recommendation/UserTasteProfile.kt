@@ -42,5 +42,56 @@ data class UserTasteProfile(
     val totalSongsInHistory: Int = 0,
     
     /** Whether the user has enough history for personalization */
-    val hasEnoughData: Boolean = false
-)
+    val hasEnoughData: Boolean = false,
+
+    // ---- Genre Vector Fields (Phase 2) ----
+
+    /**
+     * 20-dimension genre affinity vector built from full listening history.
+     * Each dimension maps to a genre in [GenreTaxonomy.GENRES].
+     * Values normalized to [0, 1].
+     */
+    val genreAffinityVector: FloatArray = FloatArray(GenreTaxonomy.GENRE_COUNT),
+
+    /**
+     * Genre vector built from only the last 10 songs — captures session/mood recency.
+     * Enables "what I'm in the mood for right now" scoring.
+     */
+    val recentGenreVector: FloatArray = FloatArray(GenreTaxonomy.GENRE_COUNT),
+
+    /**
+     * Genre vector from frequently-skipped songs — negative signal.
+     * Genres the user tends to skip get penalized during scoring.
+     */
+    val skipGenreVector: FloatArray = FloatArray(GenreTaxonomy.GENRE_COUNT)
+) {
+    // Custom equals/hashCode to handle FloatArray comparison
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is UserTasteProfile) return false
+        return artistAffinities == other.artistAffinities &&
+                timeOfDayWeights == other.timeOfDayWeights &&
+                avgCompletionRate == other.avgCompletionRate &&
+                frequentlySkippedIds == other.frequentlySkippedIds &&
+                likedSongIds == other.likedSongIds &&
+                dislikedSongIds == other.dislikedSongIds &&
+                likedArtists == other.likedArtists &&
+                dislikedArtists == other.dislikedArtists &&
+                recentSongIds == other.recentSongIds &&
+                topPlayedSongIds == other.topPlayedSongIds &&
+                sourceDistribution == other.sourceDistribution &&
+                totalSongsInHistory == other.totalSongsInHistory &&
+                hasEnoughData == other.hasEnoughData &&
+                genreAffinityVector.contentEquals(other.genreAffinityVector) &&
+                recentGenreVector.contentEquals(other.recentGenreVector) &&
+                skipGenreVector.contentEquals(other.skipGenreVector)
+    }
+
+    override fun hashCode(): Int {
+        var result = artistAffinities.hashCode()
+        result = 31 * result + genreAffinityVector.contentHashCode()
+        result = 31 * result + recentGenreVector.contentHashCode()
+        result = 31 * result + skipGenreVector.contentHashCode()
+        return result
+    }
+}
