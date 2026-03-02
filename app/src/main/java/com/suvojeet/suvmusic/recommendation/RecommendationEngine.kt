@@ -37,6 +37,7 @@ class RecommendationEngine @Inject constructor(
     private val listeningHistoryDao: ListeningHistoryDao,
     private val dislikedItemDao: DislikedItemDao,
     private val youTubeRepository: YouTubeRepository,
+    private val libraryRepository: LibraryRepository, // Added for Cold Start handling
     private val tasteProfileBuilder: TasteProfileBuilder,
     private val cache: RecommendationCache
 ) {
@@ -77,9 +78,17 @@ class RecommendationEngine @Inject constructor(
      * Normalized "Title | Artist"
      */
     private fun getSongFingerprint(song: Song): String {
-        val title = song.title.lowercase().replace(Regex("[^a-z0-9]"), "")
-        val artist = song.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
-        return "$title|$artist"
+        // Optimized normalization without Regex for better performance
+        fun String.normalize(): String {
+            val sb = StringBuilder(this.length)
+            for (char in this.lowercase()) {
+                if (char in 'a'..'z' || char in '0'..'9') {
+                    sb.append(char)
+                }
+            }
+            return sb.toString()
+        }
+        return "${song.title.normalize()}|${song.artist.normalize()}"
     }
 
     /**
@@ -141,6 +150,29 @@ class RecommendationEngine @Inject constructor(
                 items = timeBased.map { HomeItem.SongItem(it) },
                 type = HomeSectionType.HorizontalCarousel
             ))
+        }
+
+        // Add Cold Start Artist Mixes if profile is shallow
+        if (!profile.hasEnoughData) {
+            val savedArtists = try {
+                libraryRepository.getSavedArtists().first().take(3)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            
+            savedArtists.forEach { artist ->
+                try {
+                    val artistName = artist.title
+                    val songs = getArtistMixRecommendations(artistName, 10)
+                    if (songs.isNotEmpty()) {
+                        sections.add(HomeSection(
+                            title = "For fans of $artistName",
+                            items = songs.map { HomeItem.SongItem(it) },
+                            type = HomeSectionType.HorizontalCarousel
+                        ))
+                    }
+                } catch (e: Exception) { /* skip */ }
+            }
         }
 
         if (recentBased.isNotEmpty()) {

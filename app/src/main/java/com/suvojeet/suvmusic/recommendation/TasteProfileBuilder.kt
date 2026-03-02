@@ -57,20 +57,26 @@ class TasteProfileBuilder @Inject constructor(
     }
 
     private suspend fun buildProfile(): UserTasteProfile = withContext(Dispatchers.IO) {
-        val allHistory = listeningHistoryDao.getAllHistory()
-        val totalSongs = allHistory.size
+        // Limit history scan to latest 1000 items to avoid DB bottlenecks (Flaw 10)
+        // In real music apps, older history is less relevant anyway.
+        val recentHistory = try {
+            listeningHistoryDao.getRecentlyPlayed(1000).first()
+        } catch (e: Exception) {
+            emptyList()
+        }
+        
+        val totalSongs = recentHistory.size
 
         if (totalSongs == 0) {
             return@withContext UserTasteProfile()
         }
 
         // --- Artist Affinities ---
-        // Weighted by play count * completion rate, with recency decay
         val now = System.currentTimeMillis()
         val artistScores = mutableMapOf<String, Float>()
-        allHistory.forEach { entry ->
+        recentHistory.forEach { entry ->
             val recencyDays = ((now - entry.lastPlayed) / (1000 * 60 * 60 * 24)).toFloat().coerceAtLeast(1f)
-            val recencyWeight = 1f / (1f + (recencyDays / 30f)) // Decay over ~1 month
+            val recencyWeight = 1f / (1f + (recencyDays / 45f)) // Slightly slower decay (45 days)
             val completionWeight = (entry.completionRate / 100f).coerceIn(0.1f, 1f)
             val score = entry.playCount * completionWeight * recencyWeight
             
