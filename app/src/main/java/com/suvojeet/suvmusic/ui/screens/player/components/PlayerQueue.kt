@@ -72,6 +72,12 @@ import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 fun QueueView(
     currentSong: Song?,
     queue: List<Song>,
+    upNextSongs: List<Song>,
+    autoPlaySongs: List<Song>,
+    selectedQueueIndices: Set<Int>,
+    onToggleSelection: (Int) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearSelection: () -> Unit,
     currentIndex: Int,
     isPlaying: Boolean,
     shuffleEnabled: Boolean,
@@ -100,8 +106,7 @@ fun QueueView(
     val themeBackgroundColor = MaterialTheme.colorScheme.background
     val haptic = LocalHapticFeedback.current
 
-    var selectedIndices by remember { mutableStateOf(setOf<Int>()) }
-    val isSelectionMode = selectedIndices.isNotEmpty()
+    val isSelectionMode = selectedQueueIndices.isNotEmpty()
 
     var showSavePlaylistDialog by remember { mutableStateOf(false) }
 
@@ -143,7 +148,7 @@ fun QueueView(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { selectedIndices = emptySet() }) {
+                    IconButton(onClick = onClearSelection) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "Exit selection",
@@ -151,16 +156,14 @@ fun QueueView(
                         )
                     }
                     Text(
-                        text = "${selectedIndices.size} selected",
+                        text = "${selectedQueueIndices.size} selected",
                         style = MaterialTheme.typography.titleMedium,
                         color = dominantColors.onBackground
                     )
                 }
 
                 Row {
-                    IconButton(onClick = { 
-                        selectedIndices = queue.indices.toSet()
-                    }) {
+                    IconButton(onClick = onSelectAll) {
                         Icon(
                             imageVector = Icons.Default.SelectAll,
                             contentDescription = "Select all",
@@ -177,8 +180,7 @@ fun QueueView(
                         )
                     }
                     IconButton(onClick = { 
-                        onRemoveItems(selectedIndices.toList())
-                        selectedIndices = emptySet()
+                        onRemoveItems(selectedQueueIndices.toList())
                     }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -311,170 +313,170 @@ fun QueueView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Queue header
-        if (!isSelectionMode) {
-            Row(
+        // Empty State
+        if (queue.isEmpty() && !isLoadingMore) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    Text(
-                        text = "Continue Playing",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = dominantColors.onBackground
-                    )
-                    Text(
-                        text = if (isAutoplayEnabled) "Autoplaying similar music" else "${queue.size} songs in queue",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = dominantColors.onBackground.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-                
-                IconButton(onClick = { showSavePlaylistDialog = true }) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        imageVector = Icons.Default.PlaylistAdd,
-                        contentDescription = "Save queue as playlist",
-                        tint = dominantColors.onBackground.copy(alpha = 0.7f)
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = dominantColors.onBackground.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Your queue is empty",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = dominantColors.onBackground.copy(alpha = 0.7f)
                     )
                 }
             }
-        }
-
-        // Queue list with sticky headers
-        val listState = rememberLazyListState()
-        
-        // Logic to determine headers:
-        // In this app's logic (observed from PlayerViewModel):
-        // 'Up Next' are the songs that were in the original queue.
-        // When autoplay/radio loads more, it appends them to the end.
-        // We can use a heuristic: if radio mode is on, we can split the queue
-        // into "Up Next" (original items) and "Autoplay" (newly appended items).
-        // For simplicity and immediate UI feedback, we'll split based on current index.
-        
-        val upNextSongs = remember(queue, currentIndex) {
-            if (currentIndex < 0) queue else queue.subList(0, (currentIndex + 1).coerceAtMost(queue.size))
-        }
-        
-        val autoPlaySongs = remember(queue, currentIndex) {
-            if (currentIndex < 0 || currentIndex >= queue.size - 1) emptyList() 
-            else queue.subList(currentIndex + 1, queue.size)
-        }
-
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(bottom = 16.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            // Up Next Section
-            if (upNextSongs.isNotEmpty()) {
-                stickyHeader {
-                    HeaderItem("Up Next", dominantColors)
-                }
-                
-                itemsIndexed(
-                    items = upNextSongs,
-                    key = { index, song -> "upnext_${song.id}_$index" },
-                    contentType = { _, _ -> "queue_item" }
-                ) { index, song ->
-                    QueueItem(
-                        song = song,
-                        isCurrent = song.id == currentSong?.id,
-                        isPlaying = song.id == currentSong?.id && isPlaying,
-                        isSelected = selectedIndices.contains(index),
-                        isSelectionMode = isSelectionMode,
-                        onClick = {
-                            if (isSelectionMode) {
-                                selectedIndices = if (selectedIndices.contains(index)) {
-                                    selectedIndices - index
-                                } else {
-                                    selectedIndices + index
-                                }
-                            } else {
-                                onSongClick(index)
-                            }
-                        },
-                        onLongClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (!isSelectionMode) {
-                                selectedIndices = setOf(index)
-                            } else {
-                                onMoreClick(song)
-                            }
-                        },
-                        onMoreClick = { onMoreClick(song) },
-                        dominantColors = dominantColors
-                    )
-                }
-            }
-
-            // Autoplay Section
-            if (autoPlaySongs.isNotEmpty()) {
-                stickyHeader {
-                    val title = if (isRadioMode || isAutoplayEnabled) "Autoplay" else "Coming Up"
-                    HeaderItem(title, dominantColors)
-                }
-                
-                itemsIndexed(
-                    items = autoPlaySongs,
-                    key = { index, song -> "auto_${song.id}_$index" },
-                    contentType = { _, _ -> "queue_item" }
-                ) { indexInList, song ->
-                    val actualIndex = upNextSongs.size + indexInList
-                    QueueItem(
-                        song = song,
-                        isCurrent = false,
-                        isPlaying = false,
-                        isSelected = selectedIndices.contains(actualIndex),
-                        isSelectionMode = isSelectionMode,
-                        onClick = {
-                            if (isSelectionMode) {
-                                selectedIndices = if (selectedIndices.contains(actualIndex)) {
-                                    selectedIndices - actualIndex
-                                } else {
-                                    selectedIndices + actualIndex
-                                }
-                            } else {
-                                onSongClick(actualIndex)
-                            }
-                        },
-                        onLongClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (!isSelectionMode) {
-                                selectedIndices = setOf(actualIndex)
-                            } else {
-                                onMoreClick(song)
-                            }
-                        },
-                        onMoreClick = { onMoreClick(song) },
-                        dominantColors = dominantColors
-                    )
-                }
-            }
-            
-            // Loading indicator at bottom when loading more
-            if (isLoadingMore) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = dominantColors.accent,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
+        } else {
+            // Queue header
+            if (!isSelectionMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
                         Text(
-                            text = "Loading more songs...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = dominantColors.onBackground.copy(alpha = 0.7f)
+                            text = "Continue Playing",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = dominantColors.onBackground
                         )
+                        Text(
+                            text = if (isAutoplayEnabled) "Autoplaying similar music" else "${queue.size} songs in queue",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = dominantColors.onBackground.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                    
+                    IconButton(onClick = { showSavePlaylistDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.PlaylistAdd,
+                            contentDescription = "Save queue as playlist",
+                            tint = dominantColors.onBackground.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+
+            // Queue list with sticky headers
+            val listState = rememberLazyListState()
+
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(bottom = 16.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                // Up Next Section
+                if (upNextSongs.isNotEmpty()) {
+                    stickyHeader {
+                        HeaderItem("Up Next", dominantColors)
+                    }
+                    
+                    itemsIndexed(
+                        items = upNextSongs,
+                        key = { _, song -> "upnext_${song.id}" },
+                        contentType = { _, _ -> "queue_item" }
+                    ) { index, song ->
+                        QueueItem(
+                            song = song,
+                            isCurrent = song.id == currentSong?.id,
+                            isPlaying = song.id == currentSong?.id && isPlaying,
+                            isSelected = selectedQueueIndices.contains(index),
+                            isSelectionMode = isSelectionMode,
+                            onClick = {
+                                if (isSelectionMode) {
+                                    onToggleSelection(index)
+                                } else {
+                                    onSongClick(index)
+                                }
+                            },
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (!isSelectionMode) {
+                                    onToggleSelection(index)
+                                } else {
+                                    onMoreClick(song)
+                                }
+                            },
+                            onMoreClick = { onMoreClick(song) },
+                            dominantColors = dominantColors
+                        )
+                    }
+                }
+
+                // Autoplay Section
+                if (autoPlaySongs.isNotEmpty()) {
+                    stickyHeader {
+                        val title = if (isRadioMode || isAutoplayEnabled) "Autoplay" else "Coming Up"
+                        HeaderItem(title, dominantColors)
+                    }
+                    
+                    itemsIndexed(
+                        items = autoPlaySongs,
+                        key = { _, song -> "auto_${song.id}" },
+                        contentType = { _, _ -> "queue_item" }
+                    ) { indexInList, song ->
+                        val actualIndex = upNextSongs.size + indexInList
+                        QueueItem(
+                            song = song,
+                            isCurrent = false,
+                            isPlaying = false,
+                            isSelected = selectedQueueIndices.contains(actualIndex),
+                            isSelectionMode = isSelectionMode,
+                            onClick = {
+                                if (isSelectionMode) {
+                                    onToggleSelection(actualIndex)
+                                } else {
+                                    onSongClick(actualIndex)
+                                }
+                            },
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (!isSelectionMode) {
+                                    onToggleSelection(actualIndex)
+                                } else {
+                                    onMoreClick(song)
+                                }
+                            },
+                            onMoreClick = { onMoreClick(song) },
+                            dominantColors = dominantColors
+                        )
+                    }
+                }
+                
+                // Loading indicator at bottom when loading more
+                if (isLoadingMore) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = dominantColors.accent,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Loading more songs...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = dominantColors.onBackground.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
