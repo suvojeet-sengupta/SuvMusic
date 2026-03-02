@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.utils
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -11,32 +12,42 @@ import kotlinx.coroutines.launch
 
 /**
  * Modifier to animate item entrance with a staggered slide-up and fade-in effect.
- * Best used in LazyLists where items appear sequentially.
+ * Uses fast-out-slow-in easing for a natural, polished feel.
+ * Index is capped so items far down the list don't wait excessively.
  *
  * @param index The index of the item in the list, used to calculate delay.
  */
 fun Modifier.animateEnter(
     index: Int,
-    delayPerItem: Int = 15, // Faster stagger
-    slideDistance: Float = 30f // Reduced distance for snappier feel
+    delayPerItem: Int = 20,
+    slideDistance: Float = 24f
 ): Modifier = composed {
     val alpha = remember { Animatable(0f) }
     val translationY = remember { Animatable(slideDistance) }
 
     LaunchedEffect(Unit) {
-        val delay = index * delayPerItem
+        // Cap delay so deeply-nested items still feel snappy
+        val cappedIndex = index.coerceAtMost(8)
+        val delay = cappedIndex * delayPerItem
         
-        // Parallel animations using launch inside the LaunchedEffect scope
         launch {
             alpha.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = 200, delayMillis = delay)
+                animationSpec = tween(
+                    durationMillis = 280,
+                    delayMillis = delay,
+                    easing = FastOutSlowInEasing
+                )
             )
         }
         launch {
             translationY.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(durationMillis = 200, delayMillis = delay)
+                animationSpec = tween(
+                    durationMillis = 320,
+                    delayMillis = delay,
+                    easing = FastOutSlowInEasing
+                )
             )
         }
     }
@@ -44,6 +55,5 @@ fun Modifier.animateEnter(
     this.graphicsLayer {
         this.alpha = alpha.value
         this.translationY = translationY.value
-        this.clip = false // Optimization: avoid clipping during entrance if not needed
     }
 }

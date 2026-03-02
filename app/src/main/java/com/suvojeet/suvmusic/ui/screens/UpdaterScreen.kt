@@ -50,7 +50,7 @@ fun UpdaterScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("App Update", fontWeight = FontWeight.ExtraBold) },
+                title = { Text("Updates", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -70,7 +70,7 @@ fun UpdaterScreen(
                     brush = Brush.verticalGradient(
                         colors = listOf(
                             surfaceColor,
-                            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f)
+                            surfaceColor.copy(alpha = 0.95f)
                         )
                     )
                 )
@@ -80,56 +80,51 @@ fun UpdaterScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(24.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Animated Header
+                // Header Icon
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(140.dp)
-                        .clip(RoundedCornerShape(40.dp))
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(28.dp))
                         .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    primaryColor.copy(alpha = 0.2f),
-                                    primaryColor.copy(alpha = 0.05f)
-                                )
-                            )
+                            primaryColor.copy(alpha = 0.08f)
                         )
                 ) {
                     Icon(
                         imageVector = Icons.Default.SystemUpdate,
                         contentDescription = null,
-                        modifier = Modifier.size(72.dp),
+                        modifier = Modifier.size(48.dp),
                         tint = primaryColor
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
                     text = "SuvMusic",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.padding(top = 8.dp)
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(top = 6.dp)
                 ) {
                     Text(
                         text = "v${uiState.currentVersion}",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        fontWeight = FontWeight.Bold
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // Update Status Card
                 UpdateStatusCard(
@@ -142,26 +137,24 @@ fun UpdaterScreen(
                     onCancelDownload = { viewModel.cancelDownload() }
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 
                 // View Changelog Button
                 OutlinedButton(
                     onClick = onViewChangelog,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(
                         width = 1.dp,
-                        brush = Brush.linearGradient(
-                            listOf(primaryColor.copy(alpha = 0.5f), primaryColor.copy(alpha = 0.1f))
-                        )
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
                 ) {
-                    Icon(Icons.Default.Info, null)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("View Release Notes", fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Info, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Release Notes", fontWeight = FontWeight.Medium)
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Release Notes from Server (if available)
                 AnimatedVisibility(
@@ -178,31 +171,31 @@ fun UpdaterScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                .padding(20.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                .padding(16.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Info,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = "What's New in v${update.versionName}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                             
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             
                             Text(
                                 text = update.releaseNotes,
-                                style = MaterialTheme.typography.bodyMedium,
-                                lineHeight = 22.sp,
+                                style = MaterialTheme.typography.bodySmall,
+                                lineHeight = 20.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -212,11 +205,11 @@ fun UpdaterScreen(
                 Spacer(modifier = Modifier.weight(1f))
                 
                 Text(
-                    text = "SuvMusic checks for updates automatically. You can also manually check for the latest improvements and bug fixes.",
+                    text = "Updates are checked automatically. You can also check manually above.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)
                 )
             }
         }
@@ -233,17 +226,17 @@ fun UpdateStatusCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(32.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)
         )
     ) {
         Column(
-            modifier = Modifier.padding(28.dp),
+            modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             when (state) {
@@ -252,45 +245,45 @@ fun UpdateStatusCard(
                         Icons.Default.CheckCircle, 
                         contentDescription = null,
                         tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "Everything looks good!",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "Everything looks good",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = onCheckUpdate,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(14.dp),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Check for Updates", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("Check for Updates", fontWeight = FontWeight.Medium)
                     }
                 }
 
                 is UpdateState.Checking -> {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(40.dp),
-                        strokeWidth = 4.dp,
+                        modifier = Modifier.size(36.dp),
+                        strokeWidth = 3.dp,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Searching for the latest...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        text = "Checking for updates\u2026",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
                 is UpdateState.UpdateAvailable -> {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
@@ -299,44 +292,44 @@ fun UpdateStatusCard(
                             Icons.Default.Download,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "New Update Available!",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold
+                        text = "Update Available",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "v${state.update.versionName} is ready.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "v${state.update.versionName} is ready",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = { onDownloadUpdate(state.update) },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text("Update Now", fontWeight = FontWeight.Bold)
+                        Text("Update Now", fontWeight = FontWeight.Medium)
                     }
                 }
 
                 is UpdateState.Downloading -> {
                     Text(
-                        text = "Downloading... ${state.progress}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "Downloading\u2026 ${state.progress}%",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     LinearProgressIndicator(
                         progress = { state.progress / 100f },
-                        modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     TextButton(onClick = onCancelDownload) {
                         Text("Cancel", color = MaterialTheme.colorScheme.error)
                     }
@@ -347,22 +340,22 @@ fun UpdateStatusCard(
                         Icons.Default.CheckCircle,
                         contentDescription = null,
                         tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(40.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "Download Ready",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "Ready to Install",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = onInstallUpdate,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                     ) {
-                        Text("Install and Relaunch", fontWeight = FontWeight.Bold)
+                        Text("Install and Relaunch", fontWeight = FontWeight.Medium)
                     }
                 }
 
@@ -371,27 +364,27 @@ fun UpdateStatusCard(
                         Icons.Default.CheckCircle,
                         contentDescription = null,
                         tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "You're on the latest version",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "You're up to date",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = onCheckUpdate,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     ) {
-                        Icon(Icons.Default.Refresh, null)
+                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Check Again", fontWeight = FontWeight.Bold)
+                        Text("Check Again", fontWeight = FontWeight.Medium)
                     }
                 }
 
@@ -400,22 +393,22 @@ fun UpdateStatusCard(
                         Icons.Default.Error,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = "Couldn't reach server",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Medium
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = onCheckUpdate,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text("Try Again", fontWeight = FontWeight.Bold)
+                        Text("Try Again", fontWeight = FontWeight.Medium)
                     }
                 }
             }

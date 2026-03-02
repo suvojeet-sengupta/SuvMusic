@@ -128,8 +128,9 @@ fun ListenTogetherScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        dominantColors.secondary,
-                        dominantColors.primary
+                        dominantColors.primary,
+                        dominantColors.secondary.copy(alpha = 0.85f),
+                        dominantColors.primary.copy(alpha = 0.95f)
                     )
                 )
             )
@@ -138,42 +139,41 @@ fun ListenTogetherScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 20.dp),
+                    .padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
                         text = "Listen Together",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = dominantColors.onBackground,
-                            letterSpacing = (-0.5).sp
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = dominantColors.onBackground
                         )
                     )
                     Text(
-                        text = if (uiState.isInRoom) "Connected Session" else "Sync with friends",
+                        text = if (uiState.isInRoom) "Connected" else "Sync with friends",
                         style = MaterialTheme.typography.bodySmall,
-                        color = dominantColors.onBackground.copy(alpha = 0.6f)
+                        color = dominantColors.onBackground.copy(alpha = 0.5f)
                     )
                 }
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
+                        .size(36.dp)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
                 ) {
                     Icon(
                         Icons.Default.Close, 
                         "Close",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp),
                         tint = dominantColors.onBackground
                     )
                 }
@@ -246,66 +246,66 @@ fun SetupContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 32.dp)
     ) {
-        // Hero Illustration placeholder or icon
+        // Hero icon
         Box(
             modifier = Modifier
-                .padding(vertical = 32.dp)
-                .size(80.dp)
-                .background(dominantColors.accent.copy(alpha = 0.15f), CircleShape),
+                .padding(vertical = 24.dp)
+                .size(72.dp)
+                .background(dominantColors.accent.copy(alpha = 0.12f), RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Group,
                 contentDescription = null,
                 tint = dominantColors.accent,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             )
         }
 
         Text(
-            text = "Experience music in perfect sync.",
+            text = "Experience music in perfect sync",
             style = MaterialTheme.typography.titleMedium,
             color = dominantColors.onBackground,
             textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Create a room and share your code to start listening together.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = dominantColors.onBackground.copy(alpha = 0.6f),
+            text = "Create a room or join one to listen with friends in real time.",
+            style = MaterialTheme.typography.bodySmall,
+            color = dominantColors.onBackground.copy(alpha = 0.5f),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 6.dp, bottom = 28.dp)
         )
         
         OutlinedTextField(
             value = username,
             onValueChange = onUsernameChange,
-            label = { Text("Your Display Name") },
+            label = { Text("Display Name") },
             leadingIcon = { Icon(Icons.Default.Person, null) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = dominantColors.accent,
-                unfocusedBorderColor = dominantColors.onBackground.copy(alpha = 0.2f),
+                unfocusedBorderColor = dominantColors.onBackground.copy(alpha = 0.15f),
                 focusedTextColor = dominantColors.onBackground,
                 unfocusedTextColor = dominantColors.onBackground,
                 focusedLabelColor = dominantColors.accent,
-                unfocusedLabelColor = dominantColors.onBackground.copy(alpha = 0.5f),
+                unfocusedLabelColor = dominantColors.onBackground.copy(alpha = 0.4f),
                 cursorColor = dominantColors.accent,
-                focusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f),
-                unfocusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f)
+                focusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.6f),
+                unfocusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.5f)
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(14.dp)
         )
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
         // Host Card
         Card(
             onClick = onCreateRoom,
             enabled = username.isNotBlank() && connectionState != ConnectionState.CONNECTING && connectionState != ConnectionState.RECONNECTING,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = dominantColors.accent,
                 contentColor = dominantColors.onBackground
@@ -313,45 +313,45 @@ fun SetupContent(
         ) {
             Row(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .padding(18.dp)
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 if (connectionState == ConnectionState.CONNECTING || connectionState == ConnectionState.RECONNECTING) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = dominantColors.onBackground, strokeWidth = 3.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = dominantColors.onBackground, strokeWidth = 2.5.dp)
                 } else {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Host New Session", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Host New Session", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = dominantColors.onBackground.copy(alpha = 0.1f))
+            HorizontalDivider(modifier = Modifier.weight(1f), color = dominantColors.onBackground.copy(alpha = 0.08f))
             Text(
                 "OR JOIN", 
                 style = MaterialTheme.typography.labelSmall,
-                color = dominantColors.onBackground.copy(alpha = 0.4f),
-                modifier = Modifier.padding(horizontal = 16.dp),
+                color = dominantColors.onBackground.copy(alpha = 0.35f),
+                modifier = Modifier.padding(horizontal = 14.dp),
                 letterSpacing = 1.sp
             )
-            HorizontalDivider(modifier = Modifier.weight(1f), color = dominantColors.onBackground.copy(alpha = 0.1f))
+            HorizontalDivider(modifier = Modifier.weight(1f), color = dominantColors.onBackground.copy(alpha = 0.08f))
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = roomCode,
                 onValueChange = { if (it.length <= 8) roomCode = it.uppercase() },
-                placeholder = { Text("Enter Room Code", color = dominantColors.onBackground.copy(alpha = 0.3f)) },
+                placeholder = { Text("Room Code", color = dominantColors.onBackground.copy(alpha = 0.25f)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -361,35 +361,35 @@ fun SetupContent(
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = dominantColors.accent,
-                    unfocusedBorderColor = dominantColors.onBackground.copy(alpha = 0.2f),
+                    unfocusedBorderColor = dominantColors.onBackground.copy(alpha = 0.15f),
                     focusedTextColor = dominantColors.onBackground,
                     unfocusedTextColor = dominantColors.onBackground,
                     cursorColor = dominantColors.accent
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(14.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             FilledTonalButton(
                 onClick = { onJoinRoom(roomCode) },
                 enabled = username.isNotBlank() && roomCode.length >= 4 && connectionState != ConnectionState.CONNECTING && connectionState != ConnectionState.RECONNECTING,
                 modifier = Modifier.height(56.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = dominantColors.onBackground.copy(alpha = 0.1f),
+                    containerColor = dominantColors.onBackground.copy(alpha = 0.08f),
                     contentColor = dominantColors.onBackground,
-                    disabledContainerColor = dominantColors.onBackground.copy(alpha = 0.05f)
+                    disabledContainerColor = dominantColors.onBackground.copy(alpha = 0.04f)
                 ),
-                shape = RoundedCornerShape(16.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp)
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp)
             ) {
                 if (connectionState == ConnectionState.CONNECTING || connectionState == ConnectionState.RECONNECTING) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = dominantColors.onBackground)
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = dominantColors.onBackground, strokeWidth = 2.dp)
                 } else {
                     Icon(Icons.Default.Login, null)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         // Server Settings Header
         Surface(
@@ -398,21 +398,21 @@ fun SetupContent(
             shape = RoundedCornerShape(8.dp)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     Icons.Default.Settings, 
                     contentDescription = null, 
-                    tint = dominantColors.accent,
-                    modifier = Modifier.size(18.dp)
+                    tint = dominantColors.onBackground.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Advanced Settings",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = dominantColors.accent,
-                    fontWeight = FontWeight.Bold
+                    text = "Settings",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = dominantColors.onBackground.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -421,17 +421,17 @@ fun SetupContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp)
-                    .background(dominantColors.onBackground.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
-                    .padding(20.dp)
+                    .padding(top = 10.dp)
+                    .background(dominantColors.onBackground.copy(alpha = 0.04f), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
                 Text(
-                    text = "SERVER CONFIGURATION",
+                    text = "SERVER",
                     style = MaterialTheme.typography.labelSmall,
-                    color = dominantColors.onBackground.copy(alpha = 0.5f),
+                    color = dominantColors.onBackground.copy(alpha = 0.4f),
                     letterSpacing = 1.sp
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = serverUrl,
                     onValueChange = onServerUrlChange,
@@ -440,23 +440,23 @@ fun SetupContent(
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = dominantColors.accent,
-                        unfocusedBorderColor = dominantColors.onBackground.copy(alpha = 0.2f),
+                        unfocusedBorderColor = dominantColors.onBackground.copy(alpha = 0.12f),
                         focusedTextColor = dominantColors.onBackground,
                         unfocusedTextColor = dominantColors.onBackground,
-                        focusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f),
-                        unfocusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.7f)
+                        focusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.5f),
+                        unfocusedLeadingIconColor = dominantColors.onBackground.copy(alpha = 0.5f)
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 )
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 Text(
                     text = "PREFERENCES",
                     style = MaterialTheme.typography.labelSmall,
-                    color = dominantColors.onBackground.copy(alpha = 0.5f),
+                    color = dominantColors.onBackground.copy(alpha = 0.4f),
                     letterSpacing = 1.sp
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 SettingsToggle(
                     title = "Auto-approve guests",
@@ -483,29 +483,28 @@ fun SetupContent(
                 )
                 
                 if (showCredits) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     Surface(
                         onClick = { uriHandler.openUri("https://nyx.meowery.eu/") },
-                        color = dominantColors.accent.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(12.dp),
+                        color = dominantColors.onBackground.copy(alpha = 0.04f),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier.padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 Icons.Default.Info,
                                 contentDescription = null,
-                                tint = dominantColors.accent,
-                                modifier = Modifier.size(16.dp)
+                                tint = dominantColors.onBackground.copy(alpha = 0.4f),
+                                modifier = Modifier.size(14.dp)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "Server by metroserver (nyx.meowery.eu)",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = dominantColors.accent,
-                                fontWeight = FontWeight.Medium
+                                style = MaterialTheme.typography.labelSmall,
+                                color = dominantColors.onBackground.copy(alpha = 0.5f)
                             )
                         }
                     }
@@ -526,7 +525,7 @@ private fun SettingsToggle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -535,12 +534,12 @@ private fun SettingsToggle(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = dominantColors.onBackground,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Medium
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = dominantColors.onBackground.copy(alpha = 0.6f)
+                color = dominantColors.onBackground.copy(alpha = 0.45f)
             )
         }
         Switch(
@@ -549,8 +548,8 @@ private fun SettingsToggle(
             colors = SwitchDefaults.colors(
                 checkedThumbColor = dominantColors.onBackground,
                 checkedTrackColor = dominantColors.accent,
-                uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.6f),
-                uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.1f),
+                uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.5f),
+                uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.08f),
                 uncheckedBorderColor = Color.Transparent
             )
         )
@@ -577,16 +576,16 @@ fun RoomContent(
         if (uiState.role == RoomRole.HOST && pendingRequests.isNotEmpty()) {
             item {
                 Surface(
-                    color = dominantColors.accent.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+                    color = dominantColors.accent.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Text(
                             text = "Pending Requests (${pendingRequests.size})",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = dominantColors.accent,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                            modifier = Modifier.padding(bottom = 10.dp)
                         )
                         
                         pendingRequests.forEach { request ->
@@ -606,78 +605,78 @@ fun RoomContent(
         item {
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = dominantColors.onBackground.copy(alpha = 0.08f)
+                    containerColor = dominantColors.onBackground.copy(alpha = 0.06f)
                 ),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 20.dp)
+                    .padding(bottom = 16.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "SESSION CODE",
                         style = MaterialTheme.typography.labelSmall,
-                        color = dominantColors.onBackground.copy(alpha = 0.5f),
-                        letterSpacing = 2.sp,
-                        fontWeight = FontWeight.Bold
+                        color = dominantColors.onBackground.copy(alpha = 0.4f),
+                        letterSpacing = 1.5.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                     
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     
                     Surface(
                         onClick = { onCopyCode(room.roomCode) },
-                        color = dominantColors.onBackground.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(16.dp)
+                        color = dominantColors.onBackground.copy(alpha = 0.07f),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
                         ) {
                             Text(
                                 text = room.roomCode,
-                                style = MaterialTheme.typography.headlineLarge.copy(
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 4.sp
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 3.sp
                                 ),
                                 color = dominantColors.onBackground
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(14.dp))
                             Icon(
                                 Icons.Default.ContentCopy, 
                                 null, 
-                                tint = dominantColors.accent,
-                                modifier = Modifier.size(24.dp)
+                                tint = dominantColors.onBackground.copy(alpha = 0.4f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     
                     // Host Badge
                     val hostUser = room.users.find { it.userId == room.hostId }
                     Surface(
-                        color = dominantColors.accent.copy(alpha = 0.1f),
+                        color = dominantColors.onBackground.copy(alpha = 0.06f),
                         shape = CircleShape
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
                             Icon(
                                 Icons.Default.Person,
                                 contentDescription = null,
-                                tint = dominantColors.accent,
-                                modifier = Modifier.size(14.dp)
+                                tint = dominantColors.onBackground.copy(alpha = 0.5f),
+                                modifier = Modifier.size(13.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
                                 text = "Hosted by ${hostUser?.username ?: "Unknown"}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = dominantColors.accent,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.labelSmall,
+                                color = dominantColors.onBackground.copy(alpha = 0.6f),
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -705,8 +704,8 @@ fun RoomContent(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard(
                     label = "UPTIME",
@@ -735,20 +734,20 @@ fun RoomContent(
             Text(
                 "NOW PLAYING",
                 style = MaterialTheme.typography.labelSmall,
-                color = dominantColors.onBackground.copy(alpha = 0.5f),
-                letterSpacing = 1.5.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
+                color = dominantColors.onBackground.copy(alpha = 0.4f),
+                letterSpacing = 1.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 10.dp, start = 4.dp)
             )
             
             val track = room.currentTrack
             Card(
-                colors = CardDefaults.cardColors(containerColor = dominantColors.onBackground.copy(alpha = 0.05f)),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
+                colors = CardDefaults.cardColors(containerColor = dominantColors.onBackground.copy(alpha = 0.04f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    modifier = Modifier.padding(14.dp).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (track?.thumbnail != null) {
@@ -756,56 +755,55 @@ fun RoomContent(
                             model = track.thumbnail,
                             contentDescription = null,
                             modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(12.dp)),
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(10.dp)),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop
                         )
                     } else {
                         Box(
                             modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(dominantColors.onBackground.copy(alpha = 0.1f)),
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(dominantColors.onBackground.copy(alpha = 0.08f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.MusicNote, null, tint = dominantColors.onBackground.copy(alpha = 0.5f))
+                            Icon(Icons.Default.MusicNote, null, tint = dominantColors.onBackground.copy(alpha = 0.4f))
                         }
                     }
                     
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     
                     Column(modifier = Modifier.weight(1f)) {
                         if (track != null) {
                             Text(
                                 text = track.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 color = dominantColors.onBackground
                             )
                             Text(
                                 text = track.artist,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = dominantColors.onBackground.copy(alpha = 0.6f),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = dominantColors.onBackground.copy(alpha = 0.5f),
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
-                                        .size(6.dp)
+                                        .size(5.dp)
                                         .background(if (room.isPlaying) Color(0xFF4CAF50) else Color.Gray, CircleShape)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (room.isPlaying) "Live Syncing" else "Paused",
+                                    text = if (room.isPlaying) "Syncing" else "Paused",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (room.isPlaying) Color(0xFF4CAF50) else dominantColors.onBackground.copy(alpha = 0.5f),
-                                    fontWeight = FontWeight.Bold
+                                    color = if (room.isPlaying) Color(0xFF4CAF50) else dominantColors.onBackground.copy(alpha = 0.4f)
                                 )
                             }
                         } else {
@@ -824,12 +822,12 @@ fun RoomContent(
         // Users List
         item {
             Text(
-                "CONNECTED LISTENERS",
+                "LISTENERS",
                 style = MaterialTheme.typography.labelSmall,
-                color = dominantColors.onBackground.copy(alpha = 0.5f),
-                letterSpacing = 1.5.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
+                color = dominantColors.onBackground.copy(alpha = 0.4f),
+                letterSpacing = 1.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 10.dp, start = 4.dp)
             )
         }
 
@@ -839,37 +837,37 @@ fun RoomContent(
 
         // Action Buttons
         item {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (uiState.role != RoomRole.HOST) {
                     Button(
                         onClick = onSync,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = dominantColors.onBackground.copy(alpha = 0.1f),
+                            containerColor = dominantColors.onBackground.copy(alpha = 0.08f),
                             contentColor = dominantColors.onBackground
                         ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(14.dp)
                     ) {
-                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Resync with Host", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("Resync with Host", fontWeight = FontWeight.SemiBold)
                     }
                 }
                 
                 Button(
                     onClick = onLeaveRoom,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     ),
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    Icon(Icons.Default.Logout, null, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Leave Session", fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Logout, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Leave Session", fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -886,26 +884,26 @@ private fun StatCard(
 ) {
     Surface(
         modifier = modifier,
-        color = if (highlight) dominantColors.accent.copy(alpha = 0.15f) else dominantColors.onBackground.copy(alpha = 0.05f),
-        shape = RoundedCornerShape(16.dp)
+        color = if (highlight) dominantColors.accent.copy(alpha = 0.1f) else dominantColors.onBackground.copy(alpha = 0.04f),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (highlight) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.4f),
-                fontWeight = FontWeight.Bold,
+                color = if (highlight) dominantColors.accent.copy(alpha = 0.8f) else dominantColors.onBackground.copy(alpha = 0.35f),
+                fontWeight = FontWeight.Medium,
                 letterSpacing = 0.5.sp
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleSmall,
                 color = if (highlight) dominantColors.accent else dominantColors.onBackground,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -982,7 +980,7 @@ fun RequestItem(
 fun UserItem(user: com.suvojeet.suvmusic.listentogether.UserInfo, dominantColors: DominantColors) {
     Surface(
         color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically
@@ -990,53 +988,54 @@ fun UserItem(user: com.suvojeet.suvmusic.listentogether.UserInfo, dominantColors
             // Avatar
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(
-                        if (user.isHost) dominantColors.accent.copy(alpha = 0.2f)
-                        else dominantColors.onBackground.copy(alpha = 0.08f)
+                        if (user.isHost) dominantColors.accent.copy(alpha = 0.15f)
+                        else dominantColors.onBackground.copy(alpha = 0.06f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = user.username.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Black,
-                    color = if (user.isHost) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f)
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (user.isHost) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
                 )
                 
                 // Connection Indicator
                 Box(
                     modifier = Modifier
-                        .size(10.dp)
+                        .size(9.dp)
                         .align(Alignment.BottomEnd)
                         .background(if (user.isConnected) Color(0xFF4CAF50) else Color.Gray, CircleShape)
-                        .border(2.dp, dominantColors.primary, CircleShape)
+                        .border(1.5.dp, dominantColors.primary, CircleShape)
                 )
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = user.username,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = dominantColors.onBackground
                     )
                     if (user.isHost) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Surface(
-                            color = dominantColors.accent.copy(alpha = 0.15f),
+                            color = dominantColors.accent.copy(alpha = 0.12f),
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
                                 text = "HOST",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = dominantColors.accent,
-                                fontWeight = FontWeight.Black,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                fontSize = 9.sp
                             )
                         }
                     }
@@ -1045,8 +1044,9 @@ fun UserItem(user: com.suvojeet.suvmusic.listentogether.UserInfo, dominantColors
                 Text(
                     text = if (user.isConnected) "Connected" else "Disconnected",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (user.isConnected) dominantColors.onBackground.copy(alpha = 0.5f) 
-                           else MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                    color = if (user.isConnected) dominantColors.onBackground.copy(alpha = 0.4f) 
+                           else MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                    fontSize = 11.sp
                 )
             }
         }
