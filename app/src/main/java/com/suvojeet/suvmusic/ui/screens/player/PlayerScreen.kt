@@ -189,6 +189,11 @@ fun PlayerScreen(
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
     val isFullScreen by playerViewModel.isFullScreen.collectAsState()
     
+    // Queue Selection & Sections
+    val selectedQueueIndices by playerViewModel.selectedQueueIndices.collectAsState()
+    val upNextSongs by playerViewModel.upNextSongs.collectAsState()
+    val autoPlaySongs by playerViewModel.autoPlaySongs.collectAsState()
+    
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
     
@@ -882,6 +887,12 @@ fun PlayerScreen(
                 QueueView(
                     currentSong = song,
                     queue = playerState.queue,
+                    upNextSongs = upNextSongs,
+                    autoPlaySongs = autoPlaySongs,
+                    selectedQueueIndices = selectedQueueIndices,
+                    onToggleSelection = { index -> playerViewModel.toggleQueueSelection(index) },
+                    onSelectAll = { playerViewModel.selectAllQueueItems() },
+                    onClearSelection = { playerViewModel.clearQueueSelection() },
                     currentIndex = playerState.currentIndex,
                     isPlaying = playerState.isPlaying,
                     shuffleEnabled = playerState.shuffleEnabled,

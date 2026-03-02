@@ -37,12 +37,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -147,6 +149,21 @@ class PlayerViewModel @Inject constructor(
     private val _isPlayerExpanded = MutableStateFlow(false)
     val isPlayerExpanded: StateFlow<Boolean> = _isPlayerExpanded.asStateFlow()
     
+    // Queue Selection State
+    private val _selectedQueueIndices = MutableStateFlow<Set<Int>>(emptySet())
+    val selectedQueueIndices: StateFlow<Set<Int>> = _selectedQueueIndices.asStateFlow()
+
+    // Derived Queue Sections
+    val upNextSongs: StateFlow<List<Song>> = playerState.map { state ->
+        if (state.currentIndex < 0) state.queue 
+        else state.queue.subList(0, (state.currentIndex + 1).coerceAtMost(state.queue.size))
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val autoPlaySongs: StateFlow<List<Song>> = playerState.map { state ->
+        if (state.currentIndex < 0 || state.currentIndex >= state.queue.size - 1) emptyList()
+        else state.queue.subList(state.currentIndex + 1, state.queue.size)
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private var radioBaseSongId: String? = null
 
     // History Sync State
@@ -484,10 +501,30 @@ class PlayerViewModel @Inject constructor(
 
     fun removeQueueItems(indices: List<Int>) {
         musicPlayer.removeFromQueue(indices)
+        clearQueueSelection()
+    }
+
+    fun toggleQueueSelection(index: Int) {
+        val current = _selectedQueueIndices.value
+        _selectedQueueIndices.value = if (current.contains(index)) {
+            current - index
+        } else {
+            current + index
+        }
+    }
+
+    fun selectAllQueueItems() {
+        val queueSize = playerState.value.queue.size
+        _selectedQueueIndices.value = (0 until queueSize).toSet()
+    }
+
+    fun clearQueueSelection() {
+        _selectedQueueIndices.value = emptySet()
     }
 
     fun clearQueue() {
         musicPlayer.clearQueue()
+        clearQueueSelection()
     }
 
     fun saveQueueAsPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean = true, onComplete: (Boolean) -> Unit) {
