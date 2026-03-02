@@ -113,6 +113,233 @@ class RecommendationEngine @Inject constructor(
     // ============================================================================================
 
     /**
+     * Generate genre-based discovery sections for the home screen.
+     * Creates "Because you like [genre]" sections for the user's top 3 genres.
+     * Uses genre affinity vector from the taste profile for accurate genre identification.
+     */
+    suspend fun getGenreBasedSections(): List<HomeSection> = coroutineScope {
+        val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS + "_genre")
+        if (cached != null) return@coroutineScope cached
+
+        val profile = tasteProfileBuilder.getProfile()
+        if (!profile.hasEnoughData) return@coroutineScope emptyList()
+
+        val topGenres = GenreTaxonomy.topGenres(profile.genreAffinityVector, n = 3)
+        if (topGenres.isEmpty()) return@coroutineScope emptyList()
+
+        val sections = mutableListOf<HomeSection>()
+        val seenIds = mutableSetOf<String>()
+        val seenFingerprints = mutableSetOf<String>()
+
+        val deferredSections = topGenres.map { (genreName, _) ->
+            async(Dispatchers.IO) {
+                apiSemaphore.withPermit {
+                    try {
+                        val songs = youTubeRepository.search(
+                            "$genreName music mix",
+                            YouTubeRepository.FILTER_SONGS
+                        )
+                        val scored = scoreAndRank(songs, profile)
+                        val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
+                        if (unique.isNotEmpty()) {
+                            HomeSection(
+                                title = "Because you like $genreName",
+                                items = unique.map { HomeItem.SongItem(it) },
+                                type = HomeSectionType.HorizontalCarousel
+                            )
+                        } else null
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+        }
+
+        deferredSections.awaitAll().filterNotNull().let { sections.addAll(it) }
+        cache.putSections(RecommendationCache.Keys.HOME_SECTIONS + "_genre", sections)
+        sections
+    }
+
+    /**
+     * Generate context-aware sections based on time-of-day, day-of-week, and listening patterns.
+     * Creates sections like "Friday Night Energy", "Weekend Chill", "Your Late Night Mix".
+     */
+    suspend fun getContextAwareSections(): List<HomeSection> = coroutineScope {
+        val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS + "_context")
+        if (cached != null) return@coroutineScope cached
+
+        val profile = tasteProfileBuilder.getProfile()
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+        val isWeekend = dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY
+
+        val sections = mutableListOf<HomeSection>()
+        val seenIds = mutableSetOf<String>()
+        val seenFingerprints = mutableSetOf<String>()
+
+        // Context query pairs: (title, searchQuery)
+        val contextQueries = mutableListOf<Pair<String, String>>()
+
+        // Time-of-day aware sections
+        when (hour) {
+            in 5..8 -> contextQueries.add("Morning Kickstart" to "upbeat morning motivation music")
+            in 9..12 -> contextQueries.add("Focus Flow" to "deep focus concentration music")
+            in 13..16 -> contextQueries.add("Afternoon Boost" to "afternoon energy upbeat")
+            in 17..20 -> contextQueries.add("Evening Unwind" to "evening relaxing atmospheric music")
+            in 21..23 -> contextQueries.add("Night Session" to "late night mellow music")
+            else -> contextQueries.add("Late Night Wandering" to "ambient late night calm")
+        }
+
+        // Weekend/weekday specific
+        if (isWeekend) {
+            contextQueries.add("Weekend Vibes" to "weekend party feel good music")
+        } else {
+            contextQueries.add("Workday Groove" to "productive work music beats")
+        }
+
+        val deferredSections = contextQueries.map { (title, query) ->
+            async(Dispatchers.IO) {
+                apiSemaphore.withPermit {
+                    try {
+                        val songs = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                        val scored = scoreAndRank(songs, profile)
+                        val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
+                        if (unique.isNotEmpty()) {
+                            HomeSection(
+                                title = title,
+                                items = unique.map { HomeItem.SongItem(it) },
+                                type = HomeSectionType.HorizontalCarousel
+                            )
+                        } else null
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+        }
+
+        deferredSections.awaitAll().filterNotNull().let { sections.addAll(it) }
+        cache.putSections(RecommendationCache.Keys.HOME_SECTIONS + "_context", sections)
+        sections
+    }
+
+    /**
+     * Detect the user's current mood based on recent listening patterns.
+     * Analyzes the genre distribution of the last 5-10 plays to infer mood.
+     *
+     * @return A mood string like "Chill", "Energize", "Sad", "Party", or null if uncertain.
+     */
+    suspend fun detectCurrentMood(): String? = withContext(Dispatchers.IO) {
+        val profile = tasteProfileBuilder.getProfile()
+        if (!profile.hasEnoughData) return@withContext null
+
+        val vec = profile.recentGenreVector
+        if (!GenreTaxonomy.isNonZero(vec)) return@withContext null
+
+        val topGenres = GenreTaxonomy.topGenres(vec, n = 2)
+        if (topGenres.isEmpty()) return@withContext null
+
+        val primary = topGenres[0].first.lowercase()
+
+        // Map genre to mood
+        return@withContext when (primary) {
+            "lo-fi", "ambient", "jazz", "classical" -> "Chill"
+            "r&b", "soul" -> "Romance"
+            "edm", "hip-hop", "latin" -> "Party"
+            "rock", "metal", "punk" -> "Energize"
+            "folk", "country", "indie" -> "Relax"
+            "blues" -> "Sad"
+            "pop" -> if (topGenres.size > 1 && topGenres[1].first.lowercase() in listOf("edm", "hip-hop", "latin")) "Feel Good" else null
+            else -> null
+        }
+    }
+
+    /**
+     * Generate additional sections for infinite scrolling.
+     * Each page produces a different set of sections to avoid repetition.
+     *
+     * @param page The page number (1-based) for pagination
+     * @param existingTitles Titles already shown to avoid duplicates
+     * @return New sections to append, or empty list if no more content
+     */
+    suspend fun getMoreSections(
+        page: Int,
+        existingTitles: Set<String>
+    ): List<HomeSection> = coroutineScope {
+        val profile = tasteProfileBuilder.getProfile()
+        val sections = mutableListOf<HomeSection>()
+        val seenIds = mutableSetOf<String>()
+        val seenFingerprints = mutableSetOf<String>()
+
+        // Different content strategies per page
+        val queries: List<Pair<String, String>> = when (page) {
+            1 -> listOf(
+                "New releases this week" to "new music releases this week",
+                "Throwback hits" to "throwback classic hits",
+                "Acoustic sessions" to "acoustic covers sessions"
+            )
+            2 -> listOf(
+                "Global trending" to "trending music worldwide",
+                "Mood booster" to "feel good happy songs playlist",
+                "Indie spotlight" to "indie music spotlight underground"
+            )
+            3 -> {
+                // Artist-based exploration: find artists similar to user's favorites
+                val topArtists = profile.artistAffinities.keys.drop(3).take(3)
+                if (topArtists.isNotEmpty()) {
+                    topArtists.map { artist ->
+                        val displayName = artist.replaceFirstChar { it.titlecase() }
+                        "More from $displayName" to "$artist songs"
+                    }
+                } else {
+                    listOf(
+                        "Hidden gems" to "underground hidden gem music",
+                        "Chill beats" to "lofi chill beat study"
+                    )
+                }
+            }
+            4 -> listOf(
+                "Around the world" to "world music international hits",
+                "Live performances" to "best live music performances",
+                "Viral hits" to "viral music trending tiktok"
+            )
+            else -> emptyList() // No more content after page 4
+        }
+
+        if (queries.isEmpty()) return@coroutineScope emptyList()
+
+        val deferredSections = queries
+            .filter { (title, _) -> title !in existingTitles }
+            .map { (title, query) ->
+                async(Dispatchers.IO) {
+                    apiSemaphore.withPermit {
+                        try {
+                            val songs = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                            val scored = scoreAndRank(songs, profile)
+                            val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
+                            if (unique.isNotEmpty()) {
+                                HomeSection(
+                                    title = title,
+                                    items = unique.map { HomeItem.SongItem(it) },
+                                    type = if (title.contains("More from", ignoreCase = true))
+                                        HomeSectionType.QuickPicks
+                                    else
+                                        HomeSectionType.HorizontalCarousel
+                                )
+                            } else null
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+            }
+
+        deferredSections.awaitAll().filterNotNull().let { sections.addAll(it) }
+        sections
+    }
+
+    /**
      * Generate the complete set of personalized home sections, tightly coupled with YT Music.
      */
     suspend fun getPersonalizedHomeSections(): List<HomeSection> = coroutineScope {

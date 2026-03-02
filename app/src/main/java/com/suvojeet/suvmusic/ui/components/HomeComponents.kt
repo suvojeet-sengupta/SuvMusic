@@ -97,8 +97,8 @@ fun PlaylistDisplayCard(
     
     Box(
         modifier = Modifier
-            .width(160.dp)
-            .height(160.dp)
+            .width(170.dp)
+            .height(220.dp)
             .clip(RoundedCornerShape(16.dp))
             .bounceClick(onClick = onClick)
     ) {
@@ -122,8 +122,8 @@ fun PlaylistDisplayCard(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.6f),
-                            Color.Black.copy(alpha = 0.9f)
+                            Color.Black.copy(alpha = 0.5f),
+                            Color.Black.copy(alpha = 0.85f)
                         )
                     )
                 )
@@ -132,16 +132,19 @@ fun PlaylistDisplayCard(
             Column {
                 Text(
                     text = playlist.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    color = Color.White
+                    maxLines = 2,
+                    color = Color.White,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = playlist.uploaderName,
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                    maxLines = 1
+                    color = Color.White.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -161,13 +164,12 @@ fun MediumSongCard(
     
     Column(
         modifier = Modifier
-            .width(160.dp)
+            .width(170.dp)
             .bounceClick(onClick = onClick)
     ) {
 
-
         Box(
-            modifier = Modifier.size(160.dp)
+            modifier = Modifier.size(170.dp)
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -177,8 +179,8 @@ fun MediumSongCard(
                     .build(),
                 contentDescription = song.title,
                 modifier = Modifier
-                    .size(160.dp)
-                    .clip(RoundedCornerShape(16.dp)),
+                    .size(170.dp)
+                    .clip(RoundedCornerShape(14.dp)),
                 contentScale = ContentScale.Crop
             )
             
@@ -186,7 +188,7 @@ fun MediumSongCard(
             if (song.isMembersOnly) {
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 16.dp),
+                    shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 14.dp),
                     modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Text(
@@ -198,7 +200,7 @@ fun MediumSongCard(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -255,22 +257,30 @@ fun HomeSectionHeader(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface,
-            letterSpacing = (-0.5).sp
+            letterSpacing = (-0.5).sp,
+            modifier = Modifier.weight(1f, fill = false)
         )
         if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(8.dp))
             trailingContent()
         } else if (onSeeAllClick != null) {
-            Text(
-                text = "SEE ALL",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .clickable(onClick = onSeeAllClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                letterSpacing = 1.sp
-            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ) {
+                Text(
+                    text = "SEE ALL",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .clickable(onClick = onSeeAllClick)
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    letterSpacing = 1.sp
+                )
+            }
         }
     }
 }

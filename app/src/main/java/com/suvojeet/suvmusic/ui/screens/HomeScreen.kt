@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -27,12 +28,14 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import android.content.Intent
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -67,6 +70,8 @@ import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.ui.graphics.Shape
 import java.util.Calendar
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 /**
  * Home screen with Spotify-style "Good Morning" grid and dynamic visuals.
@@ -131,7 +136,32 @@ fun HomeScreen(
             uiState.isLoading && uiState.homeSections.isEmpty() -> {
                 HomeLoadingSkeleton()
             }
+            uiState.error != null && uiState.homeSections.isEmpty() && uiState.recommendations.isEmpty() -> {
+                // Full-screen error state
+                ErrorState(
+                    message = uiState.error ?: "Something went wrong",
+                    onRetry = { viewModel.refresh() },
+                    modifier = Modifier.fillMaxSize().statusBarsPadding()
+                )
+            }
             uiState.homeSections.isNotEmpty() || uiState.recommendations.isNotEmpty() -> {
+                val lazyListState = rememberLazyListState()
+
+                // Infinite scroll detection
+                LaunchedEffect(lazyListState) {
+                    snapshotFlow {
+                        val layoutInfo = lazyListState.layoutInfo
+                        val totalItems = layoutInfo.totalItemsCount
+                        val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        lastVisibleIndex >= totalItems - 3 && totalItems > 0
+                    }
+                        .distinctUntilChanged()
+                        .filter { it }
+                        .collect {
+                            viewModel.loadMore()
+                        }
+                }
+
                 @OptIn(ExperimentalMaterial3Api::class)
                 PullToRefreshBox(
                     isRefreshing = uiState.isRefreshing,
@@ -141,9 +171,10 @@ fun HomeScreen(
                         .statusBarsPadding()
                 ) {
                     LazyColumn(
+                        state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 140.dp),
-                        verticalArrangement = Arrangement.spacedBy(32.dp)
+                        verticalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
                         // Greeting & Profile Header
                         item(key = "header", contentType = "header") {
@@ -370,6 +401,77 @@ fun HomeScreen(
                             }
                         }
 
+                        // Genre-Based Discovery Sections ("Because you like Pop", "Your R&B Mix", etc.)
+                        if (uiState.genreSections.isNotEmpty()) {
+                            item(key = "genre_header", contentType = "genre_header") {
+                                SectionDividerHeader(
+                                    title = "Your Genres",
+                                    subtitle = "Because of your taste",
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .animateEnter(index = uiState.filteredSections.size + uiState.personalizedSections.size + 8)
+                                )
+                            }
+
+                            itemsIndexed(
+                                items = uiState.genreSections,
+                                key = { _, section -> "genre_${section.title}" },
+                                contentType = { _, section -> "genre_${section.type}" }
+                            ) { index, section ->
+                                val enterModifier = Modifier.animateEnter(
+                                    index = index + uiState.filteredSections.size + uiState.personalizedSections.size + 9
+                                )
+                                com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick,
+                                    onSongMoreClick = { song ->
+                                        selectedSong = song
+                                        showSongMenu = true
+                                    },
+                                    modifier = enterModifier,
+                                )
+                            }
+                        }
+
+                        // Context-Aware Sections (time-of-day, listening patterns)
+                        if (uiState.contextSections.isNotEmpty()) {
+                            itemsIndexed(
+                                items = uiState.contextSections,
+                                key = { _, section -> "context_${section.title}" },
+                                contentType = { _, section -> "context_${section.type}" }
+                            ) { index, section ->
+                                val enterModifier = Modifier.animateEnter(
+                                    index = index + uiState.filteredSections.size + uiState.personalizedSections.size + uiState.genreSections.size + 10
+                                )
+                                com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick,
+                                    onSongMoreClick = { song ->
+                                        selectedSong = song
+                                        showSongMenu = true
+                                    },
+                                    modifier = enterModifier,
+                                )
+                            }
+                        }
+
+                        // Detected Mood Banner
+                        if (uiState.detectedMood != null && uiState.selectedMood == null) {
+                            item(key = "mood_banner", contentType = "mood_banner") {
+                                DetectedMoodBanner(
+                                    mood = uiState.detectedMood!!,
+                                    onExplore = { viewModel.onMoodSelected(uiState.detectedMood!!) },
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .animateEnter(index = 12)
+                                )
+                            }
+                        }
+
                         // Create a Mix Section (Quick Access)
                         item(key = "create_mix", contentType = "create_mix") {
                              // Spotify often has these functional cards in-between
@@ -378,6 +480,17 @@ fun HomeScreen(
                                  Spacer(modifier = Modifier.height(12.dp))
                                  CreateMixCard(onClick = onCreateMixClick)
                              }
+                        }
+
+                        // Loading More Indicator (infinite scroll)
+                        if (uiState.isLoadingMore) {
+                            item(key = "loading_more", contentType = "loading_more") {
+                                LoadingMoreIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp)
+                                )
+                            }
                         }
 
                         // App Footer
@@ -604,6 +717,232 @@ private fun ProfileHeader(
 }
 
 // Unused local cards removed for cleanliness
+
+// -----------------------------------------------------------------------------
+// Error State & Loading
+// -----------------------------------------------------------------------------
+
+@Composable
+private fun ErrorState(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            text = "Couldn't load content",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Button(
+            onClick = onRetry,
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Retry", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun LoadingMoreIndicator(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Loading more for you...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+/**
+ * Detected mood banner — shows when the engine auto-detects the user's current mood.
+ */
+@Composable
+private fun DetectedMoodBanner(
+    mood: String,
+    onExplore: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.Transparent,
+        tonalElevation = 0.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .clickable(onClick = onExplore)
+                .padding(horizontal = 20.dp, vertical = 14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            MaterialTheme.colorScheme.tertiaryContainer,
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Feeling $mood?",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "We noticed your vibe. Tap to explore",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "Explore",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Section divider header with title and subtitle — used between major recommendation categories.
+ */
+@Composable
+private fun SectionDividerHeader(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Accent bar
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(32.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        ),
+                        RoundedCornerShape(2.dp)
+                    )
+            )
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = (-0.5).sp
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
 
 // -----------------------------------------------------------------------------
 // Existing Helpers & Footer (Refined)
@@ -1034,22 +1373,28 @@ fun ArtistCard(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(100.dp)
+            .width(110.dp)
             .bounceClick(onClick = onClick)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(imageUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = artist.name,
-            modifier = Modifier
-                .size(100.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            modifier = Modifier.size(100.dp),
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shadowElevation = 4.dp
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = artist.name,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(androidx.compose.foundation.shape.CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = artist.name,
             style = MaterialTheme.typography.bodyMedium,
@@ -1072,21 +1417,23 @@ fun TrackCard(
 
     Column(
         modifier = Modifier
-            .width(140.dp)
+            .width(150.dp)
             .bounceClick(onClick = onClick)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(imageUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = track.name,
-            modifier = Modifier
-                .size(140.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
+        Box {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = track.name,
+                modifier = Modifier
+                    .size(150.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+        }
         Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = track.name,
