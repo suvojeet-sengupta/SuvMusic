@@ -8,7 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(suvmusic_native SHARED
         spatial_audio.cpp
         limiter.cpp
-        file_mapper.cpp)
+        file_mapper.cpp
+        recommendation_scorer.cpp)
 
 find_library(log-lib log)
 

@@ -154,12 +154,14 @@ class PlayerViewModel @Inject constructor(
     val selectedQueueIndices: StateFlow<Set<Int>> = _selectedQueueIndices.asStateFlow()
 
     // Derived Queue Sections
-    val upNextSongs: StateFlow<List<Song>> = playerState.map { state ->
+    /** Songs from index 0 to currentIndex (inclusive) — already played + currently playing */
+    val playedSongs: StateFlow<List<Song>> = playerState.map { state ->
         if (state.currentIndex < 0) state.queue 
         else state.queue.subList(0, (state.currentIndex + 1).coerceAtMost(state.queue.size))
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val autoPlaySongs: StateFlow<List<Song>> = playerState.map { state ->
+    /** Songs after currentIndex — the actual upcoming / "up next" songs */
+    val upNextSongs: StateFlow<List<Song>> = playerState.map { state ->
         if (state.currentIndex < 0 || state.currentIndex >= state.queue.size - 1) emptyList()
         else state.queue.subList(state.currentIndex + 1, state.queue.size)
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

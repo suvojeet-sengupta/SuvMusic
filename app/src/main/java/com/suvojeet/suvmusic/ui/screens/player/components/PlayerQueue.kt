@@ -72,8 +72,8 @@ import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 fun QueueView(
     currentSong: Song?,
     queue: List<Song>,
+    playedSongs: List<Song>,
     upNextSongs: List<Song>,
-    autoPlaySongs: List<Song>,
     selectedQueueIndices: Set<Int>,
     onToggleSelection: (Int) -> Unit,
     onSelectAll: () -> Unit,
@@ -379,13 +379,13 @@ fun QueueView(
                 modifier = Modifier.weight(1f)
             ) {
                 // Up Next Section
-                if (upNextSongs.isNotEmpty()) {
+                if (playedSongs.isNotEmpty()) {
                     stickyHeader {
-                        HeaderItem("Up Next", dominantColors)
+                        HeaderItem("Played", dominantColors)
                     }
                     
                     itemsIndexed(
-                        items = upNextSongs,
+                        items = playedSongs,
                         key = { _, song -> "upnext_${song.id}" },
                         contentType = { _, _ -> "queue_item" }
                     ) { index, song ->
@@ -417,18 +417,18 @@ fun QueueView(
                 }
 
                 // Autoplay Section
-                if (autoPlaySongs.isNotEmpty()) {
+                if (upNextSongs.isNotEmpty()) {
                     stickyHeader {
-                        val title = if (isRadioMode || isAutoplayEnabled) "Autoplay" else "Coming Up"
+                        val title = if (isRadioMode || isAutoplayEnabled) "Autoplay" else "Up Next"
                         HeaderItem(title, dominantColors)
                     }
                     
                     itemsIndexed(
-                        items = autoPlaySongs,
+                        items = upNextSongs,
                         key = { _, song -> "auto_${song.id}" },
                         contentType = { _, _ -> "queue_item" }
                     ) { indexInList, song ->
-                        val actualIndex = upNextSongs.size + indexInList
+                        val actualIndex = playedSongs.size + indexInList
                         QueueItem(
                             song = song,
                             isCurrent = false,

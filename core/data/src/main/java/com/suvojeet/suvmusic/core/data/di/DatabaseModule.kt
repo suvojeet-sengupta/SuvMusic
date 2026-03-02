@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.core.data.local.AppDatabase
 import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
 import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.core.data.local.dao.DislikedItemDao
+import com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,5 +43,10 @@ object DatabaseModule {
     @Provides
     fun provideDislikedItemDao(database: AppDatabase): DislikedItemDao {
         return database.dislikedItemDao()
+    }
+
+    @Provides
+    fun provideSongGenreDao(database: AppDatabase): SongGenreDao {
+        return database.songGenreDao()
     }
 }
