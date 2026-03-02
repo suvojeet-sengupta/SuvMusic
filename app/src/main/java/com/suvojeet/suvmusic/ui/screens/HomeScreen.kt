@@ -55,6 +55,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.data.model.HomeItem
+import com.suvojeet.suvmusic.data.model.HomeSection
+import com.suvojeet.suvmusic.data.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.Album
@@ -232,10 +234,10 @@ fun HomeScreen(
                         if (uiState.recommendations.isNotEmpty()) {
                             item(key = "quick_picks", contentType = "section_quick_picks") {
                                 com.suvojeet.suvmusic.ui.components.QuickPicksSection(
-                                    section = com.suvojeet.suvmusic.data.model.HomeSection(
+                                    section = HomeSection(
                                         title = "Quick picks",
-                                        items = uiState.recommendations.map { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) },
-                                        type = com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks
+                                        items = uiState.recommendations.map { HomeItem.SongItem(it) },
+                                        type = HomeSectionType.QuickPicks
                                     ),
                                     onSongClick = onSongClick,
                                     onPlaylistClick = onPlaylistClick,
@@ -259,7 +261,7 @@ fun HomeScreen(
                             val enterModifier = Modifier.animateEnter(index = index + 5)
                             
                             when (section.type) {
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList -> {
+                                HomeSectionType.LargeCardWithList -> {
                                     com.suvojeet.suvmusic.ui.components.LargeCardWithListSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -272,7 +274,7 @@ fun HomeScreen(
                                         modifier = enterModifier,
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.Grid -> {
+                                HomeSectionType.Grid -> {
                                     com.suvojeet.suvmusic.ui.components.GridSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -285,7 +287,7 @@ fun HomeScreen(
                                         modifier = enterModifier,
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList -> {
+                                HomeSectionType.VerticalList -> {
                                     com.suvojeet.suvmusic.ui.components.VerticalListSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -298,7 +300,7 @@ fun HomeScreen(
                                         modifier = enterModifier,
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.HorizontalCarousel -> {
+                                HomeSectionType.HorizontalCarousel -> {
                                     com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -311,7 +313,7 @@ fun HomeScreen(
                                         modifier = enterModifier,
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.CommunityCarousel -> {
+                                HomeSectionType.CommunityCarousel -> {
                                     com.suvojeet.suvmusic.ui.components.CommunityCarouselSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -328,7 +330,7 @@ fun HomeScreen(
                                         modifier = enterModifier
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks -> {
+                                HomeSectionType.QuickPicks -> {
                                     com.suvojeet.suvmusic.ui.components.QuickPicksSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -341,7 +343,7 @@ fun HomeScreen(
                                         modifier = enterModifier,
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.ExploreGrid -> {
+                                HomeSectionType.ExploreGrid -> {
                                     com.suvojeet.suvmusic.ui.components.ExploreGridSection(
                                         section = section,
                                         onExploreItemClick = onExploreClick,
@@ -371,7 +373,7 @@ fun HomeScreen(
                                 val enterModifier = Modifier.animateEnter(index = index + uiState.filteredSections.size + 6)
                                 
                                 when (section.type) {
-                                    com.suvojeet.suvmusic.data.model.HomeSectionType.QuickPicks -> {
+                                    HomeSectionType.QuickPicks -> {
                                         com.suvojeet.suvmusic.ui.components.QuickPicksSection(
                                             section = section,
                                             onSongClick = onSongClick,
@@ -474,7 +476,6 @@ fun HomeScreen(
 
                         // Create a Mix Section (Quick Access)
                         item(key = "create_mix", contentType = "create_mix") {
-                             // Spotify often has these functional cards in-between
                              Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                  HomeSectionHeader(title = "More specifically")
                                  Spacer(modifier = Modifier.height(12.dp))
@@ -482,13 +483,51 @@ fun HomeScreen(
                              }
                         }
 
-                        // Loading More Indicator (infinite scroll)
+                        // ──────────────────────────────────────────────────
+                        // "More for you" — Scroll-loaded sections (varied styles)
+                        // ──────────────────────────────────────────────────
+                        if (uiState.moreSections.isNotEmpty()) {
+                            itemsIndexed(
+                                items = uiState.moreSections,
+                                key = { _, section -> "more_${section.title}" },
+                                contentType = { _, section -> "more_${section.type}" }
+                            ) { index, section ->
+                                val enterModifier = Modifier.animateEnter(index = index + 14)
+                                RenderHomeSection(
+                                    section = section,
+                                    onSongClick = onSongClick,
+                                    onPlaylistClick = onPlaylistClick,
+                                    onAlbumClick = onAlbumClick,
+                                    onExploreClick = onExploreClick,
+                                    onStartRadio = onStartRadio,
+                                    onSongMoreClick = { song ->
+                                        selectedSong = song
+                                        showSongMenu = true
+                                    },
+                                    modifier = enterModifier
+                                )
+                            }
+                        }
+
+                        // Loading More Indicator
                         if (uiState.isLoadingMore) {
                             item(key = "loading_more", contentType = "loading_more") {
                                 LoadingMoreIndicator(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 16.dp)
+                                )
+                            }
+                        }
+
+                        // End-of-Feed or App Footer
+                        if (uiState.hasReachedEnd) {
+                            item(key = "end_of_feed", contentType = "end_of_feed") {
+                                EndOfFeedCard(
+                                    onStartRadio = onStartRadio,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
                                 )
                             }
                         }
@@ -717,6 +756,224 @@ private fun ProfileHeader(
 }
 
 // Unused local cards removed for cleanliness
+
+// -----------------------------------------------------------------------------
+// Unified Section Renderer — dispatches by HomeSectionType
+// -----------------------------------------------------------------------------
+
+/**
+ * Render any [HomeSection] by dispatching to the correct composable based on its [HomeSectionType].
+ * Used for moreSections to avoid copy-pasting the when-block.
+ */
+@Composable
+private fun RenderHomeSection(
+    section: HomeSection,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    onExploreClick: (String, String) -> Unit,
+    onStartRadio: () -> Unit,
+    onSongMoreClick: (Song) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    when (section.type) {
+        HomeSectionType.QuickPicks -> {
+            com.suvojeet.suvmusic.ui.components.QuickPicksSection(
+                section = section,
+                onSongClick = onSongClick,
+                onPlaylistClick = onPlaylistClick,
+                onAlbumClick = onAlbumClick,
+                onSongMoreClick = onSongMoreClick,
+                modifier = modifier,
+            )
+        }
+        HomeSectionType.LargeCardWithList -> {
+            com.suvojeet.suvmusic.ui.components.LargeCardWithListSection(
+                section = section,
+                onSongClick = onSongClick,
+                onPlaylistClick = onPlaylistClick,
+                onAlbumClick = onAlbumClick,
+                onSongMoreClick = onSongMoreClick,
+                modifier = modifier,
+            )
+        }
+        HomeSectionType.Grid -> {
+            com.suvojeet.suvmusic.ui.components.GridSection(
+                section = section,
+                onSongClick = onSongClick,
+                onPlaylistClick = onPlaylistClick,
+                onAlbumClick = onAlbumClick,
+                onSongMoreClick = onSongMoreClick,
+                modifier = modifier,
+            )
+        }
+        HomeSectionType.VerticalList -> {
+            com.suvojeet.suvmusic.ui.components.VerticalListSection(
+                section = section,
+                onSongClick = onSongClick,
+                onPlaylistClick = onPlaylistClick,
+                onAlbumClick = onAlbumClick,
+                onSongMoreClick = onSongMoreClick,
+                modifier = modifier,
+            )
+        }
+        HomeSectionType.CommunityCarousel -> {
+            com.suvojeet.suvmusic.ui.components.CommunityCarouselSection(
+                section = section,
+                onSongClick = onSongClick,
+                onPlaylistClick = onPlaylistClick,
+                onAlbumClick = onAlbumClick,
+                onStartRadio = onStartRadio,
+                onSongMoreClick = onSongMoreClick,
+                modifier = modifier,
+            )
+        }
+        HomeSectionType.ExploreGrid -> {
+            com.suvojeet.suvmusic.ui.components.ExploreGridSection(
+                section = section,
+                onExploreItemClick = onExploreClick,
+                modifier = modifier
+            )
+        }
+        else -> {
+            com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                section = section,
+                onSongClick = onSongClick,
+                onPlaylistClick = onPlaylistClick,
+                onAlbumClick = onAlbumClick,
+                onSongMoreClick = onSongMoreClick,
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// End-of-Feed Card — unique ending element
+// -----------------------------------------------------------------------------
+
+/**
+ * A visually distinctive "End of Feed" card shown when the user has scrolled
+ * through all content. Offers a personal radio as the next action.
+ */
+@Composable
+private fun EndOfFeedCard(
+    onStartRadio: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "end_glow")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        color = Color.Transparent,
+        tonalElevation = 0.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = glowAlpha * 0.3f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.10f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                )
+                .padding(horizontal = 24.dp, vertical = 32.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Animated music icon
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                                )
+                            ),
+                            RoundedCornerShape(20.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Radio,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f + glowAlpha * 0.2f),
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "You've explored it all!",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Start a personal radio for an endless stream tailored just for you",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // CTA button
+                Surface(
+                    modifier = Modifier.bounceClick(
+                        shape = RoundedCornerShape(24.dp),
+                        onClick = onStartRadio
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Start Your Radio",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 // -----------------------------------------------------------------------------
 // Error State & Loading
