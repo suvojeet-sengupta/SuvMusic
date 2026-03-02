@@ -7,6 +7,7 @@ import javax.inject.Singleton
 
 @Singleton
 class NativeSpatialAudio @Inject constructor() {
+    @Volatile
     private var isLibraryLoaded = false
 
     init {

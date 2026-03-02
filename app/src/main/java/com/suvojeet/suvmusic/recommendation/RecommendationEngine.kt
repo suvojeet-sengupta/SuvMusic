@@ -17,11 +17,16 @@ import kotlinx.coroutines.withContext
 import com.suvojeet.suvmusic.core.data.local.dao.DislikedItemDao
 import com.suvojeet.suvmusic.core.data.local.entity.DislikedArtist as DislikedArtistEntity
 import com.suvojeet.suvmusic.core.data.local.entity.DislikedSong as DislikedSongEntity
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Advanced recommendation engine deeply integrated with YouTube Music's recommendation system.
@@ -38,23 +43,33 @@ class RecommendationEngine @Inject constructor(
     private val dislikedItemDao: DislikedItemDao,
     private val youTubeRepository: YouTubeRepository,
     private val tasteProfileBuilder: TasteProfileBuilder,
-    private val cache: RecommendationCache
+    private val cache: RecommendationCache,
+    private val nativeScorer: NativeRecommendationScorer,
+    private val songGenreDao: com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
 ) {
     companion object {
         private const val TAG = "RecommendationEngine"
+        /** Max concurrent YouTube API calls to prevent throttling */
+        private const val MAX_CONCURRENT_API_CALLS = 3
     }
 
-    private val scope = MainScope()
+    /** Application-scoped coroutine scope with SupervisorJob — survives child failures */
+    private val scope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** Semaphore to rate-limit parallel YouTube API calls */
+    private val apiSemaphore = Semaphore(MAX_CONCURRENT_API_CALLS)
 
     /**
      * In-memory set of disliked song IDs (synced with DB).
+     * Thread-safe: uses ConcurrentHashMap-backed set.
      */
-    private val dislikedSongIds = mutableSetOf<String>()
+    private val dislikedSongIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
      * In-memory set of disliked artists (synced with DB).
+     * Thread-safe: uses ConcurrentHashMap-backed set.
      */
-    private val dislikedArtists = mutableSetOf<String>()
+    private val dislikedArtists: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     init {
         // Load persistent dislikes on initialization
@@ -208,10 +223,12 @@ class RecommendationEngine @Inject constructor(
                     coroutineScope {
                         val relatedJobs = recentIds.map { songId ->
                             async(Dispatchers.IO) {
-                                try {
-                                    youTubeRepository.getRelatedSongs(songId)
-                                } catch (e: Exception) {
-                                    emptyList()
+                                apiSemaphore.withPermit {
+                                    try {
+                                        youTubeRepository.getRelatedSongs(songId)
+                                    } catch (e: Exception) {
+                                        emptyList()
+                                    }
                                 }
                             }
                         }
@@ -358,10 +375,12 @@ class RecommendationEngine @Inject constructor(
         coroutineScope {
             val jobs = recentIds.map { songId ->
                 async(Dispatchers.IO) {
-                    try {
-                        youTubeRepository.getRelatedSongs(songId)
-                    } catch (e: Exception) {
-                        emptyList()
+                    apiSemaphore.withPermit {
+                        try {
+                            youTubeRepository.getRelatedSongs(songId)
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
                     }
                 }
             }
@@ -435,16 +454,16 @@ class RecommendationEngine @Inject constructor(
     // ============================================================================================
 
     fun onSongPlayed(song: Song) {
-        tasteProfileBuilder.invalidate()
+        tasteProfileBuilder.onSongPlayed() // Rate-limited invalidation (every 5th play)
         cache.invalidateUpNext()
     }
 
     fun onSongSkipped(song: Song) {
-        tasteProfileBuilder.invalidate()
+        tasteProfileBuilder.onSongPlayed() // Skips also count toward the play-event counter
     }
 
     fun onSongLikeChanged(song: Song, isLiked: Boolean) {
-        tasteProfileBuilder.invalidate()
+        tasteProfileBuilder.invalidateImmediate() // Likes are significant — immediate rebuild
         cache.invalidateRecommendations()
     }
 
@@ -469,7 +488,7 @@ class RecommendationEngine @Inject constructor(
                 Log.e(TAG, "Failed to update persistent dislikes", e)
             }
         }
-        tasteProfileBuilder.invalidate()
+        tasteProfileBuilder.invalidateImmediate()
         cache.invalidateRecommendations()
         cache.invalidateUpNext()
     }
@@ -481,7 +500,7 @@ class RecommendationEngine @Inject constructor(
             dislikedSongIds.clear()
             dislikedArtists.clear()
         }
-        tasteProfileBuilder.invalidate()
+        tasteProfileBuilder.invalidateImmediate()
         cache.invalidateAll()
     }
 
@@ -489,47 +508,247 @@ class RecommendationEngine @Inject constructor(
     // PRIVATE — Scoring & Ranking
     // ============================================================================================
 
-    private fun scoreAndRank(candidates: List<Song>, profile: UserTasteProfile): List<Song> {
-        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        val artistCounts = mutableMapOf<String, Int>()
+    /**
+     * Rebalanced scoring weights (v2, with genre signals).
+     *
+     * | Signal               | Weight |
+     * |----------------------|--------|
+     * | Base                 | 0.50   |
+     * | Artist Affinity      | 0.22   |
+     * | Freshness            | 0.12   |
+     * | Skip Avoidance       | 0.12   |
+     * | Liked Song           | 0.12   |
+     * | Liked Artist         | 0.08   |
+     * | Time-of-Day          | 0.08   |
+     * | Variety Penalty      | 0.10   |
+     * | Genre Similarity     | 0.20   |
+     * | Session Genre Sim    | 0.08   |
+     * | Skip Genre Penalty   | 0.08   |
+     */
+    private val scoringWeights = floatArrayOf(
+        0.50f,  // [0] base
+        0.22f,  // [1] artistAffinity
+        0.12f,  // [2] freshness
+        0.12f,  // [3] skipPenalty
+        0.12f,  // [4] likedSong
+        0.08f,  // [5] likedArtist
+        0.08f,  // [6] timeOfDay
+        0.10f,  // [7] varietyPenalty
+        0.20f,  // [8] genreSimilarity
+        0.08f,  // [9] recentGenreSimilarity
+        0.08f   // [10] skipGenrePenalty
+    )
 
+    /**
+     * Score and rank candidates using the native SIMD engine (with Kotlin fallback).
+     *
+     * Pipeline:
+     * 1. Filter disliked songs/artists
+     * 2. Infer genre vectors for each candidate (cached in Room)
+     * 3. Marshal features into SoA FloatArray
+     * 4. Single JNI call to native scorer
+     * 5. Unpack top-K indices back to Song list
+     *
+     * Falls back to pure Kotlin scoring if native library is unavailable.
+     */
+    private suspend fun scoreAndRank(candidates: List<Song>, profile: UserTasteProfile): List<Song> {
+        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+
+        // Step 1: Filter disliked
+        val filtered = candidates.filter {
+            it.id !in dislikedSongIds && it.artist.lowercase().trim() !in dislikedArtists
+        }
+
+        if (filtered.isEmpty()) return emptyList()
+
+        val N = filtered.size
+
+        // Step 2: Compute variety penalties (order-dependent, must be sequential)
+        val artistCounts = mutableMapOf<String, Int>()
+        val varietyPenalties = FloatArray(N)
+        for (i in 0 until N) {
+            val artistKey = filtered[i].artist.trim().lowercase()
+            val count = artistCounts.getOrDefault(artistKey, 0)
+            artistCounts[artistKey] = count + 1
+            varietyPenalties[i] = if (count > 2) (count - 2).toFloat() else 0f
+        }
+
+        // Step 3: Compute genre similarities
+        val genreSimilarities = computeGenreSimilarities(filtered, profile.genreAffinityVector)
+        val recentGenreSimilarities = computeGenreSimilarities(filtered, profile.recentGenreVector)
+        val skipGenreSimilarities = computeGenreSimilarities(filtered, profile.skipGenreVector)
+
+        // Step 4: Try native scoring
+        if (nativeScorer.isNativeAvailable()) {
+            val result = scoreWithNative(
+                filtered, profile, currentHour, varietyPenalties,
+                genreSimilarities, recentGenreSimilarities, skipGenreSimilarities
+            )
+            if (result != null) return result
+        }
+
+        // Step 5: Kotlin fallback
+        return scoreWithKotlin(
+            filtered, profile, currentHour, varietyPenalties,
+            genreSimilarities, recentGenreSimilarities, skipGenreSimilarities
+        )
+    }
+
+    /**
+     * Native SIMD scoring path. Marshals features into SoA layout and calls C++.
+     */
+    private fun scoreWithNative(
+        candidates: List<Song>,
+        profile: UserTasteProfile,
+        currentHour: Int,
+        varietyPenalties: FloatArray,
+        genreSims: FloatArray,
+        recentGenreSims: FloatArray,
+        skipGenreSims: FloatArray
+    ): List<Song>? {
+        val N = candidates.size
+        val numFeatures = NativeRecommendationScorer.NUM_FEATURES
+
+        // Marshal features into SoA (column-major) FloatArray
+        val features = FloatArray(numFeatures * N)
+
+        for (i in 0 until N) {
+            val song = candidates[i]
+            val artistKey = song.artist.trim().lowercase()
+
+            // Feature 0: Artist affinity
+            features[0 * N + i] = profile.artistAffinities[artistKey] ?: 0f
+            // Feature 1: Freshness (1 = not recently played)
+            features[1 * N + i] = if (song.id in profile.recentSongIds) 0f else 1f
+            // Feature 2: Skip flag
+            features[2 * N + i] = if (song.id in profile.frequentlySkippedIds) 1f else 0f
+            // Feature 3: Liked song
+            features[3 * N + i] = if (song.id in profile.likedSongIds) 1f else 0f
+            // Feature 4: Liked artist
+            features[4 * N + i] = if (artistKey in profile.likedArtists) 1f else 0f
+            // Feature 5: Time-of-day weight
+            features[5 * N + i] = profile.timeOfDayWeights[currentHour] ?: 0.5f
+            // Feature 6: Variety penalty
+            features[6 * N + i] = varietyPenalties[i]
+            // Feature 7: Genre similarity
+            features[7 * N + i] = genreSims[i]
+            // Feature 8: Recent genre similarity
+            features[8 * N + i] = recentGenreSims[i]
+            // Feature 9: Skip genre penalty
+            features[9 * N + i] = skipGenreSims[i]
+            // Feature 10: Reserved
+            features[10 * N + i] = 0f
+        }
+
+        val topIndices = nativeScorer.scoreCandidates(
+            features = features,
+            numCandidates = N,
+            weights = scoringWeights,
+            topK = N // Return all, sorted
+        ) ?: return null
+
+        return topIndices.map { candidates[it] }
+    }
+
+    /**
+     * Kotlin fallback scoring — identical algorithm to native, used when JNI fails.
+     */
+    private fun scoreWithKotlin(
+        candidates: List<Song>,
+        profile: UserTasteProfile,
+        currentHour: Int,
+        varietyPenalties: FloatArray,
+        genreSims: FloatArray,
+        recentGenreSims: FloatArray,
+        skipGenreSims: FloatArray
+    ): List<Song> {
         data class ScoredSong(val song: Song, val score: Float)
 
-        val scored = candidates
-            .filter { it.id !in dislikedSongIds && it.artist.lowercase().trim() !in dislikedArtists }
-            .map { song ->
-                var score = 0.5f
+        val w = scoringWeights
 
-                val artistKey = song.artist.trim().lowercase()
+        val scored = candidates.mapIndexed { i, song ->
+            val artistKey = song.artist.trim().lowercase()
 
-                // --- Artist Affinity ---
-                val artistAffinity = profile.artistAffinities[artistKey] ?: 0f
-                score += artistAffinity * 0.30f
+            var score = w[0] // base
+            score += (profile.artistAffinities[artistKey] ?: 0f) * w[1]
+            score += (if (song.id in profile.recentSongIds) 0f else 1f) * w[2]
+            score -= (if (song.id in profile.frequentlySkippedIds) 1f else 0f) * w[3]
+            score += (if (song.id in profile.likedSongIds) 1f else 0f) * w[4]
+            score += (if (artistKey in profile.likedArtists) 1f else 0f) * w[5]
+            score += (profile.timeOfDayWeights[currentHour] ?: 0.5f) * w[6]
+            score -= varietyPenalties[i] * w[7]
+            score += genreSims[i] * w[8]
+            score += recentGenreSims[i] * w[9]
+            score -= skipGenreSims[i] * w[10]
 
-                // --- Freshness ---
-                val isRecent = song.id in profile.recentSongIds
-                if (!isRecent) score += 0.15f
-
-                // --- Skip Avoidance ---
-                if (song.id in profile.frequentlySkippedIds) score -= 0.15f
-
-                // --- Liked Boost ---
-                if (song.id in profile.likedSongIds) score += 0.15f
-                if (artistKey in profile.likedArtists) score += 0.10f
-
-                // --- Time-of-Day Relevance ---
-                val timeWeight = profile.timeOfDayWeights[currentHour] ?: 0.5f
-                score += timeWeight * 0.10f
-
-                // --- Variety Penalty ---
-                val artistCount = artistCounts.getOrDefault(artistKey, 0)
-                artistCounts[artistKey] = artistCount + 1
-                if (artistCount > 2) score -= 0.12f * (artistCount - 2)
-
-                ScoredSong(song, score.coerceIn(0f, 1f))
-            }
+            ScoredSong(song, score.coerceIn(0f, 1f))
+        }
 
         return scored.sortedByDescending { it.score }.map { it.song }
+    }
+
+    /**
+     * Compute genre cosine similarities between each candidate and a target genre vector.
+     * Uses cached genre vectors from Room + keyword-based inference via GenreTaxonomy.
+     */
+    private suspend fun computeGenreSimilarities(
+        candidates: List<Song>,
+        targetVector: FloatArray
+    ): FloatArray {
+        if (!GenreTaxonomy.isNonZero(targetVector)) {
+            return FloatArray(candidates.size) // All zeros — no genre data
+        }
+
+        val N = candidates.size
+        val dim = GenreTaxonomy.GENRE_COUNT
+
+        // Batch fetch cached genre vectors from Room
+        val songIds = candidates.map { it.id }
+        val cachedGenres = try {
+            songGenreDao.getGenres(songIds).associateBy { it.songId }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+
+        // Build candidate genre vectors (infer missing, cache them)
+        val candidateVectors = FloatArray(N * dim)
+        val newGenres = mutableListOf<com.suvojeet.suvmusic.core.data.local.entity.SongGenre>()
+
+        for (i in 0 until N) {
+            val song = candidates[i]
+            val cached = cachedGenres[song.id]
+            val genreVec = if (cached != null) {
+                cached.toFloatArray()
+            } else {
+                val inferred = GenreTaxonomy.inferGenreVector(song.title, song.artist)
+                if (GenreTaxonomy.isNonZero(inferred)) {
+                    newGenres.add(com.suvojeet.suvmusic.core.data.local.entity.SongGenre.fromFloatArray(song.id, inferred))
+                }
+                inferred
+            }
+            // Pack into contiguous array for batch operation
+            System.arraycopy(genreVec, 0, candidateVectors, i * dim, dim.coerceAtMost(genreVec.size))
+        }
+
+        // Persist newly inferred genres
+        if (newGenres.isNotEmpty()) {
+            try { songGenreDao.insertGenres(newGenres) } catch (_: Exception) { }
+        }
+
+        // Try native batch cosine similarity
+        val nativeSims = nativeScorer.batchCosineSimilarity(targetVector, candidateVectors, N)
+        if (nativeSims != null && nativeSims.size == N) {
+            return nativeSims
+        }
+
+        // Kotlin fallback: compute individually
+        val sims = FloatArray(N)
+        for (i in 0 until N) {
+            val startIdx = i * dim
+            val vec = candidateVectors.copyOfRange(startIdx, startIdx + dim)
+            sims[i] = nativeScorer.cosineSimilarity(targetVector, vec)
+        }
+        return sims
     }
 
     // ============================================================================================
@@ -563,18 +782,20 @@ class RecommendationEngine @Inject constructor(
         coroutineScope {
             val jobs = topArtists.map { artist ->
                 async(Dispatchers.IO) {
-                    try {
-                        val songs = getArtistMixRecommendations(artist, 15)
-                        if (songs.isNotEmpty()) {
-                            val displayName = artist.replaceFirstChar { it.titlecase() }
-                            HomeSection(
-                                title = "Your $displayName Mix",
-                                items = songs.map { HomeItem.SongItem(it) },
-                                type = HomeSectionType.HorizontalCarousel
-                            )
-                        } else null
-                    } catch (e: Exception) {
-                        null
+                    apiSemaphore.withPermit {
+                        try {
+                            val songs = getArtistMixRecommendations(artist, 15)
+                            if (songs.isNotEmpty()) {
+                                val displayName = artist.replaceFirstChar { it.titlecase() }
+                                HomeSection(
+                                    title = "Your $displayName Mix",
+                                    items = songs.map { HomeItem.SongItem(it) },
+                                    type = HomeSectionType.HorizontalCarousel
+                                )
+                            } else null
+                        } catch (e: Exception) {
+                            null
+                        }
                     }
                 }
             }
@@ -608,10 +829,12 @@ class RecommendationEngine @Inject constructor(
             coroutineScope {
                 val jobs = discoveryQueries.map { query ->
                     async {
-                        try {
-                            youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
-                        } catch (e: Exception) {
-                            emptyList()
+                        apiSemaphore.withPermit {
+                            try {
+                                youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
                         }
                     }
                 }
