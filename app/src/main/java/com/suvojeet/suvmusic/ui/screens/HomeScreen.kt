@@ -856,9 +856,8 @@ private fun ForYouBanner(
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
-                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f)
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                         )
                     ),
                     shape = RoundedCornerShape(20.dp)
@@ -874,12 +873,7 @@ private fun ForYouBanner(
                     modifier = Modifier
                         .size(48.dp)
                         .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.tertiary
-                                )
-                            ),
+                            MaterialTheme.colorScheme.primaryContainer,
                             RoundedCornerShape(14.dp)
                         ),
                     contentAlignment = Alignment.Center
@@ -887,7 +881,7 @@ private fun ForYouBanner(
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -959,12 +953,7 @@ private fun PersonalizedSectionHeader(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(28.dp)
                 .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
-                        )
-                    ),
+                    MaterialTheme.colorScheme.primaryContainer,
                     RoundedCornerShape(8.dp)
                 ),
             contentAlignment = Alignment.Center
