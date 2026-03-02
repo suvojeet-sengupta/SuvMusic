@@ -256,62 +256,137 @@ class RecommendationEngine @Inject constructor(
     }
 
     /**
-     * Generate additional sections for infinite scrolling.
-     * Each page produces a different set of sections to avoid repetition.
+     * Generate additional sections for scroll-to-load.
+     * Each page uses a DIFFERENT strategy and visual style, all taste-profile-driven.
+     * Returns nearby-relevant content — songs the user will actually want to listen to.
      *
-     * @param page The page number (1-based) for pagination
+     * Pages 1-6 produce 2-3 sections each (total ~15 extra sections). Empty after page 6.
+     *
+     * @param page The page number (1-based)
      * @param existingTitles Titles already shown to avoid duplicates
-     * @return New sections to append, or empty list if no more content
      */
     suspend fun getMoreSections(
         page: Int,
         existingTitles: Set<String>
     ): List<HomeSection> = coroutineScope {
+        if (page > 6) return@coroutineScope emptyList()
+
         val profile = tasteProfileBuilder.getProfile()
-        val sections = mutableListOf<HomeSection>()
         val seenIds = mutableSetOf<String>()
         val seenFingerprints = mutableSetOf<String>()
 
-        // Different content strategies per page
-        val queries: List<Pair<String, String>> = when (page) {
-            1 -> listOf(
-                "New releases this week" to "new music releases this week",
-                "Throwback hits" to "throwback classic hits",
-                "Acoustic sessions" to "acoustic covers sessions"
-            )
-            2 -> listOf(
-                "Global trending" to "trending music worldwide",
-                "Mood booster" to "feel good happy songs playlist",
-                "Indie spotlight" to "indie music spotlight underground"
-            )
-            3 -> {
-                // Artist-based exploration: find artists similar to user's favorites
-                val topArtists = profile.artistAffinities.keys.drop(3).take(3)
-                if (topArtists.isNotEmpty()) {
-                    topArtists.map { artist ->
-                        val displayName = artist.replaceFirstChar { it.titlecase() }
-                        "More from $displayName" to "$artist songs"
-                    }
-                } else {
-                    listOf(
-                        "Hidden gems" to "underground hidden gem music",
-                        "Chill beats" to "lofi chill beat study"
-                    )
+        // Gather taste signals for query generation
+        val topArtists = profile.artistAffinities.keys.toList()
+        val topGenres = GenreTaxonomy.topGenres(profile.genreAffinityVector, n = 5).map { it.first }
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+
+        // Each page: list of Triple(title, searchQuery, sectionType)
+        val pageContent: List<Triple<String, String, HomeSectionType>> = when (page) {
+            1 -> {
+                // Page 1 — artist deep-dives from user's top artists
+                val artistQueries = mutableListOf<Triple<String, String, HomeSectionType>>()
+                topArtists.getOrNull(0)?.let { a ->
+                    val name = a.replaceFirstChar { it.titlecase() }
+                    artistQueries.add(Triple("Because you listen to $name", "$a best songs", HomeSectionType.QuickPicks))
+                }
+                topArtists.getOrNull(1)?.let { a ->
+                    val name = a.replaceFirstChar { it.titlecase() }
+                    artistQueries.add(Triple("$name Radio", "$a similar artists songs", HomeSectionType.HorizontalCarousel))
+                }
+                // Genre-aligned pick if available
+                topGenres.getOrNull(0)?.let { g ->
+                    artistQueries.add(Triple("Your $g Favourites", "$g hits best $year", HomeSectionType.Grid))
+                }
+                artistQueries.ifEmpty {
+                    listOf(Triple("Today's Hits", "top hits $year", HomeSectionType.HorizontalCarousel))
                 }
             }
-            4 -> listOf(
-                "Around the world" to "world music international hits",
-                "Live performances" to "best live music performances",
-                "Viral hits" to "viral music trending tiktok"
-            )
-            else -> emptyList() // No more content after page 4
+            2 -> {
+                // Page 2 — deeper genre exploration, different visual styles
+                val items = mutableListOf<Triple<String, String, HomeSectionType>>()
+                topGenres.getOrNull(1)?.let { g ->
+                    items.add(Triple("$g Deep Cuts", "$g deep cuts underrated", HomeSectionType.VerticalList))
+                }
+                topGenres.getOrNull(2)?.let { g ->
+                    items.add(Triple("Fresh $g", "new $g $year releases", HomeSectionType.LargeCardWithList))
+                }
+                topArtists.getOrNull(2)?.let { a ->
+                    val name = a.replaceFirstChar { it.titlecase() }
+                    items.add(Triple("More like $name", "$a similar songs", HomeSectionType.HorizontalCarousel))
+                }
+                items.ifEmpty {
+                    listOf(Triple("Chill Vibes", "chill relaxing music", HomeSectionType.VerticalList))
+                }
+            }
+            3 -> {
+                // Page 3 — nostalgia + related artists
+                val items = mutableListOf<Triple<String, String, HomeSectionType>>()
+                topArtists.getOrNull(3)?.let { a ->
+                    val name = a.replaceFirstChar { it.titlecase() }
+                    items.add(Triple("$name Essentials", "$a top songs all time", HomeSectionType.QuickPicks))
+                }
+                topGenres.getOrNull(0)?.let { g ->
+                    items.add(Triple("Classic $g", "classic $g songs all time best", HomeSectionType.Grid))
+                }
+                items.add(Triple("Throwback Favourites", buildString {
+                    // Use top artist for relevance
+                    append(topArtists.take(2).joinToString(" "))
+                    append(" throwback songs")
+                }, HomeSectionType.HorizontalCarousel))
+                items
+            }
+            4 -> {
+                // Page 4 — mood & context, acoustic/live versions
+                val items = mutableListOf<Triple<String, String, HomeSectionType>>()
+                topArtists.getOrNull(0)?.let { a ->
+                    items.add(Triple("${a.replaceFirstChar { it.titlecase() }} — Acoustic", "$a acoustic live", HomeSectionType.VerticalList))
+                }
+                topGenres.getOrNull(0)?.let { g ->
+                    items.add(Triple("$g for the Mood", "$g mood playlist", HomeSectionType.LargeCardWithList))
+                }
+                items.ifEmpty {
+                    listOf(Triple("Acoustic Sessions", "acoustic covers popular songs", HomeSectionType.VerticalList))
+                }
+            }
+            5 -> {
+                // Page 5 — sibling artists & blended genres
+                val items = mutableListOf<Triple<String, String, HomeSectionType>>()
+                topArtists.getOrNull(4)?.let { a ->
+                    val name = a.replaceFirstChar { it.titlecase() }
+                    items.add(Triple("Fans also like $name", "$a fans also like", HomeSectionType.HorizontalCarousel))
+                }
+                if (topGenres.size >= 2) {
+                    val g1 = topGenres[0]; val g2 = topGenres[1]
+                    items.add(Triple("$g1 × $g2 Blend", "$g1 $g2 blend crossover songs", HomeSectionType.Grid))
+                }
+                topGenres.getOrNull(3)?.let { g ->
+                    items.add(Triple("Discover $g", "$g new artists $year", HomeSectionType.QuickPicks))
+                }
+                items.ifEmpty {
+                    listOf(Triple("Genre Blend", "crossover fusion music", HomeSectionType.Grid))
+                }
+            }
+            6 -> {
+                // Page 6 — final batch: underrated, long-play, "one last thing"
+                val items = mutableListOf<Triple<String, String, HomeSectionType>>()
+                topGenres.getOrNull(0)?.let { g ->
+                    items.add(Triple("Hidden Gems: $g", "$g hidden gems underrated $year", HomeSectionType.VerticalList))
+                }
+                items.add(Triple("Long Listens", buildString {
+                    append(topGenres.take(2).joinToString(" "))
+                    append(" full album long playlist")
+                }, HomeSectionType.LargeCardWithList))
+                items
+            }
+            else -> emptyList()
         }
 
-        if (queries.isEmpty()) return@coroutineScope emptyList()
+        if (pageContent.isEmpty()) return@coroutineScope emptyList()
 
-        val deferredSections = queries
-            .filter { (title, _) -> title !in existingTitles }
-            .map { (title, query) ->
+        val deferredSections = pageContent
+            .filter { (title, _, _) -> title !in existingTitles }
+            .map { (title, query, type) ->
                 async(Dispatchers.IO) {
                     apiSemaphore.withPermit {
                         try {
@@ -319,24 +394,14 @@ class RecommendationEngine @Inject constructor(
                             val scored = scoreAndRank(songs, profile)
                             val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
                             if (unique.isNotEmpty()) {
-                                HomeSection(
-                                    title = title,
-                                    items = unique.map { HomeItem.SongItem(it) },
-                                    type = if (title.contains("More from", ignoreCase = true))
-                                        HomeSectionType.QuickPicks
-                                    else
-                                        HomeSectionType.HorizontalCarousel
-                                )
+                                HomeSection(title = title, items = unique.map { HomeItem.SongItem(it) }, type = type)
                             } else null
-                        } catch (e: Exception) {
-                            null
-                        }
+                        } catch (e: Exception) { null }
                     }
                 }
             }
 
-        deferredSections.awaitAll().filterNotNull().let { sections.addAll(it) }
-        sections
+        deferredSections.awaitAll().filterNotNull()
     }
 
     /**

@@ -41,6 +41,8 @@ data class HomeUiState(
     val genreSections: List<HomeSection> = emptyList(),
     /** Context-aware sections (time-of-day, mood-detected, listening patterns) */
     val contextSections: List<HomeSection> = emptyList(),
+    /** Additional sections loaded via scroll-to-load (varied styles, taste-driven) */
+    val moreSections: List<HomeSection> = emptyList(),
     val recommendedArtists: List<RecommendedArtist> = emptyList(),
     val recommendedTracks: List<RecommendedTrack> = emptyList(),
     val userAvatarUrl: String? = null,
@@ -264,7 +266,7 @@ class HomeViewModel @Inject constructor(
         // Invalidate recommendation caches for fresh data
         recommendationEngine.onAuthStateChanged()
         // Reset infinite scroll state
-        _uiState.update { it.copy(loadMorePage = 0, hasReachedEnd = false) }
+        _uiState.update { it.copy(loadMorePage = 0, hasReachedEnd = false, moreSections = emptyList()) }
         loadData(forceRefresh = true)
         loadRecommendations()
         loadPersonalizedSections()
@@ -440,7 +442,7 @@ class HomeViewModel @Inject constructor(
                 } else {
                     _uiState.update {
                         it.copy(
-                            personalizedSections = it.personalizedSections + newSections,
+                            moreSections = it.moreSections + newSections,
                             isLoadingMore = false,
                             loadMorePage = page
                         )
@@ -463,6 +465,7 @@ class HomeViewModel @Inject constructor(
         state.personalizedSections.mapTo(titles) { it.title }
         state.genreSections.mapTo(titles) { it.title }
         state.contextSections.mapTo(titles) { it.title }
+        state.moreSections.mapTo(titles) { it.title }
         return titles
     }
 }
