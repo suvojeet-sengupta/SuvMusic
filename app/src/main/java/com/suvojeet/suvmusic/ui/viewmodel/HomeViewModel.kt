@@ -266,6 +266,7 @@ class HomeViewModel @Inject constructor(
         // Invalidate recommendation caches for fresh data
         recommendationEngine.onAuthStateChanged()
         // Reset infinite scroll state
+        loadMoreRetryCount = 0
         _uiState.update { it.copy(loadMorePage = 0, hasReachedEnd = false, moreSections = emptyList()) }
         loadData(forceRefresh = true)
         loadRecommendations()
@@ -425,6 +426,9 @@ class HomeViewModel @Inject constructor(
      * Load additional personalized sections for infinite scrolling.
      * Called when user reaches the bottom of the LazyColumn.
      */
+    private var loadMoreRetryCount = 0
+    private val maxLoadMoreRetries = 3
+
     fun loadMore() {
         val currentState = _uiState.value
         if (currentState.isLoadingMore || currentState.hasReachedEnd) return
@@ -440,6 +444,7 @@ class HomeViewModel @Inject constructor(
                 if (newSections.isEmpty()) {
                     _uiState.update { it.copy(isLoadingMore = false, hasReachedEnd = true) }
                 } else {
+                    loadMoreRetryCount = 0 // Reset on success
                     _uiState.update {
                         it.copy(
                             moreSections = it.moreSections + newSections,
@@ -450,6 +455,12 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoadingMore = false) }
+                // Auto-retry on error (up to 3 times) with increasing delay
+                if (loadMoreRetryCount < maxLoadMoreRetries) {
+                    loadMoreRetryCount++
+                    kotlinx.coroutines.delay(1500L * loadMoreRetryCount)
+                    loadMore()
+                }
             }
         }
     }

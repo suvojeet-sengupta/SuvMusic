@@ -108,24 +108,27 @@ fun CommentsSheet(
                     } else {
                         val listState = androidx.compose.foundation.lazy.rememberLazyListState()
                         
-                        // Check for infinite scroll
-                        val isAtBottom by remember {
+                        // Check for infinite scroll — track totalItemsCount so that
+                        // after new comments load, if still at bottom, it re-triggers.
+                        val scrollInfo by remember {
                             derivedStateOf {
                                 val layoutInfo = listState.layoutInfo
                                 val visibleItemsInfo = layoutInfo.visibleItemsInfo
-                                if (layoutInfo.totalItemsCount == 0 || visibleItemsInfo.isEmpty()) {
+                                val totalItems = layoutInfo.totalItemsCount
+                                val isAtBottom = if (totalItems == 0 || visibleItemsInfo.isEmpty()) {
                                     false
                                 } else {
                                     val lastVisibleItem = visibleItemsInfo.last()
                                     val viewportHeight = layoutInfo.viewportEndOffset + layoutInfo.viewportStartOffset
-                                    (lastVisibleItem.index + 1 == layoutInfo.totalItemsCount) &&
+                                    (lastVisibleItem.index + 1 == totalItems) &&
                                     (lastVisibleItem.offset + lastVisibleItem.size <= viewportHeight)
                                 }
+                                Pair(isAtBottom, totalItems)
                             }
                         }
                         
-                        LaunchedEffect(isAtBottom) {
-                            if (isAtBottom && !isLoadingMore && !isLoading) {
+                        LaunchedEffect(scrollInfo) {
+                            if (scrollInfo.first && !isLoadingMore && !isLoading) {
                                 onLoadMore()
                             }
                         }

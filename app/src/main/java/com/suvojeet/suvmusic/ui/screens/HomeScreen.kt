@@ -140,15 +140,18 @@ fun HomeScreen(
                 val lazyListState = rememberLazyListState()
 
                 // Infinite scroll detection — trigger slightly earlier for seamless loading
+                // Emit Pair(lastVisibleIndex, totalItems) so that when new items load and
+                // user is still near the bottom, distinctUntilChanged sees a new value
+                // and re-fires loadMore() automatically until the exact end is reached.
                 LaunchedEffect(lazyListState) {
                     snapshotFlow {
                         val layoutInfo = lazyListState.layoutInfo
                         val totalItems = layoutInfo.totalItemsCount
                         val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                        lastVisibleIndex >= totalItems - 5 && totalItems > 0
+                        Triple(lastVisibleIndex, totalItems, lastVisibleIndex >= totalItems - 5 && totalItems > 0)
                     }
                         .distinctUntilChanged()
-                        .filter { it }
+                        .filter { it.third }
                         .collect {
                             viewModel.loadMore()
                         }
