@@ -728,8 +728,8 @@ class PlayerViewModel @Inject constructor(
     /**
      * Load more songs for endless radio queue.
      * Called automatically when near end of queue (infinite scroll).
-     * @deprecated Use loadMoreAutoplaySongs() instead
      */
+    @Deprecated("Use loadMoreAutoplaySongs() instead", ReplaceWith("loadMoreAutoplaySongs()"))
     fun loadMoreRadioSongs() {
         loadMoreAutoplaySongs()
     }

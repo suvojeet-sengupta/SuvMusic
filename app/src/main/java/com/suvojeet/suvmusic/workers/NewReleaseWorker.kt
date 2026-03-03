@@ -65,13 +65,14 @@ class NewReleaseWorker @AssistedInject constructor(
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.w("NewReleaseWorker", "Error checking releases for ${artistEntity.title}", e)
                 }
             }
             
             editor.apply()
             Result.success()
         } catch (e: Exception) {
+            Log.e("NewReleaseWorker", "Failed to check new releases", e)
             Result.failure()
         }
     }

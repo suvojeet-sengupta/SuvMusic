@@ -45,13 +45,17 @@ class ListenTogetherManager @Inject constructor(
     private var isSyncing = false
     
     // Track the last state we synced to avoid duplicate events
+    @Volatile
     private var lastSyncedIsPlaying: Boolean? = null
+    @Volatile
     private var lastSyncedTrackId: String? = null
     
     // Track ID being buffered
+    @Volatile
     private var bufferingTrackId: String? = null
     
     // Track active sync job to cancel it if a better update arrives
+    @Volatile
     private var activeSyncJob: Job? = null
 
     // Drift Correction
@@ -60,9 +64,11 @@ class ListenTogetherManager @Inject constructor(
     private var driftCorrectionJob: Job? = null
 
     // Pending sync to apply after buffering completes for guest
+    @Volatile
     private var pendingSyncState: SyncStatePayload? = null
 
     // Track if a buffer-complete arrived before the pending sync was ready
+    @Volatile
     private var bufferCompleteReceivedForTrack: String? = null
 
     // Expose client state
@@ -190,7 +196,7 @@ class ListenTogetherManager @Inject constructor(
                     startHeartbeat()
                     stopDriftCorrection()
                     if (!playerListenerRegistered) {
-                        player!!.addListener(playerListener)
+                        player?.addListener(playerListener)
                         playerListenerRegistered = true
                     }
                 } else if (newRole != RoomRole.HOST && wasHost) {

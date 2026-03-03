@@ -1226,6 +1226,7 @@ class SessionManager @Inject constructor(
     private val _isLoggedInFlow = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isLoggedInFlow: Flow<Boolean> = _isLoggedInFlow
 
+    @Volatile
     private var _encryptedPrefs: android.content.SharedPreferences? = null
     private val encryptedPrefs: android.content.SharedPreferences
         get() {

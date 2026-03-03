@@ -1,5 +1,6 @@
-package com.suvojeet.suvmusic.util
+﻿package com.suvojeet.suvmusic.util
 
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.suvojeet.suvmusic.data.model.ImportResult
@@ -43,7 +44,7 @@ class SpotifyImportHelper @Inject constructor(
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.w("SpotifyImportHelper", "Spotify API method failed, falling back to embed", e)
                 }
             }
 
@@ -90,7 +91,7 @@ class SpotifyImportHelper @Inject constructor(
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.w("SpotifyImportHelper", "Spotify operation failed", e)
                 }
             }
 
@@ -129,11 +130,11 @@ class SpotifyImportHelper @Inject constructor(
                 // If above fails, try searching for the "og:description" which sometimes lists tracks
                 if (songs.isEmpty()) {
                     val ogDesc = doc.select("meta[property=og:description]").attr("content")
-                    if (ogDesc.isNotBlank() && ogDesc.contains("·")) {
-                        // Format: "Song Name · Artist Name, Song 2 · Artist 2..."
+                    if (ogDesc.isNotBlank() && ogDesc.contains("Â·")) {
+                        // Format: "Song Name Â· Artist Name, Song 2 Â· Artist 2..."
                         val parts = ogDesc.split(",")
                         for (part in parts) {
-                            val trackInfo = part.split("·")
+                            val trackInfo = part.split("Â·")
                             if (trackInfo.size >= 2) {
                                 songs.add(trackInfo[0].trim() to trackInfo[1].trim())
                             }
@@ -143,7 +144,7 @@ class SpotifyImportHelper @Inject constructor(
             }
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("SpotifyImportHelper", "Spotify operation failed", e)
         }
         playlistName to songs
     }
@@ -180,7 +181,7 @@ class SpotifyImportHelper @Inject constructor(
             // Sometimes it's in a different structure depending on the build
             null
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("SpotifyImportHelper", "Spotify operation failed", e)
             null
         }
     }
@@ -209,7 +210,7 @@ class SpotifyImportHelper @Inject constructor(
             }
             response.close()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("SpotifyImportHelper", "Spotify operation failed", e)
         }
 
         // Pagination Loop
@@ -260,7 +261,7 @@ class SpotifyImportHelper @Inject constructor(
                 response.close()
                 
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.w("SpotifyImportHelper", "Spotify operation failed", e)
                 break
             }
         }
@@ -292,7 +293,7 @@ class SpotifyImportHelper @Inject constructor(
                 it.title.contains(title, ignoreCase = true) || title.contains(it.title, ignoreCase = true)
             } ?: searchResults.firstOrNull()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("SpotifyImportHelper", "Spotify operation failed", e)
             null
         }
     }

@@ -968,7 +968,7 @@ fun LyricsList(
             ),
             modifier = Modifier.fillMaxSize()
         ) {
-            itemsIndexed(lyrics.lines) { index, line ->
+            itemsIndexed(lyrics.lines, key = { index, _ -> index }) { index, line ->
                 val isActive = if (lyrics.isSynced) index == activeLineIndex else true
                 val isSelected = selectedIndices.contains(index)
                 

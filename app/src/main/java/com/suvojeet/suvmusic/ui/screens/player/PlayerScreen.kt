@@ -53,6 +53,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -181,40 +182,40 @@ fun PlayerScreen(
 
     val song = playbackInfo.currentSong
     val context = LocalContext.current
-    val mainUiState by mainViewModel.uiState.collectAsState()
+    val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val isInPip = mainUiState.isInPictureInPictureMode
-    val playlistUiState by playlistViewModel.uiState.collectAsState()
-    val sponsorSegments by playerViewModel.sponsorSegments.collectAsState(initial = emptyList())
-    val lyricsState by playerViewModel.lyricsState.collectAsState()
-    val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsState()
-    val isFullScreen by playerViewModel.isFullScreen.collectAsState()
+    val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
+    val sponsorSegments by playerViewModel.sponsorSegments.collectAsStateWithLifecycle(initialValue = emptyList())
+    val lyricsState by playerViewModel.lyricsState.collectAsStateWithLifecycle()
+    val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle()
+    val isFullScreen by playerViewModel.isFullScreen.collectAsStateWithLifecycle()
     
     // Queue Selection & Sections
-    val selectedQueueIndices by playerViewModel.selectedQueueIndices.collectAsState()
-    val playedSongs by playerViewModel.playedSongs.collectAsState()
-    val upNextSongs by playerViewModel.upNextSongs.collectAsState()
+    val selectedQueueIndices by playerViewModel.selectedQueueIndices.collectAsStateWithLifecycle()
+    val playedSongs by playerViewModel.playedSongs.collectAsStateWithLifecycle()
+    val upNextSongs by playerViewModel.upNextSongs.collectAsStateWithLifecycle()
     
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
     
-    val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVE_LINE")
-    val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
-    val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
-    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsState(initial = true)
-    val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsState(initial = 10)
-    val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsState(initial = false)
-    val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsState(initial = true)
-    val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition.CENTER)
-    val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsState(initial = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
-    val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsState(initial = 1.5f)
-    val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsState(initial = 26f)
-    val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsState(initial = false)
+    val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = "WAVE_LINE")
+    val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = "ROUNDED_SQUARE")
+    val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = "LARGE")
+    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsStateWithLifecycle(initialValue = 10)
+    val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsStateWithLifecycle(initialValue = true)
+    val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition.CENTER)
+    val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
+    val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsStateWithLifecycle(initialValue = 1.5f)
+    val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 26f)
+    val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     
-    val eqEnabled by playerViewModel.getEqEnabled().collectAsState(initial = false)
-    val eqBands by playerViewModel.getEqBands().collectAsState(initial = FloatArray(10) { 0f })
-    val eqPreamp by playerViewModel.getEqPreamp().collectAsState(initial = 0f)
-    val bassBoost by playerViewModel.getBassBoost().collectAsState(initial = 0f)
-    val virtualizer by playerViewModel.getVirtualizer().collectAsState(initial = 0f)
+    val eqEnabled by playerViewModel.getEqEnabled().collectAsStateWithLifecycle(initialValue = false)
+    val eqBands by playerViewModel.getEqBands().collectAsStateWithLifecycle(initialValue = FloatArray(10) { 0f })
+    val eqPreamp by playerViewModel.getEqPreamp().collectAsStateWithLifecycle(initialValue = 0f)
+    val bassBoost by playerViewModel.getBassBoost().collectAsStateWithLifecycle(initialValue = 0f)
+    val virtualizer by playerViewModel.getVirtualizer().collectAsStateWithLifecycle(initialValue = 0f)
     
     // Keep Screen On Logic — only clear the flag if *we* were the ones who added it
     DisposableEffect(keepScreenOn) {

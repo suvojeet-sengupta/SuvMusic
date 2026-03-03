@@ -82,7 +82,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 album = entity.album ?: "",
                 thumbnailUrl = entity.thumbnailUrl,
                 duration = entity.duration,
-                source = try { SongSource.valueOf(entity.source) } catch (e: Exception) { SongSource.YOUTUBE },
+                source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
                 localUri = entity.localUri?.let { android.net.Uri.parse(it) }
             )
         }
@@ -98,7 +98,7 @@ class LibraryRepositoryImpl @Inject constructor(
                     album = entity.album ?: "",
                     thumbnailUrl = entity.thumbnailUrl,
                     duration = entity.duration,
-                    source = try { SongSource.valueOf(entity.source) } catch (e: Exception) { SongSource.YOUTUBE },
+                    source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
                     localUri = entity.localUri?.let { android.net.Uri.parse(it) }
                 )
             }
@@ -211,7 +211,7 @@ class LibraryRepositoryImpl @Inject constructor(
             title = title,
             subtitle = subtitle,
             thumbnailUrl = thumbnailUrl,
-            type = try { LibraryItemType.valueOf(type) } catch(e: Exception) { LibraryItemType.UNKNOWN },
+            type = try { LibraryItemType.valueOf(type) } catch(e: IllegalArgumentException) { LibraryItemType.UNKNOWN },
             timestamp = timestamp
         )
     }

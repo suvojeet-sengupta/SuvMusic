@@ -95,7 +95,7 @@ fun TvHomeScreen(
         }
 
         // --- SECTIONS ---
-        items(uiState.homeSections) { section ->
+          items(uiState.homeSections, key = { it.title }) { section ->
             if (section.items.isNotEmpty()) {
                 TvHorizontalSection(
                     section = section,

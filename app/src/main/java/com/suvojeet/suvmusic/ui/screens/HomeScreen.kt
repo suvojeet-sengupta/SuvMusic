@@ -452,15 +452,17 @@ fun HomeScreen(
                         }
 
                         // Detected Mood Banner
-                        if (uiState.detectedMood != null && uiState.selectedMood == null) {
-                            item(key = "mood_banner", contentType = "mood_banner") {
-                                DetectedMoodBanner(
-                                    mood = uiState.detectedMood!!,
-                                    onExplore = { viewModel.onMoodSelected(uiState.detectedMood!!) },
-                                    modifier = Modifier
-                                        .padding(horizontal = 16.dp)
-                                        .animateEnter(index = 12)
-                                )
+                        uiState.detectedMood?.let { mood ->
+                            if (uiState.selectedMood == null) {
+                                item(key = "mood_banner", contentType = "mood_banner") {
+                                    DetectedMoodBanner(
+                                        mood = mood,
+                                        onExplore = { viewModel.onMoodSelected(mood) },
+                                        modifier = Modifier
+                                            .padding(horizontal = 16.dp)
+                                            .animateEnter(index = 12)
+                                    )
+                                }
                             }
                         }
 

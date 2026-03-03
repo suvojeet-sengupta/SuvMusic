@@ -19,7 +19,8 @@ import java.util.zip.GZIPOutputStream
  * Message format for encoding/decoding
  */
 enum class MessageFormat {
-    JSON,      // DEPRECATED - will be removed in future versions
+    @Deprecated("Will be removed in favor of PROTOBUF")
+    JSON,
     PROTOBUF
 }
 
