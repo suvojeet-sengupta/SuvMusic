@@ -5,10 +5,17 @@ import com.suvojeet.suvmusic.BuildConfig
 /**
  * Secure configuration for sensitive API endpoints.
  * Strings are AES encrypted and decrypted at runtime.
+ * Key derivation is handled in native code to resist reverse-engineering.
  */
 object SecureConfig {
     
+    init {
+        System.loadLibrary("suvmusic_native")
+    }
 
+    // Native key derivation — implemented in secure_config.cpp
+    private external fun nDeriveKey(): String
+    private external fun nDeriveDesKey(): String
     
     // AES encrypted strings (pre-encrypted values)
     // New Stable Encrypted URL
@@ -18,24 +25,11 @@ object SecureConfig {
     private const val ENC_DEV_PASSWORD = "xRPT8bkdX5W955JnBIE//WQuRXgaLjxR9PD9F4CQmkA="
     
     /**
-     * Derives encryption key at runtime from STABLE package name.
-     * Use "com.suvojeet.suvmusic" regardless of valid/flavor.
-     */
-    private fun deriveKey(): String {
-        val base = "com.suvojeet.suvmusic" // Hardcoded stable package to avoid debug suffix issues
-        val transformed = base.replace(".", "")
-            .reversed()
-            .take(16)
-            .padEnd(16, 'S')
-        return transformed
-    }
-    
-    /**
      * Get API base URL (decrypted at runtime).
      */
     fun getJioSaavnBaseUrl(): String {
         return try {
-            AESUtil.decrypt(ENC_BASE_URL, deriveKey())
+            AESUtil.decrypt(ENC_BASE_URL, nDeriveKey())
         } catch (e: Exception) {
             ""
         }
@@ -45,9 +39,11 @@ object SecureConfig {
      * Get DES key for URL decryption.
      */
     fun getJioSaavnDesKey(): String {
-        return byteArrayOf(66, 71, 66, 67, 69, 68, 72, 64)
-            .map { (it - 15).toChar() }
-            .joinToString("")
+        return try {
+            nDeriveDesKey()
+        } catch (e: Exception) {
+            ""
+        }
     }
     
     /**
@@ -55,11 +51,10 @@ object SecureConfig {
      */
     fun checkDeveloperPassword(input: String): Boolean {
         return try {
-            val decryptedPassword = AESUtil.decrypt(ENC_DEV_PASSWORD, deriveKey())
+            val decryptedPassword = AESUtil.decrypt(ENC_DEV_PASSWORD, nDeriveKey())
             input == decryptedPassword
         } catch (e: Exception) {
             false
         }
     }
 }
-

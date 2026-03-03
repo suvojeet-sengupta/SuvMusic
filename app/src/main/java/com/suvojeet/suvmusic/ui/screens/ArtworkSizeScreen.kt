@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,7 +59,7 @@ fun ArtworkSizeScreen(
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     
-    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
+    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = "LARGE")
     
     val currentArtworkSize = try {
         ArtworkSize.valueOf(artworkSizeString)

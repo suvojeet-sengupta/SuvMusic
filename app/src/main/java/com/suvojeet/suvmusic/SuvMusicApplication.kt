@@ -55,11 +55,13 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
         }
     }
 
+    private val applicationScope = CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+
     override fun onCreate() {
         super.onCreate()
         instance = this
         // Initialize any app-wide components here on a background thread
-        CoroutineScope(Dispatchers.IO).launch {
+        applicationScope.launch {
             setupWorkers()
         }
     }
@@ -87,7 +89,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             .diskCachePolicy(CachePolicy.ENABLED)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .crossfade(true)
-            .logger(DebugLogger())
+            .apply { if (BuildConfig.DEBUG) logger(DebugLogger()) }
             .build()
     }
     

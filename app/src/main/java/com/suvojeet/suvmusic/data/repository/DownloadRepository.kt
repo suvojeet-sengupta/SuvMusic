@@ -86,15 +86,17 @@ class DownloadRepository @Inject constructor(
     private val _batchProgress = MutableStateFlow<Pair<Int, Int>>(0 to 0) // current, total
     val batchProgress: StateFlow<Pair<Int, Int>> = _batchProgress.asStateFlow()
 
+    private val initScope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+
     init {
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        initScope.launch {
             loadDownloads()
             migrateOldDownloads()
             scanDownloadsFolder()
         }
     }
 
-    private fun scanDownloadsFolder() {
+    private suspend fun scanDownloadsFolder() {
         try {
             val currentSongs = _downloadedSongs.value.toMutableList()
             var hasNewSongs = false
@@ -109,7 +111,7 @@ class DownloadRepository @Inject constructor(
             scanAndMigrateLegacyFolder()
             
             // 3. Scan custom folder if set
-            val customLocationUri = kotlinx.coroutines.runBlocking { sessionManager.getDownloadLocation() }
+            val customLocationUri = sessionManager.getDownloadLocation()
             if (customLocationUri != null) {
                 try {
                     val rootUri = Uri.parse(customLocationUri)
@@ -315,7 +317,7 @@ class DownloadRepository @Inject constructor(
         return false
     }
 
-    private fun migrateOldDownloads() {
+    private suspend fun migrateOldDownloads() {
         if (!oldDownloadsDir.exists()) return
         
         val oldFiles = oldDownloadsDir.listFiles() ?: return
@@ -330,9 +332,7 @@ class DownloadRepository @Inject constructor(
                 val song = currentSongs.find { it.id == songId }
                 
                 if (song != null) {
-                    val newUri = kotlinx.coroutines.runBlocking { 
-                        saveFileToPublicDownloads(songId, song.artist, song.title, oldFile.inputStream())
-                    }
+                    val newUri = saveFileToPublicDownloads(songId, song.artist, song.title, oldFile.inputStream())
                     
                     if (newUri != null) {
                         val index = currentSongs.indexOfFirst { it.id == songId }
@@ -1106,7 +1106,7 @@ class DownloadRepository @Inject constructor(
 
     fun refreshDownloads() {
         loadDownloads()
-        scanDownloadsFolder()
+        initScope.launch { scanDownloadsFolder() }
     }
     
     fun getDownloadInfo(): Pair<Int, Long> {

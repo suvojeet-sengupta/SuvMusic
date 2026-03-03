@@ -50,7 +50,7 @@ class DownloadsViewModel @Inject constructor(
         val allSongs = (downloaded + queued).distinctBy { it.id }
         
         val collections = allSongs.filter { it.collectionId != null }
-            .groupBy { it.collectionId!! }
+            .groupBy { it.collectionId.orEmpty() }
             .map { (id, groupSongs) ->
                 val first = groupSongs.first()
                 DownloadItem.CollectionItem(

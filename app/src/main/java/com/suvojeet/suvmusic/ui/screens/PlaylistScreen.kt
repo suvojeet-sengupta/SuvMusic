@@ -322,7 +322,7 @@ fun PlaylistScreen(
                     }
                 } else {
                     // Song List
-                    itemsIndexed(playlist.songs) { index, song ->
+                    itemsIndexed(playlist.songs, key = { _, song -> song.id }) { index, song ->
                         SongListItem(
                             song = song,
                             isEditable = uiState.isEditable,

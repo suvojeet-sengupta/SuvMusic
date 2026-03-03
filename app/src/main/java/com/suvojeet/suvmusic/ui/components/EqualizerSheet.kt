@@ -427,7 +427,7 @@ fun EqualizerSheet(
                         isSelected = selectedPreset == presetName,
                         onClick = {
                             selectedPreset = presetName
-                            val presetBands = EqPresets[presetName]!!
+                            val presetBands = EqPresets[presetName] ?: return@PresetChip
                             localBands = presetBands.copyOf()
                             onBandsChange(presetBands)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
