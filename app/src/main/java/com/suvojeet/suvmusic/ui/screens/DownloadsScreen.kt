@@ -60,6 +60,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -107,12 +108,12 @@ fun DownloadsScreen(
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val downloadedSongs by viewModel.downloadedSongs.collectAsState()
-    val downloadedVideos by viewModel.downloadedVideos.collectAsState()
-    val downloadItems by viewModel.downloadItems.collectAsState()
-    val isSelectionMode by viewModel.isSelectionMode.collectAsState()
-    val selectedSongIds by viewModel.selectedSongIds.collectAsState()
-    val pendingIntent by viewModel.pendingIntent.collectAsState()
+    val downloadedSongs by viewModel.downloadedSongs.collectAsStateWithLifecycle()
+    val downloadedVideos by viewModel.downloadedVideos.collectAsStateWithLifecycle()
+    val downloadItems by viewModel.downloadItems.collectAsStateWithLifecycle()
+    val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
+    val selectedSongIds by viewModel.selectedSongIds.collectAsStateWithLifecycle()
+    val pendingIntent by viewModel.pendingIntent.collectAsStateWithLifecycle()
     
     // Launcher for Scoped Storage permission requests (Android 10+)
     val intentSenderLauncher = rememberLauncherForActivityResult(
@@ -514,6 +515,11 @@ fun DownloadsScreen(
                         is DownloadItem.SongItem -> !item.song.isVideo
                         is DownloadItem.CollectionItem -> true
                     }
+                }, key = { _, item ->
+                    when (item) {
+                        is DownloadItem.SongItem -> "song_${item.song.id}"
+                        is DownloadItem.CollectionItem -> "col_${item.id}"
+                    }
                 }) { index, item ->
                     when (item) {
                         is DownloadItem.CollectionItem -> {
@@ -586,7 +592,7 @@ fun DownloadsScreen(
                         }
                     }
                 } else {
-                    itemsIndexed(downloadedVideos) { index, video ->
+                    itemsIndexed(downloadedVideos, key = { _, video -> video.id }) { index, video ->
                         VideoDownloadCard(
                             video = video,
                             index = index + 1,

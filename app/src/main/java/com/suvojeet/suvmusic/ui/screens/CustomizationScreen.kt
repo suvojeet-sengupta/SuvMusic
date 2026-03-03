@@ -56,6 +56,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,8 +105,8 @@ fun CustomizationScreen(
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     
-    val seekbarStyleString by sessionManager.seekbarStyleFlow.collectAsState(initial = "WAVE_LINE")
-    val artworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
+    val seekbarStyleString by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = "WAVE_LINE")
+    val artworkShapeString by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = "ROUNDED_SQUARE")
     
     val currentSeekbarStyle = try {
         SeekbarStyle.valueOf(seekbarStyleString)
@@ -119,21 +120,21 @@ fun CustomizationScreen(
         ArtworkShape.ROUNDED_SQUARE
     }
     
-    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsState(initial = "LARGE")
+    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = "LARGE")
     val currentArtworkSize = try {
         ArtworkSize.valueOf(artworkSizeString)
     } catch (e: Exception) {
         ArtworkSize.LARGE
     }
 
-    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsState(initial = 0f)
-    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsState(initial = 0.9f)
-    val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsState(initial = false)
-    val dynamicColor by sessionManager.dynamicColorFlow.collectAsState(initial = true)
-    val pureBlack by sessionManager.pureBlackEnabledFlow.collectAsState(initial = false)
-    val appTheme by sessionManager.appThemeFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.AppTheme.DEFAULT)
-    val themeMode by sessionManager.themeModeFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.ThemeMode.SYSTEM)
-    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsState(initial = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL)
+    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
+    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.9f)
+    val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val dynamicColor by sessionManager.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true)
+    val pureBlack by sessionManager.pureBlackEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val appTheme by sessionManager.appThemeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.AppTheme.DEFAULT)
+    val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.ThemeMode.SYSTEM)
+    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL)
 
     val scope = rememberCoroutineScope()
     

@@ -156,7 +156,7 @@ fun ArtistScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                         
-                        itemsIndexed(artist.songs.take(5)) { index, song ->
+                        itemsIndexed(artist.songs.take(5), key = { _, song -> song.id }) { index, song ->
                             TopSongRow(
                                 index = index + 1,
                                 song = song,
