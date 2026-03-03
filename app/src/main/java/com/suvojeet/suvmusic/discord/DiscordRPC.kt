@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.discord
 
 import android.util.Log
 import com.suvojeet.suvmusic.discord.Identify.Companion.toIdentifyPayload
+import com.suvojeet.suvmusic.util.AppLog
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
@@ -55,33 +56,33 @@ class DiscordRPC(
     private var currentReconnectDelay = INITIAL_RECONNECT_DELAY
     private var lastPresence: Presence? = null
 
-    override val coroutineContext: CoroutineContext
-        get() = SupervisorJob() + Dispatchers.IO
+    private val supervisorJob = SupervisorJob()
+    override val coroutineContext: CoroutineContext = supervisorJob + Dispatchers.IO
 
     fun connect() {
         if (connected) {
-            Log.i(tag, "Gateway already connected.")
+            AppLog.i(tag) { "Gateway already connected." }
             return
         }
         reconnectionJob?.cancel()
         reconnectionJob = launch {
             try {
                 val url = resumeGatewayUrl ?: gatewayUrl
-                Log.i(tag, "Connecting to Discord Gateway at $url")
+                AppLog.i(tag) { "Connecting to Discord Gateway at $url" }
                 websocket = client.webSocketSession(url)
                 connected = true
-                Log.i(tag, "Successfully connected to Discord Gateway.")
+                AppLog.i(tag) { "Successfully connected to Discord Gateway." }
                 currentReconnectDelay = INITIAL_RECONNECT_DELAY
                 // start receiving messages
-                websocket!!.incoming.receiveAsFlow()
-                    .collect {
+                websocket?.incoming?.receiveAsFlow()
+                    ?.collect {
                         when (it) {
                             is Frame.Text -> {
                                 val jsonString = it.readText()
                                 try {
                                     onMessage(json.decodeFromString(jsonString))
                                 } catch (e: Exception) {
-                                     Log.e(tag, "Error decoding message: $jsonString", e)
+                                     AppLog.e(tag, "Error decoding message: $jsonString", e)
                                 }
                             }
 
@@ -90,7 +91,7 @@ class DiscordRPC(
                     }
                 handleClose()
             } catch (e: Exception) {
-                Log.e(tag, "Gateway connection error", e)
+                AppLog.e(tag, "Gateway connection error", e)
                 scheduleReconnection()
             }
         }
@@ -104,7 +105,7 @@ class DiscordRPC(
         connected = false
         reconnectionJob = launch {
             delay(currentReconnectDelay)
-            Log.i(tag, "Attempting to reconnect...")
+            AppLog.i(tag) { "Attempting to reconnect..." }
             connect()
             currentReconnectDelay = (currentReconnectDelay * 2).coerceAtMost(MAX_RECONNECT_DELAY)
         }
@@ -115,11 +116,11 @@ class DiscordRPC(
         heartbeatJob?.cancel()
         connected = false
         val close = websocket?.closeReason?.await()
-        Log.w(tag, "Gateway closed with code: ${close?.code}, reason: ${close?.message}")
+        AppLog.w(tag) { "Gateway closed with code: ${close?.code}, reason: ${close?.message}" }
         
         // 4004: Authentication Failed - Do not reconnect
         if (close?.code?.toInt() == 4004) {
-             Log.e(tag, "Authentication Failed. Please check your token.")
+             AppLog.e(tag, "Authentication Failed. Please check your token.")
              return
         }
         
@@ -139,7 +140,7 @@ class DiscordRPC(
             OpCode.DISPATCH -> payload.handleDispatch()
             OpCode.HEARTBEAT -> sendHeartBeat()
             OpCode.RECONNECT -> {
-                Log.i(tag, "Received RECONNECT OpCode")
+                AppLog.i(tag) { "Received RECONNECT OpCode" }
                 reconnectWebSocket()
             }
             OpCode.INVALID_SESSION -> handleInvalidSession()
@@ -157,7 +158,7 @@ class DiscordRPC(
                 val ready = json.decodeFromJsonElement<Ready>(this.d!!)
                 sessionId = ready.sessionId
                 resumeGatewayUrl = ready.resumeGatewayUrl + "/?v=10&encoding=json"
-                Log.i(tag, "Gateway READY: resume_gateway_url updated to $resumeGatewayUrl, session_id updated to $sessionId")
+                AppLog.i(tag) { "Gateway READY: resume_gateway_url updated to $resumeGatewayUrl, session_id updated to $sessionId" }
                 connected = true
                 
                 // Resend presence if we have one
@@ -168,7 +169,7 @@ class DiscordRPC(
             }
 
             "RESUMED" -> {
-                Log.i(tag, "Gateway: Session Resumed")
+                AppLog.i(tag) { "Gateway: Session Resumed" }
             }
 
             else -> {}
@@ -176,7 +177,7 @@ class DiscordRPC(
     }
 
     private suspend inline fun handleInvalidSession() {
-        Log.w(tag, "Gateway: Handling Invalid Session. Sending Identify after 150ms")
+        AppLog.w(tag) { "Gateway: Handling Invalid Session. Sending Identify after 150ms" }
         delay(150)
         sendIdentify()
     }
@@ -188,7 +189,7 @@ class DiscordRPC(
             sendIdentify()
         }
         heartbeatInterval = json.decodeFromJsonElement<Heartbeat>(this.d!!).heartbeatInterval
-        Log.i(tag, "Gateway: Setting heartbeatInterval=$heartbeatInterval")
+        AppLog.i(tag) { "Gateway: Setting heartbeatInterval=$heartbeatInterval" }
         startHeartbeatJob(heartbeatInterval)
     }
 
@@ -210,7 +211,7 @@ class DiscordRPC(
     }
 
     private suspend fun sendIdentify() {
-        Log.i(tag, "Gateway: Sending IDENTIFY")
+        AppLog.i(tag) { "Gateway: Sending IDENTIFY" }
         send(
             op = OpCode.IDENTIFY,
             d = token.toIdentifyPayload()
@@ -218,7 +219,7 @@ class DiscordRPC(
     }
 
     private suspend fun sendResume() {
-        Log.i(tag, "Gateway: Sending RESUME")
+        AppLog.i(tag) { "Gateway: Sending RESUME" }
         send(
             op = OpCode.RESUME,
             d = Resume(
@@ -270,9 +271,9 @@ class DiscordRPC(
         connected = false
         try {
             websocket?.close()
-            Log.i(tag, "Gateway: Connection to gateway closed")
+            AppLog.i(tag) { "Gateway: Connection to gateway closed" }
         } catch (e: Exception) {
-            Log.e(tag, "Error closing gateway", e)
+            AppLog.e(tag, "Error closing gateway", e)
         }
     }
 
@@ -333,13 +334,13 @@ class DiscordRPC(
         }
         
         try {
-            Log.i(tag, "Gateway: Sending PRESENCE_UPDATE")
+            AppLog.i(tag) { "Gateway: Sending PRESENCE_UPDATE" }
             send(
                 op = OpCode.PRESENCE_UPDATE,
                 d = presence
             )
         } catch (e: Exception) {
-            Log.e(tag, "Error sending activity", e)
+            AppLog.e(tag, "Error sending activity", e)
         }
     }
     

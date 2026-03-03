@@ -9,7 +9,8 @@ add_library(suvmusic_native SHARED
         spatial_audio.cpp
         limiter.cpp
         file_mapper.cpp
-        recommendation_scorer.cpp)
+        recommendation_scorer.cpp
+        secure_config.cpp)
 
 find_library(log-lib log)
 

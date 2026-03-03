@@ -220,7 +220,7 @@ fun AlbumScreen(
                     }
                     
                     // Song List
-                    itemsIndexed(album.songs) { index, song ->
+                    itemsIndexed(album.songs, key = { _, song -> song.id }) { index, song ->
                         AlbumSongItem(
                             song = song,
                             trackNumber = index + 1,
@@ -264,8 +264,8 @@ fun AlbumScreen(
                         onAddToQueue = { viewModel.addToQueue(album.songs) },
                         onAddToPlaylist = { 
                              selectedSong = album.songs.firstOrNull()
-                             if (selectedSong != null) {
-                                 playlistViewModel.showAddToPlaylistSheet(selectedSong!!)
+                             selectedSong?.let { song ->
+                                 playlistViewModel.showAddToPlaylistSheet(song)
                              }
                         },
                         onDownload = { viewModel.downloadAlbum(album) },
@@ -274,34 +274,36 @@ fun AlbumScreen(
                 }
                 
                 // Song Menu Bottom Sheet
-                if (showSongMenu && selectedSong != null) {
-                    val song = selectedSong!!
-                    com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet(
-                        isVisible = showSongMenu,
-                        onDismiss = { showSongMenu = false },
-                        song = song,
-                        onPlayNext = { viewModel.playNext(listOf(song)) },
-                        onAddToQueue = { viewModel.addToQueue(listOf(song)) },
-                        onAddToPlaylist = { playlistViewModel.showAddToPlaylistSheet(song) },
-                        onDownload = { viewModel.downloadSong(song) },
-                        onShare = { 
-                            val shareText = "Check out this song: ${song.title} by ${song.artist}\n\nhttps://music.youtube.com/watch?v=${song.id}"
-                            val sendIntent = android.content.Intent().apply {
-                                action = android.content.Intent.ACTION_SEND
-                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                                type = "text/plain"
+                selectedSong?.let { song ->
+                    if (showSongMenu) {
+                        com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet(
+                            isVisible = showSongMenu,
+                            onDismiss = { showSongMenu = false },
+                            song = song,
+                            onPlayNext = { viewModel.playNext(listOf(song)) },
+                            onAddToQueue = { viewModel.addToQueue(listOf(song)) },
+                            onAddToPlaylist = { playlistViewModel.showAddToPlaylistSheet(song) },
+                            onDownload = { viewModel.downloadSong(song) },
+                            onShare = { 
+                                val shareText = "Check out this song: ${song.title} by ${song.artist}\n\nhttps://music.youtube.com/watch?v=${song.id}"
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Song")
+                                context.startActivity(shareIntent)
                             }
-                            val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Song")
-                            context.startActivity(shareIntent)
-                        }
-                    )
+                        )
+                    }
                 }
 
                 // Global Add to Playlist Sheet
                 val playlistMgmtState by playlistViewModel.uiState.collectAsState()
-                if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
-                    com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
-                        song = playlistMgmtState.selectedSong!!,
+                playlistMgmtState.selectedSong?.let { selectedPlaylistSong ->
+                    if (playlistMgmtState.showAddToPlaylistSheet) {
+                        com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
+                            song = selectedPlaylistSong,
                         isVisible = playlistMgmtState.showAddToPlaylistSheet,
                         playlists = playlistMgmtState.userPlaylists,
                         isLoading = playlistMgmtState.isLoadingPlaylists,
@@ -309,6 +311,7 @@ fun AlbumScreen(
                         onAddToPlaylist = { playlistId -> playlistViewModel.addSongToPlaylist(playlistId) },
                         onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() }
                     )
+                    }
                 }
 
                 // Create Playlist Dialog

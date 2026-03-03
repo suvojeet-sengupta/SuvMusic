@@ -340,6 +340,9 @@ static BassBoost bassBoost;
 static Virtualizer virtualizer;
 static PitchShifter pitchShifter;
 static std::vector<float> processingBuffer;
+static std::mutex processingMutex;
+
+static constexpr int MAX_TOTAL_SAMPLES = 48000 * 8; // max 48kHz * 8 channels = 1 second cap
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -360,9 +363,11 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, 
     }
 
     const int totalSamples = frameCount * channelCount;
-    if (totalSamples <= 0) {
+    if (totalSamples <= 0 || totalSamples > MAX_TOTAL_SAMPLES) {
         return;
     }
+
+    std::lock_guard<std::mutex> lock(processingMutex);
 
     if (processingBuffer.size() < static_cast<size_t>(totalSamples)) {
         processingBuffer.resize(static_cast<size_t>(totalSamples));

@@ -157,6 +157,7 @@ void Limiter::setEnabled(bool enabled) {
 }
 
 void Limiter::reset() {
+    std::lock_guard<std::mutex> lock(mtx);
     envelope = 0.0f;
     currentGain = 1.0f;
     std::fill(delayBuffer.begin(), delayBuffer.end(), 0.0f);

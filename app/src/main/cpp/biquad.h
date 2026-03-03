@@ -36,8 +36,10 @@ public:
     }
 
     void process(float* buffer, int numFrames, int numChannels) {
+        // Clamp to max supported channels to prevent buffer overflow
+        const int safeChannels = numChannels > 8 ? 8 : numChannels;
         for (int i = 0; i < numFrames; ++i) {
-            for (int ch = 0; ch < numChannels; ++ch) {
+            for (int ch = 0; ch < safeChannels; ++ch) {
                 float in = buffer[i * numChannels + ch];
                 
                 // Direct Form I
