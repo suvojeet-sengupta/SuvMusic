@@ -271,7 +271,8 @@ fun NavGraph(
         composable(Destination.Search.route) {
             SearchScreen(
                 onSongClick = { songs, index -> 
-                    onStartRadio(songs[index], songs)
+                    // Don't pass search results as queue — fetch recommendations instead
+                    onStartRadio(songs[index], null)
                 },
                 onArtistClick = { artistId ->
                     navController.navigate(Destination.Artist(artistId).route)
