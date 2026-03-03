@@ -462,8 +462,7 @@ fun PlayerScreen(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    dominantColors.secondary,
-                                    dominantColors.primary,
+                                    dominantColors.primary.copy(alpha = 0.6f),
                                     playerBackgroundColor
                                 )
                             )
@@ -589,11 +588,7 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
-                                    isDisliked = playerState.isDisliked,
-                                    downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
-                                    onDislikeClick = onToggleDislike,
-                                    onDownloadClick = onDownload,
                                     onMoreClick = { 
                                         activeOverlay = PlayerOverlay.Actions(song)
                                     },
@@ -653,6 +648,10 @@ fun PlayerScreen(
                                     onLyricsClick = { activeOverlay = PlayerOverlay.Lyrics },
                                     onCastClick = { activeOverlay = PlayerOverlay.OutputDevice },
                                     onQueueClick = { activeOverlay = PlayerOverlay.Queue },
+                                    onDownloadClick = onDownload,
+                                    downloadState = playerState.downloadState,
+                                    onDislikeClick = onToggleDislike,
+                                    isDisliked = playerState.isDisliked,
                                     dominantColors = dominantColors,
                                     isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                                     isVideoMode = playerState.isVideoMode,
@@ -792,11 +791,7 @@ fun PlayerScreen(
                                 SongInfoSection(
                                     song = song,
                                     isFavorite = playerState.isLiked,
-                                    isDisliked = playerState.isDisliked,
-                                    downloadState = playerState.downloadState,
                                     onFavoriteClick = onToggleLike,
-                                    onDislikeClick = onToggleDislike,
-                                    onDownloadClick = onDownload,
                                     onMoreClick = { 
                                         activeOverlay = PlayerOverlay.Actions(song)
                                     },
@@ -807,13 +802,7 @@ fun PlayerScreen(
                                 )
 
                                 // Adaptive spacer between song info and seekbar
-                                Spacer(modifier = Modifier.height(
-                                    if (isCompactHeight) {
-                                        if (playerState.isVideoMode) 8.dp else 12.dp
-                                    } else {
-                                        if (playerState.isVideoMode) 16.dp else 24.dp
-                                    }
-                                ))
+                                Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
                                 // Progress & Waveform
                                 WaveformSeeker(
@@ -843,7 +832,7 @@ fun PlayerScreen(
                                     dominantColors = dominantColors
                                 )
 
-                                Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
+                                Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
                                 // Playback Controls
                                 PlaybackControls(
@@ -866,6 +855,10 @@ fun PlayerScreen(
                                     onLyricsClick = { activeOverlay = PlayerOverlay.Lyrics },
                                     onCastClick = { activeOverlay = PlayerOverlay.OutputDevice },
                                     onQueueClick = { activeOverlay = PlayerOverlay.Queue },
+                                    onDownloadClick = onDownload,
+                                    downloadState = playerState.downloadState,
+                                    onDislikeClick = onToggleDislike,
+                                    isDisliked = playerState.isDisliked,
                                     dominantColors = dominantColors,
                                     isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                                     isVideoMode = playerState.isVideoMode,

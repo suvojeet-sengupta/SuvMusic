@@ -50,11 +50,7 @@ import androidx.compose.foundation.clickable
 fun SongInfoSection(
     song: Song?,
     isFavorite: Boolean,
-    isDisliked: Boolean = false,
-    downloadState: DownloadState,
     onFavoriteClick: () -> Unit,
-    onDislikeClick: () -> Unit = {},
-    onDownloadClick: () -> Unit,
     onMoreClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (String) -> Unit = {},
@@ -156,46 +152,6 @@ fun SongInfoSection(
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
 
-            // Download Button
-            IconButton(
-                onClick = onDownloadClick,
-                modifier = iconButtonModifier
-            ) {
-                when(downloadState) {
-                    DownloadState.DOWNLOADING -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = dominantColors.accent,
-                            strokeWidth = 2.dp
-                        )
-                    }
-                    DownloadState.DOWNLOADED -> {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Downloaded",
-                            tint = dominantColors.accent,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    DownloadState.FAILED -> {
-                        Icon(
-                            imageVector = Icons.Filled.Error,
-                            contentDescription = "Retry Download",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    else -> {
-                        Icon(
-                            imageVector = Icons.Filled.Download,
-                            contentDescription = "Download",
-                            tint = dominantColors.onBackground.copy(alpha = 0.9f),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-            }
-
             IconButton(
                 onClick = onFavoriteClick,
                 modifier = iconButtonModifier
@@ -204,19 +160,6 @@ fun SongInfoSection(
                     imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                     contentDescription = "Like",
                     tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.9f),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            // Dislike Button — signals the recommendation engine to avoid similar songs
-            IconButton(
-                onClick = onDislikeClick,
-                modifier = iconButtonModifier
-            ) {
-                Icon(
-                    imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                    contentDescription = "Dislike",
-                    tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.9f),
                     modifier = Modifier.size(22.dp)
                 )
             }
