@@ -28,7 +28,8 @@ import androidx.compose.ui.unit.dp
 fun MeshGradientBackground(
     dominantColors: DominantColors?, // Nullable to handle loading states gracefully
     modifier: Modifier = Modifier,
-    speedMultiplier: Float = 1f
+    speedMultiplier: Float = 1f,
+    backgroundColor: Color = MaterialTheme.colorScheme.background
 ) {
     // If no colors provided yet, just show default background or a simple placeholder
     val colors = dominantColors ?: DominantColors(
@@ -101,8 +102,6 @@ fun MeshGradientBackground(
         animationSpec = infiniteRepeatable(tween(19000, easing = LinearEasing), RepeatMode.Reverse),
         label = "y4"
     )
-
-    val backgroundColor = MaterialTheme.colorScheme.background
 
     Box(
         modifier = modifier
