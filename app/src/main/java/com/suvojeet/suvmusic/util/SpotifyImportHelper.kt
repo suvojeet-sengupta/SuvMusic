@@ -22,7 +22,7 @@ class SpotifyImportHelper @Inject constructor(
 ) {
     /**
      * Extracts song titles and artists from a Spotify playlist URL.
-     * Note: This uses Jsoup to scrape the public Spotify playlist page.
+     * Uses Spotify's internal API with pagination to fetch ALL tracks.
      * Returns a Pair of (Playlist Name, List of (Song Title, Artist)).
      */
     suspend fun getPlaylistSongs(url: String): Pair<String, List<Pair<String, String>>> = withContext(Dispatchers.IO) {
@@ -32,19 +32,23 @@ class SpotifyImportHelper @Inject constructor(
         try {
             val playlistId = extractPlaylistId(url)
             
-            // 1. Try API Method (Best for large playlists > 100 songs)
+            // 1. Try API Method (Best for large playlists — handles pagination for 3500+ songs)
             if (playlistId != null) {
-                try {
-                    val accessToken = extractAccessToken(url)
-                    if (accessToken != null) {
+                // Try multiple token strategies in order of reliability
+                val accessToken = getSpotifyAccessToken(url)
+                if (accessToken != null) {
+                    try {
                         val (name, apiSongs) = fetchSpotifyTracksWithApi(playlistId, accessToken)
                         if (name.isNotEmpty()) playlistName = name
                         if (apiSongs.isNotEmpty()) {
+                            Log.i("SpotifyImportHelper", "API method fetched ${apiSongs.size} songs")
                             return@withContext playlistName to apiSongs
                         }
+                    } catch (e: Exception) {
+                        Log.w("SpotifyImportHelper", "Spotify API method failed, falling back to embed", e)
                     }
-                } catch (e: Exception) {
-                    Log.w("SpotifyImportHelper", "Spotify API method failed, falling back to embed", e)
+                } else {
+                    Log.w("SpotifyImportHelper", "Could not obtain Spotify access token")
                 }
             }
 
@@ -155,46 +159,164 @@ class SpotifyImportHelper @Inject constructor(
         return match?.groupValues?.get(1)
     }
 
-    private suspend fun extractAccessToken(url: String): String? {
-        return try {
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .get()
+    /**
+     * Tries multiple strategies to obtain a Spotify access token.
+     * Strategy 1: Fetch anonymous token from Spotify's internal token endpoint
+     * Strategy 2: Extract from playlist page's __NEXT_DATA__
+     * Strategy 3: Extract from embed page
+     */
+    private suspend fun getSpotifyAccessToken(url: String): String? {
+        // Strategy 1: Anonymous token (most reliable for public playlists)
+        try {
+            val token = fetchAnonymousSpotifyToken()
+            if (token != null) {
+                Log.i("SpotifyImportHelper", "Got anonymous Spotify token")
+                return token
+            }
+        } catch (e: Exception) {
+            Log.w("SpotifyImportHelper", "Anonymous token fetch failed", e)
+        }
 
-            val nextDataScript = doc.select("script#__NEXT_DATA__").first() ?: return null
-            val json = nextDataScript.html()
-            val jsonObject = gson.fromJson(json, JsonObject::class.java)
+        // Strategy 2: Extract from playlist page HTML
+        try {
+            val token = extractAccessTokenFromPage(url)
+            if (token != null) {
+                Log.i("SpotifyImportHelper", "Got token from page HTML")
+                return token
+            }
+        } catch (e: Exception) {
+            Log.w("SpotifyImportHelper", "Page token extraction failed", e)
+        }
 
-            // props -> pageProps -> session -> accessToken
-            // Or props -> pageProps -> session -> data -> accessToken
-            val pageProps = jsonObject.getAsJsonObject("props")?.getAsJsonObject("pageProps")
-            val session = pageProps?.getAsJsonObject("session")
-            
-            if (session != null) {
-                if (session.has("accessToken")) {
-                    return session.get("accessToken").asString
+        // Strategy 3: Extract from embed page
+        val playlistId = extractPlaylistId(url)
+        if (playlistId != null) {
+            try {
+                val token = extractAccessTokenFromEmbed(playlistId)
+                if (token != null) {
+                    Log.i("SpotifyImportHelper", "Got token from embed page")
+                    return token
                 }
-                if (session.has("data")) {
-                    return session.getAsJsonObject("data").get("accessToken").asString
+            } catch (e: Exception) {
+                Log.w("SpotifyImportHelper", "Embed token extraction failed", e)
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Fetch an anonymous access token from Spotify's internal token endpoint.
+     * This works without any user login for public playlists.
+     */
+    private fun fetchAnonymousSpotifyToken(): String? {
+        val request = Request.Builder()
+            .url("https://open.spotify.com/get_access_token?reason=transport&productType=web_player")
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            .addHeader("Accept", "application/json")
+            .addHeader("Referer", "https://open.spotify.com/")
+            .addHeader("Origin", "https://open.spotify.com")
+            .build()
+
+        val response = okHttpClient.newCall(request).execute()
+        return try {
+            if (response.isSuccessful) {
+                val json = response.body.string()
+                val jsonObj = gson.fromJson(json, JsonObject::class.java)
+                if (jsonObj.has("accessToken")) {
+                    jsonObj.get("accessToken").asString
+                } else null
+            } else null
+        } finally {
+            response.close()
+        }
+    }
+
+    /**
+     * Extract access token from the playlist page's __NEXT_DATA__ JSON.
+     */
+    private fun extractAccessTokenFromPage(url: String): String? {
+        val doc = Jsoup.connect(url)
+            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            .get()
+
+        val nextDataScript = doc.select("script#__NEXT_DATA__").first() ?: return null
+        val json = nextDataScript.html()
+        val jsonObject = gson.fromJson(json, JsonObject::class.java)
+
+        val pageProps = jsonObject.getAsJsonObject("props")?.getAsJsonObject("pageProps")
+        val session = pageProps?.getAsJsonObject("session")
+        
+        if (session != null) {
+            if (session.has("accessToken")) {
+                return session.get("accessToken").asString
+            }
+            if (session.has("data")) {
+                val data = session.getAsJsonObject("data")
+                if (data?.has("accessToken") == true) {
+                    return data.get("accessToken").asString
                 }
             }
-            // Sometimes it's in a different structure depending on the build
-            null
-        } catch (e: Exception) {
-            Log.w("SpotifyImportHelper", "Spotify operation failed", e)
-            null
         }
+        
+        // Try alternative path: session might be at a different location
+        val buildId = jsonObject.get("buildId")
+        if (buildId != null) {
+            // Some versions put the token in runtimeConfig or directly in props
+            val token = findAccessTokenRecursive(jsonObject, 0)
+            if (token != null) return token
+        }
+        
+        return null
+    }
+
+    /**
+     * Extract access token from the embed page.
+     */
+    private fun extractAccessTokenFromEmbed(playlistId: String): String? {
+        val embedUrl = "https://open.spotify.com/embed/playlist/$playlistId"
+        val doc = Jsoup.connect(embedUrl)
+            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            .get()
+
+        val nextDataScript = doc.select("script#__NEXT_DATA__").first() ?: return null
+        val json = nextDataScript.html()
+        val jsonObject = gson.fromJson(json, JsonObject::class.java)
+
+        return findAccessTokenRecursive(jsonObject, 0)
+    }
+
+    /**
+     * Recursively search a JSON object for an "accessToken" field (max depth 6).
+     */
+    private fun findAccessTokenRecursive(jsonObject: JsonObject, depth: Int): String? {
+        if (depth > 6) return null
+        if (jsonObject.has("accessToken")) {
+            val token = jsonObject.get("accessToken")
+            if (token.isJsonPrimitive && token.asString.isNotBlank()) {
+                return token.asString
+            }
+        }
+        for ((_, value) in jsonObject.entrySet()) {
+            if (value.isJsonObject) {
+                val found = findAccessTokenRecursive(value.asJsonObject, depth + 1)
+                if (found != null) return found
+            }
+        }
+        return null
     }
 
     private fun fetchSpotifyTracksWithApi(playlistId: String, accessToken: String): Pair<String, List<Pair<String, String>>> {
         val songs = mutableListOf<Pair<String, String>>()
         var playlistName = ""
-        var nextUrl: String? = "https://api.spotify.com/v1/playlists/$playlistId/tracks?offset=0&limit=100"
+        var totalExpected = 0
+        // Use fields parameter to reduce payload size — only fetch what we need
+        var nextUrl: String? = "https://api.spotify.com/v1/playlists/$playlistId/tracks?offset=0&limit=100&fields=items(track(name,artists(name))),next,total"
 
-        // First, fetch playlist details to get the name
+        // First, fetch playlist details to get the name and total track count
         try {
             val request = Request.Builder()
-                .url("https://api.spotify.com/v1/playlists/$playlistId")
+                .url("https://api.spotify.com/v1/playlists/$playlistId?fields=name,tracks.total")
                 .addHeader("Authorization", "Bearer $accessToken")
                 .build()
             
@@ -206,14 +328,23 @@ class SpotifyImportHelper @Inject constructor(
                     if (jsonObj.has("name")) {
                         playlistName = jsonObj.get("name").asString
                     }
+                    val tracks = jsonObj.getAsJsonObject("tracks")
+                    if (tracks?.has("total") == true) {
+                        totalExpected = tracks.get("total").asInt
+                        Log.i("SpotifyImportHelper", "Playlist '$playlistName' has $totalExpected tracks")
+                    }
                 }
             }
             response.close()
         } catch (e: Exception) {
-            Log.w("SpotifyImportHelper", "Spotify operation failed", e)
+            Log.w("SpotifyImportHelper", "Failed to fetch playlist details", e)
         }
 
-        // Pagination Loop
+        // Pagination Loop — fetch ALL pages
+        var pageCount = 0
+        var consecutiveErrors = 0
+        val maxConsecutiveErrors = 3
+
         while (nextUrl != null) {
             val currentNextUrl: String = nextUrl
             try {
@@ -224,9 +355,27 @@ class SpotifyImportHelper @Inject constructor(
 
                 val response = okHttpClient.newCall(request).execute()
                 if (!response.isSuccessful) {
+                    val code = response.code
                     response.close()
+                    
+                    // If rate limited (429), wait and retry
+                    if (code == 429) {
+                        consecutiveErrors++
+                        if (consecutiveErrors <= maxConsecutiveErrors) {
+                            Log.w("SpotifyImportHelper", "Rate limited, waiting ${consecutiveErrors * 2}s before retry...")
+                            Thread.sleep(consecutiveErrors * 2000L)
+                            continue // Retry same URL
+                        }
+                    }
+                    
+                    // If token expired (401), don't retry
+                    if (code == 401) {
+                        Log.e("SpotifyImportHelper", "Token expired after fetching ${songs.size} songs")
+                    }
                     break
                 }
+                
+                consecutiveErrors = 0 // Reset on success
 
                 val json = response.body.string()
                 val jsonObj = gson.fromJson(json, JsonObject::class.java)
@@ -235,21 +384,37 @@ class SpotifyImportHelper @Inject constructor(
                 val items = jsonObj.getAsJsonArray("items")
                 if (items != null) {
                     for (item in items) {
-                        val trackObj = item.asJsonObject.getAsJsonObject("track") ?: continue
-                        val title = trackObj.get("name").asString
-                        
-                        val artistsArray = trackObj.getAsJsonArray("artists")
-                        val artistList = mutableListOf<String>()
-                        if (artistsArray != null) {
-                            for (artist in artistsArray) {
-                                artistList.add(artist.asJsonObject.get("name").asString)
+                        try {
+                            val itemObj = item.asJsonObject
+                            val trackObj = itemObj.getAsJsonObject("track") ?: continue
+                            // Skip null/local tracks
+                            if (!trackObj.has("name") || trackObj.get("name").isJsonNull) continue
+                            val title = trackObj.get("name").asString
+                            
+                            val artistsArray = trackObj.getAsJsonArray("artists")
+                            val artistList = mutableListOf<String>()
+                            if (artistsArray != null) {
+                                for (artist in artistsArray) {
+                                    val artistObj = artist.asJsonObject
+                                    if (artistObj.has("name") && !artistObj.get("name").isJsonNull) {
+                                        artistList.add(artistObj.get("name").asString)
+                                    }
+                                }
                             }
+                            val artist = artistList.joinToString(", ")
+                            
+                            if (title.isNotBlank()) {
+                                songs.add(title to artist)
+                            }
+                        } catch (e: Exception) {
+                            // Skip malformed individual tracks, don't break the whole loop
+                            Log.w("SpotifyImportHelper", "Skipping malformed track", e)
                         }
-                        val artist = artistList.joinToString(", ")
-                        
-                        songs.add(title to artist)
                     }
                 }
+                
+                pageCount++
+                Log.i("SpotifyImportHelper", "Fetched page $pageCount — ${songs.size}/$totalExpected tracks so far")
 
                 // Check for next page
                 nextUrl = if (jsonObj.has("next") && !jsonObj.get("next").isJsonNull) {
@@ -260,12 +425,24 @@ class SpotifyImportHelper @Inject constructor(
                 
                 response.close()
                 
+                // Small delay between pages to avoid rate limiting on large playlists
+                if (nextUrl != null) {
+                    Thread.sleep(100)
+                }
+                
             } catch (e: Exception) {
-                Log.w("SpotifyImportHelper", "Spotify operation failed", e)
+                Log.w("SpotifyImportHelper", "Error fetching page ${pageCount + 1}, songs so far: ${songs.size}", e)
+                consecutiveErrors++
+                if (consecutiveErrors <= maxConsecutiveErrors) {
+                    // Retry same URL with increasing delay
+                    Thread.sleep(consecutiveErrors * 1500L)
+                    continue
+                }
                 break
             }
         }
-        
+
+        Log.i("SpotifyImportHelper", "Finished fetching: ${songs.size} songs out of $totalExpected expected")
         return playlistName to songs
     }
 
