@@ -108,7 +108,7 @@ private fun AppleMusicButton(
                 indication = null,
                 onClick = onClick
             )
-            .background(Color.Black.copy(alpha = backgroundAlpha)),
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = backgroundAlpha)),
         contentAlignment = Alignment.Center
     ) {
         content(isPressed)

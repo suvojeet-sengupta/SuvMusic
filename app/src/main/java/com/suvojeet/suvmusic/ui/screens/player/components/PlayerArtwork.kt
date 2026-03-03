@@ -232,7 +232,7 @@ fun AlbumArtwork(
                         rotationZ = rotation + if (currentShape == ArtworkShape.VINYL) animatedVinylRotation else 0f
                     }
                     .shadow(
-                        elevation = 32.dp,
+                        elevation = 16.dp,
                         shape = RoundedCornerShape(safeCornerRadius),
                         spotColor = dominantColors.primary.copy(alpha = 0.5f)
                     )
