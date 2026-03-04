@@ -27,6 +27,9 @@ class ListenTogetherViewModel @Inject constructor(
     val logs = manager.logs
     val events = manager.events
     val pendingJoinRequests = manager.pendingJoinRequests
+    val bufferingUsers = manager.bufferingUsers
+    val pendingSuggestions = manager.pendingSuggestions
+    val hasPersistedSession: Boolean get() = manager.hasPersistedSession
     
     private val _savedUsername = kotlinx.coroutines.flow.MutableStateFlow("")
     val savedUsername: StateFlow<String> = _savedUsername
@@ -44,6 +47,7 @@ class ListenTogetherViewModel @Inject constructor(
     val muteHost: StateFlow<Boolean> = _muteHost
 
     init {
+        manager.initialize()
         viewModelScope.launch {
             _savedUsername.value = manager.getSavedUsername()
             _serverUrl.value = manager.getServerUrl()
@@ -131,6 +135,16 @@ class ListenTogetherViewModel @Inject constructor(
     fun rejectJoin(userId: String) {
         manager.rejectJoin(userId)
     }
+    
+    fun transferHost(newHostId: String) {
+        manager.transferHost(newHostId)
+    }
+    
+    fun forceReconnect() {
+        manager.forceReconnect()
+    }
+    
+    fun getPersistedRoomCode(): String? = manager.getPersistedRoomCode()
     
     fun requestSync() {
         manager.requestSync()

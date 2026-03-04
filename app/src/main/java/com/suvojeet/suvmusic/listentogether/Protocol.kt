@@ -2,7 +2,6 @@ package com.suvojeet.suvmusic.listentogether
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 /**
  * Message types for Listen Together protocol
@@ -17,12 +16,11 @@ object MessageTypes {
     const val PLAYBACK_ACTION = "playback_action"
     const val BUFFER_READY = "buffer_ready"
     const val KICK_USER = "kick_user"
+    const val TRANSFER_HOST = "transfer_host"
     const val PING = "ping"
+    const val CHAT = "chat"
     const val REQUEST_SYNC = "request_sync"
     const val RECONNECT = "reconnect"
-    const val CAPABILITIES = "capabilities"
-    const val TRANSFER_HOST = "transfer_host"
-    // Suggestions (Client -> Server)
     const val SUGGEST_TRACK = "suggest_track"
     const val APPROVE_SUGGESTION = "approve_suggestion"
     const val REJECT_SUGGESTION = "reject_suggestion"
@@ -39,14 +37,12 @@ object MessageTypes {
     const val BUFFER_COMPLETE = "buffer_complete"
     const val ERROR = "error"
     const val PONG = "pong"
-    const val ROOM_STATE = "room_state"
     const val HOST_CHANGED = "host_changed"
     const val KICKED = "kicked"
     const val SYNC_STATE = "sync_state"
     const val RECONNECTED = "reconnected"
     const val USER_RECONNECTED = "user_reconnected"
     const val USER_DISCONNECTED = "user_disconnected"
-    // Suggestions (Server -> Client)
     const val SUGGESTION_RECEIVED = "suggestion_received"
     const val SUGGESTION_APPROVED = "suggestion_approved"
     const val SUGGESTION_REJECTED = "suggestion_rejected"
@@ -66,16 +62,8 @@ object PlaybackActions {
     const val QUEUE_REMOVE = "queue_remove"
     const val QUEUE_CLEAR = "queue_clear"
     const val SYNC_QUEUE = "sync_queue"
+    const val SET_VOLUME = "set_volume"
 }
-
-/**
- * Base message structure
- */
-@Serializable
-data class Message(
-    val type: String,
-    val payload: JsonElement? = null
-)
 
 /**
  * Track information
@@ -169,6 +157,11 @@ data class KickUserPayload(
 @Serializable
 data class TransferHostPayload(
     @SerialName("new_host_id") val newHostId: String
+)
+
+@Serializable
+data class ChatPayload(
+    val message: String
 )
 
 // Suggestions payloads
@@ -267,6 +260,14 @@ data class ErrorPayload(
 )
 
 @Serializable
+data class ChatMessagePayload(
+    @SerialName("user_id") val userId: String,
+    val username: String,
+    val message: String,
+    val timestamp: Long
+)
+
+@Serializable
 data class HostChangedPayload(
     @SerialName("new_host_id") val newHostId: String,
     @SerialName("new_host_name") val newHostName: String
@@ -295,20 +296,6 @@ data class SyncStatePayload(
 @Serializable
 data class ReconnectPayload(
     @SerialName("session_token") val sessionToken: String
-)
-
-@Serializable
-data class ClientCapabilities(
-    @SerialName("supports_protobuf") val supportsProtobuf: Boolean,
-    @SerialName("supports_compression") val supportsCompression: Boolean,
-    @SerialName("client_version") val clientVersion: String
-)
-
-@Serializable
-data class ServerCapabilities(
-    @SerialName("supports_protobuf") val supportsProtobuf: Boolean,
-    @SerialName("supports_compression") val supportsCompression: Boolean,
-    @SerialName("server_version") val serverVersion: String
 )
 
 @Serializable
