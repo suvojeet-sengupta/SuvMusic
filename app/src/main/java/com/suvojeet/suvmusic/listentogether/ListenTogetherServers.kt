@@ -21,7 +21,7 @@ object ListenTogetherServers {
         [
           {
             "name": "The Meowery",
-            "url": "wss://metroserverx.meowery.eu/ws",
+            "url": "wss://metroserver.meowery.eu/ws",
             "location": "Poland",
             "operator": "Nyx"
           }
