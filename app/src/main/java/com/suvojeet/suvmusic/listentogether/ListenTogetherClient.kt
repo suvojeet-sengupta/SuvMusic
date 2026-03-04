@@ -227,8 +227,8 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
-    // Message Codec - Starts with JSON (DEPRECATED), upgrades to Protobuf when supported
-    private val messageCodec = MessageCodec(MessageFormat.JSON, compressionEnabled = false)
+    // Message Codec - Always use Protobuf (server only supports protobuf)
+    private val messageCodec = MessageCodec(MessageFormat.PROTOBUF, compressionEnabled = true)
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
@@ -402,9 +402,6 @@ class ListenTogetherClient @Inject constructor(
                     _connectionState.value = ConnectionState.CONNECTED
                     reconnectAttempts = 0
                     startPingJob()
-                    
-                    // Negotiate capabilities
-                    sendCapabilities()
                     
                     if (sessionToken != null && storedRoomCode != null) {
                         log(LogLevel.INFO, "Attempting to reconnect to previous session", "Room: $storedRoomCode")
@@ -679,18 +676,10 @@ class ListenTogetherClient @Inject constructor(
 
     private fun handleMessage(data: ByteArray) {
         try {
-            // Detect format and auto-upgrade codec if needed
-            val detectedFormat = MessageCodec.detectMessageFormat(data)
-            if (detectedFormat == MessageFormat.PROTOBUF && messageCodec.format == MessageFormat.JSON) {
-                messageCodec.format = MessageFormat.PROTOBUF
-                messageCodec.compressionEnabled = true
-                log(LogLevel.INFO, "Upgraded to Protobuf", "with compression")
-            }
-
             val (msgType, payloadBytes) = messageCodec.decode(data)
             
             // Decode specific payload
-            val payloadObj = messageCodec.decodePayload(msgType, payloadBytes, detectedFormat)
+            val payloadObj = messageCodec.decodePayload(msgType, payloadBytes, MessageFormat.PROTOBUF)
             
             when (msgType) {
                 MessageTypes.ROOM_CREATED -> {
@@ -862,20 +851,6 @@ class ListenTogetherClient @Inject constructor(
                     scope.launch { _events.emit(ListenTogetherEvent.SyncStateReceived(payload)) }
                 }
                 
-                MessageTypes.CAPABILITIES -> {
-                    val payload = payloadObj as ServerCapabilities
-                    log(LogLevel.INFO, "Server capabilities received", "Protobuf: ${payload.supportsProtobuf}, Compression: ${payload.supportsCompression}, Version: ${payload.serverVersion}")
-                    
-                    // If server doesn't support Protobuf (unlikely if we're here, but good practice), we'd need to downgrade.
-                    // But since user says JSON is deprecated, we assume Protobuf is available.
-                    if (payload.supportsProtobuf) {
-                        messageCodec.format = MessageFormat.PROTOBUF
-                    }
-                    if (payload.supportsCompression && messageCodec.compressionEnabled) {
-                        messageCodec.compressionEnabled = true
-                    }
-                }
-                
                 MessageTypes.SUGGESTION_RECEIVED -> {
                     val payload = payloadObj as SuggestionReceivedPayload
                     if (_role.value == RoomRole.HOST) {
@@ -974,33 +949,15 @@ class ListenTogetherClient @Inject constructor(
 
     private inline fun <reified T> sendMessage(type: String, payload: T?) {
         val bytes = messageCodec.encode(type, payload)
-        // Use text for JSON (server expects text), binary for Protobuf
-        if (messageCodec.format == MessageFormat.JSON) {
-            webSocket?.send(bytes.decodeToString())
-        } else {
-            webSocket?.send(bytes.toByteString())
-        }
+        webSocket?.send(bytes.toByteString())
     }
     
     private fun sendMessageNoPayload(type: String) {
         val bytes = messageCodec.encode(type, null)
-        if (messageCodec.format == MessageFormat.JSON) {
-            webSocket?.send(bytes.decodeToString())
-        } else {
-            webSocket?.send(bytes.toByteString())
-        }
+        webSocket?.send(bytes.toByteString())
     }
 
-    fun sendCapabilities() {
-        sendMessage(
-            MessageTypes.CAPABILITIES,
-            ClientCapabilities(
-                supportsProtobuf = true,
-                supportsCompression = true,
-                clientVersion = "1.2.0"
-            )
-        )
-    }
+    // Server uses protobuf-only, no capability negotiation needed
 
     fun createRoom(username: String) {
         clearPersistedSession()
