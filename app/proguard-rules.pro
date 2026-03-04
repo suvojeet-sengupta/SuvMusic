@@ -97,3 +97,7 @@
 -keepclasseswithmembers class com.suvojeet.suvmusic.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+## Listen Together Protobuf
+-keep class com.suvojeet.suvmusic.listentogether.proto.** { *; }
+-keepclassmembers class com.suvojeet.suvmusic.listentogether.proto.** { *; }
