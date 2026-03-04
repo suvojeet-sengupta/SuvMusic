@@ -36,8 +36,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okio.ByteString
-import okio.ByteString.Companion.toByteString
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
@@ -116,7 +114,7 @@ class ListenTogetherClient @Inject constructor(
     companion object {
         private const val TAG = "ListenTogether"
         // Server provided by: https://nyx.meowery.eu/
-        const val DEFAULT_SERVER_URL = "wss://metroserver.meowery.eu/ws" 
+        private val DEFAULT_SERVER_URL = ListenTogetherServers.defaultServerUrl
         private const val MAX_RECONNECT_ATTEMPTS = 15
         private const val INITIAL_RECONNECT_DELAY_MS = 1000L
         private const val MAX_RECONNECT_DELAY_MS = 120000L
@@ -141,11 +139,6 @@ class ListenTogetherClient @Inject constructor(
         
         fun setInstance(client: ListenTogetherClient) {
             instance = client
-        }
-        
-        fun isMetroServer(url: String): Boolean {
-            return url.contains("metroserver", ignoreCase = true) || 
-                   url.contains("meowery.eu", ignoreCase = true)
         }
     }
     
@@ -184,6 +177,29 @@ class ListenTogetherClient @Inject constructor(
             }
         } catch (e: Exception) {
             log(LogLevel.ERROR, "Failed to load persisted session", e.message)
+        }
+        
+        // Migrate old server URL to new one
+        migrateServerUrl()
+    }
+    
+    /**
+     * Migrate old server URL to new one if needed
+     */
+    private suspend fun migrateServerUrl() {
+        try {
+            val oldServerUrl = "wss://metroserver.meowery.eu/ws"
+            val prefs = context.dataStore.data.first()
+            val currentUrl = prefs[ListenTogetherServerUrlKey] ?: DEFAULT_SERVER_URL
+            
+            if (currentUrl == oldServerUrl) {
+                log(LogLevel.INFO, "Migrating server URL", "Old: $oldServerUrl -> New: $DEFAULT_SERVER_URL")
+                context.dataStore.edit { preferences ->
+                    preferences[ListenTogetherServerUrlKey] = DEFAULT_SERVER_URL
+                }
+            }
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Failed to migrate server URL", e.message)
         }
     }
     
@@ -227,8 +243,8 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
-    // Message Codec - Always use Protobuf (server only supports protobuf)
-    private val messageCodec = MessageCodec(MessageFormat.PROTOBUF, compressionEnabled = true)
+    // Message Codec - Protobuf only (server only supports protobuf)
+    private val messageCodec = MessageCodec(compressionEnabled = true)
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
@@ -290,7 +306,7 @@ class ListenTogetherClient @Inject constructor(
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
-        .pingInterval(30, TimeUnit.SECONDS)
+        .pingInterval(60, TimeUnit.SECONDS)  // Match server ping interval
         .build()
 
     suspend fun getServerUrl(): String {
@@ -411,12 +427,7 @@ class ListenTogetherClient @Inject constructor(
                     }
                 }
 
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    // Fallback for text messages if any
-                    handleMessage(text.toByteArray())
-                }
-
-                override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) {
                     handleMessage(bytes.toByteArray())
                 }
 
@@ -499,7 +510,7 @@ class ListenTogetherClient @Inject constructor(
             )
         }
         if (wakeLock?.isHeld == false) {
-            wakeLock?.acquire(30 * 60 * 1000L)
+            wakeLock?.acquire(10 * 60 * 1000L)  // 10 minutes to reduce battery drain
             log(LogLevel.DEBUG, "Wake lock acquired")
         }
     }
@@ -627,7 +638,8 @@ class ListenTogetherClient @Inject constructor(
         pingJob?.cancel()
         pingJob = null
         
-        val shouldReconnect = (sessionToken != null || _roomState.value != null) && pendingAction == null
+        // Always try to reconnect if we have a session token or pending action
+        val shouldReconnect = sessionToken != null || _roomState.value != null || pendingAction != null
         
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && shouldReconnect) {
             reconnectAttempts++
@@ -679,7 +691,7 @@ class ListenTogetherClient @Inject constructor(
             val (msgType, payloadBytes) = messageCodec.decode(data)
             
             // Decode specific payload
-            val payloadObj = messageCodec.decodePayload(msgType, payloadBytes, MessageFormat.PROTOBUF)
+            val payloadObj = messageCodec.decodePayload(msgType, payloadBytes)
             
             when (msgType) {
                 MessageTypes.ROOM_CREATED -> {
@@ -782,6 +794,9 @@ class ListenTogetherClient @Inject constructor(
                     )
                     if (payload.newHostId == _userId.value) {
                         _role.value = RoomRole.HOST
+                    } else if (_role.value == RoomRole.HOST) {
+                        // Lost host role
+                        _role.value = RoomRole.GUEST
                     }
                     log(LogLevel.INFO, "Host changed", "New host: ${payload.newHostName}")
                     scope.launch { _events.emit(ListenTogetherEvent.HostChanged(payload.newHostId, payload.newHostName)) }
@@ -825,6 +840,33 @@ class ListenTogetherClient @Inject constructor(
                                 isPlaying = false,
                                 position = 0
                             )
+                        }
+                        PlaybackActions.QUEUE_ADD -> {
+                            val ti = payload.trackInfo
+                            if (ti != null) {
+                                val currentQueue = _roomState.value?.queue ?: emptyList()
+                                _roomState.value = _roomState.value?.copy(
+                                    queue = if (payload.insertNext == true) listOf(ti) + currentQueue else currentQueue + ti
+                                )
+                            }
+                        }
+                        PlaybackActions.QUEUE_REMOVE -> {
+                            val id = payload.trackId
+                            if (!id.isNullOrEmpty()) {
+                                val currentQueue = _roomState.value?.queue ?: emptyList()
+                                _roomState.value = _roomState.value?.copy(
+                                    queue = currentQueue.filter { it.id != id }
+                                )
+                            }
+                        }
+                        PlaybackActions.QUEUE_CLEAR -> {
+                            _roomState.value = _roomState.value?.copy(queue = emptyList())
+                        }
+                        PlaybackActions.SET_VOLUME -> {
+                            val vol = payload.volume
+                            if (vol != null) {
+                                _roomState.value = _roomState.value?.copy(volume = vol.coerceIn(0f, 1f))
+                            }
                         }
                     }
                     
@@ -948,13 +990,19 @@ class ListenTogetherClient @Inject constructor(
     }
 
     private inline fun <reified T> sendMessage(type: String, payload: T?) {
-        val bytes = messageCodec.encode(type, payload)
-        webSocket?.send(bytes.toByteString())
+        try {
+            val bytes = messageCodec.encode(type, payload)
+            val success = webSocket?.send(okio.ByteString.of(*bytes)) ?: false
+            if (!success) {
+                log(LogLevel.ERROR, "Failed to send message", type)
+            }
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Error encoding message", "$type: ${e.message}")
+        }
     }
     
     private fun sendMessageNoPayload(type: String) {
-        val bytes = messageCodec.encode(type, null)
-        webSocket?.send(bytes.toByteString())
+        sendMessage<Unit>(type, null)
     }
 
     // Server uses protobuf-only, no capability negotiation needed
@@ -1033,6 +1081,12 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
+    fun transferHost(newHostId: String) {
+        if (_role.value == RoomRole.HOST) {
+            sendMessage(MessageTypes.TRANSFER_HOST, TransferHostPayload(newHostId))
+        }
+    }
+
     fun sendPlaybackAction(
         action: String, 
         trackId: String? = null, 
@@ -1040,10 +1094,11 @@ class ListenTogetherClient @Inject constructor(
         trackInfo: TrackInfo? = null, 
         insertNext: Boolean? = null, 
         queue: List<TrackInfo>? = null,
-        queueTitle: String? = null
+        queueTitle: String? = null,
+        volume: Float? = null
     ) {
         if (_role.value == RoomRole.HOST) {
-            sendMessage(MessageTypes.PLAYBACK_ACTION, PlaybackActionPayload(action, trackId, position, trackInfo, insertNext, queue, queueTitle))
+            sendMessage(MessageTypes.PLAYBACK_ACTION, PlaybackActionPayload(action, trackId, position, trackInfo, insertNext, queue, queueTitle, volume))
         }
     }
 

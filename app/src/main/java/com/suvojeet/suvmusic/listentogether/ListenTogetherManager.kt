@@ -440,10 +440,12 @@ class ListenTogetherManager @Inject constructor(
         try {
             when (action.action) {
                 PlaybackActions.PLAY -> {
-                    // Latency compensation: Add ~100ms to target position to account for network time
-                    val latencyComp = 100L
-                    val rawPos = action.position ?: 0L
-                    val targetPos = rawPos + latencyComp
+                    // Server-time based position adjustment for better sync
+                    val basePos = action.position ?: 0L
+                    val now = System.currentTimeMillis()
+                    val targetPos = action.serverTime?.let { serverTime ->
+                        basePos + kotlin.math.max(0L, now - serverTime)
+                    } ?: basePos
                     
                     // Update anchors
                     anchorPosition = targetPos
@@ -528,6 +530,9 @@ class ListenTogetherManager @Inject constructor(
                      }
                 }
                 PlaybackActions.QUEUE_CLEAR -> p.clearMediaItems()
+                PlaybackActions.SET_VOLUME -> {
+                    // Volume sync handled at UI level through room state
+                }
                 PlaybackActions.SYNC_QUEUE -> {
                     // Logic remains same or implemented later
                 }
@@ -746,6 +751,7 @@ class ListenTogetherManager @Inject constructor(
     fun approveJoin(userId: String) = client.approveJoin(userId)
     fun rejectJoin(userId: String) = client.rejectJoin(userId)
     fun kickUser(userId: String) = client.kickUser(userId)
+    fun transferHost(newHostId: String) = client.transferHost(newHostId)
     
     fun sendTrackChange(mediaItem: MediaItem) {
         if (!isHost || isSyncing) return
