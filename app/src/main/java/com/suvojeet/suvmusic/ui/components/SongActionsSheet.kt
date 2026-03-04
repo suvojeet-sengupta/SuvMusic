@@ -144,10 +144,11 @@ fun SongActionsSheet(
     
     val handleAction = androidx.compose.runtime.remember(sheetState, onDismiss) {
         { action: () -> Unit ->
-            action()
             scope.launch {
                 sheetState.hide()
                 onDismiss()
+                // Perform action AFTER dismissal to ensure state transitions work correctly
+                action()
             }
         }
     }

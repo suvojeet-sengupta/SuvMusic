@@ -784,9 +784,25 @@ fun SuvMusicApp(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
             expandedContent = { onCollapse ->
-                com.suvojeet.suvmusic.ui.screens.player.PlayerScreen(
+                val playerScreenState = com.suvojeet.suvmusic.ui.screens.player.PlayerScreenState(
                     playbackInfo = playbackInfo,
                     playerState = playerState,
+                    lyrics = lyrics,
+                    isFetchingLyrics = isFetchingLyrics,
+                    comments = comments,
+                    isFetchingComments = isFetchingComments,
+                    isLoggedIn = isLoggedIn,
+                    isPostingComment = isPostingComment,
+                    isLoadingMoreComments = isLoadingMoreComments,
+                    isRadioMode = isRadioMode,
+                    isLoadingMoreSongs = isLoadingMoreSongs,
+                    selectedLyricsProvider = selectedLyricsProvider,
+                    enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
+                    sleepTimerOption = sleepTimerOption,
+                    sleepTimerRemainingMs = sleepTimerRemainingMs
+                )
+
+                val playerScreenActions = com.suvojeet.suvmusic.ui.screens.player.PlayerScreenActions(
                     onPlayPause = { playerViewModel.togglePlayPause() },
                     onSeekTo = { playerViewModel.seekTo(it) },
                     onNext = { playerViewModel.seekToNext() },
@@ -806,9 +822,6 @@ fun SuvMusicApp(
                          }
                     },
                     onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
-                    isRadioMode = isRadioMode,
-                    isLoadingMoreSongs = isLoadingMoreSongs,
-                    player = playerViewModel.getPlayer(),
                     onPlayFromQueue = { index ->
                         if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
                             playerViewModel.playSong(playerState.queue[index], playerState.queue, index)
@@ -825,23 +838,16 @@ fun SuvMusicApp(
                         navController.navigate(Destination.Album(albumId = albumId, name = null, thumbnailUrl = null).route)
                     },
                     onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
-                    lyrics = lyrics,
-                    isFetchingLyrics = isFetchingLyrics,
-                    comments = comments,
-                    isFetchingComments = isFetchingComments,
-                    isLoggedIn = isLoggedIn,
-                    isPostingComment = isPostingComment,
                     onPostComment = { commentText -> playerViewModel.postComment(commentText) },
-                    isLoadingMoreComments = isLoadingMoreComments,
                     onLoadMoreComments = { playerViewModel.loadMoreComments() },
-                    selectedLyricsProvider = selectedLyricsProvider,
-                    enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
                     onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
-                    sleepTimerOption = sleepTimerOption,
-                    sleepTimerRemainingMs = sleepTimerRemainingMs,
-                    onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
-                    playlistViewModel = hiltViewModel(),
-                    ringtoneViewModel = hiltViewModel(),
+                    onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) }
+                )
+
+                com.suvojeet.suvmusic.ui.screens.player.PlayerScreen(
+                    state = playerScreenState,
+                    actions = playerScreenActions,
+                    player = playerViewModel.getPlayer(),
                     playerViewModel = playerViewModel,
                     volumeKeyEvents = volumeKeyEvents
                 )
