@@ -20,6 +20,9 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
 
+    - name: Install Protobuf Compiler
+      run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
     # Gradle Wrapper cache
     - name: Cache Gradle wrapper
       uses: actions/cache@v4
