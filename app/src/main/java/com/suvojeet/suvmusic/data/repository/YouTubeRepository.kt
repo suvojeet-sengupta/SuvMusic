@@ -1755,14 +1755,22 @@ class YouTubeRepository @Inject constructor(
      * Fetch comments for a video using NewPipe extractor.
      */
     suspend fun getComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        if (videoId.isBlank()) return@withContext emptyList()
         try {
             currentVideoIdForComments = videoId
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: return@withContext emptyList()
             
-            currentCommentsExtractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
-            currentCommentsExtractor?.fetchPage()
-            currentCommentsPage = currentCommentsExtractor?.initialPage
+            val extractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
+            if (extractor == null) {
+                currentCommentsExtractor = null
+                currentCommentsPage = null
+                return@withContext emptyList()
+            }
+            
+            extractor.fetchPage()
+            currentCommentsExtractor = extractor
+            currentCommentsPage = extractor.initialPage
             
             currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
                 Comment(
