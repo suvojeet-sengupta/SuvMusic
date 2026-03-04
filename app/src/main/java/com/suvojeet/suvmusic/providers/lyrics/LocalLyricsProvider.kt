@@ -30,25 +30,27 @@ class LocalLyricsProvider @Inject constructor(
         
         // 4. Fallback: Check internal app storage for manually added lyrics
         // Path: /Android/data/com.package/files/lyrics/{songId}.lrc
-        val internalDir = File(context.getExternalFilesDir(null), "lyrics")
+        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val internalDir = File(baseDir, "lyrics")
         if (internalDir.exists()) {
             val internalLrc = File(internalDir, "${song.id}.lrc")
             if (internalLrc.exists()) return internalLrc.readText()
-            
+
             val internalTxt = File(internalDir, "${song.id}.txt")
             if (internalTxt.exists()) return internalTxt.readText()
         }
 
         return null
     }
-    
+
     /**
      * Helper to save manually added lyrics
      */
     fun saveLyrics(songId: String, content: String) {
-        val internalDir = File(context.getExternalFilesDir(null), "lyrics")
+        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val internalDir = File(baseDir, "lyrics")
         if (!internalDir.exists()) internalDir.mkdirs()
-        
+
         val file = File(internalDir, "$songId.lrc")
         file.writeText(content)
     }

@@ -188,18 +188,18 @@ class ListenTogetherClient @Inject constructor(
      */
     private suspend fun migrateServerUrl() {
         try {
-            val oldServerUrl = "wss://metroserver.meowery.eu/ws"
+            val faultyServerUrl = "wss://metroserverx.meowery.eu/ws"
             val prefs = context.dataStore.data.first()
             val currentUrl = prefs[ListenTogetherServerUrlKey] ?: DEFAULT_SERVER_URL
             
-            if (currentUrl == oldServerUrl) {
-                log(LogLevel.INFO, "Migrating server URL", "Old: $oldServerUrl -> New: $DEFAULT_SERVER_URL")
+            if (currentUrl == faultyServerUrl) {
+                log(LogLevel.INFO, "Rolling back faulty server URL", "Faulty: $faultyServerUrl -> Stable: $DEFAULT_SERVER_URL")
                 context.dataStore.edit { preferences ->
                     preferences[ListenTogetherServerUrlKey] = DEFAULT_SERVER_URL
                 }
             }
         } catch (e: Exception) {
-            log(LogLevel.ERROR, "Failed to migrate server URL", e.message)
+            log(LogLevel.ERROR, "Failed to migrate/rollback server URL", e.message)
         }
     }
     
