@@ -24,6 +24,7 @@ import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.data.MusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -119,7 +121,8 @@ data class SettingsUiState(
     val forceMaxRefreshRateEnabled: Boolean = true,
     val navBarAlpha: Float = 0.9f,
     val downloadLocation: String? = null,
-    val loggingEnabled: Boolean = false
+    val loggingEnabled: Boolean = false,
+    val isBugReportingSessionActive: Boolean = false
 )
 
 @HiltViewModel
@@ -1340,6 +1343,78 @@ class SettingsViewModel @Inject constructor(
     fun toggleSponsorCategory(categoryKey: String, isEnabled: Boolean) {
         viewModelScope.launch {
             sessionManager.toggleSponsorCategory(categoryKey, isEnabled)
+        }
+    }
+
+    fun startBugReportingSession() {
+        _uiState.update { it.copy(isBugReportingSessionActive = true) }
+        // Optional: clear logcat buffer if possible
+        try {
+            Runtime.getRuntime().exec("logcat -c")
+        } catch (e: Exception) {
+            // Might fail on some Android versions due to permission
+        }
+    }
+
+    fun stopBugReportingSession(onLogReady: (File) -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBugReportingSessionActive = false) }
+            val logFile = withContext(Dispatchers.IO) { collectLogs() }
+            if (logFile != null) {
+                onLogReady(logFile)
+            }
+        }
+    }
+
+    private fun collectLogs(): File? {
+        val logDir = File(context.cacheDir, "crash_logs")
+        if (!logDir.exists()) logDir.mkdirs()
+        
+        val timestamp = System.currentTimeMillis()
+        val logFile = File(logDir, "suvmusic_bug_report_$timestamp.txt")
+        
+        return try {
+            val process = Runtime.getRuntime().exec("logcat -d")
+            val reader = process.inputStream.bufferedReader()
+            val writer = logFile.bufferedWriter()
+            
+            reader.use { r ->
+                writer.use { w ->
+                    r.forEachLine { line ->
+                        w.write(line)
+                        w.newLine()
+                    }
+                }
+            }
+            logFile
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsViewModel", "Error collecting logs", e)
+            null
+        }
+    }
+
+    fun shareBugReport(file: File) {
+        try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+            
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Bug Report")
+                putExtra(Intent.EXTRA_TEXT, "Steps to reproduce: \n\n[Describe what you did]")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            
+            context.startActivity(Intent.createChooser(intent, "Share Bug Report").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsViewModel", "Error sharing bug report", e)
         }
     }
 }

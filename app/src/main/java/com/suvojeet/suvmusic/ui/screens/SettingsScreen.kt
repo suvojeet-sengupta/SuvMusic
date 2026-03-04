@@ -322,6 +322,52 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
+                // --- Bug Reproduction Section ---
+                item {
+                    SettingsSectionTitle("Bug Reproduction")
+                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        ListItem(
+                            headlineContent = { Text("SuvMusic Session", fontWeight = FontWeight.SemiBold) },
+                            supportingContent = { 
+                                Text(
+                                    if (uiState.isBugReportingSessionActive) "Recording logs... Reproduce the bug now" 
+                                    else "Start a session to capture logs for debugging"
+                                ) 
+                            },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = if (uiState.isBugReportingSessionActive) Icons.Default.GraphicEq else Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = if (uiState.isBugReportingSessionActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            },
+                            trailingContent = {
+                                TextButton(
+                                    onClick = {
+                                        if (uiState.isBugReportingSessionActive) {
+                                            viewModel.stopBugReportingSession { file ->
+                                                viewModel.shareBugReport(file)
+                                            }
+                                        } else {
+                                            viewModel.startBugReportingSession()
+                                        }
+                                    },
+                                    colors = if (uiState.isBugReportingSessionActive) {
+                                        androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                    } else {
+                                        androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                                    }
+                                ) {
+                                    Text(if (uiState.isBugReportingSessionActive) "Stop & Share" else "Start")
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
 
                 // --- Bluetooth Section ---
                 item {
