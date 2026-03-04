@@ -51,6 +51,8 @@ fun SongInfoSection(
     song: Song?,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit,
+    isDisliked: Boolean = false,
+    onDislikeClick: () -> Unit = {},
     onMoreClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (String) -> Unit = {},
@@ -151,6 +153,18 @@ fun SongInfoSection(
                     color = dominantColors.onBackground.copy(alpha = 0.08f),
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
+
+            IconButton(
+                onClick = onDislikeClick,
+                modifier = iconButtonModifier
+            ) {
+                Icon(
+                    imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                    contentDescription = "Dislike",
+                    tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.9f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
 
             IconButton(
                 onClick = onFavoriteClick,
