@@ -79,7 +79,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.listentogether.ConnectionState
-import com.suvojeet.suvmusic.listentogether.ListenTogetherClient
 import com.suvojeet.suvmusic.listentogether.RoomRole
 import com.suvojeet.suvmusic.listentogether.ListenTogetherAutoApprovalKey
 import com.suvojeet.suvmusic.listentogether.ListenTogetherSyncVolumeKey
@@ -237,7 +236,8 @@ fun SetupContent(
     var showSettings by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     
-    val showCredits = ListenTogetherClient.isMetroServer(serverUrl)
+    val showCredits = serverUrl.contains("metroserver", ignoreCase = true) || 
+                      serverUrl.contains("meowery.eu", ignoreCase = true)
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
