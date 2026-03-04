@@ -19,3 +19,6 @@ local.properties
 *.keystore
 keystore-base64.txt
 
+
+Metrolist/
+metroserver/

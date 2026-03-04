@@ -1755,14 +1755,26 @@ class YouTubeRepository @Inject constructor(
      * Fetch comments for a video using NewPipe extractor.
      */
     suspend fun getComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        if (videoId.isBlank()) return@withContext emptyList()
         try {
             currentVideoIdForComments = videoId
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: return@withContext emptyList()
             
-            currentCommentsExtractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
-            currentCommentsExtractor?.fetchPage()
-            currentCommentsPage = currentCommentsExtractor?.initialPage
+            val extractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
+            if (extractor == null) {
+                currentCommentsExtractor = null
+                currentCommentsPage = null
+                return@withContext emptyList()
+            }
+            
+            extractor.fetchPage()
+            currentCommentsExtractor = extractor
+            
+            // NewPipe internal NPE protection for getInitialPage
+            currentCommentsPage = runCatching { extractor.initialPage }.getOrNull()
+            
+            if (currentCommentsPage == null) return@withContext emptyList()
             
             currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
                 Comment(
@@ -1792,10 +1804,13 @@ class YouTubeRepository @Inject constructor(
         }
 
         try {
-            val nextPage = extractor.getPage(page.nextPage)
+            val nextPage = runCatching { extractor.getPage(page.nextPage) }.getOrNull()
             currentCommentsPage = nextPage
-            
-            nextPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
+
+            if (nextPage == null) return@withContext emptyList()
+
+            nextPage.items.filterIsInstance<CommentsInfoItem>().map { item ->
+
                 Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
