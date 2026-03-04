@@ -101,13 +101,13 @@ class DownloadRepository @Inject constructor(
             val currentSongs = _downloadedSongs.value.toMutableList()
             var hasNewSongs = false
 
-            // 1. Scan default folder
+            // 1. Scan default folder recursively
             val defaultFolder = getPublicMusicFolder()
             if (defaultFolder.exists()) {
-                scanFolder(defaultFolder, currentSongs).let { hasNewSongs = hasNewSongs || it }
+                scanFolderRecursive(defaultFolder, currentSongs).let { hasNewSongs = hasNewSongs || it }
             }
             
-            // 2. Scan legacy folder
+            // 2. Scan legacy folder recursively and migrate
             scanAndMigrateLegacyFolder()
             
             // 3. Scan custom folder if set
@@ -117,7 +117,7 @@ class DownloadRepository @Inject constructor(
                     val rootUri = Uri.parse(customLocationUri)
                     val rootFolder = DocumentFile.fromTreeUri(context, rootUri)
                     if (rootFolder != null && rootFolder.exists()) {
-                        scanDocumentFolder(rootFolder, currentSongs).let { hasNewSongs = hasNewSongs || it }
+                        scanDocumentFolderRecursive(rootFolder, currentSongs).let { hasNewSongs = hasNewSongs || it }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error scanning custom folder", e)
@@ -134,70 +134,78 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private fun scanFolder(folder: File, currentSongs: MutableList<Song>): Boolean {
+    private fun scanFolderRecursive(folder: File, currentSongs: MutableList<Song>, collectionName: String? = null): Boolean {
         var hasNew = false
-        val audioFiles = folder.listFiles { file ->
-            file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac", "wav", "ogg", "opus")
-        } ?: return false
+        val files = folder.listFiles() ?: return false
         
-        for (file in audioFiles) {
-            if (processScannedFile(file.name, file.toUri(), currentSongs)) hasNew = true
-            
+        for (file in files) {
             if (file.isDirectory) {
-                file.listFiles { f -> f.isFile && f.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac") }?.forEach { subFile ->
-                    if (processScannedFile(subFile.name, subFile.toUri(), currentSongs)) hasNew = true
-                }
+                // Use subfolder name as collection name
+                if (scanFolderRecursive(file, currentSongs, file.name)) hasNew = true
+            } else if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac", "wav", "ogg", "opus")) {
+                if (processScannedFile(file.name, file.toUri(), currentSongs, collectionName)) hasNew = true
             }
         }
         return hasNew
     }
 
-    private fun scanDocumentFolder(folder: DocumentFile, currentSongs: MutableList<Song>): Boolean {
+    private fun scanDocumentFolderRecursive(folder: DocumentFile, currentSongs: MutableList<Song>, collectionName: String? = null): Boolean {
         var hasNew = false
         folder.listFiles().forEach { file: DocumentFile ->
-            if (file.isFile && (file.name?.substringAfterLast('.', "")?.lowercase() ?: "") in listOf("m4a", "mp3", "aac", "flac")) {
-                if (processScannedFile(file.name ?: "Unknown", file.uri, currentSongs)) hasNew = true
-            } else if (file.isDirectory) {
-                file.listFiles().forEach { subFile: DocumentFile ->
-                    if (subFile.isFile && (subFile.name?.substringAfterLast('.', "")?.lowercase() ?: "") in listOf("m4a", "mp3", "aac", "flac")) {
-                        if (processScannedFile(subFile.name ?: "Unknown", subFile.uri, currentSongs)) hasNew = true
-                    }
-                }
+            if (file.isDirectory) {
+                if (scanDocumentFolderRecursive(file, currentSongs, file.name)) hasNew = true
+            } else if (file.isFile && (file.name?.substringAfterLast('.', "")?.lowercase() ?: "") in listOf("m4a", "mp3", "aac", "flac", "wav", "ogg", "opus")) {
+                if (processScannedFile(file.name ?: "Unknown", file.uri, currentSongs, collectionName)) hasNew = true
             }
         }
         return hasNew
     }
 
-    private fun processScannedFile(fileName: String, uri: Uri, currentSongs: MutableList<Song>): Boolean {
+    private fun processScannedFile(fileName: String, uri: Uri, currentSongs: MutableList<Song>, collectionName: String? = null): Boolean {
         val nameWithoutExt = fileName.substringBeforeLast('.')
         val parts = nameWithoutExt.split(" - ", limit = 2)
         val title = parts.getOrElse(0) { nameWithoutExt }.trim()
         val artist = parts.getOrElse(1) { "Unknown Artist" }.trim()
 
-        val isTracked = currentSongs.any { song ->
-            if (song.localUri == uri || song.localUri?.path == uri.path) return@any true
+        val existingSongIndex = currentSongs.indexOfFirst { song ->
+            if (song.localUri == uri || song.localUri?.path == uri.path) return@indexOfFirst true
             val expectedFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}"
-            if (nameWithoutExt == expectedFileName) return@any true
-            if (song.title == title && song.artist == artist) return@any true
+            if (nameWithoutExt == expectedFileName) return@indexOfFirst true
+            if (song.title.equals(title, ignoreCase = true) && song.artist.equals(artist, ignoreCase = true)) return@indexOfFirst true
             false
         }
 
-        if (!isTracked) {
-            val song = Song(
-                id = "local_${fileName.hashCode()}",
-                title = title,
-                artist = artist,
-                album = "Downloads",
-                duration = 0L,
-                thumbnailUrl = null,
-                source = SongSource.DOWNLOADED,
-                streamUrl = null,
-                localUri = uri
-            )
-            currentSongs.add(song)
-            return true
+        if (existingSongIndex != -1) {
+            val existingSong = currentSongs[existingSongIndex]
+            // Update collection info if it was missing but now found in a folder
+            if (collectionName != null && (existingSong.collectionId == null || existingSong.collectionName != collectionName)) {
+                currentSongs[existingSongIndex] = existingSong.copy(
+                    collectionId = "folder_$collectionName",
+                    collectionName = collectionName,
+                    customFolderPath = collectionName,
+                    album = if (existingSong.album == "Downloads" || existingSong.album == "Unknown Album") collectionName else existingSong.album
+                )
+                return true
+            }
+            return false
         }
-        return false
+
+        val song = Song(
+            id = "local_${fileName.hashCode()}_${System.currentTimeMillis()}",
+            title = title,
+            artist = artist,
+            album = collectionName ?: "Downloads",
+            duration = 0L,
+            thumbnailUrl = null,
+            source = SongSource.DOWNLOADED,
+            streamUrl = null,
+            localUri = uri,
+            collectionId = collectionName?.let { "folder_$it" },
+            collectionName = collectionName,
+            customFolderPath = collectionName
+        )
+        currentSongs.add(song)
+        return true
     }
 
     private fun getPublicMusicFolder(): File {
@@ -219,32 +227,36 @@ class DownloadRepository @Inject constructor(
             val legacyFolder = getLegacyDownloadsFolder()
             if (!legacyFolder.exists()) return
             
-            val legacyFiles = legacyFolder.listFiles { file ->
-                file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac", "wav", "ogg", "opus")
-            } ?: return
-            
-            if (legacyFiles.isEmpty()) return
-            
             val newFolder = getPublicMusicFolder()
-            for (file in legacyFiles) {
-                try {
-                    val newFile = File(newFolder, file.name)
-                    if (!newFile.exists()) {
-                        file.copyTo(newFile, overwrite = false)
-                        file.delete()
-                    } else {
-                        file.delete()
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error migrating file: ${file.name}", e)
-                }
-            }
+            migrateFolderRecursive(legacyFolder, newFolder)
             
-            if (legacyFolder.listFiles()?.isEmpty() == true) {
+            if (legacyFolder.exists() && legacyFolder.listFiles()?.isEmpty() == true) {
                 legacyFolder.delete()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in legacy folder migration", e)
+        }
+    }
+
+    private fun migrateFolderRecursive(source: File, target: File) {
+        val files = source.listFiles() ?: return
+        if (!target.exists()) target.mkdirs()
+        
+        for (file in files) {
+            val targetFile = File(target, file.name)
+            if (file.isDirectory) {
+                migrateFolderRecursive(file, targetFile)
+                if (file.listFiles()?.isEmpty() == true) file.delete()
+            } else if (file.isFile) {
+                try {
+                    if (!targetFile.exists()) {
+                        file.copyTo(targetFile, overwrite = false)
+                    }
+                    file.delete()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error migrating file: ${file.name}", e)
+                }
+            }
         }
     }
     
@@ -650,6 +662,19 @@ class DownloadRepository @Inject constructor(
         return name.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
     }
 
+    private fun findFileRecursive(folder: File, fileName: String): File? {
+        val files = folder.listFiles() ?: return null
+        for (file in files) {
+            if (file.isDirectory) {
+                val found = findFileRecursive(file, fileName)
+                if (found != null) return found
+            } else if (file.isFile && file.name == fileName) {
+                return file
+            }
+        }
+        return null
+    }
+
     private fun loadDownloads() {
         if (!downloadsMetaFile.exists()) {
             _downloadedSongs.value = emptyList()
@@ -685,6 +710,18 @@ class DownloadRepository @Inject constructor(
                     val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
                     val file = File(folder, fileName)
                     if (file.exists()) return@mapNotNull song.copy(localUri = file.toUri())
+                    
+                    // Fallback: search recursively in case it's in a subfolder (album/playlist)
+                    val foundFile = findFileRecursive(folder, fileName)
+                    if (foundFile != null) return@mapNotNull song.copy(localUri = foundFile.toUri())
+
+                    // Try other extensions
+                    val extensions = listOf("mp3", "aac", "flac", "wav", "ogg", "opus")
+                    for (ext in extensions) {
+                        val altFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.$ext"
+                        val altFoundFile = findFileRecursive(folder, altFileName)
+                        if (altFoundFile != null) return@mapNotNull song.copy(localUri = altFoundFile.toUri())
+                    }
                 } catch (e: Exception) {}
                 null
             }
