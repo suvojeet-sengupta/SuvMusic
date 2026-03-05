@@ -69,6 +69,7 @@ import com.suvojeet.suvmusic.ui.components.SeekbarStyle
 import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
 import com.suvojeet.suvmusic.ui.components.SongInfoSheet
+import com.suvojeet.suvmusic.ui.components.OutputDeviceSheet
 import com.suvojeet.suvmusic.ui.components.PlaybackSpeedSheet
 import com.suvojeet.suvmusic.ui.components.WaveformSeeker
 import com.suvojeet.suvmusic.ui.components.DominantColors
@@ -575,6 +576,23 @@ fun OverlaysContent(
     if (activeOverlay is PlayerOverlay.Equalizer) {
         com.suvojeet.suvmusic.ui.components.EqualizerSheet(isVisible = true, onDismiss = { onOverlayChange(PlayerOverlay.None) }, dominantColor = dominantColors.accent, onEnabledChange = { playerViewModel.setEqEnabled(it) }, onBandChange = { b, g -> playerViewModel.setEqBandGain(b, g) }, onBandsChange = { playerViewModel.setEqBands(it) }, onPreampChange = { playerViewModel.setEqPreamp(it) }, onBassBoostChange = { playerViewModel.setBassBoost(it) }, onVirtualizerChange = { playerViewModel.setVirtualizer(it) }, onReset = { playerViewModel.resetEqBands() }, initialEnabled = eqEnabled, initialBands = eqBands, initialPreamp = eqPreamp, initialBassBoost = bassBoost, initialVirtualizer = virtualizer)
     }
+
+    PlaybackSpeedSheet(
+        isVisible = activeOverlay is PlayerOverlay.PlaybackSpeed,
+        currentSpeed = playerState.playbackSpeed,
+        currentPitch = playerState.pitch,
+        onDismiss = { if (currentOverlay is PlayerOverlay.PlaybackSpeed) onOverlayChange(PlayerOverlay.None) },
+        onApply = { speed, pitch -> actions.onSetPlaybackParameters(speed, pitch) }
+    )
+
+    OutputDeviceSheet(
+        isVisible = activeOverlay is PlayerOverlay.OutputDevice,
+        devices = playerState.availableDevices,
+        onDeviceSelected = { actions.onSwitchDevice(it) },
+        onDismiss = { if (currentOverlay is PlayerOverlay.OutputDevice) onOverlayChange(PlayerOverlay.None) },
+        onRefreshDevices = { actions.onRefreshDevices() },
+        accentColor = dominantColors.accent
+    )
 
     if (isFullScreen) {
         FullScreenVideoPlayer(viewModel = playerViewModel, dominantColors = dominantColors, onDismiss = { playerViewModel.setFullScreen(false) })
