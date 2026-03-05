@@ -80,7 +80,7 @@ import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
 import com.suvojeet.suvmusic.ui.screens.player.components.BottomActions
 import com.suvojeet.suvmusic.ui.screens.player.components.PlaybackControls
 import com.suvojeet.suvmusic.ui.screens.player.components.PlayerTopBar
-import com.suvojeet.suvmusic.ui.screens.player.components.QueueView
+import com.suvojeet.suvmusic.ui.screens.player.components.ModernQueueView
 import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
 import com.suvojeet.suvmusic.ui.components.VideoErrorDialog
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
@@ -511,7 +511,7 @@ fun OverlaysContent(
 
     // Queue View
     AnimatedVisibility(visible = activeOverlay is PlayerOverlay.Queue, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
-        QueueView(
+        ModernQueueView(
             currentSong = song, queue = playerState.queue, playedSongs = playedSongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
             onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
             currentIndex = playerState.currentIndex, isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
