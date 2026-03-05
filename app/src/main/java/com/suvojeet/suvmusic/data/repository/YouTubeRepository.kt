@@ -17,6 +17,7 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
+import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeConfig
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
 import com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService
 import com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
@@ -1423,8 +1424,8 @@ class YouTubeRepository @Inject constructor(
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -1435,7 +1436,7 @@ class YouTubeRepository @Inject constructor(
             }
             
             val request = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/playlist/create")
+                .url("${YouTubeConfig.BASE_URL}/playlist/create")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                 .addHeader("Cookie", cookies)
                 .addHeader("Authorization", authHeader)
@@ -1475,8 +1476,8 @@ class YouTubeRepository @Inject constructor(
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -1491,7 +1492,7 @@ class YouTubeRepository @Inject constructor(
             }
             
             val request = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/browse/edit_playlist")
+                .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                 .addHeader("Cookie", cookies)
                 .addHeader("Authorization", authHeader)
@@ -1532,8 +1533,8 @@ class YouTubeRepository @Inject constructor(
                 val jsonBody = JSONObject().apply {
                     put("context", JSONObject().apply {
                         put("client", JSONObject().apply {
-                            put("clientName", "WEB_REMIX")
-                            put("clientVersion", "1.20230102.01.00")
+                            put("clientName", YouTubeConfig.CLIENT_NAME)
+                            put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                             put("hl", "en")
                             put("gl", "US")
                         })
@@ -1550,7 +1551,7 @@ class YouTubeRepository @Inject constructor(
                 }
                 
                 val request = okhttp3.Request.Builder()
-                    .url("https://music.youtube.com/youtubei/v1/browse/edit_playlist")
+                    .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                     .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                     .addHeader("Cookie", cookies)
                     .addHeader("Authorization", authHeader)
@@ -1590,8 +1591,8 @@ class YouTubeRepository @Inject constructor(
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -1612,7 +1613,7 @@ class YouTubeRepository @Inject constructor(
             }
             
             val request = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/browse/edit_playlist")
+                .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                 .addHeader("Cookie", cookies)
                 .addHeader("Authorization", authHeader)
@@ -1646,8 +1647,8 @@ class YouTubeRepository @Inject constructor(
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -1656,7 +1657,7 @@ class YouTubeRepository @Inject constructor(
             }
             
             val request = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/playlist/delete")
+                .url("${YouTubeConfig.BASE_URL}/playlist/delete")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                 .addHeader("Cookie", cookies)
                 .addHeader("Authorization", authHeader)
@@ -1687,8 +1688,8 @@ class YouTubeRepository @Inject constructor(
             val nextBody = JSONObject().apply {
                  put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -1697,7 +1698,7 @@ class YouTubeRepository @Inject constructor(
             }
             
             val nextRequest = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/next")
+                .url("${YouTubeConfig.BASE_URL}/next")
                 .post(nextBody.toString().toRequestBody("application/json".toMediaType()))
                 .apply {
                     if (cookies != null) addHeader("Cookie", cookies)
@@ -1718,8 +1719,8 @@ class YouTubeRepository @Inject constructor(
             val browseBody = JSONObject().apply {
                  put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -1728,7 +1729,7 @@ class YouTubeRepository @Inject constructor(
             }
             
             val browseRequest = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/browse")
+                .url("${YouTubeConfig.BASE_URL}/browse")
                 .post(browseBody.toString().toRequestBody("application/json".toMediaType()))
                 .apply {
                     if (cookies != null) addHeader("Cookie", cookies)
@@ -1842,9 +1843,8 @@ class YouTubeRepository @Inject constructor(
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB")
-                        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-                        put("clientVersion", "2.$year${"0101"}.00.00")
+                        put("clientName", YouTubeConfig.WEB_CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.WEB_CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -1981,8 +1981,8 @@ class YouTubeRepository @Inject constructor(
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -2000,7 +2000,7 @@ class YouTubeRepository @Inject constructor(
             }
             
             val request = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/browse/edit_playlist")
+                .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                 .addHeader("Cookie", cookies)
                 .addHeader("Authorization", authHeader)
