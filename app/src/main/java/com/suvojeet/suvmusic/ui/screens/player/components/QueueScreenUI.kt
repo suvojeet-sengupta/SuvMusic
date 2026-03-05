@@ -122,19 +122,19 @@ fun ModernQueueView(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 if (isSelectionMode) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onClearSelection, modifier = Modifier.size(36.dp)) {
+                        IconButton(onClick = onClearSelection, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "${selectedQueueIndices.size} Selected",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = dominantColors.onBackground
                         )
                     }
@@ -146,61 +146,61 @@ fun ModernQueueView(
                 } else {
                     IconButton(onClick = onBack, modifier = Modifier
                         .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        .size(40.dp)) {
+                        .size(36.dp)) {
                         Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground)
                     }
                     Text(
                         "Playing Next",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = dominantColors.onBackground
                     )
                     IconButton(onClick = { showSavePlaylistDialog = true }, modifier = Modifier
                         .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        .size(40.dp)) {
+                        .size(36.dp)) {
                         Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground)
                     }
                 }
             }
 
-            // Now Playing Card (Modern)
+            // Now Playing Card (Modern Compact)
             if (!isSelectionMode && currentSong != null) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(24.dp),
+                        .padding(horizontal = 12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = dominantColors.accent.copy(alpha = 0.15f)
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
                             model = currentSong.thumbnailUrl,
                             contentDescription = currentSong.title,
                             modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(16.dp)),
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp)),
                             contentScale = ContentScale.Crop
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 "NOW PLAYING",
-                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp, fontWeight = FontWeight.Black),
+                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp, fontWeight = FontWeight.Black),
                                 color = dominantColors.accent
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 currentSong.title,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                                 color = dominantColors.onBackground,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 currentSong.artist,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = dominantColors.onBackground.copy(alpha = 0.7f),
                                 maxLines = 1
                             )
@@ -209,12 +209,13 @@ fun ModernQueueView(
                             Icon(
                                 if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
                                 "Like",
-                                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground
+                                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
             // Controls
@@ -222,27 +223,30 @@ fun ModernQueueView(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 32.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         IconButton(
                             onClick = onToggleShuffle,
                             modifier = Modifier
+                                .size(36.dp)
                                 .background(if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent, CircleShape)
                         ) {
-                            Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground)
+                            Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground, modifier = Modifier.size(20.dp))
                         }
                         IconButton(
                             onClick = onToggleRepeat,
                             modifier = Modifier
+                                .size(36.dp)
                                 .background(if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent, CircleShape)
                         ) {
                             Icon(
                                 if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
                                 "Repeat",
-                                tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground
+                                tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -250,21 +254,21 @@ fun ModernQueueView(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .background(dominantColors.onBackground.copy(alpha = 0.05f))
                             .clickable(onClick = onToggleAutoplay)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
                             "Autoplay",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
                             color = dominantColors.onBackground
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Switch(
                             checked = isAutoplayEnabled,
                             onCheckedChange = { onToggleAutoplay() },
-                            modifier = Modifier.scale(0.7f),
+                            modifier = Modifier.scale(0.6f),
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = dominantColors.accent,
                                 checkedTrackColor = dominantColors.accent.copy(alpha = 0.3f),
@@ -274,7 +278,7 @@ fun ModernQueueView(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             // List
@@ -347,9 +351,9 @@ fun ModernQueueView(
 private fun ModernHeader(title: String, dominantColors: DominantColors) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
         color = dominantColors.onBackground.copy(alpha = 0.5f),
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }
 
@@ -369,11 +373,11 @@ private fun ModernQueueItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .padding(horizontal = 8.dp, vertical = 1.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(8.dp),
+            .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box {
@@ -381,30 +385,30 @@ private fun ModernQueueItem(
                 model = song.thumbnailUrl,
                 contentDescription = song.title,
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop
             )
             if (isCurrent && isPlaying) {
-                Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                     NowPlayingAnimation(color = dominantColors.accent, isPlaying = true)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = if (isCurrent) dominantColors.accent else dominantColors.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = song.artist,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = dominantColors.onBackground.copy(alpha = 0.6f),
                 maxLines = 1
             )
@@ -414,14 +418,15 @@ private fun ModernQueueItem(
             androidx.compose.material3.Checkbox(
                 checked = isSelected,
                 onCheckedChange = { onClick() },
+                modifier = Modifier.scale(0.8f),
                 colors = androidx.compose.material3.CheckboxDefaults.colors(
                     checkedColor = dominantColors.accent,
                     uncheckedColor = dominantColors.onBackground.copy(alpha = 0.4f)
                 )
             )
         } else if (!isCurrent) {
-            IconButton(onClick = onMoreClick) {
-                Icon(Icons.Default.MoreVert, "More", tint = dominantColors.onBackground.copy(alpha = 0.5f))
+            IconButton(onClick = onMoreClick, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.MoreVert, "More", tint = dominantColors.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
             }
         }
     }
