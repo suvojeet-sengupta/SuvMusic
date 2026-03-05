@@ -1,9 +1,12 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.CheckCircle
@@ -17,9 +20,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
@@ -36,88 +40,100 @@ fun BottomActions(
     onVideoToggle: () -> Unit = {},
     compact: Boolean = false
 ) {
-    val buttonModifier = if (compact) Modifier.size(36.dp) else Modifier
-    val iconSize = if (compact) 20.dp else 24.dp
+    val iconSize = if (compact) 20.dp else 22.dp
+    val containerPadding = if (compact) 4.dp else 6.dp
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onLyricsClick, modifier = buttonModifier) {
-            Icon(
-                imageVector = Icons.Default.Lyrics,
-                contentDescription = "Lyrics",
-                tint = dominantColors.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.size(iconSize)
-            )
-        }
-
-        // Download Button
-        IconButton(
-            onClick = onDownloadClick,
-            modifier = buttonModifier
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(24.dp))
+                .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                .padding(horizontal = containerPadding),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            when(downloadState) {
-                com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADING -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(iconSize),
-                        color = dominantColors.accent,
-                        strokeWidth = 2.dp
-                    )
-                }
-                com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED -> {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Downloaded",
-                        tint = dominantColors.accent,
-                        modifier = Modifier.size(iconSize)
-                    )
-                }
-                com.suvojeet.suvmusic.data.model.DownloadState.FAILED -> {
-                    Icon(
-                        imageVector = Icons.Filled.Error,
-                        contentDescription = "Retry Download",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(iconSize)
-                    )
-                }
-                else -> {
-                    Icon(
-                        imageVector = Icons.Filled.Download,
-                        contentDescription = "Download",
-                        tint = dominantColors.onBackground.copy(alpha = 0.6f),
-                        modifier = Modifier.size(iconSize)
-                    )
+            IconButton(onClick = onLyricsClick, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Lyrics,
+                    contentDescription = "Lyrics",
+                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(iconSize)
+                )
+            }
+
+            // Download Button
+            IconButton(
+                onClick = onDownloadClick,
+                modifier = Modifier.size(if (compact) 36.dp else 44.dp)
+            ) {
+                when(downloadState) {
+                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADING -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(iconSize),
+                            color = dominantColors.accent,
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED -> {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Downloaded",
+                            tint = dominantColors.accent,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+                    com.suvojeet.suvmusic.data.model.DownloadState.FAILED -> {
+                        Icon(
+                            imageVector = Icons.Filled.Error,
+                            contentDescription = "Retry Download",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Filled.Download,
+                            contentDescription = "Download",
+                            tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
                 }
             }
-        }
 
-        // Video mode toggle - for all songs (searches YouTube if not native)
-        IconButton(onClick = onVideoToggle, modifier = buttonModifier) {
-            Icon(
-                imageVector = if (isVideoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                contentDescription = if (isVideoMode) "Switch to Audio" else "Switch to Video",
-                tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.size(iconSize)
-            )
-        }
+            // Video mode toggle
+            IconButton(onClick = onVideoToggle, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
+                Icon(
+                    imageVector = if (isVideoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                    contentDescription = if (isVideoMode) "Audio Mode" else "Video Mode",
+                    tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(iconSize)
+                )
+            }
 
-        IconButton(onClick = onCastClick, modifier = buttonModifier) {
-            Icon(
-                imageVector = Icons.Default.Devices,
-                contentDescription = "Output Device",
-                tint = dominantColors.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.size(iconSize)
-            )
-        }
+            IconButton(onClick = onCastClick, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Devices,
+                    contentDescription = "Output Device",
+                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(iconSize)
+                )
+            }
 
-        IconButton(onClick = onQueueClick, modifier = buttonModifier) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                contentDescription = "Queue",
-                tint = dominantColors.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.size(iconSize)
-            )
+            IconButton(onClick = onQueueClick, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                    contentDescription = "Queue",
+                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(iconSize)
+                )
+            }
         }
     }
 }
