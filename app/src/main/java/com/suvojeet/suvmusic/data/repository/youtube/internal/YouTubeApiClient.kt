@@ -25,14 +25,14 @@ class YouTubeApiClient @Inject constructor(
      * @param hl Host language (e.g., "en", "hi")
      * @param gl Geolocation (e.g., "US", "IN")
      */
-    suspend fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String {
+    suspend fun fetchInternalApi(endpoint: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val isBrowse = !endpoint.contains("/")
         
         val url = if (isBrowse) {
-            "https://music.youtube.com/youtubei/v1/browse"
+            "${YouTubeConfig.BASE_URL}/browse"
         } else {
-            "https://music.youtube.com/youtubei/v1/$endpoint"
+            "${YouTubeConfig.BASE_URL}/$endpoint"
         }
         
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
@@ -40,8 +40,8 @@ class YouTubeApiClient @Inject constructor(
         val contextJson = """
             "context": {
                 "client": {
-                    "clientName": "WEB_REMIX",
-                    "clientVersion": "1.20230102.01.00",
+                    "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                    "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
                     "hl": "$hl",
                     "gl": "$gl"
                 }
@@ -74,7 +74,7 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch continuation data for paginated results.
      */
-    suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = "en", gl: String = "US"): String {
+    suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
@@ -82,8 +82,8 @@ class YouTubeApiClient @Inject constructor(
             {
                 "context": {
                     "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20230102.01.00",
+                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
                         "hl": "$hl",
                         "gl": "$gl"
                     }
@@ -92,7 +92,7 @@ class YouTubeApiClient @Inject constructor(
         """.trimIndent()
 
         val request = okhttp3.Request.Builder()
-            .url("https://music.youtube.com/youtubei/v1/browse?ctoken=$continuationToken&continuation=$continuationToken")
+            .url("${YouTubeConfig.BASE_URL}/browse?ctoken=$continuationToken&continuation=$continuationToken")
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
             .addHeader("Cookie", cookies)
             .addHeader("Authorization", authHeader)
@@ -111,7 +111,7 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch with browse parameters (for category browsing).
      */
-    suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String {
+    suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
         val cookies = sessionManager.getCookies() ?: return ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
@@ -119,8 +119,8 @@ class YouTubeApiClient @Inject constructor(
             {
                 "context": {
                     "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20230102.01.00",
+                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
                         "hl": "$hl",
                         "gl": "$gl"
                     }
@@ -131,7 +131,7 @@ class YouTubeApiClient @Inject constructor(
         """.trimIndent()
 
         val request = okhttp3.Request.Builder()
-            .url("https://music.youtube.com/youtubei/v1/browse")
+            .url("${YouTubeConfig.BASE_URL}/browse")
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
             .addHeader("Cookie", cookies)
             .addHeader("Authorization", authHeader)
@@ -151,15 +151,15 @@ class YouTubeApiClient @Inject constructor(
      * Fetch public YouTube Music API without authentication.
      * Used for charts, trending, and public browse content.
      */
-    suspend fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "IN"): String {
-        val url = "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false"
+    suspend fun fetchPublicApi(browseId: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = "IN"): String {
+        val url = "${YouTubeConfig.PUBLIC_BASE_URL}/browse?prettyPrint=false"
         
         val jsonBody = """
             {
                 "context": {
                     "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20240101.01.00",
+                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
                         "hl": "$hl",
                         "gl": "$gl"
                     }
@@ -192,7 +192,7 @@ class YouTubeApiClient @Inject constructor(
         if (!sessionManager.isLoggedIn()) return false
         val cookies = sessionManager.getCookies() ?: return false
         
-        val url = "https://music.youtube.com/youtubei/v1/$endpoint"
+        val url = "${YouTubeConfig.BASE_URL}/$endpoint"
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: return false
 
         val cleanedBody = innerBody.trim()
@@ -206,10 +206,10 @@ class YouTubeApiClient @Inject constructor(
             {
                 "context": {
                     "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1.20230102.01.00",
-                        "hl": "en",
-                        "gl": "US"
+                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
+                        "hl": "${YouTubeConfig.DEFAULT_HL}",
+                        "gl": "${YouTubeConfig.DEFAULT_GL}"
                     }
                 },
                 $processedBody
@@ -271,10 +271,10 @@ class YouTubeApiClient @Inject constructor(
             val playerBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
-                        put("hl", "en")
-                        put("gl", "US")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
+                        put("hl", YouTubeConfig.DEFAULT_HL)
+                        put("gl", YouTubeConfig.DEFAULT_GL)
                     })
                 })
                 put("videoId", videoId)
@@ -286,7 +286,7 @@ class YouTubeApiClient @Inject constructor(
             }
 
             val playerRequest = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/player")
+                .url("${YouTubeConfig.BASE_URL}/player")
                 .post(playerBody.toString().toRequestBody("application/json".toMediaType()))
                 .addHeader("Cookie", cookies)
                 .addHeader("Authorization", authHeader)

@@ -5,6 +5,7 @@ import com.suvojeet.suvmusic.data.YouTubeAuthUtils
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeConfig
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -239,8 +240,8 @@ class YouTubeSearchService @Inject constructor(
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
-                        put("clientName", "WEB_REMIX")
-                        put("clientVersion", "1.20230102.01.00")
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
                         put("hl", "en")
                         put("gl", "US")
                     })
@@ -253,7 +254,7 @@ class YouTubeSearchService @Inject constructor(
             }
 
             val request = okhttp3.Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/next")
+                .url("${YouTubeConfig.BASE_URL}/next")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                 .apply {
                     if (cookies != null) addHeader("Cookie", cookies)
