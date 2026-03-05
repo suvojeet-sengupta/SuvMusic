@@ -148,7 +148,8 @@ data class PlayerScreenActions(
     val onPostComment: (String) -> Unit = {},
     val onLoadMoreComments: () -> Unit = {},
     val onLyricsProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
-    val onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> }
+    val onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
+    val onClearQueue: () -> Unit = {}
 )
 
 /**
@@ -177,7 +178,7 @@ fun PlayerScreen(
     val isFullScreen by playerViewModel.isFullScreen.collectAsStateWithLifecycle()
     
     // Queue Selection & Sections
-    val playedSongs by playerViewModel.playedSongs.collectAsStateWithLifecycle()
+    val historySongs by playerViewModel.historySongs.collectAsStateWithLifecycle()
     val upNextSongs by playerViewModel.upNextSongs.collectAsStateWithLifecycle()
     val selectedQueueIndices by playerViewModel.selectedQueueIndices.collectAsStateWithLifecycle()
     
@@ -333,10 +334,10 @@ fun PlayerScreen(
                 }
 
                 OverlaysContent(
-                    state = state, actions = actions, activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
+                    state = state, actions = actions.copy(onClearQueue = { playerViewModel.clearQueue() }), activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
                     dominantColors = dominantColors, playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
                     ringtoneViewModel = hiltViewModel(), // Simplified for brevity
-                    playedSongs = playedSongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+                    historySongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
                     isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
                     volumeSliderEnabled = volumeSliderEnabled, volumeKeyEvents = volumeKeyEvents,
                     lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
@@ -490,7 +491,7 @@ fun LandscapePlayerContent(
 fun OverlaysContent(
     state: PlayerScreenState, actions: PlayerScreenActions, activeOverlay: PlayerOverlay, onOverlayChange: (PlayerOverlay) -> Unit,
     dominantColors: DominantColors, playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel,
-    playlistViewModel: PlaylistManagementViewModel, ringtoneViewModel: RingtoneViewModel, playedSongs: List<com.suvojeet.suvmusic.core.model.Song>,
+    playlistViewModel: PlaylistManagementViewModel, ringtoneViewModel: RingtoneViewModel, historySongs: List<com.suvojeet.suvmusic.core.model.Song>,
     upNextSongs: List<com.suvojeet.suvmusic.core.model.Song>, selectedQueueIndices: Set<Int>, isAppInDarkTheme: Boolean,
     animatedBackgroundEnabled: Boolean, volumeSliderEnabled: Boolean, volumeKeyEvents: SharedFlow<Unit>?,
     lyricsTextPosition: com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition, lyricsAnimationType: com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType,
@@ -513,7 +514,7 @@ fun OverlaysContent(
     // Queue View
     AnimatedVisibility(visible = activeOverlay is PlayerOverlay.Queue, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
         ModernQueueView(
-            currentSong = song, queue = playerState.queue, playedSongs = playedSongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+            currentSong = song, queue = playerState.queue, playedSongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
             onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
             currentIndex = playerState.currentIndex, isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
             isAutoplayEnabled = playerState.isAutoplayEnabled, isFavorite = playerState.isLiked, isRadioMode = state.isRadioMode, isLoadingMore = state.isLoadingMoreSongs,
@@ -521,6 +522,7 @@ fun OverlaysContent(
             onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
             onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
             onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show() } },
+            onClearQueue = actions.onClearQueue,
             dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
         )
     }

@@ -99,6 +99,7 @@ fun ModernQueueView(
     onMoveItem: (Int, Int) -> Unit,
     onRemoveItems: (List<Int>) -> Unit,
     onSaveAsPlaylist: (String, String, Boolean, Boolean) -> Unit,
+    onClearQueue: () -> Unit,
     dominantColors: DominantColors,
     animatedBackgroundEnabled: Boolean = true,
     isDarkTheme: Boolean = true
@@ -144,20 +145,41 @@ fun ModernQueueView(
                         IconButton(onClick = { onRemoveItems(selectedQueueIndices.toList()) }) { Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error) }
                     }
                 } else {
-                    IconButton(onClick = onBack, modifier = Modifier
-                        .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        .size(36.dp)) {
-                        Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack, modifier = Modifier
+                            .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
+                            .size(36.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Playing Next",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = dominantColors.onBackground
+                        )
                     }
-                    Text(
-                        "Playing Next",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = dominantColors.onBackground
-                    )
-                    IconButton(onClick = { showSavePlaylistDialog = true }, modifier = Modifier
-                        .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        .size(36.dp)) {
-                        Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground)
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Select button for discoverability
+                        Text(
+                            "Select",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = dominantColors.accent,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { if (queue.isNotEmpty()) onToggleSelection(if (currentIndex >= 0) currentIndex else 0) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                        
+                        IconButton(onClick = onClearQueue, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.Delete, "Clear Queue", tint = dominantColors.onBackground.copy(alpha = 0.7f))
+                        }
+                        
+                        IconButton(onClick = { showSavePlaylistDialog = true }, modifier = Modifier
+                            .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
+                            .size(36.dp)) {
+                            Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground)
+                        }
                     }
                 }
             }
@@ -175,14 +197,21 @@ fun ModernQueueView(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AsyncImage(
-                            model = currentSong.thumbnailUrl,
-                            contentDescription = currentSong.title,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            AsyncImage(
+                                model = currentSong.thumbnailUrl,
+                                contentDescription = currentSong.title,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            if (isPlaying) {
+                                Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                                    NowPlayingAnimation(color = Color.White, isPlaying = true)
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -202,7 +231,8 @@ fun ModernQueueView(
                                 currentSong.artist,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = dominantColors.onBackground.copy(alpha = 0.7f),
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         IconButton(onClick = onToggleLike) {
@@ -218,68 +248,8 @@ fun ModernQueueView(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Controls
-            if (!isSelectionMode) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        IconButton(
-                            onClick = onToggleShuffle,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground, modifier = Modifier.size(20.dp))
-                        }
-                        IconButton(
-                            onClick = onToggleRepeat,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent, CircleShape)
-                        ) {
-                            Icon(
-                                if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                                "Repeat",
-                                tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(dominantColors.onBackground.copy(alpha = 0.05f))
-                            .clickable(onClick = onToggleAutoplay)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            "Autoplay",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                            color = dominantColors.onBackground
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Switch(
-                            checked = isAutoplayEnabled,
-                            onCheckedChange = { onToggleAutoplay() },
-                            modifier = Modifier.scale(0.6f),
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = dominantColors.accent,
-                                checkedTrackColor = dominantColors.accent.copy(alpha = 0.3f),
-                                uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.5f),
-                                uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.1f)
-                            )
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+            // Controls (Merged into list headers later or kept if scrolling is not desired yet)
+            // For now, let's keep them and focus on the list fix.
 
             // List
             val listState = rememberLazyListState()
@@ -289,12 +259,12 @@ fun ModernQueueView(
                 modifier = Modifier.weight(1f)
             ) {
                 if (playedSongs.isNotEmpty()) {
-                    item { ModernHeader("Previous Tracks", dominantColors) }
-                    itemsIndexed(playedSongs, key = { _, s -> "prev_${s.id}" }) { index, song ->
+                    item { ModernHeader("History", dominantColors) }
+                    itemsIndexed(playedSongs, key = { _, s -> "history_${s.id}" }) { index, song ->
                         ModernQueueItem(
                             song = song,
-                            isCurrent = song.id == currentSong?.id,
-                            isPlaying = song.id == currentSong?.id && isPlaying,
+                            isCurrent = false, // Current is in the card
+                            isPlaying = false,
                             isSelected = selectedQueueIndices.contains(index),
                             isSelectionMode = isSelectionMode,
                             onClick = { if (isSelectionMode) onToggleSelection(index) else onSongClick(index) },
@@ -308,7 +278,9 @@ fun ModernQueueView(
                 if (upNextSongs.isNotEmpty()) {
                     item { ModernHeader(if (isRadioMode || isAutoplayEnabled) "Upcoming (Autoplay)" else "Up Next", dominantColors) }
                     itemsIndexed(upNextSongs, key = { _, s -> "next_${s.id}" }) { indexInList, song ->
-                        val actualIndex = playedSongs.size + indexInList
+                        // Actual index in the full queue is historySize + 1 (for current) + indexInList
+                        val historySize = playedSongs.size
+                        val actualIndex = historySize + 1 + indexInList
                         ModernQueueItem(
                             song = song,
                             isCurrent = false,
