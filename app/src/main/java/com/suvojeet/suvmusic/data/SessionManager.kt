@@ -294,27 +294,35 @@ class SessionManager @Inject constructor(
     // --- Last.fm ---
 
     suspend fun setLastFmSession(sessionKey: String, username: String) {
-        encryptedPrefs.edit().putString("last_fm_session", sessionKey).apply()
-        context.dataStore.edit { preferences ->
-            preferences[LAST_FM_USERNAME_KEY] = username
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit()
+                .putString("last_fm_session", sessionKey)
+                .putString("last_fm_username", username)
+                .apply()
         }
+        context.dataStore.edit { it.remove(LAST_FM_USERNAME_KEY) }
     }
 
     fun getLastFmSessionKey(): String? {
         return encryptedPrefs.getString("last_fm_session", null)
     }
 
-    suspend fun getLastFmUsername(): String? {
-         return context.dataStore.data.first()[LAST_FM_USERNAME_KEY]
+    suspend fun getLastFmUsername(): String? = withContext(Dispatchers.IO) {
+        return@withContext encryptedPrefs.getString("last_fm_username", null)
     }
 
     suspend fun clearLastFmSession() {
-        encryptedPrefs.edit().remove("last_fm_session").apply()
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit()
+                .remove("last_fm_session")
+                .remove("last_fm_username")
+                .apply()
+        }
         context.dataStore.edit { it.remove(LAST_FM_USERNAME_KEY) }
     }
 
-    val lastFmUsernameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[LAST_FM_USERNAME_KEY]
+    val lastFmUsernameFlow: Flow<String?> = context.dataStore.data.map {
+        encryptedPrefs.getString("last_fm_username", null)
     }
 
     suspend fun isLastFmScrobblingEnabled(): Boolean = 
@@ -1254,19 +1262,38 @@ class SessionManager @Inject constructor(
         migrationScope.launch {
             // Warm up encrypted prefs on background thread
             val prefs = encryptedPrefs 
-            migrateCookies()
+            migrateSensitiveData()
             // Initial login check on background thread
             _isLoggedInFlow.value = isLoggedIn()
         }
     }
 
-    private suspend fun migrateCookies() {
-        val oldCookies = context.dataStore.data.first()[COOKIES_KEY]
-        if (oldCookies != null) {
-            encryptedPrefs.edit().putString("cookies", oldCookies).apply()
-            context.dataStore.edit { it.remove(COOKIES_KEY) }
-            _isLoggedInFlow.value = true
+    private suspend fun migrateSensitiveData() {
+        val dataStore = context.dataStore.data.first()
+        val edit = encryptedPrefs.edit()
+        var changed = false
+
+        val keysToMigrate = listOf(
+            kotlin.Pair(COOKIES_KEY, "cookies"),
+            kotlin.Pair(RECENT_SEARCHES_KEY, "recent_searches"),
+            kotlin.Pair(RECENTLY_PLAYED_KEY, "recently_played"),
+            kotlin.Pair(LAST_FM_USERNAME_KEY, "last_fm_username"),
+            kotlin.Pair(HOME_CACHE_KEY, "home_cache"),
+            kotlin.Pair(JIOSAAVN_HOME_CACHE_KEY, "jiosaavn_home_cache"),
+            kotlin.Pair(LIBRARY_PLAYLISTS_CACHE_KEY, "library_playlists_cache"),
+            kotlin.Pair(LIBRARY_LIKED_SONGS_CACHE_KEY, "library_liked_songs_cache")
+        )
+
+        keysToMigrate.forEach { (dsKey, prefKey) ->
+            dataStore[dsKey]?.let { value ->
+                edit.putString(prefKey, value)
+                context.dataStore.edit { prefs -> prefs.remove(dsKey) }
+                changed = true
+                if (prefKey == "cookies") _isLoggedInFlow.value = true
+            }
         }
+
+        if (changed) edit.apply()
     }
     
     fun getCookies(): String? {
@@ -1545,17 +1572,17 @@ class SessionManager @Inject constructor(
     }
     
     suspend fun getRecentSearches(): List<RecentSearchItem> = withContext(Dispatchers.IO) {
-        val json = context.dataStore.data.first()[RECENT_SEARCHES_KEY] ?: return@withContext emptyList()
+        val json = encryptedPrefs.getString("recent_searches", null) ?: return@withContext emptyList()
         withContext(Dispatchers.Default) {
             parseRecentSearchesJson(json)
         }
     }
-    
-    val recentSearchesFlow: Flow<List<RecentSearchItem>> = context.dataStore.data.map { preferences ->
-        val json = preferences[RECENT_SEARCHES_KEY] ?: return@map emptyList()
+
+    val recentSearchesFlow: Flow<List<RecentSearchItem>> = context.dataStore.data.map {
+        val json = encryptedPrefs.getString("recent_searches", null) ?: return@map emptyList()
         parseRecentSearchesJson(json)
     }
-    
+
     private fun parseRecentSearchesJson(json: String): List<RecentSearchItem> {
         return try {
             val jsonArray = JSONArray(json)
@@ -1610,13 +1637,13 @@ class SessionManager @Inject constructor(
             emptyList()
         }
     }
-    
-    suspend fun addRecentSearch(item: RecentSearchItem) {
+
+    suspend fun addRecentSearch(item: RecentSearchItem) = withContext(Dispatchers.IO) {
         val currentSearches = getRecentSearches().toMutableList()
         currentSearches.removeAll { it.id == item.id }
         currentSearches.add(0, item)
         val trimmed = currentSearches.take(MAX_RECENT_SEARCHES)
-        
+
         val jsonArray = JSONArray()
         trimmed.forEach { searchItem ->
             val obj = JSONObject()
@@ -1654,38 +1681,41 @@ class SessionManager @Inject constructor(
             }
             jsonArray.put(obj)
         }
-        
-        context.dataStore.edit { preferences ->
-            preferences[RECENT_SEARCHES_KEY] = jsonArray.toString()
-        }
+
+        encryptedPrefs.edit().putString("recent_searches", jsonArray.toString()).apply()
+        context.dataStore.edit { it.remove(RECENT_SEARCHES_KEY) }
     }
-    
+
     suspend fun clearRecentSearches() {
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().remove("recent_searches").apply()
+        }
         context.dataStore.edit { preferences ->
             preferences.remove(RECENT_SEARCHES_KEY)
         }
     }
-    
-    val recentlyPlayedFlow: Flow<List<RecentlyPlayed>> = context.dataStore.data.map { preferences ->
-        parseRecentlyPlayed(preferences[RECENTLY_PLAYED_KEY])
+
+    val recentlyPlayedFlow: Flow<List<RecentlyPlayed>> = context.dataStore.data.map {
+        parseRecentlyPlayed(encryptedPrefs.getString("recently_played", null))
     }
-    
-    suspend fun addToRecentlyPlayed(song: Song) {
-        context.dataStore.edit { preferences ->
-            val existing = parseRecentlyPlayed(preferences[RECENTLY_PLAYED_KEY]).toMutableList()
-            existing.removeAll { it.song.id == song.id }
-            existing.add(0, RecentlyPlayed(song, System.currentTimeMillis()))
-            val limited = existing.take(MAX_RECENTLY_PLAYED)
-            preferences[RECENTLY_PLAYED_KEY] = serializeRecentlyPlayed(limited)
-        }
+
+    suspend fun addToRecentlyPlayed(song: Song) = withContext(Dispatchers.IO) {
+        val existing = parseRecentlyPlayed(encryptedPrefs.getString("recently_played", null)).toMutableList()
+        existing.removeAll { it.song.id == song.id }
+        existing.add(0, RecentlyPlayed(song, System.currentTimeMillis()))
+        val limited = existing.take(MAX_RECENTLY_PLAYED)
+        encryptedPrefs.edit().putString("recently_played", serializeRecentlyPlayed(limited)).apply()
+        context.dataStore.edit { it.remove(RECENTLY_PLAYED_KEY) }
     }
-    
+
     suspend fun clearRecentlyPlayed() {
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().remove("recently_played").apply()
+        }
         context.dataStore.edit { preferences ->
             preferences.remove(RECENTLY_PLAYED_KEY)
         }
     }
-    
     private fun parseRecentlyPlayed(json: String?): List<RecentlyPlayed> {
         if (json.isNullOrBlank()) return emptyList()
         return try {
@@ -1720,49 +1750,49 @@ class SessionManager @Inject constructor(
         val json = withContext(Dispatchers.Default) {
             serializeHomeSections(sections)
         }
-        context.dataStore.edit { preferences ->
-            preferences[HOME_CACHE_KEY] = json
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("home_cache", json).apply()
         }
+        context.dataStore.edit { it.remove(HOME_CACHE_KEY) }
     }
-    
+
     fun getCachedHomeSections(): Flow<List<HomeSection>> = context.dataStore.data
-        .map { preferences -> preferences[HOME_CACHE_KEY] }
+        .map { encryptedPrefs.getString("home_cache", null) }
         .flowOn(Dispatchers.IO)
         .map { json -> 
             withContext(Dispatchers.Default) {
                 parseHomeSections(json)
             }
         }
-    
+
     suspend fun getCachedHomeSectionsSync(): List<HomeSection> = withContext(Dispatchers.IO) {
-        val prefs = context.dataStore.data.first()
-        val json = prefs[HOME_CACHE_KEY]
+        val json = encryptedPrefs.getString("home_cache", null)
         withContext(Dispatchers.Default) {
             parseHomeSections(json)
         }
     }
-    
+
     suspend fun saveJioSaavnHomeCache(sections: List<HomeSection>) {
         val json = withContext(Dispatchers.Default) {
             serializeHomeSections(sections)
         }
-        context.dataStore.edit { preferences ->
-            preferences[JIOSAAVN_HOME_CACHE_KEY] = json
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("jiosaavn_home_cache", json).apply()
         }
+        context.dataStore.edit { it.remove(JIOSAAVN_HOME_CACHE_KEY) }
     }
-    
+
     fun getCachedJioSaavnHomeSections(): Flow<List<HomeSection>> = context.dataStore.data
-        .map { preferences -> preferences[JIOSAAVN_HOME_CACHE_KEY] }
+        .map { encryptedPrefs.getString("jiosaavn_home_cache", null) }
         .flowOn(Dispatchers.IO)
         .map { json ->
             withContext(Dispatchers.Default) {
                 parseHomeSections(json)
             }
         }
-    
+
     suspend fun getCachedJioSaavnHomeSectionsSync(): List<HomeSection> = withContext(Dispatchers.IO) {
-        val prefs = context.dataStore.data.first()
-        val json = prefs[JIOSAAVN_HOME_CACHE_KEY]
+        val json = encryptedPrefs.getString("jiosaavn_home_cache", null)
         withContext(Dispatchers.Default) {
             parseHomeSections(json)
         }
@@ -1795,14 +1825,14 @@ class SessionManager @Inject constructor(
              }
              array.toString()
         }
-        context.dataStore.edit { preferences ->
-            preferences[LIBRARY_PLAYLISTS_CACHE_KEY] = json
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("library_playlists_cache", json).apply()
         }
+        context.dataStore.edit { it.remove(LIBRARY_PLAYLISTS_CACHE_KEY) }
     }
-    
+
     suspend fun getCachedLibraryPlaylistsSync(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
-        val prefs = context.dataStore.data.first()
-        val json = prefs[LIBRARY_PLAYLISTS_CACHE_KEY] ?: return@withContext emptyList()
+        val json = encryptedPrefs.getString("library_playlists_cache", null) ?: return@withContext emptyList()
         withContext(Dispatchers.Default) {
             try {
                 val array = JSONArray(json)
@@ -1822,21 +1852,21 @@ class SessionManager @Inject constructor(
             }
         }
     }
-    
+
     suspend fun saveLibraryLikedSongsCache(songs: List<Song>) {
         val json = withContext(Dispatchers.Default) {
             val array = JSONArray()
             songs.forEach { song -> array.put(songToJson(song)) }
             array.toString()
         }
-        context.dataStore.edit { preferences ->
-            preferences[LIBRARY_LIKED_SONGS_CACHE_KEY] = json
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("library_liked_songs_cache", json).apply()
         }
+        context.dataStore.edit { it.remove(LIBRARY_LIKED_SONGS_CACHE_KEY) }
     }
     
     suspend fun getCachedLibraryLikedSongsSync(): List<Song> = withContext(Dispatchers.IO) {
-        val prefs = context.dataStore.data.first()
-        val json = prefs[LIBRARY_LIKED_SONGS_CACHE_KEY] ?: return@withContext emptyList()
+        val json = encryptedPrefs.getString("library_liked_songs_cache", null) ?: return@withContext emptyList()
         withContext(Dispatchers.Default) {
             try {
                 val array = JSONArray(json)
