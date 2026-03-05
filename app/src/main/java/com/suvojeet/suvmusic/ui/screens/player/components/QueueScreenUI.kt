@@ -1,0 +1,428 @@
+package com.suvojeet.suvmusic.ui.screens.player.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.data.model.RepeatMode
+import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
+import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.NowPlayingAnimation
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ModernQueueView(
+    currentSong: Song?,
+    queue: List<Song>,
+    playedSongs: List<Song>,
+    upNextSongs: List<Song>,
+    selectedQueueIndices: Set<Int>,
+    onToggleSelection: (Int) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearSelection: () -> Unit,
+    currentIndex: Int,
+    isPlaying: Boolean,
+    shuffleEnabled: Boolean,
+    repeatMode: RepeatMode,
+    isAutoplayEnabled: Boolean,
+    isFavorite: Boolean,
+    isRadioMode: Boolean = false,
+    isLoadingMore: Boolean = false,
+    onBack: () -> Unit,
+    onSongClick: (Int) -> Unit,
+    onPlayPause: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onToggleRepeat: () -> Unit,
+    onToggleAutoplay: () -> Unit,
+    onToggleLike: () -> Unit,
+    onMoreClick: (Song) -> Unit,
+    onLoadMore: () -> Unit = {},
+    onMoveItem: (Int, Int) -> Unit,
+    onRemoveItems: (List<Int>) -> Unit,
+    onSaveAsPlaylist: (String, String, Boolean, Boolean) -> Unit,
+    dominantColors: DominantColors,
+    animatedBackgroundEnabled: Boolean = true,
+    isDarkTheme: Boolean = true
+) {
+    val haptic = LocalHapticFeedback.current
+    val isSelectionMode = selectedQueueIndices.isNotEmpty()
+    var showSavePlaylistDialog by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(dominantColors.primary.copy(alpha = 0.95f)) // Solid modern background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (isSelectionMode) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onClearSelection, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "${selectedQueueIndices.size} Selected",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = dominantColors.onBackground
+                        )
+                    }
+                    Row {
+                        IconButton(onClick = onSelectAll) { Icon(Icons.Default.SelectAll, "Select All", tint = dominantColors.onBackground) }
+                        IconButton(onClick = { showSavePlaylistDialog = true }) { Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground) }
+                        IconButton(onClick = { onRemoveItems(selectedQueueIndices.toList()) }) { Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error) }
+                    }
+                } else {
+                    IconButton(onClick = onBack, modifier = Modifier
+                        .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
+                        .size(40.dp)) {
+                        Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground)
+                    }
+                    Text(
+                        "Playing Next",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = dominantColors.onBackground
+                    )
+                    IconButton(onClick = { showSavePlaylistDialog = true }, modifier = Modifier
+                        .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
+                        .size(40.dp)) {
+                        Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground)
+                    }
+                }
+            }
+
+            // Now Playing Card (Modern)
+            if (!isSelectionMode && currentSong != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    color = dominantColors.accent.copy(alpha = 0.15f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = currentSong.thumbnailUrl,
+                            contentDescription = currentSong.title,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "NOW PLAYING",
+                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp, fontWeight = FontWeight.Black),
+                                color = dominantColors.accent
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                currentSong.title,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = dominantColors.onBackground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                currentSong.artist,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = dominantColors.onBackground.copy(alpha = 0.7f),
+                                maxLines = 1
+                            )
+                        }
+                        IconButton(onClick = onToggleLike) {
+                            Icon(
+                                if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
+                                "Like",
+                                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Controls
+            if (!isSelectionMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        IconButton(
+                            onClick = onToggleShuffle,
+                            modifier = Modifier
+                                .background(if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent, CircleShape)
+                        ) {
+                            Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground)
+                        }
+                        IconButton(
+                            onClick = onToggleRepeat,
+                            modifier = Modifier
+                                .background(if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent, CircleShape)
+                        ) {
+                            Icon(
+                                if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                                "Repeat",
+                                tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground
+                            )
+                        }
+                    }
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(dominantColors.onBackground.copy(alpha = 0.05f))
+                            .clickable(onClick = onToggleAutoplay)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            "Autoplay",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                            color = dominantColors.onBackground
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Switch(
+                            checked = isAutoplayEnabled,
+                            onCheckedChange = { onToggleAutoplay() },
+                            modifier = Modifier.scale(0.7f),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = dominantColors.accent,
+                                checkedTrackColor = dominantColors.accent.copy(alpha = 0.3f),
+                                uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.5f),
+                                uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.1f)
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // List
+            val listState = rememberLazyListState()
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(bottom = 80.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                if (playedSongs.isNotEmpty()) {
+                    item { ModernHeader("Previous Tracks", dominantColors) }
+                    itemsIndexed(playedSongs, key = { _, s -> "prev_${s.id}" }) { index, song ->
+                        ModernQueueItem(
+                            song = song,
+                            isCurrent = song.id == currentSong?.id,
+                            isPlaying = song.id == currentSong?.id && isPlaying,
+                            isSelected = selectedQueueIndices.contains(index),
+                            isSelectionMode = isSelectionMode,
+                            onClick = { if (isSelectionMode) onToggleSelection(index) else onSongClick(index) },
+                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); if (!isSelectionMode) onToggleSelection(index) else onMoreClick(song) },
+                            onMoreClick = { onMoreClick(song) },
+                            dominantColors = dominantColors
+                        )
+                    }
+                }
+
+                if (upNextSongs.isNotEmpty()) {
+                    item { ModernHeader(if (isRadioMode || isAutoplayEnabled) "Upcoming (Autoplay)" else "Up Next", dominantColors) }
+                    itemsIndexed(upNextSongs, key = { _, s -> "next_${s.id}" }) { indexInList, song ->
+                        val actualIndex = playedSongs.size + indexInList
+                        ModernQueueItem(
+                            song = song,
+                            isCurrent = false,
+                            isPlaying = false,
+                            isSelected = selectedQueueIndices.contains(actualIndex),
+                            isSelectionMode = isSelectionMode,
+                            onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
+                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); if (!isSelectionMode) onToggleSelection(actualIndex) else onMoreClick(song) },
+                            onMoreClick = { onMoreClick(song) },
+                            dominantColors = dominantColors
+                        )
+                    }
+                }
+
+                if (isLoadingMore) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = dominantColors.accent, modifier = Modifier.size(32.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSavePlaylistDialog) {
+        CreatePlaylistDialog(
+            isVisible = showSavePlaylistDialog,
+            isCreating = false,
+            onDismiss = { showSavePlaylistDialog = false },
+            onCreate = { title, desc, isPrivate, sync ->
+                onSaveAsPlaylist(title, desc, isPrivate, sync)
+                showSavePlaylistDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun ModernHeader(title: String, dominantColors: DominantColors) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        color = dominantColors.onBackground.copy(alpha = 0.5f),
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ModernQueueItem(
+    song: Song,
+    isCurrent: Boolean,
+    isPlaying: Boolean,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onMoreClick: () -> Unit,
+    dominantColors: DominantColors
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (isSelected) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box {
+            AsyncImage(
+                model = song.thumbnailUrl,
+                contentDescription = song.title,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+            if (isCurrent && isPlaying) {
+                Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                    NowPlayingAnimation(color = dominantColors.accent, isPlaying = true)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = song.title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = if (isCurrent) dominantColors.accent else dominantColors.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = song.artist,
+                style = MaterialTheme.typography.bodyMedium,
+                color = dominantColors.onBackground.copy(alpha = 0.6f),
+                maxLines = 1
+            )
+        }
+
+        if (isSelectionMode) {
+            androidx.compose.material3.Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                    checkedColor = dominantColors.accent,
+                    uncheckedColor = dominantColors.onBackground.copy(alpha = 0.4f)
+                )
+            )
+        } else if (!isCurrent) {
+            IconButton(onClick = onMoreClick) {
+                Icon(Icons.Default.MoreVert, "More", tint = dominantColors.onBackground.copy(alpha = 0.5f))
+            }
+        }
+    }
+}
