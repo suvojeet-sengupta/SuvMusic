@@ -9,18 +9,13 @@ import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Reusable direct ByteBuffer for JNI calls.
- * GetDirectBufferAddress requires a direct buffer; replaceOutputBuffer returns heap buffers.
- */
-private var directNativeBuffer: ByteBuffer? = null
-
 @Singleton
 class SpatialAudioProcessor @Inject constructor(
     private val nativeSpatialAudio: NativeSpatialAudio,
     private val audioARManager: AudioARManager
 ) : BaseAudioProcessor() {
 
+    private var directNativeBuffer: ByteBuffer? = null
     private var azimuth = 0f
     private var elevation = 0f
     
