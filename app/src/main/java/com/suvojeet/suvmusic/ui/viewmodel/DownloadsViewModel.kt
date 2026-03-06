@@ -135,8 +135,14 @@ class DownloadsViewModel @Inject constructor(
     
     fun deleteAll() {
         viewModelScope.launch {
-            downloadRepository.deleteAllDownloads()
-            clearSelection()
+            try {
+                downloadRepository.deleteAllDownloads()
+                clearSelection()
+            } catch (e: com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException) {
+                _pendingIntent.value = e.pendingIntent
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
     
