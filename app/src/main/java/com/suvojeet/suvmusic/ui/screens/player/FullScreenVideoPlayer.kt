@@ -95,6 +95,10 @@ import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.RotateRight
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullScreenVideoPlayer(
@@ -107,17 +111,18 @@ fun FullScreenVideoPlayer(
     val playerState by viewModel.playerState.collectAsState()
     val player = viewModel.getPlayer()
 
-    // Auto-hide controls
+    // UI State
     var areControlsVisible by remember { mutableStateOf(true) }
+    var isLocked by remember { mutableStateOf(false) }
     var showQualityDialog by remember { mutableStateOf(false) }
     var showDownloadSheet by remember { mutableStateOf(false) }
     var isVideoDownloading by remember { mutableStateOf(false) }
     var videoDownloaded by remember { mutableStateOf(false) }
     val downloadSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    LaunchedEffect(areControlsVisible, playerState.isPlaying) {
-        if (areControlsVisible && playerState.isPlaying) {
-            delay(3500)
+    LaunchedEffect(areControlsVisible, playerState.isPlaying, isLocked) {
+        if (areControlsVisible && playerState.isPlaying && !isLocked) {
+            delay(4000)
             areControlsVisible = false
         }
     }
@@ -125,7 +130,7 @@ fun FullScreenVideoPlayer(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Use WindowInsetsControllerCompat for modern immersive mode
+    // Modern immersive mode handling
     DisposableEffect(Unit) {
         val activity = context as? Activity
         val window = activity?.window
@@ -140,7 +145,7 @@ fun FullScreenVideoPlayer(
             insetsController?.show(WindowInsetsCompat.Type.systemBars())
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             
-            // Restore system brightness control
+            // Restore system brightness
             val layoutParams = activity?.window?.attributes
             layoutParams?.screenBrightness = -1.0f
             activity?.window?.attributes = layoutParams
@@ -148,21 +153,25 @@ fun FullScreenVideoPlayer(
     }
 
     BackHandler {
-        // Return to embedded player screen (PiP triggers via Home/switch apps)
-        onDismiss()
+        if (isLocked) {
+            isLocked = false
+            areControlsVisible = true
+        } else {
+            onDismiss()
+        }
     }
 
-    // Video quality dialog
+    // Controls state
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
-    var brightness by remember { mutableStateOf(-1.0f) } // Default to system brightness (-1.0f)
-    var volumeLevel by remember { mutableStateOf(0.7f) } // Default 70%
+    var brightness by remember { mutableStateOf(-1.0f) }
+    var volumeLevel by remember { mutableStateOf(0.7f) }
     var gestureStatusText by remember { mutableStateOf("") }
     var showGestureStatus by remember { mutableStateOf(false) }
     var gestureIcon by remember { mutableStateOf(Icons.Filled.Settings) }
 
     LaunchedEffect(showGestureStatus) {
         if (showGestureStatus) {
-            delay(1500)
+            delay(1200)
             showGestureStatus = false
         }
     }
@@ -170,32 +179,42 @@ fun FullScreenVideoPlayer(
     if (showQualityDialog) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showQualityDialog = false },
-            title = { Text("Video Quality", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF1A1A2E),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
+            title = { Text("Quality", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
             text = {
-                Column {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
                     com.suvojeet.suvmusic.data.model.VideoQuality.entries.forEach { quality ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setVideoQuality(quality)
-                                    showQualityDialog = false
-                                }
-                                .padding(vertical = 12.dp, horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Surface(
+                            onClick = {
+                                viewModel.setVideoQuality(quality)
+                                showQualityDialog = false
+                            },
+                            color = if (playerState.videoQuality == quality) Color.White.copy(alpha = 0.1f) else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            RadioButton(
-                                selected = playerState.videoQuality == quality,
-                                onClick = null
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(quality.label)
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = playerState.videoQuality == quality,
+                                    onClick = null,
+                                    colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = dominantColors.primary)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(quality.label, style = MaterialTheme.typography.bodyLarge)
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showQualityDialog = false }) { Text("Close") }
+                TextButton(onClick = { showQualityDialog = false }) { 
+                    Text("Cancel", color = dominantColors.primary) 
+                }
             }
         )
     }
@@ -212,26 +231,20 @@ fun FullScreenVideoPlayer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .padding(bottom = 48.dp, top = 8.dp)
+                    .padding(bottom = 32.dp, top = 8.dp)
             ) {
                 Text(
                     text = "Download Video",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    color = Color.White
                 )
-                Text(
-                    text = playerState.currentSong?.title ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(bottom = 20.dp)
-                )
+                Spacer(modifier = Modifier.height(20.dp))
 
                 VideoDownloadQuality.entries.forEach { quality ->
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 6.dp)
                             .clickable {
                                 val song = playerState.currentSong ?: return@clickable
                                 showDownloadSheet = false
@@ -246,18 +259,16 @@ fun FullScreenVideoPlayer(
                         color = Color.White.copy(alpha = 0.08f)
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            modifier = Modifier.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = quality.label,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color.White
-                                )
-                            }
+                            Icon(Icons.Default.SaveAlt, null, tint = Color.White.copy(alpha = 0.6f))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = quality.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White
+                            )
                         }
                     }
                 }
@@ -269,90 +280,80 @@ fun FullScreenVideoPlayer(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { areControlsVisible = !areControlsVisible },
-                    onDoubleTap = { offset ->
-                        val isForward = offset.x > size.width / 2
-                        if (isForward) {
-                            viewModel.seekTo(playerState.currentPosition + 10000)
-                            gestureStatusText = "+10s"
-                            gestureIcon = Icons.Filled.Forward10
-                        } else {
-                            viewModel.seekTo(playerState.currentPosition - 10000)
-                            gestureStatusText = "-10s"
-                            gestureIcon = Icons.Filled.Replay10
+            .pointerInput(isLocked) {
+                if (isLocked) {
+                    detectTapGestures(onTap = { areControlsVisible = !areControlsVisible })
+                } else {
+                    detectTapGestures(
+                        onTap = { areControlsVisible = !areControlsVisible },
+                        onDoubleTap = { offset ->
+                            val isForward = offset.x > size.width / 2
+                            if (isForward) {
+                                viewModel.seekTo(playerState.currentPosition + 10000)
+                                gestureStatusText = "+10s"
+                                gestureIcon = Icons.Filled.Forward10
+                            } else {
+                                viewModel.seekTo(playerState.currentPosition - 10000)
+                                gestureStatusText = "-10s"
+                                gestureIcon = Icons.Filled.Replay10
+                            }
+                            showGestureStatus = true
                         }
-                        showGestureStatus = true
-                    }
-                )
-            }
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { change, dragAmount ->
-                    val isVolume = change.position.x > size.width / 2
-                    if (isVolume) {
-                        volumeLevel = (volumeLevel - dragAmount / size.height).coerceIn(0f, 1f)
-                        gestureStatusText = "Volume: ${(volumeLevel * 100).toInt()}%"
-                        gestureIcon = Icons.Filled.VolumeUp
-                        
-                        // Set system volume
-                        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-                        audioManager?.let {
-                            val max = it.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
-                            val newVolume = (volumeLevel * max).toInt()
-                            it.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, newVolume, 0)
-                        }
-                    } else {
-                        // If it's the first drag, initialize brightness from current window if it's -1
-                        val activity = context as? Activity
-                        if (brightness < 0) {
-                            val currentBrightness = activity?.window?.attributes?.screenBrightness ?: 0.5f
-                            brightness = if (currentBrightness < 0) 0.5f else currentBrightness
-                        }
-                        
-                        brightness = (brightness - dragAmount / size.height).coerceIn(0f, 1f)
-                        gestureStatusText = "Brightness: ${(brightness * 100).toInt()}%"
-                        gestureIcon = Icons.Filled.BrightnessHigh
-                        
-                        val layoutParams = activity?.window?.attributes
-                        layoutParams?.screenBrightness = brightness
-                        activity?.window?.attributes = layoutParams
-                    }
-                    showGestureStatus = true
+                    )
                 }
             }
-            .pointerInput(Unit) {
-                detectTransformGestures { _, _, zoom, _ ->
-                    if (zoom > 1.1f) {
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        gestureStatusText = "Zoom: Fill"
-                        gestureIcon = Icons.Filled.AspectRatio
+            .pointerInput(isLocked) {
+                if (!isLocked) {
+                    detectVerticalDragGestures { change, dragAmount ->
+                        val isVolume = change.position.x > size.width / 2
+                        if (isVolume) {
+                            volumeLevel = (volumeLevel - dragAmount / size.height).coerceIn(0f, 1f)
+                            gestureStatusText = "${(volumeLevel * 100).toInt()}%"
+                            gestureIcon = Icons.Filled.VolumeUp
+                            
+                            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                            audioManager?.let {
+                                val max = it.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                                val newVolume = (volumeLevel * max).toInt()
+                                it.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, newVolume, 0)
+                            }
+                        } else {
+                            val activity = context as? Activity
+                            if (brightness < 0) {
+                                val currentBrightness = activity?.window?.attributes?.screenBrightness ?: 0.5f
+                                brightness = if (currentBrightness < 0) 0.5f else currentBrightness
+                            }
+                            brightness = (brightness - dragAmount / size.height).coerceIn(0f, 1f)
+                            gestureStatusText = "${(brightness * 100).toInt()}%"
+                            gestureIcon = Icons.Filled.BrightnessHigh
+                            
+                            val layoutParams = activity?.window?.attributes
+                            layoutParams?.screenBrightness = brightness
+                            activity?.window?.attributes = layoutParams
+                        }
                         showGestureStatus = true
-                    } else if (zoom < 0.9f) {
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        gestureStatusText = "Zoom: Fit"
-                        gestureIcon = Icons.Filled.AspectRatio
-                        showGestureStatus = true
+                    }
+                }
+            }
+            .pointerInput(isLocked) {
+                if (!isLocked) {
+                    detectTransformGestures { _, _, zoom, _ ->
+                        if (zoom > 1.1f && resizeMode != AspectRatioFrameLayout.RESIZE_MODE_ZOOM) {
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            gestureStatusText = "Fill"
+                            gestureIcon = Icons.Filled.AspectRatio
+                            showGestureStatus = true
+                        } else if (zoom < 0.9f && resizeMode != AspectRatioFrameLayout.RESIZE_MODE_FIT) {
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            gestureStatusText = "Fit"
+                            gestureIcon = Icons.Filled.AspectRatio
+                            showGestureStatus = true
+                        }
                     }
                 }
             }
     ) {
-        // Ambient Background
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            dominantColors.primary.copy(alpha = 0.4f),
-                            Color.Black.copy(alpha = 0.9f)
-                        ),
-                        radius = 1500f
-                    )
-                )
-        )
-
-        // Video Player
+        // Video
         AndroidView<PlayerView>(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -368,16 +369,11 @@ fun FullScreenVideoPlayer(
                     )
                 }
             },
-            update = { playerView ->
-                playerView.player = player
-                playerView.resizeMode = resizeMode
-            },
-            modifier = Modifier
-                .fillMaxSize()
-                .align(Alignment.Center)
+            update = { it.resizeMode = resizeMode },
+            modifier = Modifier.fillMaxSize()
         )
 
-        // Gesture Feedback Overlay
+        // Gesture Feedback
         AnimatedVisibility(
             visible = showGestureStatus,
             enter = fadeIn(),
@@ -385,32 +381,21 @@ fun FullScreenVideoPlayer(
             modifier = Modifier.align(Alignment.Center)
         ) {
             Surface(
-                color = Color.Black.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.padding(16.dp)
+                color = Color.Black.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = gestureIcon,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = gestureStatusText,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
+                    Icon(gestureIcon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(gestureStatusText, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
 
-        // Controls Overlay
+        // Overlay Controls
         AnimatedVisibility(
             visible = areControlsVisible,
             enter = fadeIn(),
@@ -420,233 +405,136 @@ fun FullScreenVideoPlayer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
+                    .background(Color.Black.copy(alpha = if (isLocked) 0.1f else 0.5f))
                     .systemBarsPadding()
             ) {
-                // ─── Top Bar ─────────────────────────────────────────────────
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp)
-                        .align(Alignment.TopCenter),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Filled.KeyboardArrowDown,
-                            contentDescription = "Minimize",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
+                if (isLocked) {
+                    // Lock button only
+                    IconButton(
+                        onClick = { isLocked = false },
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
+                            .size(56.dp)
+                    ) {
+                        Icon(Icons.Filled.LockOpen, "Unlock", tint = Color.White, modifier = Modifier.size(28.dp))
                     }
-
-                    Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
-                        Text(
-                            text = playerState.currentSong?.title ?: "",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = playerState.currentSong?.artist ?: "",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
-                            maxLines = 1
-                        )
-                    }
-
-                    // Resize Toggle
-                    IconButton(onClick = {
-                        resizeMode = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
-                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        } else {
-                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+                } else {
+                    // ─── Top Bar ──────────────────
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .align(Alignment.TopCenter),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Filled.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(32.dp))
                         }
-                        gestureStatusText = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) "Fill" else "Fit"
-                        gestureIcon = Icons.Filled.AspectRatio
-                        showGestureStatus = true
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.AspectRatio,
-                            contentDescription = "Resize",
-                            tint = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) dominantColors.primary else Color.White
-                        )
-                    }
 
-                    // Resolution chip
-                    val resLabel = playerState.videoQuality?.let { "${it.maxResolution}p" } ?: ""
-                    if (resLabel.isNotEmpty()) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color.White.copy(alpha = 0.15f),
-                            modifier = Modifier.padding(end = 4.dp)
-                        ) {
+                        Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
                             Text(
-                                text = resLabel,
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                text = playerState.currentSong?.title ?: "",
+                                style = MaterialTheme.typography.titleMedium,
                                 color = Color.White,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = playerState.currentSong?.artist ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f),
+                                maxLines = 1
                             )
                         }
-                    }
 
-                    // Quality picker
-                    IconButton(onClick = { showQualityDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Quality",
-                            tint = Color.White
-                        )
-                    }
-
-                    // Download video
-                    IconButton(
-                        onClick = {
-                            if (!isVideoDownloading && !videoDownloaded) {
-                                showDownloadSheet = true
+                        // Compact controls group
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { showQualityDialog = true }) {
+                                val resLabel = playerState.videoQuality?.let { "${it.maxResolution}p" } ?: "Res"
+                                Text(resLabel, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
                             }
-                        }
-                    ) {
-                        when {
-                            isVideoDownloading -> CircularProgressIndicator(
-                                color = Color.White,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            videoDownloaded -> Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = "Downloaded",
-                                tint = dominantColors.accent,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            else -> Icon(
-                                imageVector = Icons.Filled.SaveAlt,
-                                contentDescription = "Download Video",
-                                tint = Color.White
-                            )
-                        }
-                    }
-
-                    // Rotate screen
-                    IconButton(onClick = {
-                        val activity = context as? Activity
-                        if (isLandscape) {
-                            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                        } else {
-                            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.ScreenRotation,
-                            contentDescription = "Rotate",
-                            tint = Color.White
-                        )
-                    }
-                }
-
-                // ─── Center Controls ──────────────────────────────────────────
-                Row(
-                    modifier = Modifier.align(Alignment.Center),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Skip backward 10s
-                    IconButton(
-                        onClick = { viewModel.seekTo(playerState.currentPosition - 10000L) },
-                        modifier = Modifier.size(52.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Replay10,
-                            contentDescription = "Rewind 10s",
-                            tint = Color.White,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-
-                    // Play / Pause / Loading
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(72.dp)) {
-                        if (playerState.isLoading) {
-                            CircularProgressIndicator(
-                                color = dominantColors.primary,
-                                strokeWidth = 3.dp,
-                                modifier = Modifier.size(52.dp)
-                            )
-                        } else {
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = Color.White.copy(alpha = 0.15f),
-                                modifier = Modifier.size(64.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    IconButton(
-                                        onClick = { viewModel.togglePlayPause() },
-                                        modifier = Modifier.size(64.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                            contentDescription = "Play/Pause",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(48.dp)
-                                        )
-                                    }
+                            
+                            IconButton(onClick = {
+                                val activity = context as? Activity
+                                activity?.requestedOrientation = if (isLandscape) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                            }) {
+                                Icon(Icons.Filled.ScreenRotation, "Rotate", tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                            
+                            IconButton(onClick = { showDownloadSheet = true }) {
+                                when {
+                                    isVideoDownloading -> CircularProgressIndicator(color = dominantColors.primary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                    videoDownloaded -> Icon(Icons.Filled.CheckCircle, "Done", tint = dominantColors.accent, modifier = Modifier.size(20.dp))
+                                    else -> Icon(Icons.Filled.SaveAlt, "Download", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
                     }
 
-                    // Skip forward 10s
-                    IconButton(
-                        onClick = { viewModel.seekTo(playerState.currentPosition + 10000L) },
-                        modifier = Modifier.size(52.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Forward10,
-                            contentDescription = "Forward 10s",
-                            tint = Color.White,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-                }
-
-                // ─── Bottom Seekbar ───────────────────────────────────────────
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 8.dp)
-                ) {
+                    // ─── Middle Controls ───────────
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.align(Alignment.Center),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(isLandscape.let { if (it) 64.dp else 32.dp })
                     ) {
-                        Text(
-                            text = formatDuration(playerState.currentPosition),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = formatDuration(playerState.duration),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White,
-                            fontSize = 12.sp
-                        )
+                        IconButton(onClick = { viewModel.seekTo(playerState.currentPosition - 10000L) }, modifier = Modifier.size(56.dp)) {
+                            Icon(Icons.Filled.Replay10, "-10s", tint = Color.White, modifier = Modifier.size(36.dp))
+                        }
+
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp).background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))) {
+                            if (playerState.isLoading) {
+                                CircularProgressIndicator(color = dominantColors.primary, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
+                            } else {
+                                IconButton(onClick = { viewModel.togglePlayPause() }, modifier = Modifier.fillMaxSize()) {
+                                    Icon(if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", tint = Color.White, modifier = Modifier.size(48.dp))
+                                }
+                            }
+                        }
+
+                        IconButton(onClick = { viewModel.seekTo(playerState.currentPosition + 10000L) }, modifier = Modifier.size(56.dp)) {
+                            Icon(Icons.Filled.Forward10, "+10s", tint = Color.White, modifier = Modifier.size(36.dp))
+                        }
                     }
 
-                    Slider(
-                        value = if (playerState.duration > 0) playerState.currentPosition.toFloat() else 0f,
-                        onValueChange = { viewModel.seekTo(it.toLong()) },
-                        valueRange = 0f..playerState.duration.toFloat().coerceAtLeast(1f),
-                        colors = SliderDefaults.colors(
-                            thumbColor = dominantColors.primary,
-                            activeTrackColor = dominantColors.primary,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    // ─── Bottom Group ──────────────
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = if (isLandscape) 12.dp else 24.dp, start = 16.dp, end = 16.dp)
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(formatDuration(playerState.currentPosition), style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            
+                            // Bottom actions group
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    resizeMode = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                }) {
+                                    Icon(Icons.Filled.AspectRatio, "Resize", tint = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) dominantColors.primary else Color.White, modifier = Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = { isLocked = true }) {
+                                    Icon(Icons.Filled.Lock, "Lock", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            
+                            Text(formatDuration(playerState.duration), style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        }
+
+                        Slider(
+                            value = if (playerState.duration > 0) playerState.currentPosition.toFloat() else 0f,
+                            onValueChange = { viewModel.seekTo(it.toLong()) },
+                            valueRange = 0f..playerState.duration.toFloat().coerceAtLeast(1f),
+                            colors = SliderDefaults.colors(
+                                thumbColor = dominantColors.primary,
+                                activeTrackColor = dominantColors.primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                            ),
+                            modifier = Modifier.fillMaxWidth().height(24.dp)
+                        )
+                    }
                 }
             }
         }
