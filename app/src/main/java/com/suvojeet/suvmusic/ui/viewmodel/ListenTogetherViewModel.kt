@@ -2,11 +2,11 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.suvojeet.suvmusic.listentogether.ConnectionState
-import com.suvojeet.suvmusic.listentogether.ListenTogetherManager
-import com.suvojeet.suvmusic.listentogether.RoomRole
-import com.suvojeet.suvmusic.listentogether.RoomState
-import com.suvojeet.suvmusic.listentogether.TrackInfo
+import com.suvojeet.suvmusic.shareplay.ConnectionState
+import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
+import com.suvojeet.suvmusic.shareplay.RoomRole
+import com.suvojeet.suvmusic.shareplay.RoomState
+import com.suvojeet.suvmusic.shareplay.TrackInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

@@ -3,7 +3,7 @@
  * Licensed under GPL-3.0
  */
 
-package com.suvojeet.suvmusic.listentogether
+package com.suvojeet.suvmusic.shareplay
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

@@ -1,13 +1,13 @@
-﻿/**
+/**
  * SuvMusic Project
  * Licensed under GPL-3.0
  */
 
-package com.suvojeet.suvmusic.listentogether
+package com.suvojeet.suvmusic.shareplay
 
 import android.util.Log
 import com.google.protobuf.MessageLite
-import com.suvojeet.suvmusic.listentogether.proto.Listentogether
+import com.suvojeet.suvmusic.shareplay.proto.SharePlay
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
@@ -59,7 +59,7 @@ class MessageCodec(
             }
         }
         
-        val envelope = Listentogether.Envelope.newBuilder()
+        val envelope = SharePlay.Envelope.newBuilder()
             .setType(msgType)
             .setPayload(com.google.protobuf.ByteString.copyFrom(payloadBytes))
             .setCompressed(compressed)
@@ -72,7 +72,7 @@ class MessageCodec(
      * Decode protobuf message
      */
     private fun decodeProtobuf(data: ByteArray): Pair<String, ByteArray> {
-        val envelope = Listentogether.Envelope.parseFrom(data)
+        val envelope = SharePlay.Envelope.parseFrom(data)
         
         var payloadBytes = envelope.payload.toByteArray()
         
@@ -114,22 +114,22 @@ class MessageCodec(
      */
     private fun toProtoMessage(payload: Any): MessageLite {
         return when (payload) {
-            is CreateRoomPayload -> Listentogether.CreateRoomPayload.newBuilder()
+            is CreateRoomPayload -> SharePlay.CreateRoomPayload.newBuilder()
                 .setUsername(payload.username)
                 .build()
-            is JoinRoomPayload -> Listentogether.JoinRoomPayload.newBuilder()
+            is JoinRoomPayload -> SharePlay.JoinRoomPayload.newBuilder()
                 .setRoomCode(payload.roomCode)
                 .setUsername(payload.username)
                 .build()
-            is ApproveJoinPayload -> Listentogether.ApproveJoinPayload.newBuilder()
+            is ApproveJoinPayload -> SharePlay.ApproveJoinPayload.newBuilder()
                 .setUserId(payload.userId)
                 .build()
-            is RejectJoinPayload -> Listentogether.RejectJoinPayload.newBuilder()
+            is RejectJoinPayload -> SharePlay.RejectJoinPayload.newBuilder()
                 .setUserId(payload.userId)
                 .setReason(payload.reason ?: "")
                 .build()
             is PlaybackActionPayload -> {
-                val builder = Listentogether.PlaybackActionPayload.newBuilder()
+                val builder = SharePlay.PlaybackActionPayload.newBuilder()
                     .setAction(payload.action)
                     .setPosition(payload.position ?: 0)
                     .setInsertNext(payload.insertNext ?: false)
@@ -145,29 +145,29 @@ class MessageCodec(
                 
                 builder.build()
             }
-            is BufferReadyPayload -> Listentogether.BufferReadyPayload.newBuilder()
+            is BufferReadyPayload -> SharePlay.BufferReadyPayload.newBuilder()
                 .setTrackId(payload.trackId)
                 .build()
-            is KickUserPayload -> Listentogether.KickUserPayload.newBuilder()
+            is KickUserPayload -> SharePlay.KickUserPayload.newBuilder()
                 .setUserId(payload.userId)
                 .setReason(payload.reason ?: "")
                 .build()
             is SuggestTrackPayload -> {
-                val builder = Listentogether.SuggestTrackPayload.newBuilder()
+                val builder = SharePlay.SuggestTrackPayload.newBuilder()
                 payload.trackInfo.let { builder.setTrackInfo(trackInfoToProto(it)) }
                 builder.build()
             }
-            is ApproveSuggestionPayload -> Listentogether.ApproveSuggestionPayload.newBuilder()
+            is ApproveSuggestionPayload -> SharePlay.ApproveSuggestionPayload.newBuilder()
                 .setSuggestionId(payload.suggestionId)
                 .build()
-            is RejectSuggestionPayload -> Listentogether.RejectSuggestionPayload.newBuilder()
+            is RejectSuggestionPayload -> SharePlay.RejectSuggestionPayload.newBuilder()
                 .setSuggestionId(payload.suggestionId)
                 .setReason(payload.reason ?: "")
                 .build()
-            is ReconnectPayload -> Listentogether.ReconnectPayload.newBuilder()
+            is ReconnectPayload -> SharePlay.ReconnectPayload.newBuilder()
                 .setSessionToken(payload.sessionToken)
                 .build()
-            is TransferHostPayload -> Listentogether.TransferHostPayload.newBuilder()
+            is TransferHostPayload -> SharePlay.TransferHostPayload.newBuilder()
                 .setNewHostId(payload.newHostId)
                 .build()
             else -> throw IllegalArgumentException("Unsupported payload type: ${payload::class.simpleName}")
@@ -189,15 +189,15 @@ class MessageCodec(
     private fun decodeProtobufPayload(msgType: String, payloadBytes: ByteArray): Any? {
         return when (msgType) {
             MessageTypes.ROOM_CREATED -> {
-                val pb = Listentogether.RoomCreatedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.RoomCreatedPayload.parseFrom(payloadBytes)
                 RoomCreatedPayload(pb.roomCode, pb.userId, pb.sessionToken)
             }
             MessageTypes.JOIN_REQUEST -> {
-                val pb = Listentogether.JoinRequestPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.JoinRequestPayload.parseFrom(payloadBytes)
                 JoinRequestPayload(pb.userId, pb.username)
             }
             MessageTypes.JOIN_APPROVED -> {
-                val pb = Listentogether.JoinApprovedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.JoinApprovedPayload.parseFrom(payloadBytes)
                 JoinApprovedPayload(
                     pb.roomCode,
                     pb.userId,
@@ -206,19 +206,19 @@ class MessageCodec(
                 )
             }
             MessageTypes.JOIN_REJECTED -> {
-                val pb = Listentogether.JoinRejectedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.JoinRejectedPayload.parseFrom(payloadBytes)
                 JoinRejectedPayload(pb.reason)
             }
             MessageTypes.USER_JOINED -> {
-                val pb = Listentogether.UserJoinedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.UserJoinedPayload.parseFrom(payloadBytes)
                 UserJoinedPayload(pb.userId, pb.username)
             }
             MessageTypes.USER_LEFT -> {
-                val pb = Listentogether.UserLeftPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.UserLeftPayload.parseFrom(payloadBytes)
                 UserLeftPayload(pb.userId, pb.username)
             }
             MessageTypes.SYNC_PLAYBACK -> {
-                val pb = Listentogether.PlaybackActionPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.PlaybackActionPayload.parseFrom(payloadBytes)
                 PlaybackActionPayload(
                     action = pb.action,
                     trackId = pb.trackId.takeIf { it.isNotEmpty() },
@@ -232,27 +232,27 @@ class MessageCodec(
                 )
             }
             MessageTypes.BUFFER_WAIT -> {
-                val pb = Listentogether.BufferWaitPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.BufferWaitPayload.parseFrom(payloadBytes)
                 BufferWaitPayload(pb.trackId, pb.waitingForList)
             }
             MessageTypes.BUFFER_COMPLETE -> {
-                val pb = Listentogether.BufferCompletePayload.parseFrom(payloadBytes)
+                val pb = SharePlay.BufferCompletePayload.parseFrom(payloadBytes)
                 BufferCompletePayload(pb.trackId)
             }
             MessageTypes.ERROR -> {
-                val pb = Listentogether.ErrorPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.ErrorPayload.parseFrom(payloadBytes)
                 ErrorPayload(pb.code, pb.message)
             }
             MessageTypes.HOST_CHANGED -> {
-                val pb = Listentogether.HostChangedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.HostChangedPayload.parseFrom(payloadBytes)
                 HostChangedPayload(pb.newHostId, pb.newHostName)
             }
             MessageTypes.KICKED -> {
-                val pb = Listentogether.KickedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.KickedPayload.parseFrom(payloadBytes)
                 KickedPayload(pb.reason)
             }
             MessageTypes.SYNC_STATE -> {
-                val pb = Listentogether.SyncStatePayload.parseFrom(payloadBytes)
+                val pb = SharePlay.SyncStatePayload.parseFrom(payloadBytes)
                 SyncStatePayload(
                     currentTrack = pb.currentTrack?.let { protoToTrackInfo(it) },
                     isPlaying = pb.isPlaying,
@@ -263,7 +263,7 @@ class MessageCodec(
                 )
             }
             MessageTypes.RECONNECTED -> {
-                val pb = Listentogether.ReconnectedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.ReconnectedPayload.parseFrom(payloadBytes)
                 ReconnectedPayload(
                     pb.roomCode,
                     pb.userId,
@@ -272,15 +272,15 @@ class MessageCodec(
                 )
             }
             MessageTypes.USER_RECONNECTED -> {
-                val pb = Listentogether.UserReconnectedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.UserReconnectedPayload.parseFrom(payloadBytes)
                 UserReconnectedPayload(pb.userId, pb.username)
             }
             MessageTypes.USER_DISCONNECTED -> {
-                val pb = Listentogether.UserDisconnectedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.UserDisconnectedPayload.parseFrom(payloadBytes)
                 UserDisconnectedPayload(pb.userId, pb.username)
             }
             MessageTypes.SUGGESTION_RECEIVED -> {
-                val pb = Listentogether.SuggestionReceivedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.SuggestionReceivedPayload.parseFrom(payloadBytes)
                 SuggestionReceivedPayload(
                     pb.suggestionId,
                     pb.fromUserId,
@@ -289,14 +289,14 @@ class MessageCodec(
                 )
             }
             MessageTypes.SUGGESTION_APPROVED -> {
-                val pb = Listentogether.SuggestionApprovedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.SuggestionApprovedPayload.parseFrom(payloadBytes)
                 SuggestionApprovedPayload(
                     pb.suggestionId,
                     protoToTrackInfo(pb.trackInfo)
                 )
             }
             MessageTypes.SUGGESTION_REJECTED -> {
-                val pb = Listentogether.SuggestionRejectedPayload.parseFrom(payloadBytes)
+                val pb = SharePlay.SuggestionRejectedPayload.parseFrom(payloadBytes)
                 SuggestionRejectedPayload(pb.suggestionId, pb.reason.takeIf { it.isNotEmpty() })
             }
             else -> null
@@ -305,8 +305,8 @@ class MessageCodec(
     
     // Helper conversion functions
     
-    private fun trackInfoToProto(track: TrackInfo): Listentogether.TrackInfo {
-        return Listentogether.TrackInfo.newBuilder()
+    private fun trackInfoToProto(track: TrackInfo): SharePlay.TrackInfo {
+        return SharePlay.TrackInfo.newBuilder()
             .setId(track.id)
             .setTitle(track.title)
             .setArtist(track.artist)
@@ -317,7 +317,7 @@ class MessageCodec(
             .build()
     }
     
-    private fun protoToTrackInfo(proto: Listentogether.TrackInfo): TrackInfo {
+    private fun protoToTrackInfo(proto: SharePlay.TrackInfo): TrackInfo {
         return TrackInfo(
             id = proto.id,
             title = proto.title,
@@ -329,7 +329,7 @@ class MessageCodec(
         )
     }
     
-    private fun protoToUserInfo(proto: Listentogether.UserInfo): UserInfo {
+    private fun protoToUserInfo(proto: SharePlay.UserInfo): UserInfo {
         return UserInfo(
             userId = proto.userId,
             username = proto.username,
@@ -338,7 +338,7 @@ class MessageCodec(
         )
     }
     
-    private fun protoToRoomState(proto: Listentogether.RoomState): RoomState {
+    private fun protoToRoomState(proto: SharePlay.RoomState): RoomState {
         return RoomState(
             roomCode = proto.roomCode,
             hostId = proto.hostId,

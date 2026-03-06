@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.listentogether
+package com.suvojeet.suvmusic.shareplay
 
 import android.net.Uri
 import android.util.Log
