@@ -59,6 +59,9 @@ class RecommendationEngine @Inject constructor(
     /** Semaphore to rate-limit parallel YouTube API calls */
     private val apiSemaphore = Semaphore(MAX_CONCURRENT_API_CALLS)
 
+    /** Pre-compiled regex for song fingerprinting to avoid per-call allocation */
+    private val fingerprintRegex = Regex("[^a-z0-9]")
+
     /**
      * In-memory set of disliked song IDs (synced with DB).
      * Thread-safe: uses ConcurrentHashMap-backed set.
@@ -92,8 +95,9 @@ class RecommendationEngine @Inject constructor(
      * Normalized "Title | Artist"
      */
     private fun getSongFingerprint(song: Song): String {
-        val title = song.title.lowercase().replace(Regex("[^a-z0-9]"), "")
-        val artist = song.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
+        // Use pre-compiled regex and single lowercase call per field
+        val title = song.title.lowercase().replace(fingerprintRegex, "")
+        val artist = song.artist.lowercase().replace(fingerprintRegex, "")
         return "$title|$artist"
     }
 
@@ -101,10 +105,24 @@ class RecommendationEngine @Inject constructor(
      * Filter and deduplicate a list of songs using both ID and Title/Artist fingerprint.
      */
     private fun deduplicate(songs: List<Song>, seenIds: MutableSet<String>, seenFingerprints: MutableSet<String>): List<Song> {
+        if (songs.isEmpty()) return emptyList()
+        
         return songs.filter { song ->
+            // Early exit if ID is already seen or disliked
+            if (song.id in seenIds || song.id in dislikedSongIds) return@filter false
+            
+            // Artist check — dislikedArtists are already lowercase/trimmed in the set
+            val artistKey = song.artist.trim().lowercase()
+            if (artistKey in dislikedArtists) return@filter false
+
             val fingerprint = getSongFingerprint(song)
-            val isNew = seenIds.add(song.id) && seenFingerprints.add(fingerprint)
-            isNew && song.id !in dislikedSongIds && song.artist.lowercase().trim() !in dislikedArtists
+            val isNewFingerprint = seenFingerprints.add(fingerprint)
+            if (isNewFingerprint) {
+                seenIds.add(song.id)
+                true
+            } else {
+                false
+            }
         }
     }
 
