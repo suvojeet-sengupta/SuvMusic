@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddToQueue
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
@@ -58,6 +59,7 @@ fun SongMenuBottomSheet(
     onShare: () -> Unit,
     onViewArtist: (() -> Unit)? = null,
     onViewAlbum: (() -> Unit)? = null,
+    onListenTogether: () -> Unit = {},
     showShare: Boolean = true
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -197,6 +199,13 @@ fun SongMenuBottomSheet(
                     title = "Download",
                     subtitle = "Make available for offline playback",
                     onClick = { onDownload(); onDismiss() }
+                )
+
+                MenuActionItem(
+                    icon = Icons.Default.Group,
+                    title = "Listen Together",
+                    subtitle = "Sync music with others in real-time",
+                    onClick = { onListenTogether(); onDismiss() }
                 )
                 
                 if (onViewArtist != null) {

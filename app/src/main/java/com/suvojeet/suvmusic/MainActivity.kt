@@ -841,7 +841,11 @@ fun SuvMusicApp(
                     onPostComment = { commentText -> playerViewModel.postComment(commentText) },
                     onLoadMoreComments = { playerViewModel.loadMoreComments() },
                     onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
-                    onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) }
+                    onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
+                    onListenTogetherClick = {
+                        onCollapse()
+                        navController.navigate(Destination.ListenTogether.route)
+                    }
                 )
 
                 com.suvojeet.suvmusic.ui.screens.player.PlayerScreen(
