@@ -77,6 +77,7 @@ import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
 @Composable
 fun PlaylistScreen(
@@ -227,6 +228,11 @@ fun PlaylistScreen(
                 onBackClick = onBackClick
             )
         } else if (playlist != null) {
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = { viewModel.refreshPlaylist() },
+                modifier = Modifier.fillMaxSize()
+            ) {
             LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(top = 60.dp, bottom = 100.dp), // Top padding for TopBar
@@ -381,6 +387,7 @@ fun PlaylistScreen(
                     showShare = playlist.id != "CACHED_ALL" && playlist.id != "DEVICE_SONGS"
                 )
             }
+            } // End PullToRefreshBox
         }
 
         // Song Menu
@@ -401,6 +408,15 @@ fun PlaylistScreen(
 
         // Global Add to Playlist Sheet
         val playlistMgmtState by playlistMgmtViewModel.uiState.collectAsState()
+
+        // Auto-refresh when PlaylistManagementViewModel reports a successful add
+        androidx.compose.runtime.LaunchedEffect(playlistMgmtState.successMessage) {
+            if (playlistMgmtState.successMessage != null) {
+                viewModel.refreshPlaylist()
+                playlistMgmtViewModel.clearMessages()
+            }
+        }
+
         if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
             com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
                 song = playlistMgmtState.selectedSong!!,
