@@ -602,8 +602,26 @@ class RecommendationEngine @Inject constructor(
                 // Continue
             }
         }
+        
+        // 3. Fallback to recent-based suggestions if needed
+        if (candidates.size < count) {
+            try {
+                val recentSuggestions = getRecentBasedSuggestions(count)
+                candidates.addAll(deduplicate(recentSuggestions, seenIds, seenFingerprints))
+            } catch (e: Exception) {}
+        }
+        
+        // 4. Inject familiarity: random top artist
+        if (profile.hasEnoughData && candidates.size < count * 2) {
+            try {
+                profile.artistAffinities.keys.shuffled().firstOrNull()?.let { artist ->
+                    val songs = youTubeRepository.search("$artist best hits", YouTubeRepository.FILTER_SONGS)
+                    candidates.addAll(deduplicate(songs, seenIds, seenFingerprints))
+                }
+            } catch (e: Exception) {}
+        }
 
-        // 3. Score, filter skips, and rank
+        // 5. Score, filter skips, and rank
         val scored = scoreAndRank(candidates, profile)
         scored.take(count)
     }
@@ -630,13 +648,33 @@ class RecommendationEngine @Inject constructor(
         }
 
         // 2. Personalized supplement
-        if (candidates.size < count) {
+        if (candidates.size < count * 2) {
             try {
                 val personalRecs = getPersonalizedRecommendations(count * 2)
                 candidates.addAll(deduplicate(personalRecs, seenIds, seenFingerprints))
             } catch (e: Exception) {
-                // Continue
+                Log.w(TAG, "Radio: failed to get personalized recs", e)
             }
+        }
+        
+        // 3. Recent-based suggestions (if still needing more candidates)
+        if (candidates.size < count * 2) {
+            try {
+                val recentSuggestions = getRecentBasedSuggestions(count)
+                candidates.addAll(deduplicate(recentSuggestions, seenIds, seenFingerprints))
+            } catch (e: Exception) {
+                Log.w(TAG, "Radio: failed to get recent based suggestions", e)
+            }
+        }
+        
+        // 4. Inject familiarity: random top artist
+        if (profile.hasEnoughData && candidates.size < count * 3) {
+            try {
+                profile.artistAffinities.keys.shuffled().firstOrNull()?.let { artist ->
+                    val songs = youTubeRepository.search("$artist best hits", YouTubeRepository.FILTER_SONGS)
+                    candidates.addAll(deduplicate(songs, seenIds, seenFingerprints))
+                }
+            } catch (e: Exception) {}
         }
 
         // Score and return
