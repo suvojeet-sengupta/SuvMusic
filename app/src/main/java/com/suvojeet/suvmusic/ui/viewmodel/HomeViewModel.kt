@@ -81,15 +81,33 @@ class HomeViewModel @Inject constructor(
     val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
     
     init {
-        loadData()
+        // 1. Immutable observations (continuous flows)
         observeSession()
         observeMusicSource()
-        loadRecommendations()
-        loadPersonalizedSections()
-        loadLastFmRecommendations()
-        loadGenreSections()
-        loadContextSections()
-        detectMood()
+        
+        // 2. Structured data loading
+        loadHomeContent()
+    }
+    
+    /**
+     * Entry point for all home-related data loading.
+     * Launches a single coroutine to coordinate multiple data sources and avoid over-allocation.
+     */
+    private fun loadHomeContent(forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            // Load base data first (HomeSections from YouTube/JioSaavn)
+            loadData(forceRefresh)
+            
+            // Parallelize remaining taste-profile-driven content
+            // We use separate launches here but they are coordinated from a single parent call
+            // to allow for incremental UI updates as they arrive.
+            launch { loadRecommendations() }
+            launch { loadPersonalizedSections() }
+            launch { loadGenreSections() }
+            launch { loadContextSections() }
+            launch { loadLastFmRecommendations() }
+            launch { detectMood() }
+        }
     }
     
     private fun observeSession() {
@@ -265,16 +283,20 @@ class HomeViewModel @Inject constructor(
     fun refresh() {
         // Invalidate recommendation caches for fresh data
         recommendationEngine.onAuthStateChanged()
+        
         // Reset infinite scroll state
         loadMoreRetryCount = 0
-        _uiState.update { it.copy(loadMorePage = 0, hasReachedEnd = false, moreSections = emptyList()) }
-        loadData(forceRefresh = true)
-        loadRecommendations()
-        loadPersonalizedSections()
-        loadLastFmRecommendations()
-        loadGenreSections()
-        loadContextSections()
-        detectMood()
+        _uiState.update { 
+            it.copy(
+                loadMorePage = 0, 
+                hasReachedEnd = false, 
+                moreSections = emptyList(),
+                isRefreshing = true 
+            ) 
+        }
+        
+        // Trigger structured reload
+        loadHomeContent(forceRefresh = true)
     }
     
     private fun loadRecommendations() {

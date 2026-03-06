@@ -404,7 +404,10 @@ Java_com_suvojeet_suvmusic_recommendation_NativeRecommendationScorer_nScoreCandi
     jintArray result = env->NewIntArray(K);
     env->SetIntArrayRegion(result, 0, K, topIndices.data());
 
-    LOGD("Scored %d candidates, returned top %d", numCandidates, K);
+    // Only log if specifically requested or for large batches to avoid noise
+    if (numCandidates > 100) {
+        LOGD("Scored %d candidates, returned top %d", numCandidates, K);
+    }
     return result;
 }
 
