@@ -24,11 +24,12 @@ class ListenTogetherViewModel @Inject constructor(
     val roomState: StateFlow<RoomState?> = manager.roomState
     val role: StateFlow<RoomRole> = manager.role
     val userId: StateFlow<String?> = manager.userId
-    val logs = manager.logs
-    val events = manager.events
     val pendingJoinRequests = manager.pendingJoinRequests
     val bufferingUsers = manager.bufferingUsers
     val pendingSuggestions = manager.pendingSuggestions
+    val logs = manager.logs
+    val isLogActive = manager.isLogActive
+    val events = manager.events
     val hasPersistedSession: Boolean get() = manager.hasPersistedSession
     
     private val _savedUsername = kotlinx.coroutines.flow.MutableStateFlow("")
@@ -55,6 +56,22 @@ class ListenTogetherViewModel @Inject constructor(
             _syncVolume.value = manager.getSyncVolume()
             _muteHost.value = manager.getMuteHost()
         }
+    }
+    
+    fun connectToServer() {
+        manager.connect()
+    }
+
+    fun disconnectFromServer() {
+        manager.disconnect()
+    }
+
+    fun setLogActive(active: Boolean) {
+        manager.setLogActive(active)
+    }
+
+    fun clearLogs() {
+        manager.clearLogs()
     }
     
     fun updateSavedUsername(name: String) {
@@ -146,11 +163,11 @@ class ListenTogetherViewModel @Inject constructor(
     
     fun getPersistedRoomCode(): String? = manager.getPersistedRoomCode()
     
+    fun getSessionDuration(): Long = manager.getSessionDuration()
+    
     fun requestSync() {
         manager.requestSync()
     }
-
-    fun getSessionDuration(): Long = manager.getSessionAge()
 }
 
 data class ListenTogetherUiState(
