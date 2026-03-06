@@ -30,6 +30,7 @@ class ListenTogetherViewModel @Inject constructor(
     val logs = manager.logs
     val isLogActive = manager.isLogActive
     val events = manager.events
+    val blockedUsers = manager.blockedUsers
     val hasPersistedSession: Boolean get() = manager.hasPersistedSession
     
     private val _savedUsername = kotlinx.coroutines.flow.MutableStateFlow("")
@@ -73,6 +74,14 @@ class ListenTogetherViewModel @Inject constructor(
     fun clearLogs() {
         manager.clearLogs()
     }
+
+    fun blockUser(userId: String) {
+        manager.blockUser(userId)
+    }
+
+    fun unblockUser(userId: String) {
+        manager.unblockUser(userId)
+    }
     
     fun updateSavedUsername(name: String) {
         _savedUsername.value = name
@@ -108,13 +117,18 @@ class ListenTogetherViewModel @Inject constructor(
             manager.setMuteHost(enabled)
         }
     }
-    
-    // UI State for the sheet
-    val uiState = combine(connectionState, roomState, role) { connection, room, role ->
+
+    val uiState: StateFlow<ListenTogetherUiState> = combine(
+        connectionState,
+        roomState,
+        role,
+        userId
+    ) { conn, room, role, uid ->
         ListenTogetherUiState(
-            connectionState = connection,
+            connectionState = conn,
             roomState = room,
             role = role,
+            userId = uid,
             isInRoom = room != null
         )
     }.stateIn(
@@ -122,7 +136,6 @@ class ListenTogetherViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ListenTogetherUiState()
     )
-
     fun createRoom(username: String) {
         viewModelScope.launch {
             manager.createRoom(username)
@@ -174,5 +187,6 @@ data class ListenTogetherUiState(
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
     val roomState: RoomState? = null,
     val role: RoomRole = RoomRole.NONE,
+    val userId: String? = null,
     val isInRoom: Boolean = false
 )

@@ -57,6 +57,7 @@ val ListenTogetherUsernameKey = stringPreferencesKey("listenTogetherUsername")
 val ListenTogetherAutoApprovalKey = booleanPreferencesKey("listenTogetherAutoApproval")
 val ListenTogetherSyncVolumeKey = booleanPreferencesKey("listenTogetherSyncVolume")
 val ListenTogetherMuteHostKey = booleanPreferencesKey("listenTogetherMuteHost")
+val ListenTogetherBlockedUsersKey = stringPreferencesKey("listenTogetherBlockedUsers") // JSON list of userIds
 
 
 /**
@@ -161,7 +162,12 @@ class ListenTogetherClient @Inject constructor(
             val userId = prefs[ListenTogetherUserIdKey] ?: ""
             val isHost = prefs[ListenTogetherIsHostKey] ?: false
             val timestamp = prefs[ListenTogetherSessionTimestampKey] ?: 0L
-            
+            val blocked = prefs[ListenTogetherBlockedUsersKey] ?: ""
+
+            if (blocked.isNotEmpty()) {
+                _blockedUsers.value = blocked.split(",").toSet()
+            }
+
             // Check if session is still valid (within grace period)
             if (token.isNotEmpty() && roomCode.isNotEmpty() && 
                 (System.currentTimeMillis() - timestamp < SESSION_GRACE_PERIOD_MS)) {
@@ -280,6 +286,31 @@ class ListenTogetherClient @Inject constructor(
 
     fun setLogActive(active: Boolean) {
         _isLogActive.value = active
+    }
+
+    private val _blockedUsers = MutableStateFlow<Set<String>>(emptySet())
+    val blockedUsers: StateFlow<Set<String>> = _blockedUsers.asStateFlow()
+
+    fun blockUser(userId: String) {
+        _blockedUsers.value = _blockedUsers.value + userId
+        saveBlockedUsers()
+    }
+
+    fun unblockUser(userId: String) {
+        _blockedUsers.value = _blockedUsers.value - userId
+        saveBlockedUsers()
+    }
+
+    private fun saveBlockedUsers() {
+        scope.launch {
+            try {
+                context.dataStore.edit { preferences ->
+                    preferences[ListenTogetherBlockedUsersKey] = _blockedUsers.value.joinToString(",")
+                }
+            } catch (e: Exception) {
+                log(LogLevel.ERROR, "Failed to save blocked users", e.message)
+            }
+        }
     }
 
     // Event flow
@@ -704,6 +735,14 @@ class ListenTogetherClient @Inject constructor(
                 
                 MessageTypes.JOIN_REQUEST -> {
                     val payload = payloadObj as JoinRequestPayload
+                    
+                    // Auto-reject blocked users
+                    if (_blockedUsers.value.contains(payload.userId)) {
+                        log(LogLevel.WARNING, "Auto-rejecting blocked user", "User: ${payload.username} (${payload.userId})")
+                        rejectJoin(payload.userId)
+                        return@handleMessage
+                    }
+
                     _pendingJoinRequests.value = _pendingJoinRequests.value + payload
                     log(LogLevel.INFO, "Join request received", "User: ${payload.username}")
                     
