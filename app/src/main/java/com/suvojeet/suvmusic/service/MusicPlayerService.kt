@@ -165,7 +165,12 @@ class MusicPlayerService : MediaLibraryService() {
         setMediaNotificationProvider(CustomNotificationProvider())
         
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(2_000, 15_000, 1_500, 2_000)
+            .setBufferDurationsMs(
+                5_000,   // minBufferMs (was 2,000)
+                25_000,  // maxBufferMs (was 15_000)
+                2_500,   // bufferForPlaybackMs (was 1,500)
+                5_000    // bufferForPlaybackAfterRebufferMs (was 2,000)
+            )
             .setPrioritizeTimeOverSizeThresholds(true)
             .setBackBuffer(5_000, true)
             .build()
