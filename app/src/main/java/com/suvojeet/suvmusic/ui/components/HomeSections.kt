@@ -2,12 +2,11 @@ package com.suvojeet.suvmusic.ui.components
 
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -138,14 +137,16 @@ fun VerticalListSection(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            section.items.take(5).forEach { item ->
-                // Using MusicCard for vertical list look
+            val displayItems = remember(section.items) { section.items.take(5) }
+            val songs = remember(section.items) {
+                section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+            }
+            displayItems.forEach { item ->
                 when (item) {
                     is HomeItem.SongItem -> {
                          MusicCard(
                             song = item.song,
                             onClick = {
-                                val songs = section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
                                 val index = songs.indexOf(item.song)
                                 if (index != -1) onSongClick(songs, index)
                             },
@@ -154,16 +155,17 @@ fun VerticalListSection(
                         )
                     }
                     is HomeItem.PlaylistItem -> {
-                        // Create a temporary song object to use MusicCard for consistency
-                        val tempSong = Song(
-                            id = item.playlist.id,
-                            title = item.playlist.name,
-                            artist = item.playlist.uploaderName,
-                             thumbnailUrl = item.playlist.thumbnailUrl,
-                             album = "Playlist",
-                             duration = 0L,
-                             source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
-                        )
+                        val tempSong = remember(item.playlist.id) {
+                            Song(
+                                id = item.playlist.id,
+                                title = item.playlist.name,
+                                artist = item.playlist.uploaderName,
+                                thumbnailUrl = item.playlist.thumbnailUrl,
+                                album = "Playlist",
+                                duration = 0L,
+                                source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
+                            )
+                        }
                          MusicCard(
                             song = tempSong,
                             onClick = { onPlaylistClick(item.playlist) },
@@ -171,15 +173,17 @@ fun VerticalListSection(
                         )
                     }
                     is HomeItem.AlbumItem -> {
-                        val tempSong = Song(
-                            id = item.album.id,
-                            title = item.album.title,
-                            artist = item.album.artist,
-                             thumbnailUrl = item.album.thumbnailUrl,
-                             album = item.album.year ?: "Album",
-                             duration = 0L,
-                             source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
-                        )
+                        val tempSong = remember(item.album.id) {
+                            Song(
+                                id = item.album.id,
+                                title = item.album.title,
+                                artist = item.album.artist,
+                                thumbnailUrl = item.album.thumbnailUrl,
+                                album = item.album.year ?: "Album",
+                                duration = 0L,
+                                source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
+                            )
+                        }
                         MusicCard(
                             song = tempSong,
                             onClick = { onAlbumClick(item.album) },
@@ -291,29 +295,40 @@ fun GridSection(
     onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Pre-chunk items into columns of 2 for a grid layout.
+    // Using a regular Row + horizontalScroll instead of LazyHorizontalGrid
+    // to avoid nested lazy layout conflicts with the parent LazyColumn.
+    val chunkedItems = remember(section.items) { section.items.chunked(2) }
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HomeSectionHeader(title = section.title)
-        
-        // Use a LazyHorizontalGrid for grid feel but horizontally scrolling
-        LazyHorizontalGrid(
-            rows = GridCells.Fixed(2),
-            modifier = Modifier.height(340.dp), // Height for 2 items + spacing
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scrollState)
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(section.items) { item ->
-                HomeItemCard(
-                    item = item, 
-                    onSongClick = onSongClick, 
-                    onPlaylistClick = onPlaylistClick, 
-                    onAlbumClick = onAlbumClick,
-                     sectionItems = section.items,
-                     onSongMoreClick = onSongMoreClick
-                )
+            chunkedItems.forEach { columnItems ->
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    columnItems.forEach { item ->
+                        HomeItemCard(
+                            item = item,
+                            onSongClick = onSongClick,
+                            onPlaylistClick = onPlaylistClick,
+                            onAlbumClick = onAlbumClick,
+                            sectionItems = section.items,
+                            onSongMoreClick = onSongMoreClick
+                        )
+                    }
+                }
             }
         }
     }
@@ -396,15 +411,21 @@ fun QuickPicksSection(
                                     )
                                 }
                                 is HomeItem.PlaylistItem -> {
+                                    val tempSong = remember(item.playlist.id) {
+                                        Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
+                                    }
                                     MusicCard(
-                                        song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
+                                        song = tempSong,
                                         onClick = { onPlaylistClick(item.playlist) },
                                         backgroundColor = Color.Transparent
                                     )
                                 }
                                 is HomeItem.AlbumItem -> {
+                                    val tempSong = remember(item.album.id) {
+                                        Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
+                                    }
                                     MusicCard(
-                                        song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
+                                        song = tempSong,
                                         onClick = { onAlbumClick(item.album) },
                                         backgroundColor = Color.Transparent
                                     )
@@ -481,7 +502,10 @@ fun CommunityCarouselSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(section.items.filterIsInstance<HomeItem.PlaylistItem>()) { item ->
+            items(
+                items = section.items.filterIsInstance<HomeItem.PlaylistItem>(),
+                key = { it.playlist.id }
+            ) { item ->
                 CommunityPlaylistCard(
                     item = item,
                     onPlaylistClick = onPlaylistClick,
