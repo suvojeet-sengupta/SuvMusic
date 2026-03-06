@@ -313,7 +313,7 @@ fun SongActionsSheet(
 
                 ActionItem(
                     icon = Icons.Filled.Group,
-                    title = "Listen With Together",
+                    title = "Listen Together",
                     iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
                     textColor = contentColor,
                     onClick = { handleAction { onListenTogether() } }

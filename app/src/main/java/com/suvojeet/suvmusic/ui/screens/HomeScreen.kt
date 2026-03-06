@@ -571,7 +571,8 @@ fun HomeScreen(
                     }
                     context.startActivity(Intent.createChooser(sendIntent, "Share Song"))
                     showSongMenu = false
-                }
+                },
+                onListenTogether = onListenTogetherClick
             )
         }
 
