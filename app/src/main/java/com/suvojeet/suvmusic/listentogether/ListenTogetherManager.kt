@@ -82,6 +82,7 @@ class ListenTogetherManager @Inject constructor(
     val isLogActive = client.isLogActive
     val events = client.events
     val pendingSuggestions = client.pendingSuggestions
+    val blockedUsers = client.blockedUsers
 
     val isInRoom: Boolean get() = client.isInRoom
     val isHost: Boolean get() = client.isHost
@@ -89,6 +90,8 @@ class ListenTogetherManager @Inject constructor(
     
     fun setLogActive(active: Boolean) = client.setLogActive(active)
     fun clearLogs() = client.clearLogs()
+    fun blockUser(userId: String) = client.blockUser(userId)
+    fun unblockUser(userId: String) = client.unblockUser(userId)
     
     fun getSessionDuration(): Long = client.getSessionDuration()
     
