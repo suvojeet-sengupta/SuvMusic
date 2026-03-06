@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,6 +64,8 @@ import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.ui.graphics.Shape
 import java.util.Calendar
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
@@ -90,6 +94,14 @@ fun HomeScreen(
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
+
+    // Stable callback reference — avoids creating new lambdas per section item
+    val onSongMoreClickHandler = remember {
+        { song: Song ->
+            selectedSong = song
+            showSongMenu = true
+        }
+    }
     
     // Handle Events
     LaunchedEffect(Unit) {
@@ -143,16 +155,19 @@ fun HomeScreen(
                 // Emit Pair(lastVisibleIndex, totalItems) so that when new items load and
                 // user is still near the bottom, distinctUntilChanged sees a new value
                 // and re-fires loadMore() automatically until the exact end is reached.
+                // Infinite scroll detection with debounce to prevent rapid-fire loadMore calls.
+                // Uses collectLatest so fast flings cancel pending loads automatically.
                 LaunchedEffect(lazyListState) {
                     snapshotFlow {
                         val layoutInfo = lazyListState.layoutInfo
                         val totalItems = layoutInfo.totalItemsCount
                         val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                        Triple(lastVisibleIndex, totalItems, lastVisibleIndex >= totalItems - 5 && totalItems > 0)
+                        lastVisibleIndex >= totalItems - 5 && totalItems > 0
                     }
                         .distinctUntilChanged()
-                        .filter { it.third }
-                        .collect {
+                        .filter { it }
+                        .collectLatest {
+                            delay(300) // debounce to avoid race with ViewModel state update
                             viewModel.loadMore()
                         }
                 }
@@ -250,8 +265,7 @@ fun HomeScreen(
                             key = { _, section -> section.title },
                             contentType = { _, section -> section.type }
                         ) { index, section ->
-                            // Offset index by 5 for static items above
-                            val enterModifier = Modifier.animateEnter(index = index + 5)
+                            val enterModifier = Modifier.animateEnter(index = index)
                             
                             when (section.type) {
                                 HomeSectionType.LargeCardWithList -> {
@@ -260,10 +274,7 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = { song ->
-                                            selectedSong = song
-                                            showSongMenu = true
-                                        },
+                                        onSongMoreClick = onSongMoreClickHandler,
                                         modifier = enterModifier,
                                     )
                                 }
@@ -273,10 +284,7 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = { song ->
-                                            selectedSong = song
-                                            showSongMenu = true
-                                        },
+                                        onSongMoreClick = onSongMoreClickHandler,
                                         modifier = enterModifier,
                                     )
                                 }
@@ -286,10 +294,7 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = { song ->
-                                            selectedSong = song
-                                            showSongMenu = true
-                                        },
+                                        onSongMoreClick = onSongMoreClickHandler,
                                         modifier = enterModifier,
                                     )
                                 }
@@ -299,10 +304,7 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = { song ->
-                                            selectedSong = song
-                                            showSongMenu = true
-                                        },
+                                        onSongMoreClick = onSongMoreClickHandler,
                                         modifier = enterModifier,
                                     )
                                 }
@@ -316,10 +318,7 @@ fun HomeScreen(
                                         onSavePlaylist = { playlist ->
                                             android.widget.Toast.makeText(context, "Saved ${playlist.name} to Library", android.widget.Toast.LENGTH_SHORT).show()
                                         },
-                                        onSongMoreClick = { song ->
-                                            selectedSong = song
-                                            showSongMenu = true
-                                        },
+                                        onSongMoreClick = onSongMoreClickHandler,
                                         modifier = enterModifier
                                     )
                                 }
@@ -329,10 +328,7 @@ fun HomeScreen(
                                         onSongClick = onSongClick,
                                         onPlaylistClick = onPlaylistClick,
                                         onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = { song ->
-                                            selectedSong = song
-                                            showSongMenu = true
-                                        },
+                                        onSongMoreClick = onSongMoreClickHandler,
                                         modifier = enterModifier,
                                     )
                                 }
@@ -354,7 +350,7 @@ fun HomeScreen(
                                 PersonalizedSectionHeader(
                                     modifier = Modifier
                                         .padding(horizontal = 16.dp)
-                                        .animateEnter(index = uiState.filteredSections.size + 6)
+                                        .animateEnter(index = 0)
                                 )
                             }
 
@@ -363,7 +359,7 @@ fun HomeScreen(
                                 key = { _, section -> "personalized_${section.title}" },
                                 contentType = { _, section -> "personalized_${section.type}" }
                             ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(index = index + uiState.filteredSections.size + 6)
+                                val enterModifier = Modifier.animateEnter(index = index)
                                 
                                 when (section.type) {
                                     HomeSectionType.QuickPicks -> {
@@ -372,10 +368,7 @@ fun HomeScreen(
                                             onSongClick = onSongClick,
                                             onPlaylistClick = onPlaylistClick,
                                             onAlbumClick = onAlbumClick,
-                                            onSongMoreClick = { song ->
-                                                selectedSong = song
-                                                showSongMenu = true
-                                            },
+                                            onSongMoreClick = onSongMoreClickHandler,
                                             modifier = enterModifier,
                                         )
                                     }
@@ -385,10 +378,7 @@ fun HomeScreen(
                                             onSongClick = onSongClick,
                                             onPlaylistClick = onPlaylistClick,
                                             onAlbumClick = onAlbumClick,
-                                            onSongMoreClick = { song ->
-                                                selectedSong = song
-                                                showSongMenu = true
-                                            },
+                                            onSongMoreClick = onSongMoreClickHandler,
                                             modifier = enterModifier,
                                         )
                                     }
@@ -404,7 +394,7 @@ fun HomeScreen(
                                     subtitle = "Because of your taste",
                                     modifier = Modifier
                                         .padding(horizontal = 16.dp)
-                                        .animateEnter(index = uiState.filteredSections.size + uiState.personalizedSections.size + 8)
+                                        .animateEnter(index = 0)
                                 )
                             }
 
@@ -413,18 +403,13 @@ fun HomeScreen(
                                 key = { _, section -> "genre_${section.title}" },
                                 contentType = { _, section -> "genre_${section.type}" }
                             ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(
-                                    index = index + uiState.filteredSections.size + uiState.personalizedSections.size + 9
-                                )
+                                val enterModifier = Modifier.animateEnter(index = index)
                                 com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
                                     section = section,
                                     onSongClick = onSongClick,
                                     onPlaylistClick = onPlaylistClick,
                                     onAlbumClick = onAlbumClick,
-                                    onSongMoreClick = { song ->
-                                        selectedSong = song
-                                        showSongMenu = true
-                                    },
+                                    onSongMoreClick = onSongMoreClickHandler,
                                     modifier = enterModifier,
                                 )
                             }
@@ -437,18 +422,13 @@ fun HomeScreen(
                                 key = { _, section -> "context_${section.title}" },
                                 contentType = { _, section -> "context_${section.type}" }
                             ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(
-                                    index = index + uiState.filteredSections.size + uiState.personalizedSections.size + uiState.genreSections.size + 10
-                                )
+                                val enterModifier = Modifier.animateEnter(index = index)
                                 com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
                                     section = section,
                                     onSongClick = onSongClick,
                                     onPlaylistClick = onPlaylistClick,
                                     onAlbumClick = onAlbumClick,
-                                    onSongMoreClick = { song ->
-                                        selectedSong = song
-                                        showSongMenu = true
-                                    },
+                                    onSongMoreClick = onSongMoreClickHandler,
                                     modifier = enterModifier,
                                 )
                             }
@@ -487,7 +467,7 @@ fun HomeScreen(
                                 key = { _, section -> "more_${section.title}" },
                                 contentType = { _, section -> "more_${section.type}" }
                             ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(index = index + 14)
+                                val enterModifier = Modifier.animateEnter(index = index)
                                 RenderHomeSection(
                                     section = section,
                                     onSongClick = onSongClick,
@@ -495,10 +475,7 @@ fun HomeScreen(
                                     onAlbumClick = onAlbumClick,
                                     onExploreClick = onExploreClick,
                                     onStartRadio = onStartRadio,
-                                    onSongMoreClick = { song ->
-                                        selectedSong = song
-                                        showSongMenu = true
-                                    },
+                                    onSongMoreClick = onSongMoreClickHandler,
                                     modifier = enterModifier
                                 )
                             }
@@ -1244,8 +1221,7 @@ private fun Modifier.bounceClick(
     shape: Shape = RoundedCornerShape(8.dp),
     onClick: () -> Unit
 ): Modifier {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
+    var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
@@ -1256,17 +1232,27 @@ private fun Modifier.bounceClick(
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
+            clip = true
+            this.shape = shape
         }
         .dpadFocusable(
             shape = shape,
             focusedScale = 1.05f,
             borderColor = MaterialTheme.colorScheme.primary
         )
-        .clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = onClick
-        )
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onPress = {
+                    isPressed = true
+                    try {
+                        tryAwaitRelease()
+                    } finally {
+                        isPressed = false
+                    }
+                },
+                onTap = { onClick() }
+            )
+        }
 }
 
 @Composable
@@ -1458,7 +1444,10 @@ fun RecommendedArtistsSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(artists) { artist ->
+            items(
+                items = artists,
+                key = { it.name }
+            ) { artist ->
                 ArtistCard(artist = artist, onClick = { onArtistClick(artist.name) })
             }
         }
@@ -1481,7 +1470,10 @@ fun RecommendedTracksSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(tracks) { track ->
+            items(
+                items = tracks,
+                key = { it.name }
+            ) { track ->
                 TrackCard(track = track, onClick = { onTrackClick(track) })
             }
         }
