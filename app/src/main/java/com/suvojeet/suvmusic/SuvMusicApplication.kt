@@ -44,7 +44,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
                 reportFormat = StringFormat.JSON
 
                 // Capture more logs for context (default is 100)
-                logcatArguments = arrayOf("-t", "200", "-v", "time")
+                logcatArguments = listOf("-t", "200", "-v", "time")
 
                 notification {
                     title = base.getString(R.string.acra_crash_title)
