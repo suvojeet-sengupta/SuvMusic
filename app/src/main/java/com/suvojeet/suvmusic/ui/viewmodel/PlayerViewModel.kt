@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.viewmodel
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.MediaMetadataRetriever
@@ -85,6 +86,13 @@ class PlayerViewModel @Inject constructor(
     
     private val _isFetchingLyrics = MutableStateFlow(false)
     val isFetchingLyrics: StateFlow<Boolean> = _isFetchingLyrics.asStateFlow()
+    
+    private val _pendingIntent = MutableStateFlow<PendingIntent?>(null)
+    val pendingIntent = _pendingIntent.asStateFlow()
+
+    fun consumePendingIntent() {
+        _pendingIntent.value = null
+    }
     
     // Lyrics Provider Selection
     private val _selectedLyricsProvider = MutableStateFlow(LyricsProviderType.AUTO)
@@ -901,11 +909,17 @@ class PlayerViewModel @Inject constructor(
 
     fun deleteDownload(songId: String) {
         viewModelScope.launch {
-            downloadRepository.deleteDownload(songId)
-            // Update state immediately if it's current song
-            val currentSong = playerState.value.currentSong
-            if (currentSong != null && currentSong.id == songId) {
-                musicPlayer.updateDownloadState(DownloadState.NOT_DOWNLOADED)
+            try {
+                downloadRepository.deleteDownload(songId)
+                // Update state immediately if it's current song
+                val currentSong = playerState.value.currentSong
+                if (currentSong != null && currentSong.id == songId) {
+                    musicPlayer.updateDownloadState(DownloadState.NOT_DOWNLOADED)
+                }
+            } catch (e: com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException) {
+                _pendingIntent.value = e.pendingIntent
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

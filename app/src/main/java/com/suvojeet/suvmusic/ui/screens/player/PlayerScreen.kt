@@ -94,6 +94,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
@@ -197,6 +200,23 @@ fun PlayerScreen(
     val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsStateWithLifecycle(initialValue = 1.5f)
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 26f)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    
+    val pendingIntent by playerViewModel.pendingIntent.collectAsStateWithLifecycle()
+    val deleteLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            // Permission granted, file deleted
+        }
+        playerViewModel.consumePendingIntent()
+    }
+
+    LaunchedEffect(pendingIntent) {
+        pendingIntent?.let { intent ->
+            val intentSenderRequest = IntentSenderRequest.Builder(intent).build()
+            deleteLauncher.launch(intentSenderRequest)
+        }
+    }
     
     val eqEnabled by playerViewModel.getEqEnabled().collectAsStateWithLifecycle(initialValue = false)
     val eqBands by playerViewModel.getEqBands().collectAsStateWithLifecycle(initialValue = FloatArray(10) { 0f })
