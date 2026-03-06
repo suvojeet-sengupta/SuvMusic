@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.listentogether
+package com.suvojeet.suvmusic.shareplay
 
 import android.content.BroadcastReceiver
 import android.content.Context

@@ -16,12 +16,12 @@ dependencyResolutionManagement {
 
 rootProject.name = "SuvMusic"
 include(":app")
-include(":providers")
-include(":lastfm")
-include(":simpmusic")
-include(":lrclib")
-include(":kugou")
-include(":newpipe")
+include(":media-source")
+include(":scrobbler")
+include(":lyric-simpmusic")
+include(":lyric-lrclib")
+include(":lyric-kugou")
+include(":extractor")
 include(":core:model")
 include(":core:data")
 include(":core:domain")
