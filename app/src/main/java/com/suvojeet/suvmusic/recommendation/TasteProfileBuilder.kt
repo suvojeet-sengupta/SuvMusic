@@ -13,6 +13,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
 /**
  * Builds and maintains a [UserTasteProfile] from the local listening history database.
  * The profile is used by [RecommendationEngine] to score and rank song candidates.
@@ -26,6 +29,9 @@ class TasteProfileBuilder @Inject constructor(
     private val dislikedItemDao: DislikedItemDao,
     private val songGenreDao: SongGenreDao
 ) {
+    /** Lock to ensure only one buildProfile happens at a time */
+    private val buildMutex = Mutex()
+
     /** Cached profile + build timestamp — atomic pair to avoid stale reads */
     @Volatile
     private var profileSnapshot: Pair<UserTasteProfile?, Long> = Pair(null, 0L)
@@ -55,14 +61,23 @@ class TasteProfileBuilder @Inject constructor(
      * Get the current taste profile, rebuilding if stale.
      */
     suspend fun getProfile(forceRefresh: Boolean = false): UserTasteProfile {
+        // Fast path: double-checked locking style check without lock
         val now = System.currentTimeMillis()
         val (existing, buildTime) = profileSnapshot
         if (!forceRefresh && existing != null && (now - buildTime) < PROFILE_TTL_MS) {
             return existing
         }
-        return buildProfile().also {
-            // Single atomic write — both profile and timestamp update together
-            profileSnapshot = Pair(it, now)
+
+        // Slow path: obtain lock and rebuild if still needed
+        return buildMutex.withLock {
+            val (existingInner, buildTimeInner) = profileSnapshot
+            if (!forceRefresh && existingInner != null && (System.currentTimeMillis() - buildTimeInner) < PROFILE_TTL_MS) {
+                return@withLock existingInner
+            }
+
+            val newProfile = buildProfile()
+            profileSnapshot = Pair(newProfile, System.currentTimeMillis())
+            newProfile
         }
     }
 
