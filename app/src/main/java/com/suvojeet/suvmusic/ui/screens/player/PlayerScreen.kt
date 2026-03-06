@@ -484,14 +484,10 @@ fun PortraitPlayerContent(
         SongInfoSection(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
-            dominantColors = dominantColors, compact = isCompactHeight || playerState.isVideoMode
+            dominantColors = dominantColors, compact = isCompactHeight
         )
 
-        if (playerState.isVideoMode) {
-            Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 16.dp))
-        } else {
-            Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
-        }
+        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
         WaveformSeeker(
             progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
@@ -501,28 +497,20 @@ fun PortraitPlayerContent(
 
         TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
 
-        if (playerState.isVideoMode) {
-            Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 16.dp))
-        } else {
-            Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
-        }
+        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
         PlaybackControls(
             isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
             onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle,
-            onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors, compact = isCompactHeight || playerState.isVideoMode
+            onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors, compact = isCompactHeight
         )
 
-        if (playerState.isVideoMode) {
-            Spacer(modifier = Modifier.weight(1f))
-        } else {
-            Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 16.dp))
-        }
+        Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 16.dp))
 
         BottomActions(
             onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onDownloadClick = actions.onDownload,
             downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-            isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode, compact = isCompactHeight || playerState.isVideoMode
+            isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode, compact = isCompactHeight
         )
         Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
     }
