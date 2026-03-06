@@ -39,6 +39,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.draw.scale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -164,69 +166,51 @@ fun ListenTogetherHeader(onDismiss: () -> Unit, connectionState: ConnectionState
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Listen Together",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-1).sp
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.5).sp
                 )
             )
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                Surface(
-                    color = when (connectionState) {
-                        ConnectionState.CONNECTED -> Color(0xFF4CAF50).copy(alpha = 0.15f)
-                        ConnectionState.CONNECTING, ConnectionState.RECONNECTING -> Color(0xFFFF9800).copy(alpha = 0.15f)
-                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                    },
-                    shape = CircleShape
-                ) {
-                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    color = when (connectionState) {
-                                        ConnectionState.CONNECTED -> Color(0xFF4CAF50)
-                                        ConnectionState.CONNECTING, ConnectionState.RECONNECTING -> Color(0xFFFF9800)
-                                        else -> Color.Gray
-                                    },
-                                    shape = CircleShape
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = when (connectionState) {
-                                ConnectionState.CONNECTED -> "Online"
-                                ConnectionState.CONNECTING -> "Connecting..."
-                                ConnectionState.RECONNECTING -> "Reconnecting..."
-                                ConnectionState.ERROR -> "Connection Error"
-                                else -> "Offline"
-                            },
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(
                             color = when (connectionState) {
                                 ConnectionState.CONNECTED -> Color(0xFF4CAF50)
                                 ConnectionState.CONNECTING, ConnectionState.RECONNECTING -> Color(0xFFFF9800)
-                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            }
+                                else -> MaterialTheme.colorScheme.outline
+                            },
+                            shape = CircleShape
                         )
-                    }
-                }
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = when (connectionState) {
+                        ConnectionState.CONNECTED -> "Online"
+                        ConnectionState.CONNECTING -> "Connecting..."
+                        ConnectionState.RECONNECTING -> "Reconnecting..."
+                        ConnectionState.ERROR -> "Connection Error"
+                        else -> "Offline"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         
-        FilledIconButton(
+        IconButton(
             onClick = onDismiss,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            modifier = Modifier.size(48.dp)
+            modifier = Modifier.size(40.dp)
         ) {
-            Icon(Icons.Default.Close, "Close", modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Close, "Close", modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -242,73 +226,74 @@ fun ConnectToServerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 32.dp),
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         val icon = if (connectionState == ConnectionState.ERROR) Icons.Default.WifiOff else Icons.Default.Wifi
         
         Surface(
-            modifier = Modifier.size(120.dp),
-            shape = RoundedCornerShape(32.dp),
-            color = if (connectionState == ConnectionState.ERROR) MaterialTheme.colorScheme.errorContainer else dominantColors.accent.copy(alpha = 0.1f)
+            modifier = Modifier.size(80.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = if (connectionState == ConnectionState.ERROR) 
+                MaterialTheme.colorScheme.errorContainer 
+            else 
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(56.dp),
-                    tint = if (connectionState == ConnectionState.ERROR) MaterialTheme.colorScheme.error else dominantColors.accent
+                    modifier = Modifier.size(36.dp),
+                    tint = if (connectionState == ConnectionState.ERROR) 
+                        MaterialTheme.colorScheme.error 
+                    else 
+                        MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
         Text(
             text = "Connect to Session",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         
         Text(
-            text = "Sync music with friends in real-time. Connect to the session server to get started.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            text = "Sync music with friends in real-time.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 12.dp, bottom = 40.dp)
+            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
         )
 
         OutlinedTextField(
             value = serverUrl,
             onValueChange = onServerUrlChange,
             label = { Text("Server URL") },
-            leadingIcon = { Icon(Icons.Default.Link, null) },
+            leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(20.dp)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = dominantColors.accent,
-                focusedLabelColor = dominantColors.accent
-            )
+            shape = RoundedCornerShape(16.dp)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = onConnect,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp),
-            shape = RoundedCornerShape(20.dp),
-            enabled = connectionState != ConnectionState.CONNECTING,
-            colors = ButtonDefaults.buttonColors(containerColor = dominantColors.accent)
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            enabled = connectionState != ConnectionState.CONNECTING
         ) {
             if (connectionState == ConnectionState.CONNECTING) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             } else {
-                Text("Connect to Server", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text("Connect", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }
         }
     }
@@ -347,127 +332,123 @@ fun SetupContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 24.dp, end = 24.dp, bottom = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Surface(
+        OutlinedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "WHO ARE YOU?",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
+                    text = "IDENTIFICATION",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp
                     ),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    color = MaterialTheme.colorScheme.primary
                 )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 
                 OutlinedTextField(
                     value = username,
                     onValueChange = onUsernameChange,
                     placeholder = { Text("Enter your name") },
-                    leadingIcon = { Icon(Icons.Default.Person, null) },
+                    leadingIcon = { Icon(Icons.Default.Person, null, modifier = Modifier.size(20.dp)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = MaterialTheme.typography.bodyLarge
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Surface(
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Card(
                 modifier = Modifier
                     .weight(1f)
-                    .height(140.dp)
-                    .clickable(enabled = username.isNotBlank()) { onCreateRoom() },
-                shape = RoundedCornerShape(28.dp),
-                color = if (username.isNotBlank()) dominantColors.accent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    .height(110.dp),
+                onClick = { if (username.isNotBlank()) onCreateRoom() },
+                enabled = username.isNotBlank(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.fillMaxSize().padding(12.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.Add, 
-                        null, 
-                        modifier = Modifier.size(32.dp),
-                        tint = if (username.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(28.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "HOST ROOM",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
-                        color = if (username.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }
 
-            Surface(
+            OutlinedCard(
                 modifier = Modifier
                     .weight(1.2f)
-                    .height(140.dp),
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    .height(110.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    OutlinedTextField(
+                    BasicTextField(
                         value = roomCode,
                         onValueChange = { if (it.length <= 8) roomCode = it.uppercase() },
-                        placeholder = { Text("CODE", fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Black, 
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold, 
                             textAlign = TextAlign.Center,
-                            letterSpacing = 2.sp
+                            letterSpacing = 2.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
-                        )
+                        decorationBox = { innerTextField ->
+                            if (roomCode.isEmpty()) {
+                                Text(
+                                    "ROOM CODE", 
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                            innerTextField()
+                        }
                     )
                     
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    IconButton(
+                    Button(
                         onClick = { onJoinRoom(roomCode) },
                         enabled = username.isNotBlank() && roomCode.length >= 4,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .background(
-                                if (username.isNotBlank() && roomCode.length >= 4) dominantColors.accent else Color.Gray.copy(alpha = 0.2f), 
-                                RoundedCornerShape(12.dp)
-                            )
+                        modifier = Modifier.fillMaxWidth().height(36.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(0.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Login, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("JOIN", fontWeight = FontWeight.Bold, color = Color.White)
-                        }
+                        Text("JOIN", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(40.dp))
 
         SettingsSection(
             showSettings = showSettings,
@@ -493,6 +474,8 @@ fun SetupContent(
             onUnblockUser = onUnblockUser,
             dominantColors = dominantColors
         )
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -522,28 +505,24 @@ fun SettingsSection(
     dominantColors: DominantColors
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onToggleSettings() }
-                .padding(vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Connection Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Icon(if (showSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
-        }
+        ListItem(
+            headlineContent = { Text("Connection Settings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+            trailingContent = { Icon(if (showSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null) },
+            modifier = Modifier.clickable { onToggleSettings() }.clip(RoundedCornerShape(12.dp)),
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
 
         AnimatedVisibility(visible = showSettings) {
-            Surface(
+            ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     SettingsToggleItem(
                         title = "Auto-approve guests",
                         subtitle = "Accept requests automatically",
@@ -551,7 +530,7 @@ fun SettingsSection(
                         onCheckedChange = onAutoApprovalChange,
                         dominantColors = dominantColors
                     )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsToggleItem(
                         title = "Sync host volume",
                         subtitle = "Match volume with host",
@@ -559,7 +538,7 @@ fun SettingsSection(
                         onCheckedChange = onSyncVolumeChange,
                         dominantColors = dominantColors
                     )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsToggleItem(
                         title = "Mute host audio",
                         subtitle = "Useful for local syncing",
@@ -568,50 +547,47 @@ fun SettingsSection(
                         dominantColors = dominantColors
                     )
                     
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     
                     OutlinedTextField(
                         value = serverUrl,
                         onValueChange = onServerUrlChange,
                         label = { Text("Server URL") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        textStyle = MaterialTheme.typography.bodySmall
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        singleLine = true
                     )
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilledTonalButton(
                                 onClick = onToggleLogs,
-                                modifier = Modifier.weight(1f).height(52.dp),
-                                shape = RoundedCornerShape(16.dp)
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Icon(Icons.Default.History, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Real-time Logs")
+                                Text("Logs", style = MaterialTheme.typography.labelLarge)
                             }
                             
                             FilledTonalButton(
                                 onClick = onToggleBlocked,
-                                modifier = Modifier.weight(1f).height(52.dp),
-                                shape = RoundedCornerShape(16.dp)
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Icon(Icons.Default.Block, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Blocked (${blockedUsers.size})")
+                                Text("Blocked", style = MaterialTheme.typography.labelLarge)
                             }
                         }
                         
-                        Button(
+                        TextButton(
                             onClick = onDisconnect,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f), 
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                            ),
-                            shape = RoundedCornerShape(16.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                         ) {
                             Icon(Icons.Default.LinkOff, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -658,27 +634,29 @@ fun RoomContent(
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (uiState.role == RoomRole.HOST && pendingRequests.isNotEmpty()) {
             item {
-                Surface(
-                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.GroupAdd, null, tint = MaterialTheme.colorScheme.tertiary)
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Icon(Icons.Default.GroupAdd, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Pending Requests (${pendingRequests.size})",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                                color = MaterialTheme.colorScheme.tertiary
+                                text = "Join Requests (${pendingRequests.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                         }
                         
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         
                         pendingRequests.forEach { request ->
                             RequestItem(
@@ -694,40 +672,40 @@ fun RoomContent(
         }
 
         item {
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(36.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ElevatedCard(
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
             ) {
                 Column(
-                    modifier = Modifier.padding(32.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         "SESSION CODE", 
-                        style = MaterialTheme.typography.labelLarge.copy(
+                        style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp
+                            letterSpacing = 2.sp
                         ),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = room.roomCode,
-                        style = MaterialTheme.typography.displayMedium.copy(
+                        style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Black, 
-                            letterSpacing = 8.sp
+                            letterSpacing = 4.sp
                         ),
                         modifier = Modifier.clickable { onCopyCode(room.roomCode) }
                     )
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     val hostUser = room.users.find { it.userId == room.hostId }
-                    InputChip(
-                        selected = true,
+                    AssistChip(
                         onClick = {},
-                        label = { Text("Hosted by ${hostUser?.username ?: "..."}") },
-                        leadingIcon = { Icon(Icons.Default.Person, null, modifier = Modifier.size(18.dp)) },
+                        label = { Text("Host: ${hostUser?.username ?: "..."}") },
+                        leadingIcon = { Icon(Icons.Default.Person, null, modifier = Modifier.size(16.dp)) },
                         shape = CircleShape
                     )
                 }
@@ -753,87 +731,76 @@ fun RoomContent(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StatItem(label = "UPTIME", value = durationString, modifier = Modifier.weight(1f))
                 StatItem(label = "LISTENERS", value = "${room.users.size}", modifier = Modifier.weight(1f))
-                StatItem(label = "STATUS", value = if (room.isPlaying) "Playing" else "Paused", modifier = Modifier.weight(1f), highlight = room.isPlaying, highlightColor = Color(0xFF4CAF50))
+                StatItem(
+                    label = "STATUS", 
+                    value = if (room.isPlaying) "Playing" else "Paused", 
+                    modifier = Modifier.weight(1f), 
+                    highlight = room.isPlaying, 
+                    highlightColor = Color(0xFF4CAF50)
+                )
             }
         }
 
         item {
             val track = room.currentTrack
             Text(
-                "CURRENTLY SYNCED", 
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                modifier = Modifier.padding(bottom = 16.dp, start = 4.dp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                "SYNCED TRACK", 
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp, start = 4.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            OutlinedCard(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
             ) {
                 Row(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (track?.thumbnail != null) {
                         coil.compose.AsyncImage(
                             model = track.thumbnail,
                             contentDescription = null,
-                            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(16.dp)),
+                            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop
                         )
                     } else {
                         Surface(
-                            modifier = Modifier.size(72.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.size(56.dp),
+                            shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(24.dp))
                             }
                         }
                     }
                     
-                    Spacer(modifier = Modifier.width(20.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = track?.title ?: "Waiting for Host...", 
-                            style = MaterialTheme.typography.titleLarge, 
-                            fontWeight = FontWeight.ExtraBold, 
+                            text = track?.title ?: "No Synchronized Track", 
+                            style = MaterialTheme.typography.titleMedium, 
+                            fontWeight = FontWeight.Bold, 
                             maxLines = 1,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = track?.artist ?: "No track in sync", 
-                            style = MaterialTheme.typography.bodyMedium, 
+                            text = track?.artist ?: "Host is not playing anything", 
+                            style = MaterialTheme.typography.bodySmall, 
                             maxLines = 1,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        
-                        if (track != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Surface(
-                                color = if (room.isPlaying) Color(0xFF4CAF50).copy(alpha = 0.1f) else Color.Gray.copy(alpha = 0.1f),
-                                shape = CircleShape
-                            ) {
-                                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(6.dp).background(if (room.isPlaying) Color(0xFF4CAF50) else Color.Gray, CircleShape))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = if (room.isPlaying) "Synced" else "Paused", 
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = if (room.isPlaying) Color(0xFF4CAF50) else Color.Gray
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -842,9 +809,9 @@ fun RoomContent(
         item {
             Text(
                 "LISTENERS", 
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                modifier = Modifier.padding(bottom = 16.dp, start = 4.dp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp, start = 4.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -859,35 +826,35 @@ fun RoomContent(
         }
 
         item {
-            Spacer(modifier = Modifier.height(40.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (uiState.role != RoomRole.HOST) {
                     Button(
                         onClick = onSync,
-                        modifier = Modifier.fillMaxWidth().height(64.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer, 
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                     ) {
-                        Icon(Icons.Default.Refresh, null)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Resync with Host", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Force Resync", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 }
                 
-                Button(
+                TextButton(
                     onClick = onLeaveRoom,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f), 
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(64.dp),
-                    shape = RoundedCornerShape(20.dp)
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) {
-                    Icon(Icons.Default.Logout, null)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Leave Session", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Icon(Icons.Default.Logout, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Leave Session", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -896,14 +863,22 @@ fun RoomContent(
 fun StatItem(label: String, value: String, modifier: Modifier = Modifier, highlight: Boolean = false, highlightColor: Color = Color.Unspecified) {
     Surface(
         modifier = modifier,
-        color = if (highlight) highlightColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, (if (highlight) highlightColor else MaterialTheme.colorScheme.onSurface).copy(alpha = 0.05f))
+        color = if (highlight) highlightColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = if (highlight) highlightColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black), color = if (highlight) highlightColor else MaterialTheme.colorScheme.onSurface)
+        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.labelSmall, 
+                color = if (highlight) highlightColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = value, 
+                style = MaterialTheme.typography.titleMedium, 
+                fontWeight = FontWeight.Bold,
+                color = if (highlight) highlightColor else MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -918,68 +893,70 @@ fun UserListItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = Color.Transparent
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(if (isHost) accentColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = user.username.take(1).uppercase(), 
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                    color = if (isHost) accentColor else MaterialTheme.colorScheme.onSurface
-                )
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .align(Alignment.BottomEnd)
-                        .background(if (user.isConnected) Color(0xFF4CAF50) else Color.Gray, CircleShape)
-                        .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (isMe) "${user.username} (You)" else user.username, 
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    if (isHost) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(color = accentColor.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
-                            Text(
-                                "HOST", 
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black), 
-                                color = accentColor, 
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), 
-                                fontSize = 9.sp
-                            )
-                        }
+    ListItem(
+        modifier = Modifier.clip(RoundedCornerShape(16.dp)),
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        leadingContent = {
+            Box(contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.size(40.dp),
+                    shape = CircleShape,
+                    color = if (isHost) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = user.username.take(1).uppercase(), 
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isHost) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
-                Text(
-                    text = if (user.isConnected) "Synchronized" else "Disconnected", 
-                    style = MaterialTheme.typography.labelMedium, 
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .align(Alignment.BottomEnd)
+                        .background(if (user.isConnected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline, CircleShape)
+                        .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
                 )
             }
-
+        },
+        headlineContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (isMe) "${user.username} (You)" else user.username, 
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isMe || isHost) FontWeight.Bold else FontWeight.Medium
+                )
+                if (isHost) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), 
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            "HOST", 
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), 
+                            color = MaterialTheme.colorScheme.primary, 
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp), 
+                            fontSize = 8.sp
+                        )
+                    }
+                }
+            }
+        },
+        supportingContent = {
+            Text(
+                text = if (user.isConnected) "Synchronized" else "Connection lost", 
+                style = MaterialTheme.typography.labelMedium, 
+                color = if (user.isConnected) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+            )
+        },
+        trailingContent = {
             if (!isMe) {
                 Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                    IconButton(onClick = { showMenu = true }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.MoreVert, null, modifier = Modifier.size(18.dp))
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
@@ -989,75 +966,69 @@ fun UserListItem(
                                 showMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Block, null, modifier = Modifier.size(18.dp)) },
-                            colors = MenuDefaults.itemColors(textColor = MaterialTheme.colorScheme.error, leadingIconColor = MaterialTheme.colorScheme.error)
+                            colors = MenuDefaults.itemColors(
+                                textColor = MaterialTheme.colorScheme.error, 
+                                leadingIconColor = MaterialTheme.colorScheme.error
+                            )
                         )
                     }
                 }
             }
         }
-    }
+    )
 }
 
 @Composable
 fun SettingsToggleItem(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, dominantColors: DominantColors) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }, 
-        verticalAlignment = Alignment.CenterVertically, 
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-        }
-        Switch(
-            checked = checked, 
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White, 
-                checkedTrackColor = dominantColors.accent,
-                uncheckedBorderColor = Color.Transparent,
-                uncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    ListItem(
+        headlineContent = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold) },
+        supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        trailingContent = {
+            Switch(
+                checked = checked, 
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.scale(0.85f)
             )
-        )
-    }
+        },
+        modifier = Modifier.clickable { onCheckedChange(!checked) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
 }
 
 @Composable
 fun RequestItem(request: JoinRequestPayload, onApprove: (String) -> Unit, onReject: (String) -> Unit, dominantColors: DominantColors) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.padding(vertical = 4.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp), 
+            modifier = Modifier.fillMaxWidth().padding(8.dp), 
             verticalAlignment = Alignment.CenterVertically, 
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Surface(modifier = Modifier.size(36.dp), shape = CircleShape, color = dominantColors.accent.copy(alpha = 0.1f)) {
+                Surface(modifier = Modifier.size(32.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(request.username.take(1).uppercase(), fontWeight = FontWeight.Bold, color = dominantColors.accent)
+                        Text(request.username.take(1).uppercase(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(request.username, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(request.username, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
             }
             
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(
                     onClick = { onReject(request.userId) }, 
-                    modifier = Modifier.background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f), CircleShape).size(40.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(Icons.Default.Close, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
                 }
                 IconButton(
                     onClick = { onApprove(request.userId) }, 
-                    modifier = Modifier.background(Color(0xFF4CAF50).copy(alpha = 0.2f), CircleShape).size(40.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp), tint = Color(0xFF4CAF50))
+                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = Color(0xFF4CAF50))
                 }
             }
         }
@@ -1084,50 +1055,47 @@ fun LogViewSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0A0A0F),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray.copy(alpha = 0.3f)) },
-        modifier = Modifier.fillMaxHeight(0.85f)
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        modifier = Modifier.fillMaxHeight(0.8f)
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Session Terminal", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black), color = Color.White)
-                    Text("Real-time event tracking", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                    Text("Session Terminal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Real-time event tracking", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 
-                Surface(
-                    color = Color.White.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(12.dp),
-                    onClick = { onLogActiveChange(!isLogActive) }
-                ) {
-                    Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(8.dp).background(if (isLogActive) Color(0xFF4CAF50) else Color.Gray, CircleShape))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (isLogActive) "Capturing" else "Paused", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                FilterChip(
+                    selected = isLogActive,
+                    onClick = { onLogActiveChange(!isLogActive) },
+                    label = { Text(if (isLogActive) "Capturing" else "Paused") },
+                    leadingIcon = { 
+                        Box(modifier = Modifier.size(6.dp).background(if (isLogActive) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline, CircleShape)) 
                     }
-                }
+                )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             Surface(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                color = Color.Black,
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 if (logs.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Terminal, null, modifier = Modifier.size(48.dp), tint = Color.DarkGray)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text("No events logged yet", color = Color.DarkGray, style = MaterialTheme.typography.bodyMedium)
+                            Icon(Icons.Default.Terminal, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.outline)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("No events logged", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 } else {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
                         reverseLayout = true
                     ) {
                         items(logs.reversed()) { entry ->
@@ -1137,27 +1105,24 @@ fun LogViewSheet(
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
-            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 40.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
+            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextButton(
                     onClick = onClear,
-                    modifier = Modifier.weight(1f).height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f), contentColor = Color.White)
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Icon(Icons.Default.DeleteSweep, null)
+                    Icon(Icons.Default.DeleteSweep, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear Console")
+                    Text("Clear Logs")
                 }
                 
                 Button(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f).height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = dominantColors.accent)
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Done")
+                    Text("Close")
                 }
             }
         }
@@ -1167,26 +1132,29 @@ fun LogViewSheet(
 @Composable
 fun LogItemRow(entry: LogEntry) {
     val color = when (entry.level) {
-        LogLevel.ERROR -> Color(0xFFEF5350)
+        LogLevel.ERROR -> MaterialTheme.colorScheme.error
         LogLevel.WARNING -> Color(0xFFFFB74D)
-        LogLevel.INFO -> Color(0xFF81C784)
-        LogLevel.DEBUG -> Color(0xFF64B5F6)
+        LogLevel.INFO -> Color(0xFF4CAF50)
+        LogLevel.DEBUG -> MaterialTheme.colorScheme.primary
     }
     
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = entry.timestamp.split("T").lastOrNull()?.take(8) ?: entry.timestamp, 
-                color = Color.Gray, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant, 
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Surface(color = color.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+            Surface(
+                color = color.copy(alpha = 0.1f), 
+                shape = RoundedCornerShape(4.dp)
+            ) {
                 Text(
                     text = entry.level.name, 
                     color = color, 
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 8.sp),
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                 )
             }
@@ -1194,19 +1162,10 @@ fun LogItemRow(entry: LogEntry) {
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = entry.message, 
-            color = Color.White.copy(alpha = 0.9f), 
-            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp),
+            color = MaterialTheme.colorScheme.onSurface, 
+            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 14.sp),
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
         )
-        if (entry.details != null) {
-            Text(
-                text = "> ${entry.details}", 
-                color = Color.Gray, 
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(start = 8.dp, top = 2.dp),
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-            )
-        }
     }
 }
 
@@ -1219,63 +1178,55 @@ fun BlockedUsersSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Text(
                 text = "Blocked Users", 
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black)
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Users in this list cannot request to join your rooms.", 
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                text = "These users cannot join your rooms.", 
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
             )
             
             Surface(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 if (blockedUsers.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No blocked users", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                        Text("No blocked users", color = MaterialTheme.colorScheme.outline)
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                    LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                         items(blockedUsers.toList()) { userId ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("User ID", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                                    Text(userId, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
-                                }
-                                Button(
-                                    onClick = { onUnblock(userId) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 16.dp)
-                                ) {
-                                    Text("Unblock")
-                                }
-                            }
-                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                            ListItem(
+                                headlineContent = { Text(userId, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)) },
+                                trailingContent = {
+                                    TextButton(onClick = { onUnblock(userId) }) {
+                                        Text("Unblock")
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(bottom = 40.dp),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier.fillMaxWidth().height(48.dp).padding(bottom = 32.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Close")
             }
