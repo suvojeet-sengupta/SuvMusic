@@ -158,8 +158,10 @@ data class PlayerScreenActions(
     val onLoadMoreComments: () -> Unit = {},
     val onLyricsProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
     val onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
-    val onClearQueue: () -> Unit = {}
+    val onClearQueue: () -> Unit = {},
+    val onListenTogetherClick: () -> Unit = {}
 )
+
 
 /**
  * Premium full-screen player with Apple Music-style design.
@@ -613,7 +615,11 @@ fun OverlaysContent(
             onDeleteDownload = { playerViewModel.deleteDownload(menuSong.id) }, onPlayNext = { playerViewModel.playNext(menuSong) }, onAddToQueue = { playerViewModel.addToQueue(menuSong) },
             onViewInfo = { onOverlayChange(PlayerOverlay.SongInfo) }, onAddToPlaylist = { onOverlayChange(PlayerOverlay.None); playlistViewModel.showAddToPlaylistSheet(menuSong) },
             onViewComments = { onOverlayChange(PlayerOverlay.Comments) }, onSleepTimer = { onOverlayChange(PlayerOverlay.SleepTimer) }, onStartRadio = { actions.onStartRadio() },
-            onListenTogether = { onOverlayChange(PlayerOverlay.ListenTogether) }, onPlaybackSpeed = { onOverlayChange(PlayerOverlay.PlaybackSpeed) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.Equalizer) },
+            onListenTogether = { 
+                onOverlayChange(PlayerOverlay.None)
+                actions.onListenTogetherClick() 
+            }, 
+            onPlaybackSpeed = { onOverlayChange(PlayerOverlay.PlaybackSpeed) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.Equalizer) },
             currentSpeed = playerState.playbackSpeed
         )
     }
