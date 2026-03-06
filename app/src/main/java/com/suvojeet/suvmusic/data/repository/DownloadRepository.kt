@@ -1263,7 +1263,11 @@ class DownloadRepository @Inject constructor(
     }
     
     suspend fun deleteAllDownloads() = withContext(Dispatchers.IO) {
-        _downloadedSongs.value.toList().forEach { try { deleteDownload(it.id) } catch (e: Exception) {} }
+        val songIds = _downloadedSongs.value.map { it.id }
+        if (songIds.isNotEmpty()) {
+            deleteDownloads(songIds)
+        }
+        
         try {
             listOf(getPublicMusicFolder(), getLegacyDownloadsFolder()).forEach { publicFolder ->
                 if (publicFolder.exists()) publicFolder.listFiles()?.forEach { file -> if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac")) file.delete() }
