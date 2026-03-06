@@ -103,9 +103,10 @@ object AppModule {
         @PlayerDataSource dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
         musicHapticsManager: com.suvojeet.suvmusic.util.MusicHapticsManager,
         ttsManager: com.suvojeet.suvmusic.util.TTSManager,
-        spatialAudioProcessor: SpatialAudioProcessor
+        spatialAudioProcessor: SpatialAudioProcessor,
+        nativeSpatialAudio: com.suvojeet.suvmusic.player.NativeSpatialAudio
     ): MusicPlayer {
-        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory, musicHapticsManager, ttsManager, spatialAudioProcessor)
+        return MusicPlayer(context, youTubeRepository, jioSaavnRepository, sessionManager, sleepTimerManager, listeningHistoryRepository, cache, dataSourceFactory, musicHapticsManager, ttsManager, spatialAudioProcessor, nativeSpatialAudio)
     }
     @Provides
     @Singleton

@@ -62,7 +62,8 @@ class MusicPlayer @Inject constructor(
     @com.suvojeet.suvmusic.di.PlayerDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
     private val musicHapticsManager: MusicHapticsManager,
     private val ttsManager: TTSManager,
-    private val spatialAudioProcessor: SpatialAudioProcessor
+    private val spatialAudioProcessor: SpatialAudioProcessor,
+    private val nativeSpatialAudio: NativeSpatialAudio
 ) {
     
     // ... (existing properties)
@@ -565,7 +566,9 @@ class MusicPlayer @Inject constructor(
             val isAudioSinkError = error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
                                  error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED
             val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
-                               error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
+                               error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ||
+                               error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
+                               error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED
             
             // Placeholder Check: If current URI is a YouTube watch URL, it will fail and MUST be resolved
             val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
@@ -600,6 +603,11 @@ class MusicPlayer @Inject constructor(
                         // as it forces a complete reset of the decoder and audio track.
                         if (isAudioSinkError || isDecoderError) {
                             android.util.Log.d("MusicPlayer", "Audio/Decoder error detected, performing mode-switch reset")
+                            
+                            // Reset native audio state to prevent buffer/state corruption in transitions
+                            spatialAudioProcessor.resetEqBands()
+                            nativeSpatialAudio.reset()
+                            
                             val originalMode = _playerState.value.isVideoMode
                             
                             // 1. Temporarily switch mode to force renderer reset
