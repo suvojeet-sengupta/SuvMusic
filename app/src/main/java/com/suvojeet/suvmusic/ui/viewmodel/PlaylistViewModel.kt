@@ -142,95 +142,90 @@ class PlaylistViewModel @Inject constructor(
     }
 
     private suspend fun loadPlaylistInternal() {
-            try {
-                val currentSource = sessionManager.getMusicSource()
-                
-                // Smart loading based on source preference
-                // Smart loading based on source preference
-                // Smart loading based on source preference
-                val playlist = if (playlistId == "LM") {
-                    // Liked Songs - Load from local library
-                    val songs = libraryRepository.getCachedPlaylistSongs("LM")
-                    Playlist(
-                        id = "LM",
-                        title = "Liked",
-                        author = "You",
-                        thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
-                        songs = songs
-                    )
-                } else if (playlistId == "CACHED_ALL") {
-                     // Cached Songs - Now including ALL cached items from player cache
-                     val songs = loadAllCachedSongs()
-                     Playlist(
-                         id = "CACHED_ALL",
-                         title = "Cached Songs",
-                         author = "Local Device",
-                         thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
-                         songs = songs
-                     )
-                } else if (playlistId == "TOP_50") {
-                     // My Top 50 (Mapped to Supermix RTM)
-                     val supermix = try {
-                         youTubeRepository.getPlaylist("RTM")
-                     } catch (e: Exception) {
-                         Playlist("TOP_50", "My Top 50", "YouTube Music", null, emptyList())
-                     }
-                     supermix.copy(
-                         id = "TOP_50",
-                         title = "My Top 50", // Override title
-                         author = "You"
-                     )
-                } else if (playlistId == "DEVICE_SONGS") {
-                     // Device Local Songs
-                     val songs = localAudioRepository.getAllLocalSongs()
-                     Playlist(
-                         id = "DEVICE_SONGS",
-                         title = "Device files",
-                         author = "Local Storage",
-                         thumbnailUrl = null,
-                         songs = songs
-                     )
-                } else if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
-                    // In HQ Audio mode, prioritize JioSaavn
-                    val jioPlaylist = jioSaavnRepository.getPlaylist(playlistId)
-                    if (jioPlaylist != null) {
-                        jioPlaylist
-                    } else {
-                        // Fallback to YouTube if not found in JioSaavn (e.g. user clicked a YT playlist)
-                        youTubeRepository.getPlaylist(playlistId)
-                    }
-                } else {
-                    // In YouTube mode, prioritize YouTube
-                    try {
-                        youTubeRepository.getPlaylist(playlistId)
-                    } catch (e: Exception) {
-                        // Fallback to JioSaavn if not found in YouTube (e.g. user clicked a Jio playlist)
-                        jioSaavnRepository.getPlaylist(playlistId) ?: throw e
-                    }
-                }
-                
-                // Merge with initial data:
-                // - Prefer navigation thumbnail (it's the correct playlist art from Home screen)
-                // - Fallback to API data only if nav data is missing
-                val finalPlaylist = playlist.copy(
-                    title = if (playlist.title == "Unknown Playlist" && initialName != null) initialName else playlist.title,
-                    thumbnailUrl = initialThumbnail ?: playlist.thumbnailUrl,
-                    author = playlist.author.takeIf { it.isNotBlank() } ?: ""
+        try {
+            val currentSource = sessionManager.getMusicSource()
+            
+            // Smart loading based on source preference
+            val playlist = if (playlistId == "LM") {
+                // Liked Songs - Load from local library
+                val songs = libraryRepository.getCachedPlaylistSongs("LM")
+                Playlist(
+                    id = "LM",
+                    title = "Liked",
+                    author = "You",
+                    thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
+                    songs = songs
                 )
-                
-                _uiState.update { 
-                    it.copy(
-                        playlist = finalPlaylist,
-                        isLoading = false
-                    )
+            } else if (playlistId == "CACHED_ALL") {
+                // Cached Songs - Now including ALL cached items from player cache
+                val songs = loadAllCachedSongs()
+                Playlist(
+                    id = "CACHED_ALL",
+                    title = "Cached Songs",
+                    author = "Local Device",
+                    thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
+                    songs = songs
+                )
+            } else if (playlistId == "TOP_50") {
+                // My Top 50 (Mapped to Supermix RTM)
+                val supermix = try {
+                    youTubeRepository.getPlaylist("RTM")
+                } catch (e: Exception) {
+                    Playlist("TOP_50", "My Top 50", "YouTube Music", null, emptyList())
                 }
-            } catch (e: Exception) {
-                _uiState.update { 
-                    it.copy(
-                        error = e.message,
-                        isLoading = false
-                    )
+                supermix.copy(
+                    id = "TOP_50",
+                    title = "My Top 50", // Override title
+                    author = "You"
+                )
+            } else if (playlistId == "DEVICE_SONGS") {
+                // Device Local Songs
+                val songs = localAudioRepository.getAllLocalSongs()
+                Playlist(
+                    id = "DEVICE_SONGS",
+                    title = "Device files",
+                    author = "Local Storage",
+                    thumbnailUrl = null,
+                    songs = songs
+                )
+            } else if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
+                // In HQ Audio mode, prioritize JioSaavn
+                val jioPlaylist = jioSaavnRepository.getPlaylist(playlistId)
+                if (jioPlaylist != null) {
+                    jioPlaylist
+                } else {
+                    // Fallback to YouTube if not found in JioSaavn (e.g. user clicked a YT playlist)
+                    youTubeRepository.getPlaylist(playlistId)
                 }
+            } else {
+                // In YouTube mode, prioritize YouTube
+                try {
+                    youTubeRepository.getPlaylist(playlistId)
+                } catch (e: Exception) {
+                    // Fallback to JioSaavn if not found in YouTube (e.g. user clicked a Jio playlist)
+                    jioSaavnRepository.getPlaylist(playlistId) ?: throw e
+                }
+            }
+            
+            // Merge with initial data
+            val finalPlaylist = playlist.copy(
+                title = if (playlist.title == "Unknown Playlist" && initialName != null) initialName else playlist.title,
+                thumbnailUrl = initialThumbnail ?: playlist.thumbnailUrl,
+                author = playlist.author.takeIf { it.isNotBlank() } ?: ""
+            )
+            
+            _uiState.update { 
+                it.copy(
+                    playlist = finalPlaylist,
+                    isLoading = false
+                )
+            }
+        } catch (e: Exception) {
+            _uiState.update { 
+                it.copy(
+                    error = e.message,
+                    isLoading = false
+                )
             }
         }
     }
