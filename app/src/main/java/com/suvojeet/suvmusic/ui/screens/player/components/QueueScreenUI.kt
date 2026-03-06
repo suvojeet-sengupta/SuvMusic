@@ -258,29 +258,54 @@ fun ModernQueueView(
                 contentPadding = PaddingValues(bottom = 80.dp),
                 modifier = Modifier.weight(1f)
             ) {
+                // 1. History Section
                 if (playedSongs.isNotEmpty()) {
                     item { ModernHeader("History", dominantColors) }
                     itemsIndexed(playedSongs, key = { _, s -> "history_${s.id}" }) { index, song ->
                         ModernQueueItem(
                             song = song,
-                            isCurrent = false, // Current is in the card
+                            isCurrent = false,
                             isPlaying = false,
                             isSelected = selectedQueueIndices.contains(index),
                             isSelectionMode = isSelectionMode,
                             onClick = { if (isSelectionMode) onToggleSelection(index) else onSongClick(index) },
-                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); if (!isSelectionMode) onToggleSelection(index) else onMoreClick(song) },
+                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(index) },
                             onMoreClick = { onMoreClick(song) },
                             dominantColors = dominantColors
                         )
                     }
                 }
 
+                // 2. Currently Playing (In-list indicator)
+                if (currentSong != null) {
+                    item { ModernHeader("Now Playing", dominantColors) }
+                    item(key = "current_${currentSong.id}") {
+                        ModernQueueItem(
+                            song = currentSong,
+                            isCurrent = true,
+                            isPlaying = isPlaying,
+                            isSelected = selectedQueueIndices.contains(currentIndex),
+                            isSelectionMode = isSelectionMode,
+                            onClick = { if (isSelectionMode) onToggleSelection(currentIndex) else onPlayPause() },
+                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(currentIndex) },
+                            onMoreClick = { onMoreClick(currentSong) },
+                            dominantColors = dominantColors
+                        )
+                    }
+                }
+
+                // 3. Upcoming Section
                 if (upNextSongs.isNotEmpty()) {
-                    item { ModernHeader(if (isRadioMode || isAutoplayEnabled) "Upcoming (Autoplay)" else "Up Next", dominantColors) }
+                    item { 
+                        ModernHeader(
+                            if (isRadioMode || isAutoplayEnabled) "Upcoming (Autoplay)" else "Up Next", 
+                            dominantColors 
+                        ) 
+                    }
                     itemsIndexed(upNextSongs, key = { _, s -> "next_${s.id}" }) { indexInList, song ->
-                        // Actual index in the full queue is historySize + 1 (for current) + indexInList
-                        val historySize = playedSongs.size
-                        val actualIndex = historySize + 1 + indexInList
+                        // CRITICAL FIX: Absolute index in full queue
+                        val actualIndex = currentIndex + 1 + indexInList
+                        
                         ModernQueueItem(
                             song = song,
                             isCurrent = false,
@@ -288,7 +313,7 @@ fun ModernQueueView(
                             isSelected = selectedQueueIndices.contains(actualIndex),
                             isSelectionMode = isSelectionMode,
                             onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
-                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); if (!isSelectionMode) onToggleSelection(actualIndex) else onMoreClick(song) },
+                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(actualIndex) },
                             onMoreClick = { onMoreClick(song) },
                             dominantColors = dominantColors
                         )
