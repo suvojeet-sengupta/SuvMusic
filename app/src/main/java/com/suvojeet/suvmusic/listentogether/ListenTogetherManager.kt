@@ -79,12 +79,18 @@ class ListenTogetherManager @Inject constructor(
     val pendingJoinRequests = client.pendingJoinRequests
     val bufferingUsers = client.bufferingUsers
     val logs = client.logs
+    val isLogActive = client.isLogActive
     val events = client.events
     val pendingSuggestions = client.pendingSuggestions
 
     val isInRoom: Boolean get() = client.isInRoom
     val isHost: Boolean get() = client.isHost
     val hasPersistedSession: Boolean get() = client.hasPersistedSession
+    
+    fun setLogActive(active: Boolean) = client.setLogActive(active)
+    fun clearLogs() = client.clearLogs()
+    
+    fun getSessionDuration(): Long = client.getSessionDuration()
     
     private val playerListener = object : Player.Listener {
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
