@@ -430,22 +430,28 @@ fun PortraitPlayerContent(
     ) {
         PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
 
-        if (playerState.isVideoMode && player != null && !isFullScreen) {
-            Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
+        Spacer(modifier = Modifier.weight(1f))
+        
+        // Show Video or Artwork in the same center space
+        AnimatedVisibility(
+            visible = playerState.isVideoMode && player != null && !isFullScreen,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 })
+        ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(currentArtworkSize.fraction)
+                    .aspectRatio(1f)
             ) {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16 / 9f)
-                        .clip(RoundedCornerShape(12.dp))
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black)
                         .clickable { onSetFullScreen(true) },
-                    tonalElevation = 8.dp,
-                    shadowElevation = 8.dp
+                    tonalElevation = 16.dp,
+                    shadowElevation = 16.dp
                 ) {
                     AndroidView(
                         factory = { context ->
@@ -460,26 +466,31 @@ fun PortraitPlayerContent(
                     )
                     
                     // Small expand icon overlay
-                    Box(modifier = Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.TopEnd) {
+                    Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
                         Icon(
                             imageVector = Icons.Filled.Fullscreen,
                             contentDescription = "Full Screen",
-                            tint = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(24.dp).background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(4.dp)).padding(2.dp)
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
+        }
+        
+        AnimatedVisibility(
+            visible = !(playerState.isVideoMode && player != null && !isFullScreen),
+            enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 4 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 4 })
+        ) {
             AlbumArtwork(
                 imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = playerState.isLoading,
                 onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                 onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
             )
-            Spacer(modifier = Modifier.weight(1f))
         }
+        
+        Spacer(modifier = Modifier.weight(1f))
 
         SongInfoSection(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
