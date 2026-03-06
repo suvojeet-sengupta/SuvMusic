@@ -38,6 +38,7 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val isLoggedIn: Boolean = false,
+    val userName: String? = null,
     val userAvatarUrl: String? = null,
     val storedAccounts: List<SessionManager.StoredAccount> = emptyList(),
     val availableAccounts: List<SessionManager.StoredAccount> = emptyList(),
@@ -498,6 +499,8 @@ class SettingsViewModel @Inject constructor(
             val isLoggedIn = sessionManager.isLoggedIn()
             val userAvatar = sessionManager.getUserAvatar()
             val storedAccounts = sessionManager.getStoredAccounts()
+            val userName = storedAccounts.firstOrNull()?.name
+            
             val audioQuality = sessionManager.getAudioQuality()
             val videoQuality = sessionManager.getVideoQuality()
             val downloadQuality = sessionManager.getDownloadQuality()
@@ -562,11 +565,12 @@ class SettingsViewModel @Inject constructor(
             val loggingEnabled = sessionManager.isLoggingEnabled()
 
 
-            _uiState.update { 
-                it.copy(
-                    isLoggedIn = isLoggedIn,
-                    userAvatarUrl = userAvatar,
-                    storedAccounts = storedAccounts,
+            _uiState.update { it.copy(
+                isLoggedIn = isLoggedIn,
+                userName = userName,
+                userAvatarUrl = userAvatar,
+                storedAccounts = storedAccounts,
+
                     audioQuality = audioQuality,
                     videoQuality = videoQuality,
                     downloadQuality = downloadQuality,
@@ -876,14 +880,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val account = youtubeRepository.fetchAccountInfo()
             if (account != null) {
-                sessionManager.saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
-                _uiState.update { 
-                    it.copy(
-                        userAvatarUrl = account.avatarUrl,
-                        storedAccounts = sessionManager.getStoredAccounts()
-                    ) 
-                }
+               sessionManager.saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl)
+               _uiState.update {
+                   it.copy(
+                       userAvatarUrl = account.avatarUrl,
+                       userName = account.name,
+                       storedAccounts = sessionManager.getStoredAccounts()
+                   )
+               }
             }
+
         }
     }
     

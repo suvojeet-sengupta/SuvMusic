@@ -180,42 +180,74 @@ fun SettingsScreen(
                             ListItem(
                                 headlineContent = {
                                     Text(
-                                        text = uiState.storedAccounts.firstOrNull { it.email == "current" }?.name ?: "Signed In", // Fallback if name not available directly
-                                        fontWeight = FontWeight.SemiBold
+                                        text = uiState.userName ?: "Signed In",
+                                        fontWeight = FontWeight.ExtraBold,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        letterSpacing = (-0.5).sp
                                     )
                                 },
                                 supportingContent = {
-                                    Text(
-                                        text = "YouTube Music Connected",
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                },
-                                leadingContent = {
-                                    if (uiState.userAvatarUrl != null) {
-                                        AsyncImage(
-                                            model = uiState.userAvatarUrl,
-                                            contentDescription = "Avatar",
-                                            modifier = Modifier
-                                                .size(56.dp)
-                                                .clip(CircleShape)
-                                                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    val email = uiState.storedAccounts.firstOrNull()?.email
+                                    if (email != null) {
+                                        Text(
+                                            text = email,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
                                         )
                                     } else {
+                                        Text(
+                                            text = "YouTube Music Connected",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                },
+                                leadingContent = {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    ) {
+                                        // Radiant Glow/Border for Avatar
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            modifier = Modifier.size(56.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Person,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.padding(12.dp)
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                            modifier = Modifier.size(68.dp),
+                                            border = androidx.compose.foundation.BorderStroke(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                                             )
+                                        ) {}
+
+                                        if (uiState.userAvatarUrl != null) {
+                                            AsyncImage(
+                                                model = uiState.userAvatarUrl,
+                                                contentDescription = "Avatar",
+                                                modifier = Modifier
+                                                    .size(58.dp)
+                                                    .clip(CircleShape)
+                                                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                            )
+                                        } else {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = MaterialTheme.colorScheme.primaryContainer,
+                                                modifier = Modifier.size(58.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.padding(12.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                modifier = Modifier.padding(vertical = 8.dp)
                             )
                             
                             HorizontalDivider()
