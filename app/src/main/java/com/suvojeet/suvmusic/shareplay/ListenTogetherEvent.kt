@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.listentogether
+package com.suvojeet.suvmusic.shareplay
 
 /**
  * Event types for the Listen Together client
