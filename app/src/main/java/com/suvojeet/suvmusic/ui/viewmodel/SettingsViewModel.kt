@@ -1352,7 +1352,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun startBugReportingSession() {
+    private var currentIssueDescription: String? = null
+
+    fun startBugReportingSession(description: String? = null) {
+        currentIssueDescription = description
         _uiState.update { it.copy(isBugReportingSessionActive = true) }
         // Optional: clear logcat buffer if possible
         try {
@@ -1365,32 +1368,68 @@ class SettingsViewModel @Inject constructor(
     fun stopBugReportingSession(onLogReady: (File) -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isBugReportingSessionActive = false) }
-            val logFile = withContext(Dispatchers.IO) { collectLogs() }
+            val logFile = withContext(Dispatchers.IO) { collectLogs(currentIssueDescription) }
             if (logFile != null) {
                 onLogReady(logFile)
             }
+            currentIssueDescription = null
         }
     }
 
-    private fun collectLogs(): File? {
+    private fun collectLogs(description: String?): File? {
         val logDir = File(context.cacheDir, "crash_logs")
         if (!logDir.exists()) logDir.mkdirs()
-        
+
         val timestamp = System.currentTimeMillis()
         val logFile = File(logDir, "suvmusic_bug_report_$timestamp.txt")
-        
+
         return try {
             val process = Runtime.getRuntime().exec("logcat -d")
             val reader = process.inputStream.bufferedReader()
             val writer = logFile.bufferedWriter()
-            
-            reader.use { r ->
-                writer.use { w ->
+
+            writer.use { w ->
+                // --- 1. User Description ---
+                w.write("═══════════════════════════════════════\n")
+                w.write("  SuvMusic Bug Report\n")
+                w.write("  Generated: ${java.util.Date(timestamp)}\n")
+                w.write("═══════════════════════════════════════\n\n")
+                
+                w.write("── USER DESCRIPTION ──\n")
+                w.write("Issue: ${description ?: "No description provided"}\n\n")
+
+                // --- 2. Full System Details ---
+                w.write("── SYSTEM INFORMATION ──\n")
+                w.write("App Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
+                w.write("Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\n")
+                w.write("Brand: ${android.os.Build.BRAND}\n")
+                w.write("Hardware: ${android.os.Build.HARDWARE} / ${android.os.Build.BOARD}\n")
+                w.write("Android OS: ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})\n")
+                w.write("Build ID: ${android.os.Build.DISPLAY}\n")
+                w.write("Supported ABIs: ${android.os.Build.SUPPORTED_ABIS.joinToString(", ")}\n")
+                
+                // Memory Info
+                val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                val memInfo = android.app.ActivityManager.MemoryInfo()
+                activityManager?.getMemoryInfo(memInfo)
+                w.write("Total RAM: ${memInfo.totalMem / (1024 * 1024)} MB\n")
+                w.write("Available RAM: ${memInfo.availMem / (1024 * 1024)} MB\n")
+                w.write("Low Memory State: ${memInfo.lowMemory}\n")
+                
+                // Display Info
+                val metrics = context.resources.displayMetrics
+                w.write("Display: ${metrics.widthPixels}x${metrics.heightPixels} (${metrics.densityDpi} dpi)\n")
+                w.write("────────────────────────\n\n")
+
+                // --- 3. Logcat Output ---
+                w.write("── LOGCAT OUTPUT ──\n")
+                reader.use { r ->
                     r.forEachLine { line ->
                         w.write(line)
                         w.newLine()
                     }
                 }
+                w.write("\n════════ End of Report ════════\n")
             }
             logFile
         } catch (e: Exception) {
@@ -1398,7 +1437,6 @@ class SettingsViewModel @Inject constructor(
             null
         }
     }
-
     fun shareBugReport(file: File) {
         try {
             val uri = FileProvider.getUriForFile(
@@ -1410,13 +1448,13 @@ class SettingsViewModel @Inject constructor(
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Bug Report")
-                putExtra(Intent.EXTRA_TEXT, "Steps to reproduce: \n\n[Describe what you did]")
+                putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Bug Report - ${android.os.Build.MODEL}")
+                putExtra(Intent.EXTRA_TEXT, "Attached is the bug report for SuvMusic.\n\nDeveloper: @suvojeet_sengupta")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             
-            context.startActivity(Intent.createChooser(intent, "Share Bug Report").apply {
+            context.startActivity(Intent.createChooser(intent, "Send Bug Report via…").apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })
         } catch (e: Exception) {

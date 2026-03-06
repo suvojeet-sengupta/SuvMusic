@@ -115,6 +115,8 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showAccountsSheet by remember { mutableStateOf(false) }
+    var showBugDescriptionDialog by remember { mutableStateOf(false) }
+    var bugDescription by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
     
     var showUpdateChannelDialog by remember { mutableStateOf(false) }
@@ -382,7 +384,8 @@ fun SettingsScreen(
                                                 viewModel.shareBugReport(file)
                                             }
                                         } else {
-                                            viewModel.startBugReportingSession()
+                                            bugDescription = ""
+                                            showBugDescriptionDialog = true
                                         }
                                     },
                                     colors = if (uiState.isBugReportingSessionActive) {
@@ -784,6 +787,47 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+
+    // Bug Description Dialog
+    if (showBugDescriptionDialog) {
+        AlertDialog(
+            onDismissRequest = { showBugDescriptionDialog = false },
+            title = { Text("Report an Issue") },
+            text = {
+                Column {
+                    Text(
+                        text = "Briefly describe what's wrong. This will be included in the log file.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = bugDescription,
+                        onValueChange = { bugDescription = it },
+                        placeholder = { Text("e.g. App crashes when I skip songs...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 5,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.startBugReportingSession(bugDescription)
+                        showBugDescriptionDialog = false
+                    }
+                ) {
+                    Text("Start Recording")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBugDescriptionDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
     }
 
     // Update Channel Dialog
