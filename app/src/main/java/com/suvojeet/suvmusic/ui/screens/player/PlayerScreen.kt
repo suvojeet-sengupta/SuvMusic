@@ -436,7 +436,6 @@ fun PortraitPlayerContent(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
             ) {
                 Surface(
                     modifier = Modifier
