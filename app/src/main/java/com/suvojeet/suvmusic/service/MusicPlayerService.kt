@@ -72,7 +72,7 @@ class MusicPlayerService : MediaLibraryService() {
     lateinit var lastFmManager: com.suvojeet.suvmusic.player.LastFmManager
 
     @Inject
-    lateinit var listenTogetherManager: com.suvojeet.suvmusic.listentogether.ListenTogetherManager
+    lateinit var listenTogetherManager: com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 
     @Inject
     lateinit var audioARManager: com.suvojeet.suvmusic.player.AudioARManager

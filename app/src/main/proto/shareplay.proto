@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package listentogether;
+package shareplay;
 
-option go_package = "github.com/nyxiereal/metroserver/proto";
-option java_package = "com.suvojeet.suvmusic.listentogether.proto";
-option java_outer_classname = "Listentogether";
+option go_package = "github.com/suvojeet/suvmusic-server/proto";
+option java_package = "com.suvojeet.suvmusic.shareplay.proto";
+option java_outer_classname = "SharePlay";
 option java_multiple_files = false;
 
 // Message envelope with type and payload
