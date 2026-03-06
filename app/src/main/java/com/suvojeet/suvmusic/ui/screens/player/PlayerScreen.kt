@@ -487,7 +487,11 @@ fun PortraitPlayerContent(
             dominantColors = dominantColors, compact = isCompactHeight || playerState.isVideoMode
         )
 
-        Spacer(modifier = Modifier.weight(if (playerState.isVideoMode) 0.05f else if (isCompactHeight) 0.1f else 0.4f))
+        if (playerState.isVideoMode) {
+            Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 16.dp))
+        } else {
+            Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
+        }
 
         WaveformSeeker(
             progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
@@ -497,7 +501,11 @@ fun PortraitPlayerContent(
 
         TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
 
-        Spacer(modifier = Modifier.weight(if (playerState.isVideoMode) 0.05f else if (isCompactHeight) 0.1f else 0.4f))
+        if (playerState.isVideoMode) {
+            Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 16.dp))
+        } else {
+            Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
+        }
 
         PlaybackControls(
             isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
@@ -505,14 +513,18 @@ fun PortraitPlayerContent(
             onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors, compact = isCompactHeight || playerState.isVideoMode
         )
 
-        Spacer(modifier = Modifier.height(if (playerState.isVideoMode) 4.dp else if (isCompactHeight) 4.dp else 16.dp))
+        if (playerState.isVideoMode) {
+            Spacer(modifier = Modifier.weight(1f))
+        } else {
+            Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 16.dp))
+        }
 
         BottomActions(
             onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onDownloadClick = actions.onDownload,
             downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
             isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode, compact = isCompactHeight || playerState.isVideoMode
         )
-        Spacer(modifier = Modifier.height(if (playerState.isVideoMode) 8.dp else if (isCompactHeight) 8.dp else 24.dp))
+        Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
     }
 }
 
