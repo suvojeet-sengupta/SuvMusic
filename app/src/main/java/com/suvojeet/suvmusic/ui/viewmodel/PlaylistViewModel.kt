@@ -20,6 +20,7 @@ import javax.inject.Inject
 data class PlaylistUiState(
     val playlist: Playlist? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val isEditable: Boolean = false,
     val isRenaming: Boolean = false,
@@ -118,10 +119,29 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Public refresh method for pull-to-refresh and post-modification reloads.
+     */
+    fun refreshPlaylist() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            try {
+                loadPlaylistInternal()
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
+    }
+
     private fun loadPlaylist() {
         checkEditable()
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+            loadPlaylistInternal()
+        }
+    }
+
+    private suspend fun loadPlaylistInternal() {
             try {
                 val currentSource = sessionManager.getMusicSource()
                 
@@ -371,11 +391,25 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
-    fun addSongToPlaylist(playlistId: String) {
+    fun addSongToPlaylist(targetPlaylistId: String) {
         val song = _uiState.value.selectedSong ?: return
         viewModelScope.launch {
-            youTubeRepository.addSongToPlaylist(playlistId, song.id)
+            val isLocal = targetPlaylistId.startsWith("local_") || targetPlaylistId == "LM"
+            val success = if (isLocal) {
+                try {
+                    libraryRepository.addSongToPlaylist(targetPlaylistId, song)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            } else {
+                youTubeRepository.addSongToPlaylist(targetPlaylistId, song.id)
+            }
             hideAddToPlaylistSheet()
+            // Reload if the song was added to the currently viewed playlist
+            if (success && targetPlaylistId == playlistId) {
+                refreshPlaylist()
+            }
         }
     }
 
