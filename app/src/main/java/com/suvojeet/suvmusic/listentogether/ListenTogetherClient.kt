@@ -178,29 +178,6 @@ class ListenTogetherClient @Inject constructor(
         } catch (e: Exception) {
             log(LogLevel.ERROR, "Failed to load persisted session", e.message)
         }
-        
-        // Migrate old server URL to new one
-        migrateServerUrl()
-    }
-    
-    /**
-     * Migrate old server URL to new one if needed
-     */
-    private suspend fun migrateServerUrl() {
-        try {
-            val faultyServerUrl = "wss://metroserverx.meowery.eu/ws"
-            val prefs = context.dataStore.data.first()
-            val currentUrl = prefs[ListenTogetherServerUrlKey] ?: DEFAULT_SERVER_URL
-            
-            if (currentUrl == faultyServerUrl) {
-                log(LogLevel.INFO, "Rolling back faulty server URL", "Faulty: $faultyServerUrl -> Stable: $DEFAULT_SERVER_URL")
-                context.dataStore.edit { preferences ->
-                    preferences[ListenTogetherServerUrlKey] = DEFAULT_SERVER_URL
-                }
-            }
-        } catch (e: Exception) {
-            log(LogLevel.ERROR, "Failed to migrate/rollback server URL", e.message)
-        }
     }
     
     /**
@@ -297,6 +274,13 @@ class ListenTogetherClient @Inject constructor(
 
     private val _logs = MutableStateFlow<List<LogEntry>>(emptyList())
     val logs: StateFlow<List<LogEntry>> = _logs.asStateFlow()
+
+    private val _isLogActive = MutableStateFlow(false)
+    val isLogActive: StateFlow<Boolean> = _isLogActive.asStateFlow()
+
+    fun setLogActive(active: Boolean) {
+        _isLogActive.value = active
+    }
 
     // Event flow
     private val _events = MutableSharedFlow<ListenTogetherEvent>()
@@ -1018,8 +1002,7 @@ class ListenTogetherClient @Inject constructor(
         if (_connectionState.value == ConnectionState.CONNECTED) {
             sendMessage(MessageTypes.CREATE_ROOM, CreateRoomPayload(username))
         } else {
-            pendingAction = PendingAction.CreateRoom(username)
-            connect()
+            log(LogLevel.ERROR, "Cannot create room: Not connected to server")
         }
     }
 
@@ -1034,8 +1017,7 @@ class ListenTogetherClient @Inject constructor(
         if (_connectionState.value == ConnectionState.CONNECTED) {
             sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(roomCode.uppercase(), username))
         } else {
-            pendingAction = PendingAction.JoinRoom(roomCode, username)
-            connect()
+            log(LogLevel.ERROR, "Cannot join room: Not connected to server")
         }
     }
 
@@ -1163,6 +1145,10 @@ class ListenTogetherClient @Inject constructor(
         get() = sessionToken != null && storedRoomCode != null
     
     fun getPersistedRoomCode(): String? = storedRoomCode
+    
+    fun getSessionDuration(): Long {
+        return if (sessionStartTime > 0) System.currentTimeMillis() - sessionStartTime else 0
+    }
     
     fun getSessionAge(): Long = if (sessionStartTime > 0) {
         System.currentTimeMillis() - sessionStartTime
