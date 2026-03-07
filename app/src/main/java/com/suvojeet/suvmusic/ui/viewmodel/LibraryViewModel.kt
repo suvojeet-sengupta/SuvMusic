@@ -75,7 +75,11 @@ sealed class ImportState {
         val successCount: Int,
         val status: String // "Searching...", "Adding...", "Failed"
     ) : ImportState()
-    data class Success(val successCount: Int, val totalCount: Int) : ImportState()
+    data class Success(
+        val successCount: Int,
+        val totalCount: Int,
+        val failedSongs: List<Pair<String, String>> = emptyList()
+    ) : ImportState()
     data class Error(val message: String) : ImportState()
 }
 
@@ -162,7 +166,11 @@ class LibraryViewModel @Inject constructor(
                     )
                     ImportStatus.State.COMPLETED -> {
                         refresh()
-                        ImportState.Success(status.successCount, status.total)
+                        ImportState.Success(
+                            successCount = status.successCount, 
+                            totalCount = status.total,
+                            failedSongs = status.failedSongs
+                        )
                     }
                     ImportStatus.State.ERROR -> ImportState.Error(status.error ?: "Unknown Error")
                     ImportStatus.State.CANCELLED -> ImportState.Error("Import Cancelled")
