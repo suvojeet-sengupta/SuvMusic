@@ -260,19 +260,18 @@ class YouTubeStreamingService @Inject constructor(
     /**
      * Get stream URL for downloading with the user's download quality preference.
      * Prioritizes cached playback URL if available (to ensure download success if song is playing).
+     * Returns a Pair of (URL, extension).
      */
-    /**
-     * Get stream URL for downloading with the user's download quality preference.
-     * Prioritizes cached playback URL if available (to ensure download success if song is playing).
-     */
-    suspend fun getStreamUrlForDownload(videoId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getStreamUrlForDownload(videoId: String): Pair<String, String>? = withContext(Dispatchers.IO) {
         // 1. Check cache first (audio_ cache from playback)
         // If the user is listening to it, we know this URL works.
         val cacheKey = "audio_$videoId"
         streamCache.get(cacheKey)?.let { cached ->
             if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
                 android.util.Log.d("YouTubeStreaming", "Download using cached playback URL: $videoId")
-                return@withContext cached.url
+                // For cached URLs, we'll try to guess extension or default to m4a
+                // A better cache would store the extension too.
+                return@withContext cached.url to "m4a"
             }
         }
         
@@ -304,14 +303,21 @@ class YouTubeStreamingService @Inject constructor(
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
             
             val latency = System.currentTimeMillis() - startTime
-            android.util.Log.d("YouTubeStreaming", "Download stream fetched in ${latency}ms. Selected bitrate: ${bestAudioStream?.averageBitrate}kbps")
+            val extension = when (bestAudioStream?.format?.name?.uppercase()) {
+                "M4A", "AAC" -> "m4a"
+                "WEBM", "OPUS" -> "opus"
+                else -> "m4a"
+            }
+            
+            android.util.Log.d("YouTubeStreaming", "Download stream fetched in ${latency}ms. Selected bitrate: ${bestAudioStream?.averageBitrate}kbps, Format: $extension")
 
             // Cache this result too, so subsequent playback uses it
             bestAudioStream?.content?.also { url ->
                 streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
             }
             
-            bestAudioStream?.content
+            val url = bestAudioStream?.content ?: return@retryWithBackoff null
+            url to extension
         }
     }
 
