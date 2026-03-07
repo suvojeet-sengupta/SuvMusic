@@ -1001,10 +1001,12 @@ fun RoomContent(
         }
 
         items(room.users) { user: UserInfo ->
+            val isBuffering by viewModel.bufferingUsers.map { it.contains(user.userId) }.collectAsState(initialValue = false)
             UserListItem(
                 user = user, 
                 isHost = user.userId == room.hostId, 
                 isMe = user.userId == uiState.userId,
+                isBuffering = isBuffering,
                 accentColor = dominantColors.accent,
                 onBlock = { onBlockUser(user.userId) }
             )
@@ -1014,23 +1016,42 @@ fun RoomContent(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (uiState.role != RoomRole.HOST) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
-                        onClick = onSync,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        onClick = {
+                            val shareIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, "Join my SuvMusic session! Code: ${room.roomCode}")
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Session Code"))
+                        },
+                        modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer, 
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                    ) {
-                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            "Force Resync", 
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                    ) {
+                        Icon(Icons.Default.Share, null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Share", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                    }
+
+                    if (uiState.role != RoomRole.HOST) {
+                        Button(
+                            onClick = onSync,
+                            modifier = Modifier.weight(1f).height(56.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        ) {
+                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Resync", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                        }
                     }
                 }
                 
@@ -1082,6 +1103,7 @@ fun UserListItem(
     user: UserInfo, 
     isHost: Boolean, 
     isMe: Boolean,
+    isBuffering: Boolean = false,
     accentColor: Color,
     onBlock: () -> Unit
 ) {
@@ -1123,7 +1145,14 @@ fun UserListItem(
                         .offset(x = 2.dp, y = 2.dp)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
                         .padding(2.dp)
-                        .background(if (user.isConnected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error, CircleShape)
+                        .background(
+                            color = when {
+                                isBuffering -> Color(0xFFFF9800)
+                                user.isConnected -> Color(0xFF4CAF50)
+                                else -> MaterialTheme.colorScheme.error
+                            }, 
+                            shape = CircleShape
+                        )
                 )
             }
             
@@ -1148,9 +1177,17 @@ fun UserListItem(
                     }
                 }
                 Text(
-                    text = if (user.isConnected) "Synchronized" else "Waiting for sync...", 
+                    text = when {
+                        isBuffering -> "Buffering track..."
+                        user.isConnected -> "Synchronized"
+                        else -> "Waiting for sync..."
+                    }, 
                     style = MaterialTheme.typography.labelMedium, 
-                    color = if (user.isConnected) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                    color = when {
+                        isBuffering -> Color(0xFFFF9800)
+                        user.isConnected -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                    }
                 )
             }
             
