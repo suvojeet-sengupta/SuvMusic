@@ -70,9 +70,7 @@ class YouTubeStreamingService @Inject constructor(
         retryWithBackoff {
             val startTime = System.currentTimeMillis()
             val audioQuality = sessionManager.getAudioQuality()
-            val isPremium = sessionManager.isPremium()
-            
-            android.util.Log.d("YouTubeStreaming", "Fetching audio stream for $videoId. Target Quality: $audioQuality, IsPremium: $isPremium")
+            android.util.Log.d("YouTubeStreaming", "Fetching audio stream for $videoId. Target Quality: $audioQuality")
 
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
@@ -82,16 +80,10 @@ class YouTubeStreamingService @Inject constructor(
             streamExtractor.fetchPage()
             
             val audioStreams = streamExtractor.audioStreams
-            
-            // If user is premium, we always try to get the highest (256kbps)
-            val targetBitrate = if (isPremium) {
-                256 
-            } else {
-                when (audioQuality) {
-                    com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 64
-                    com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 128
-                    com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 256
-                }
+            val targetBitrate = when (audioQuality) {
+                com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 64
+                com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 128
+                com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 256
             }
             
             val bestAudioStream = audioStreams
@@ -278,9 +270,7 @@ class YouTubeStreamingService @Inject constructor(
         retryWithBackoff {
             val startTime = System.currentTimeMillis()
             val downloadQuality = sessionManager.getDownloadQuality()
-            val isPremium = sessionManager.isPremium()
-            
-            android.util.Log.d("YouTubeStreaming", "Fetching download stream for $videoId. Quality: $downloadQuality, IsPremium: $isPremium")
+            android.util.Log.d("YouTubeStreaming", "Fetching download stream for $videoId. Quality: $downloadQuality (Max Bitrate: ${downloadQuality.maxBitrate})")
             
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
@@ -290,12 +280,7 @@ class YouTubeStreamingService @Inject constructor(
             streamExtractor.fetchPage()
             
             val audioStreams = streamExtractor.audioStreams
-            
-            val targetBitrate = if (isPremium) {
-                256
-            } else {
-                downloadQuality.maxBitrate
-            }
+            val targetBitrate = downloadQuality.maxBitrate
             
             val bestAudioStream = audioStreams
                 .filter { it.averageBitrate <= targetBitrate }

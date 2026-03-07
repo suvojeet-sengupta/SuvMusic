@@ -10,7 +10,6 @@ data class AccountInfo(
     val email: String,
     val avatarUrl: String,
     val isSelected: Boolean,
-    val isPremium: Boolean = false,
     val authUserIndex: Int = 0,
     val pageId: String = "" // For brand accounts that might need pageId instead of index
 )
@@ -359,12 +358,6 @@ class YouTubeJsonParser @Inject constructor() {
                     
                     val isSelected = item.optBoolean("isSelected", false)
                     
-                    // Check for Premium status - usually indicates "YouTube Music Premium" in text
-                    // or has a specific icon/badge
-                    val accountHeader = item.optJSONObject("accountName")
-                    val isPremium = json.toString().contains("Premium", ignoreCase = true) || 
-                                   item.toString().contains("Premium", ignoreCase = true)
-                    
                     // Extract authUser index from endpoint
                     // endpoint -> signInEndpoint -> (hack) we usually don't get direct index here easily
                     // But usually, the endpoint command metadata contains it, or we rely on the order
@@ -409,7 +402,6 @@ class YouTubeJsonParser @Inject constructor() {
                         email = email,
                         avatarUrl = avatarUrl,
                         isSelected = isSelected,
-                        isPremium = isPremium,
                         authUserIndex = -1 // We'll fill this in Repository via smart guessing or additional fetches
                     ))
                 }
