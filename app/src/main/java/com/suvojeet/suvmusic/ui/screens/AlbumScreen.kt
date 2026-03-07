@@ -220,7 +220,7 @@ fun AlbumScreen(
                     }
                     
                     // Song List
-                    itemsIndexed(album.songs, key = { _, song -> song.id }) { index, song ->
+                    itemsIndexed(album.songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
                         AlbumSongItem(
                             song = song,
                             trackNumber = index + 1,

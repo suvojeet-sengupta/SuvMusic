@@ -1467,8 +1467,9 @@ fun RecommendedArtistsSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val uniqueArtists = artists.distinctBy { it.name }
             items(
-                items = artists,
+                items = uniqueArtists,
                 key = { it.name }
             ) { artist ->
                 ArtistCard(artist = artist, onClick = { onArtistClick(artist.name) })
@@ -1493,8 +1494,9 @@ fun RecommendedTracksSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val uniqueTracks = tracks.distinctBy { it.name }
             items(
-                items = tracks,
+                items = uniqueTracks,
                 key = { it.name }
             ) { track ->
                 TrackCard(track = track, onClick = { onTrackClick(track) })
