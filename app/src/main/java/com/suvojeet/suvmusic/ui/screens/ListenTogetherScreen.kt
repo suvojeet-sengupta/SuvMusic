@@ -850,11 +850,7 @@ fun RoomContent(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Surface(
-                        onClick = { 
-                            val clipData = android.content.ClipData.newPlainText("Room Code", room.roomCode)
-                            clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(clipData))
-                            Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
-                        },
+                        onClick = { onCopyCode(room.roomCode) },
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerHighest,
                         modifier = Modifier.scale(1.1f)
