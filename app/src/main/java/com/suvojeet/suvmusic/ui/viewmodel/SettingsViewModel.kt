@@ -124,8 +124,7 @@ data class SettingsUiState(
     val navBarAlpha: Float = 0.9f,
     val downloadLocation: String? = null,
     val loggingEnabled: Boolean = false,
-    val isBugReportingSessionActive: Boolean = false,
-    val isPremium: Boolean = false
+    val isBugReportingSessionActive: Boolean = false
 )
 
 @HiltViewModel
@@ -495,11 +494,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
                 fetchAndSaveAccountInfo()
-            }
-        }
-        viewModelScope.launch {
-            sessionManager.isPremiumFlow.collect { isPremium ->
-                _uiState.update { it.copy(isPremium = isPremium) }
             }
         }
     }

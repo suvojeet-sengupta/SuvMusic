@@ -148,9 +148,6 @@ class PlayerViewModel @Inject constructor(
     // MiniPlayer Visibility State
     private val _isMiniPlayerDismissed = MutableStateFlow(false)
     val isMiniPlayerDismissed: StateFlow<Boolean> = _isMiniPlayerDismissed.asStateFlow()
-    
-    val isPremium: StateFlow<Boolean> = sessionManager.isPremiumFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     // Fullscreen State (Video)
     private val _isFullScreen = MutableStateFlow(false)
