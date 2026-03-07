@@ -42,6 +42,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.draw.scale
 
+import kotlinx.coroutines.flow.map
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListenTogetherScreen(
@@ -54,6 +56,7 @@ fun ListenTogetherScreen(
     val isLogActive by viewModel.isLogActive.collectAsState()
     val logs by viewModel.logs.collectAsState()
     val blockedUsers by viewModel.blockedUsers.collectAsState()
+    val bufferingUsers by viewModel.bufferingUsers.collectAsState()
     
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -117,6 +120,7 @@ fun ListenTogetherScreen(
                                 },
                                 onSync = { viewModel.requestSync() },
                                 onBlockUser = { viewModel.blockUser(it) },
+                                bufferingUsers = bufferingUsers,
                                 viewModel = viewModel,
                                 dominantColors = dominantColors
                             )
@@ -744,10 +748,12 @@ fun RoomContent(
     onCopyCode: (String) -> Unit,
     onSync: () -> Unit,
     onBlockUser: (String) -> Unit,
+    bufferingUsers: Set<String>,
     viewModel: ListenTogetherViewModel,
     dominantColors: DominantColors
 ) {
     val room = uiState.roomState ?: return
+    val context = androidx.compose.ui.platform.LocalContext.current
     val pendingRequests by viewModel.pendingJoinRequests.collectAsState()
     
     LazyColumn(
@@ -1001,7 +1007,7 @@ fun RoomContent(
         }
 
         items(room.users) { user: UserInfo ->
-            val isBuffering by viewModel.bufferingUsers.map { it.contains(user.userId) }.collectAsState(initialValue = false)
+            val isBuffering = bufferingUsers.contains(user.userId)
             UserListItem(
                 user = user, 
                 isHost = user.userId == room.hostId, 
