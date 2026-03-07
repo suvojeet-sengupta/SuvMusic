@@ -510,8 +510,9 @@ class ListenTogetherManager @Inject constructor(
                     val track = action.trackInfo
                     if (track != null) {
                         scope.launch(Dispatchers.IO) {
-                            val streamUrl = youTubeRepository.getStreamUrlForDownload(track.id)
-                            if (streamUrl != null) {
+                            val streamResult = youTubeRepository.getStreamUrlForDownload(track.id)
+                            if (streamResult != null) {
+                                val (streamUrl, _) = streamResult
                                 val mediaItem = createMediaItem(track, streamUrl)
                                 launch(Dispatchers.Main) {
                                     isSyncing = true // Prevent echo
@@ -605,7 +606,7 @@ class ListenTogetherManager @Inject constructor(
                     youTubeRepository.getStreamUrl(songDetails.id)
                 } else {
                     // Fallback to direct fetch
-                    youTubeRepository.getStreamUrl(track.id) ?: youTubeRepository.getStreamUrlForDownload(track.id)
+                    youTubeRepository.getStreamUrl(track.id) ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
                 }
                 
                 if (streamUrl == null) {
