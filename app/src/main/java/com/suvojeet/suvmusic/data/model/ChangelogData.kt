@@ -21,6 +21,7 @@ object ChangelogData {
                 "Adaptive Recommendations: 'Made for You' banners are now closeable with a 7-day persistence logic, automatically switching to a 'Daily Mix' style when dismissed.",
                 "Infinite Home Feed: Optimized auto-loading logic that proactively fetches diverse recommendation strategies (Artist Deep-dives, Nostalgia, Blended Genres) as you scroll.",
                 "Listen Together 2.0: Massive redesign with Material 3 Expressive UI and ultra-low latency Protobuf-based binary transport for perfect real-time synchronization.",
+                "MiniPlayer UI: Added dotted progress indicator for a more refined and modern aesthetic.",
                 "Ringtone Engine: Fully restored 'Set as Ringtone' feature with integrated audio trimmer, progress tracking, and robust system permission handling.",
                 "Enhanced Privacy & Security: Migrated sensitive API metadata to encrypted storage and centralized security configurations.",
                 "Under-the-hood Stability: Improved audio decoder resilience, fixed critical queue indexing bugs, and optimized startup routines for a faster, crash-free experience."
