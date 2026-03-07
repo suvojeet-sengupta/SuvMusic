@@ -83,7 +83,11 @@ class SpotifyImportService : Service() {
                 _importState.update { it.copy(state = ImportStatus.State.PREPARING, error = null) }
                 updateNotification("Fetching playlist details...", 0, 0, true)
 
-                val (playlistName, spotifySongs) = spotifyImportHelper.getPlaylistSongs(url)
+                val (playlistName, spotifySongs) = spotifyImportHelper.getPlaylistSongs(url) { count ->
+                    _importState.update { it.copy(currentSong = "Fetched $count songs...") }
+                    updateNotification("Fetching tracks: $count", 0, 0, true)
+                }
+                
                 if (spotifySongs.isEmpty()) {
                     _importState.update { it.copy(state = ImportStatus.State.ERROR, error = "No songs found") }
                     stopSelf()
