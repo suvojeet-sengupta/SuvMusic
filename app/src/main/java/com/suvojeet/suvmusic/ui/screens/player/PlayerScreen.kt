@@ -284,7 +284,17 @@ fun PlayerScreen(
     val showEqualizerSheet = activeOverlay is PlayerOverlay.Equalizer
 
     val coroutineScope = rememberCoroutineScope()
-    BackHandler { if (activeOverlay != PlayerOverlay.None) activeOverlay = PlayerOverlay.None else actions.onBack() }
+    BackHandler { 
+        if (activeOverlay != PlayerOverlay.None) {
+            if (activeOverlay is PlayerOverlay.Actions && activeOverlay.fromQueue) {
+                activeOverlay = PlayerOverlay.Queue
+            } else {
+                activeOverlay = PlayerOverlay.None 
+            }
+        } else {
+            actions.onBack() 
+        }
+    }
 
     var pendingSeekPosition by remember { mutableStateOf<Long?>(null) }
     var seekDebounceJob by remember { mutableStateOf<Job?>(null) }
@@ -645,7 +655,11 @@ fun OverlaysContent(
     }
 
     // Queue View
-    AnimatedVisibility(visible = activeOverlay is PlayerOverlay.Queue, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
+    AnimatedVisibility(
+        visible = activeOverlay is PlayerOverlay.Queue || (activeOverlay is PlayerOverlay.Actions && activeOverlay.fromQueue),
+        enter = slideInVertically { it },
+        exit = slideOutVertically { it }
+    ) {
         ModernQueueView(
             currentSong = song, queue = playerState.queue, playedSongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
             onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
@@ -653,7 +667,7 @@ fun OverlaysContent(
             isAutoplayEnabled = playerState.isAutoplayEnabled, isFavorite = playerState.isLiked, isRadioMode = state.isRadioMode, isLoadingMore = state.isLoadingMoreSongs,
             onBack = { if (currentOverlay is PlayerOverlay.Queue) onOverlayChange(PlayerOverlay.None) }, onSongClick = actions.onPlayFromQueue, onPlayPause = actions.onPlayPause,
             onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
-            onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
+            onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
             onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show() } },
             onClearQueue = actions.onClearQueue,
             dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
@@ -678,7 +692,14 @@ fun OverlaysContent(
     val menuSong = (activeOverlay as? PlayerOverlay.Actions)?.targetSong ?: song
     if (menuSong != null) {
         SongActionsSheet(
-            song = menuSong, isVisible = activeOverlay is PlayerOverlay.Actions, onDismiss = { if (currentOverlay is PlayerOverlay.Actions) onOverlayChange(PlayerOverlay.None) }, dominantColors = dominantColors,
+            song = menuSong, isVisible = activeOverlay is PlayerOverlay.Actions, 
+            onDismiss = { 
+                if (currentOverlay is PlayerOverlay.Actions) {
+                    if (currentOverlay.fromQueue) onOverlayChange(PlayerOverlay.Queue)
+                    else onOverlayChange(PlayerOverlay.None)
+                }
+            }, 
+            dominantColors = dominantColors,
             isDownloaded = playerViewModel.isDownloaded(menuSong.id), onToggleFavorite = { if (menuSong.id == song?.id) actions.onToggleLike() else playerViewModel.likeSong(menuSong) },
             onToggleDislike = { if (menuSong.id == song?.id) actions.onToggleDislike() else playerViewModel.dislikeCurrentSong() },
             isFavorite = if (menuSong.id == song?.id) playerState.isLiked else false, isDisliked = if (menuSong.id == song?.id) playerState.isDisliked else false,

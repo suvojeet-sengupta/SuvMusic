@@ -243,6 +243,14 @@ fun ModernQueueView(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
+                        IconButton(onClick = { onMoreClick(currentSong) }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                "More",
+                                tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -468,7 +476,7 @@ private fun ModernQueueItem(
                     uncheckedColor = dominantColors.onBackground.copy(alpha = 0.4f)
                 )
             )
-        } else if (!isCurrent) {
+        } else {
             IconButton(onClick = onMoreClick, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.MoreVert, "More", tint = dominantColors.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
             }
