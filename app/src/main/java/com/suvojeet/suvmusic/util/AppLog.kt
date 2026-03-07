@@ -18,9 +18,10 @@ object AppLog {
     @PublishedApi
     internal var isLoggingEnabled = false
     
-    @PublishedApi
-    internal var logFile: File? = null
-    
+    private var _logFile: File? = null
+
+    val logFile: File? get() = _logFile
+
     private val executor = Executors.newSingleThreadExecutor()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
@@ -30,22 +31,23 @@ object AppLog {
             val logDir = File(context.cacheDir, "logs")
             if (!logDir.exists()) logDir.mkdirs()
             // Keep one main log file, maybe rotate it if it gets too big
-            logFile = File(logDir, "app_logs.txt")
+            _logFile = File(logDir, "app_logs.txt")
             
             // Optional: Start with a separator for new session
             logToFile("SYSTEM", "--- App Started / Logging Initialized ---")
         } else {
-            logFile = null
+            _logFile = null
         }
     }
 
     @PublishedApi
     internal fun logToFile(tag: String, message: String, throwable: Throwable? = null) {
-        if (!isLoggingEnabled || logFile == null) return
+        val currentFile = _logFile
+        if (!isLoggingEnabled || currentFile == null) return
 
         executor.execute {
             try {
-                FileOutputStream(logFile, true).use { fos ->
+                FileOutputStream(currentFile, true).use { fos ->
                     PrintWriter(fos).use { pw ->
                         val timestamp = dateFormat.format(Date())
                         pw.println("$timestamp [$tag] $message")
@@ -97,13 +99,11 @@ object AppLog {
         }
     }
     
-    fun getLogFile(): File? = logFile
-    
     fun clearLogs() {
         executor.execute {
             try {
-                logFile?.delete()
-                logFile?.createNewFile()
+                _logFile?.delete()
+                _logFile?.createNewFile()
             } catch (e: Exception) {
                 Log.e("AppLog", "Failed to clear log file", e)
             }
