@@ -30,15 +30,17 @@ class SpotifyImportHelper @Inject constructor(
     )
 
     /**
-     * Extracts song titles, artists, and durations from a Spotify URL (Playlist, Album, or Artist).
-     * Returns a Pair of (Name, List of SpotifyTrack).
+     * Extracts song titles, artists, and durations from a Spotify URL.
+     * onTrackFetch is called periodically with the count of tracks fetched so far.
      */
-    suspend fun getPlaylistSongs(url: String): Pair<String, List<SpotifyTrack>> = withContext(Dispatchers.IO) {
+    suspend fun getPlaylistSongs(
+        url: String,
+        onTrackFetch: (Int) -> Unit = {}
+    ): Pair<String, List<SpotifyTrack>> = withContext(Dispatchers.IO) {
         val tracks = mutableListOf<SpotifyTrack>()
         var playlistName = "Spotify Import ${System.currentTimeMillis() / 1000}"
 
         try {
-            // Resolve shortened links
             val finalUrl = if (url.contains("spotify.link") || (url.contains("open.spotify.com") && !url.contains("/playlist/") && !url.contains("/album/") && !url.contains("/artist/"))) {
                 resolveShortenedUrl(url) ?: url
             } else url
@@ -49,7 +51,7 @@ class SpotifyImportHelper @Inject constructor(
                 val accessToken = getSpotifyAccessToken(finalUrl)
                 if (accessToken != null) {
                     try {
-                        val (name, apiTracks) = fetchSpotifyTracksWithApi(id, type, accessToken)
+                        val (name, apiTracks) = fetchSpotifyTracksWithApi(id, type, accessToken, onTrackFetch)
                         if (name.isNotEmpty()) playlistName = name
                         if (apiTracks.isNotEmpty()) {
                             Log.i("SpotifyImportHelper", "API method fetched ${apiTracks.size} tracks from $type")
@@ -61,7 +63,7 @@ class SpotifyImportHelper @Inject constructor(
                 }
             }
 
-            // Fallback to embed (limited info) for playlists
+            // Fallback to embed (only for playlists, limited to 100 tracks)
             if (type == "playlist" && id != null) {
                 try {
                     val embedUrl = "https://open.spotify.com/embed/playlist/$id"
@@ -73,31 +75,22 @@ class SpotifyImportHelper @Inject constructor(
                     if (nextDataScript != null) {
                         val json = nextDataScript.html()
                         val jsonObject = gson.fromJson(json, JsonObject::class.java)
-
-                        val entity = jsonObject.getAsJsonObject("props")
-                            ?.getAsJsonObject("pageProps")
-                            ?.getAsJsonObject("state")
-                            ?.getAsJsonObject("data")
-                            ?.getAsJsonObject("entity")
+                        val entity = jsonObject.getAsJsonObject("props")?.getAsJsonObject("pageProps")
+                            ?.getAsJsonObject("state")?.getAsJsonObject("data")?.getAsJsonObject("entity")
 
                         if (entity != null) {
-                            if (entity.has("name")) {
-                                playlistName = entity.get("name").asString
-                            } else if (entity.has("title")) {
-                                playlistName = entity.get("title").asString
-                            }
-
+                            playlistName = entity.get("name")?.asString ?: entity.get("title")?.asString ?: playlistName
                             val trackList = entity.getAsJsonArray("trackList")
                             if (trackList != null) {
                                 for (element in trackList) {
                                     val trackObj = element.asJsonObject
-                                    val title = trackObj.get("title").asString
-                                    val subtitle = trackObj.get("subtitle").asString
-                                    val duration = trackObj.get("duration")?.asLong ?: 0L
-                                    if (title.isNotBlank()) {
-                                        tracks.add(SpotifyTrack(title, subtitle, duration))
-                                    }
+                                    tracks.add(SpotifyTrack(
+                                        trackObj.get("title").asString,
+                                        trackObj.get("subtitle").asString,
+                                        trackObj.get("duration")?.asLong ?: 0L
+                                    ))
                                 }
+                                onTrackFetch(tracks.size)
                             }
                         }
                     }
@@ -106,7 +99,7 @@ class SpotifyImportHelper @Inject constructor(
                 }
             }
 
-            // Final fallback: Scrape original URL (minimal info)
+            // Scrape original URL (minimal info)
             if (tracks.isEmpty()) {
                 val doc = Jsoup.connect(finalUrl)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -114,9 +107,7 @@ class SpotifyImportHelper @Inject constructor(
                 
                 val docTitle = doc.title()
                 if (docTitle.contains("Spotify")) {
-                    playlistName = docTitle.split("- Playlist by").firstOrNull()?.trim() 
-                        ?: docTitle.split("|").firstOrNull()?.trim() 
-                        ?: docTitle
+                    playlistName = docTitle.split("- Playlist by").firstOrNull()?.trim() ?: docTitle
                 }
 
                 val trackNames = doc.select("span.track-name, div.track-name, .track-name")
@@ -126,6 +117,7 @@ class SpotifyImportHelper @Inject constructor(
                     for (i in trackNames.indices) {
                         tracks.add(SpotifyTrack(trackNames[i].text(), artistNames[i].text()))
                     }
+                    onTrackFetch(tracks.size)
                 }
             }
 
@@ -138,17 +130,12 @@ class SpotifyImportHelper @Inject constructor(
     private suspend fun resolveShortenedUrl(shortUrl: String): String? {
         return withContext(Dispatchers.IO) {
             try {
-                val request = Request.Builder()
-                    .url(shortUrl)
-                    .build()
-                
+                val request = Request.Builder().url(shortUrl).build()
                 val response = okHttpClient.newCall(request).execute()
                 val finalUrl = response.request.url.toString()
                 response.close()
-                Log.i("SpotifyImportHelper", "Resolved $shortUrl to $finalUrl")
                 finalUrl
             } catch (e: Exception) {
-                Log.w("SpotifyImportHelper", "Failed to resolve short URL: $shortUrl", e)
                 null
             }
         }
@@ -172,25 +159,19 @@ class SpotifyImportHelper @Inject constructor(
         try {
             val token = fetchAnonymousSpotifyToken()
             if (token != null) return token
-        } catch (e: Exception) {
-            Log.w("SpotifyImportHelper", "Anonymous token fetch failed", e)
-        }
+        } catch (e: Exception) {}
 
         try {
             val token = extractAccessTokenFromPage(url)
             if (token != null) return token
-        } catch (e: Exception) {
-            Log.w("SpotifyImportHelper", "Page token extraction failed", e)
-        }
+        } catch (e: Exception) {}
 
         val playlistId = extractPlaylistId(url)
         if (playlistId != null) {
             try {
                 val token = extractAccessTokenFromEmbed(playlistId)
                 if (token != null) return token
-            } catch (e: Exception) {
-                Log.w("SpotifyImportHelper", "Embed token extraction failed", e)
-            }
+            } catch (e: Exception) {}
         }
         return null
     }
@@ -207,9 +188,8 @@ class SpotifyImportHelper @Inject constructor(
         val response = okHttpClient.newCall(request).execute()
         return try {
             if (response.isSuccessful) {
-                val json = response.body.string()
-                val jsonObj = gson.fromJson(json, JsonObject::class.java)
-                if (jsonObj.has("accessToken")) jsonObj.get("accessToken").asString else null
+                val jsonObj = gson.fromJson(response.body.string(), JsonObject::class.java)
+                jsonObj.get("accessToken")?.asString
             } else null
         } finally {
             response.close()
@@ -220,11 +200,8 @@ class SpotifyImportHelper @Inject constructor(
         val doc = Jsoup.connect(url)
             .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             .get()
-
         val nextDataScript = doc.select("script#__NEXT_DATA__").first() ?: return null
-        val json = nextDataScript.html()
-        val jsonObject = gson.fromJson(json, JsonObject::class.java)
-        return findAccessTokenRecursive(jsonObject, 0)
+        return findAccessTokenRecursive(gson.fromJson(nextDataScript.html(), JsonObject::class.java), 0)
     }
 
     private fun extractAccessTokenFromEmbed(playlistId: String): String? {
@@ -232,11 +209,8 @@ class SpotifyImportHelper @Inject constructor(
         val doc = Jsoup.connect(embedUrl)
             .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             .get()
-
         val nextDataScript = doc.select("script#__NEXT_DATA__").first() ?: return null
-        val json = nextDataScript.html()
-        val jsonObject = gson.fromJson(json, JsonObject::class.java)
-        return findAccessTokenRecursive(jsonObject, 0)
+        return findAccessTokenRecursive(gson.fromJson(nextDataScript.html(), JsonObject::class.java), 0)
     }
 
     private fun findAccessTokenRecursive(jsonObject: JsonObject, depth: Int): String? {
@@ -254,11 +228,15 @@ class SpotifyImportHelper @Inject constructor(
         return null
     }
 
-    private suspend fun fetchSpotifyTracksWithApi(id: String, type: String, accessToken: String): Pair<String, List<SpotifyTrack>> = withContext(Dispatchers.IO) {
+    private suspend fun fetchSpotifyTracksWithApi(
+        id: String,
+        type: String,
+        accessToken: String,
+        onTrackFetch: (Int) -> Unit
+    ): Pair<String, List<SpotifyTrack>> = withContext(Dispatchers.IO) {
         val tracks = mutableListOf<SpotifyTrack>()
         var name = ""
         
-        // Construct URL based on type
         val baseUrl = when (type) {
             "playlist" -> "https://api.spotify.com/v1/playlists/$id"
             "album" -> "https://api.spotify.com/v1/albums/$id"
@@ -275,26 +253,22 @@ class SpotifyImportHelper @Inject constructor(
             
             val response = okHttpClient.newCall(request).execute()
             if (response.isSuccessful) {
-                val json = response.body.string()
-                val jsonObj = gson.fromJson(json, JsonObject::class.java)
+                val jsonObj = gson.fromJson(response.body.string(), JsonObject::class.java)
                 name = jsonObj.get("name")?.asString ?: ""
                 
                 if (type == "track") {
-                    val title = jsonObj.get("name").asString
-                    val duration = jsonObj.get("duration_ms").asLong
                     val artists = jsonObj.getAsJsonArray("artists").map { it.asJsonObject.get("name").asString }.joinToString(", ")
-                    return@withContext name to listOf(SpotifyTrack(title, artists, duration))
+                    return@withContext name to listOf(SpotifyTrack(name, artists, jsonObj.get("duration_ms").asLong))
                 }
                 
                 if (type == "artist") {
                     val tracksArray = jsonObj.getAsJsonArray("tracks")
                     tracksArray?.forEach { 
                         val t = it.asJsonObject
-                        val title = t.get("name").asString
-                        val duration = t.get("duration_ms").asLong
                         val artists = t.getAsJsonArray("artists").map { a -> a.asJsonObject.get("name").asString }.joinToString(", ")
-                        tracks.add(SpotifyTrack(title, artists, duration))
+                        tracks.add(SpotifyTrack(t.get("name").asString, artists, t.get("duration_ms").asLong))
                     }
+                    onTrackFetch(tracks.size)
                     return@withContext "$name - Top Tracks" to tracks
                 }
             }
@@ -304,116 +278,74 @@ class SpotifyImportHelper @Inject constructor(
         }
 
         var nextUrl: String? = when (type) {
-            "playlist" -> "https://api.spotify.com/v1/playlists/$id/tracks?offset=0&limit=100&fields=items(track(name,artists(name),duration_ms)),next"
-            "album" -> "https://api.spotify.com/v1/albums/$id/tracks?offset=0&limit=50"
+            "playlist" -> "https://api.spotify.com/v1/playlists/$id/tracks?limit=100"
+            "album" -> "https://api.spotify.com/v1/albums/$id/tracks?limit=50"
             else -> null
         }
 
         var pageCount = 0
-        var consecutiveErrors = 0
         val maxSongs = 3000
 
         while (nextUrl != null && tracks.size < maxSongs) {
-            val currentNextUrl: String = nextUrl!!
             try {
                 val request = Request.Builder()
-                    .url(currentNextUrl)
+                    .url(nextUrl!!)
                     .addHeader("Authorization", "Bearer $accessToken")
                     .build()
 
                 val response = okHttpClient.newCall(request).execute()
                 if (!response.isSuccessful) {
-                    val code = response.code
                     response.close()
-                    if (code == 429 && consecutiveErrors < 3) {
-                        consecutiveErrors++
-                        delay(consecutiveErrors * 2000L)
-                        continue
-                    }
                     break
                 }
                 
-                consecutiveErrors = 0
-                val json = response.body.string()
-                val jsonObj = gson.fromJson(json, JsonObject::class.java)
+                val jsonObj = gson.fromJson(response.body.string(), JsonObject::class.java)
                 val items = jsonObj.getAsJsonArray("items")
                 
                 if (items != null) {
                     for (item in items) {
                         try {
-                            val trackObj = if (type == "playlist") {
-                                item.asJsonObject.getAsJsonObject("track")
-                            } else {
-                                item.asJsonObject
-                            } ?: continue
+                            val trackObj = if (type == "playlist") item.asJsonObject.getAsJsonObject("track") else item.asJsonObject
+                            if (trackObj == null || trackObj.get("name")?.isJsonNull != false) continue
                             
-                            if (trackObj.get("name")?.isJsonNull != false) continue
-                            
-                            val title = trackObj.get("name").asString
-                            val duration = trackObj.get("duration_ms")?.asLong ?: 0L
-                            val artists = trackObj.getAsJsonArray("artists")?.mapNotNull { 
-                                it.asJsonObject.get("name")?.asString 
-                            }?.joinToString(", ") ?: ""
-                            
-                            if (title.isNotBlank()) {
-                                tracks.add(SpotifyTrack(title, artists, duration))
-                            }
-                        } catch (e: Exception) {
-                            Log.w("SpotifyImportHelper", "Skipping track", e)
-                        }
+                            val artists = trackObj.getAsJsonArray("artists")?.mapNotNull { it.asJsonObject.get("name")?.asString }?.joinToString(", ") ?: ""
+                            tracks.add(SpotifyTrack(trackObj.get("name").asString, artists, trackObj.get("duration_ms")?.asLong ?: 0L))
+                        } catch (e: Exception) {}
                     }
                 }
                 
                 pageCount++
+                Log.i("SpotifyImportHelper", "Fetched page $pageCount, tracks: ${tracks.size}")
+                onTrackFetch(tracks.size)
+                
                 nextUrl = if (jsonObj.has("next") && !jsonObj.get("next").isJsonNull) jsonObj.get("next").asString else null
                 response.close()
                 if (nextUrl != null) delay(100)
                 
             } catch (e: Exception) {
-                if (consecutiveErrors < 3) {
-                    consecutiveErrors++
-                    delay(consecutiveErrors * 1500L)
-                    continue
-                }
                 break
             }
         }
         name to tracks
     }
 
-    /**
-     * Finds a single match for a song on YouTube Music with improved logic.
-     */
     suspend fun findMatch(title: String, artist: String, durationMs: Long = 0): Song? {
         return try {
             val query = "$title $artist"
             val searchResults = youTubeRepository.search(query)
-            
             if (searchResults.isEmpty()) return null
-
-            // 1. Try to find an exact title match (ignoring case) with duration check
+            
             var bestMatch = searchResults.find { result ->
-                val titleMatch = result.title.equals(title, ignoreCase = true) ||
-                               result.title.contains(title, ignoreCase = true) ||
-                               title.contains(result.title, ignoreCase = true)
-                
-                val durationMatch = if (durationMs > 0 && result.duration > 0) {
-                    kotlin.math.abs(result.duration - durationMs) < 10000 // within 10 seconds
-                } else true
-                
+                val titleMatch = result.title.contains(title, ignoreCase = true) || title.contains(result.title, ignoreCase = true)
+                val durationMatch = if (durationMs > 0 && result.duration > 0) kotlin.math.abs(result.duration - durationMs) < 10000 else true
                 titleMatch && durationMatch
             }
 
-            // 2. Fallback to duration-only check among top results if title match is loose
             if (bestMatch == null && durationMs > 0) {
-                bestMatch = searchResults.take(3).find { result ->
-                    kotlin.math.abs(result.duration - durationMs) < 5000 // within 5 seconds
-                }
+                bestMatch = searchResults.take(3).find { result -> kotlin.math.abs(result.duration - durationMs) < 5000 }
             }
-            
             bestMatch ?: searchResults.firstOrNull()
         } catch (e: Exception) {
-            Log.w("SpotifyImportHelper", "Match failed", e)
             null
         }
     }
