@@ -22,11 +22,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -242,7 +245,7 @@ fun AddToPlaylistSheet(
                         color = TextSecondary,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp,
-                        modifier = Modifier.padding(horizontal = 24.dp, bottom = 12.dp)
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
                     )
                     
                     LazyColumn(

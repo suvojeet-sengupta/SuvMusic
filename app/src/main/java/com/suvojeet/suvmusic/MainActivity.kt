@@ -946,7 +946,7 @@ fun SuvMusicApp(
             com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
                 song = song,
                 isVisible = playlistManagementUiState.showAddToPlaylistSheet,
-                playlists = playlistManagementUiState.playlists,
+                playlists = playlistManagementUiState.userPlaylists,
                 isLoading = playlistManagementUiState.isLoadingPlaylists || playlistManagementUiState.isAddingSong,
                 onDismiss = { playlistManagementViewModel.hideAddToPlaylistSheet() },
                 onAddToPlaylist = { playlistId -> playlistManagementViewModel.addSongToPlaylist(playlistId) },
