@@ -36,7 +36,8 @@ import coil.compose.AsyncImage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreditsScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isPremium: Boolean = false
 ) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -65,7 +66,7 @@ fun CreditsScreen(
             // --- Lead Developer ---
             item {
                 SectionHeader("Lead Developer")
-                DeveloperCard()
+                DeveloperCard(isPremium = isPremium)
             }
 
             // --- Core Engine ---
@@ -210,7 +211,7 @@ fun CreditsScreen(
 }
 
 @Composable
-private fun DeveloperCard() {
+private fun DeveloperCard(isPremium: Boolean = false) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -238,12 +239,34 @@ private fun DeveloperCard() {
             Spacer(modifier = Modifier.width(20.dp))
             
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Suvojeet Sengupta",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Suvojeet Sengupta",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    
+                    if (isPremium) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFFFFD700)) // Gold
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "PREMIUM",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 10.sp,
+                                    color = Color.Black
+                                )
+                            )
+                        }
+                    }
+                }
                 
                 Text(
                     text = "Main Developer & Maintainer",

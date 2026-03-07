@@ -146,13 +146,18 @@ class YouTubeRepository @Inject constructor(
                 
                 // Get current authUserIndex
                 val authUserIndex = sessionManager.getAuthUserIndex()
+                
+                // Detect Premium status from raw response
+                val isPremium = root.toString().contains("Premium", ignoreCase = true)
+                sessionManager.setIsPremium(isPremium)
 
                 return@withContext StoredAccount(
                     name = name,
                     email = email,
                     avatarUrl = avatarUrl,
                     cookies = cookies,
-                    authUserIndex = authUserIndex
+                    authUserIndex = authUserIndex,
+                    isPremium = isPremium
                 )
             }
             
@@ -181,7 +186,8 @@ class YouTubeRepository @Inject constructor(
                     email = info.email,
                     avatarUrl = info.avatarUrl,
                     cookies = cookies, // Sharing same cookies
-                    authUserIndex = info.authUserIndex // Parser should ideally get this, or we need a way to set it
+                    authUserIndex = info.authUserIndex, // Parser should ideally get this, or we need a way to set it
+                    isPremium = info.isPremium
                 )
             }
         } catch (e: Exception) {
@@ -192,6 +198,7 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun switchAccount(account: StoredAccount) {
         sessionManager.switchAccount(account)
+        sessionManager.setIsPremium(account.isPremium)
         // Clear caches that might be user-specific
         sessionManager.clearRecentlyPlayed()
         // Force refresh home?
