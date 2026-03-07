@@ -92,6 +92,7 @@ class SessionManager @Inject constructor(
         private const val MAX_RECENT_SEARCHES = 20
         
         private val RECENTLY_PLAYED_KEY = stringPreferencesKey("recently_played")
+        private val IS_PREMIUM_KEY = booleanPreferencesKey("is_premium")
         private const val MAX_RECENTLY_PLAYED = 50
         
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
@@ -1193,11 +1194,12 @@ class SessionManager @Inject constructor(
         val email: String,
         val avatarUrl: String,
         val cookies: String,
-        val authUserIndex: Int = 0
+        val authUserIndex: Int = 0,
+        val isPremium: Boolean = false
     )
-    
+
     private val SAVED_ACCOUNTS_KEY = "saved_accounts"
-    
+
     fun getStoredAccounts(): List<StoredAccount> {
         val json = encryptedPrefs.getString(SAVED_ACCOUNTS_KEY, null) ?: return emptyList()
         return try {
@@ -1209,14 +1211,15 @@ class SessionManager @Inject constructor(
                     email = obj.optString("email"),
                     avatarUrl = obj.optString("avatarUrl"),
                     cookies = obj.optString("cookies"),
-                    authUserIndex = obj.optInt("authUserIndex", 0)
+                    authUserIndex = obj.optInt("authUserIndex", 0),
+                    isPremium = obj.optBoolean("isPremium", false)
                 )
             }
         } catch (e: Exception) {
             emptyList()
         }
     }
-    
+
     private fun saveStoredAccounts(accounts: List<StoredAccount>) {
         val array = JSONArray()
         accounts.forEach { account ->
@@ -1226,15 +1229,15 @@ class SessionManager @Inject constructor(
                 put("avatarUrl", account.avatarUrl)
                 put("cookies", account.cookies)
                 put("authUserIndex", account.authUserIndex)
+                put("isPremium", account.isPremium)
             })
         }
         encryptedPrefs.edit().putString(SAVED_ACCOUNTS_KEY, array.toString()).apply()
     }
-    
-    suspend fun saveCurrentAccountToHistory(name: String, email: String, avatarUrl: String, authUserIndex: Int = 0) {
+
+    suspend fun saveCurrentAccountToHistory(name: String, email: String, avatarUrl: String, authUserIndex: Int = 0, isPremium: Boolean = false) {
         val currentCookies = getCookies() ?: return
-        val newAccount = StoredAccount(name, email, avatarUrl, currentCookies, authUserIndex)
-        
+        val newAccount = StoredAccount(name, email, avatarUrl, currentCookies, authUserIndex, isPremium)
         val accounts = getStoredAccounts().toMutableList()
         accounts.removeAll { it.email == email }
         accounts.add(0, newAccount)
@@ -1742,6 +1745,19 @@ class SessionManager @Inject constructor(
         }
         context.dataStore.edit { preferences ->
             preferences.remove(RECENTLY_PLAYED_KEY)
+        }
+    }
+
+    val isPremiumFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[IS_PREMIUM_KEY] ?: false
+    }
+
+    suspend fun isPremium(): Boolean =
+        context.dataStore.data.first()[IS_PREMIUM_KEY] ?: false
+
+    suspend fun setIsPremium(isPremium: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[IS_PREMIUM_KEY] = isPremium
         }
     }
     private fun parseRecentlyPlayed(json: String?): List<RecentlyPlayed> {
