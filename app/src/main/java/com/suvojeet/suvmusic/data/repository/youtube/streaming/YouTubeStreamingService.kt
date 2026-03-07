@@ -20,7 +20,7 @@ class YouTubeStreamingService @Inject constructor(
     private val sessionManager: SessionManager
 ) {
     // Cache for stream URLs to avoid re-fetching (max 50 entries, 30 min expiry)
-    private data class CachedStream(val url: String, val timestamp: Long)
+    private data class CachedStream(val url: String, val extension: String, val timestamp: Long)
     private val streamCache = LruCache<String, CachedStream>(50)
     private val CACHE_EXPIRY_MS = 3 * 60 * 60 * 1000L // 3 hours
 
@@ -92,11 +92,16 @@ class YouTubeStreamingService @Inject constructor(
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
             
             val latency = System.currentTimeMillis() - startTime
-            android.util.Log.d("YouTubeStreaming", "Audio stream fetched in ${latency}ms. Selected bitrate: ${bestAudioStream?.averageBitrate}kbps (Target: $targetBitrate)")
+            val extension = when (bestAudioStream?.format?.name?.uppercase()) {
+                "M4A", "AAC" -> "m4a"
+                "WEBM", "OPUS" -> "opus"
+                else -> "m4a"
+            }
+            android.util.Log.d("YouTubeStreaming", "Audio stream fetched in ${latency}ms. Selected bitrate: ${bestAudioStream?.averageBitrate}kbps (Target: $targetBitrate), Format: $extension")
 
             bestAudioStream?.content?.also { url ->
                 // Cache the result
-                streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
+                streamCache.put(cacheKey, CachedStream(url, extension, System.currentTimeMillis()))
             }
         }
     }
@@ -260,10 +265,8 @@ class YouTubeStreamingService @Inject constructor(
         val cacheKey = "audio_$videoId"
         streamCache.get(cacheKey)?.let { cached ->
             if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
-                android.util.Log.d("YouTubeStreaming", "Download using cached playback URL: $videoId")
-                // For cached URLs, we'll try to guess extension or default to m4a
-                // A better cache would store the extension too.
-                return@withContext cached.url to "m4a"
+                android.util.Log.d("YouTubeStreaming", "Download using cached playback URL: $videoId, Format: ${cached.extension}")
+                return@withContext cached.url to cached.extension
             }
         }
         
@@ -298,7 +301,7 @@ class YouTubeStreamingService @Inject constructor(
 
             // Cache this result too, so subsequent playback uses it
             bestAudioStream?.content?.also { url ->
-                streamCache.put(cacheKey, CachedStream(url, System.currentTimeMillis()))
+                streamCache.put(cacheKey, CachedStream(url, extension, System.currentTimeMillis()))
             }
             
             val url = bestAudioStream?.content ?: return@retryWithBackoff null
