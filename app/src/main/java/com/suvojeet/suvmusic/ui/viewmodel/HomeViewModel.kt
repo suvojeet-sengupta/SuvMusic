@@ -60,7 +60,9 @@ data class HomeUiState(
     /** True when no more sections can be loaded */
     val hasReachedEnd: Boolean = false,
     /** Detected current mood based on listening patterns */
-    val detectedMood: String? = null
+    val detectedMood: String? = null,
+    /** Whether the "Made for You" banner should be shown */
+    val isForYouBannerVisible: Boolean = true
 )
 
 @HiltViewModel
@@ -84,6 +86,7 @@ class HomeViewModel @Inject constructor(
         // 1. Immutable observations (continuous flows)
         observeSession()
         observeMusicSource()
+        observeForYouBanner()
         
         // 2. Structured data loading
         loadHomeContent()
@@ -118,6 +121,22 @@ class HomeViewModel @Inject constructor(
                     isLoggedIn = sessionManager.isLoggedIn()
                 ) }
             }
+        }
+    }
+
+    private fun observeForYouBanner() {
+        viewModelScope.launch {
+            sessionManager.forYouBannerDismissedAtFlow.collect { dismissedAt ->
+                val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
+                val shouldShow = System.currentTimeMillis() - dismissedAt > sevenDaysInMillis
+                _uiState.update { it.copy(isForYouBannerVisible = shouldShow) }
+            }
+        }
+    }
+
+    fun onDismissForYouBanner() {
+        viewModelScope.launch {
+            sessionManager.setForYouBannerDismissedAt(System.currentTimeMillis())
         }
     }
     
