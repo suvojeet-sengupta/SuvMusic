@@ -59,7 +59,7 @@ fun MoodAndGenresScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(uiState.categories) { category ->
+                    items(uiState.categories, key = { it.title }) { category ->
                         CategoryCard(
                             category = category,
                             onClick = {

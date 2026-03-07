@@ -173,7 +173,7 @@ fun PickMusicScreen(
                                 verticalArrangement = Arrangement.spacedBy(24.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(searchResults) { artist ->
+                                items(searchResults, key = { it.id }) { artist ->
                                     ArtistSelectionItem(
                                         artist = artist,
                                         isSelected = selectedArtists.any { it.id == artist.id },
