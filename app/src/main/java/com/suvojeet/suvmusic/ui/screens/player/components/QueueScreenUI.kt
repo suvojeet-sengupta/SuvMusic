@@ -248,8 +248,55 @@ fun ModernQueueView(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Controls (Merged into list headers later or kept if scrolling is not desired yet)
-            // For now, let's keep them and focus on the list fix.
+            // Controls (Modern Switch for Autoplay/Infinite Play)
+            if (!isSelectionMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 12.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(dominantColors.onBackground.copy(alpha = 0.05f))
+                        .clickable { onToggleAutoplay() }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = null,
+                            tint = if (isAutoplayEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "Infinite Play",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = dominantColors.onBackground
+                            )
+                            Text(
+                                "Automatically add similar songs to queue",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = dominantColors.onBackground.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = isAutoplayEnabled,
+                        onCheckedChange = { onToggleAutoplay() },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = dominantColors.accent,
+                            uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.4f),
+                            uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.1f),
+                            uncheckedBorderColor = Color.Transparent
+                        ),
+                        modifier = Modifier.scale(0.85f)
+                    )
+                }
+            }
 
             // List
             val listState = rememberLazyListState()
