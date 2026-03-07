@@ -1273,7 +1273,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setLoggingEnabled(enabled)
             _uiState.update { it.copy(loggingEnabled = enabled) }
+            com.suvojeet.suvmusic.util.AppLog.init(context, enabled)
         }
+    }
+
+    fun sharePersistentLogs() {
+        val logFile = com.suvojeet.suvmusic.util.AppLog.getLogFile() ?: return
+        if (!logFile.exists()) return
+        shareBugReport(logFile)
     }
 
     fun toggleSponsorCategory(categoryKey: String, isEnabled: Boolean) {

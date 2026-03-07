@@ -30,6 +30,9 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
     @javax.inject.Inject
     lateinit var workerFactory: androidx.hilt.work.HiltWorkerFactory
 
+    @javax.inject.Inject
+    lateinit var sessionManager: com.suvojeet.suvmusic.data.SessionManager
+
     companion object {
         lateinit var instance: SuvMusicApplication
             private set
@@ -63,8 +66,19 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
     override fun onCreate() {
         super.onCreate()
         instance = this
+        
+        // Initialize logging early
+        applicationScope.launch {
+            val enabled = sessionManager.isLoggingEnabled()
+            withContext(Dispatchers.Main) {
+                com.suvojeet.suvmusic.util.AppLog.init(this@SuvMusicApplication, enabled)
+                com.suvojeet.suvmusic.util.AppLog.i("SuvMusicApplication") { "App initialization started" }
+            }
+        }
+
         // Initialize any app-wide components here on a background thread
         applicationScope.launch {
+            com.suvojeet.suvmusic.util.AppLog.d("SuvMusicApplication") { "Setting up workers" }
             setupWorkers()
         }
     }
