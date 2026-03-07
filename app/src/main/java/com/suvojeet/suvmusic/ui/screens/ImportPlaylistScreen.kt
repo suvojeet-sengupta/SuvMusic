@@ -130,7 +130,7 @@ private fun InputView(onImport: (String) -> Unit) {
     // Auto-paste if valid link in clipboard (only once on appearing)
     LaunchedEffect(Unit) {
         val clipText = clipboard.getClipEntry()?.clipData?.getItemAt(0)?.text?.toString()
-        if (clipText != null && clipText.contains("spotify.com/playlist") && url.isEmpty()) {
+        if (clipText != null && isValidSpotifyUrl(clipText) && url.isEmpty()) {
             url = clipText
         }
     }
@@ -143,9 +143,9 @@ private fun InputView(onImport: (String) -> Unit) {
             .imePadding() // Handle keyboard
     ) {
         Icon(
-            imageVector = Icons.Default.MusicNote, // Could replace with Spotify SVG if available, but MusicNote is safe
+            imageVector = Icons.Default.MusicNote, 
             contentDescription = null,
-            tint = Color(0xFF1DB954), // Keeping Spotify Green branding as it is specific
+            tint = Color(0xFF1DB954), 
             modifier = Modifier
                 .size(64.dp)
                 .background(Color(0xFF1DB954).copy(alpha = 0.1f), CircleShape)
@@ -203,7 +203,7 @@ private fun InputView(onImport: (String) -> Unit) {
 
         Button(
             onClick = { onImport(url) },
-            enabled = url.contains("spotify.com/playlist"),
+            enabled = isValidSpotifyUrl(url),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -219,6 +219,13 @@ private fun InputView(onImport: (String) -> Unit) {
             )
         }
     }
+}
+
+private fun isValidSpotifyUrl(url: String): Boolean {
+    val cleanUrl = url.trim()
+    return cleanUrl.contains("spotify.com/playlist") || 
+           cleanUrl.contains("spotify.link") || 
+           (cleanUrl.contains("open.spotify.com") && cleanUrl.contains("playlist"))
 }
 
 @Composable
