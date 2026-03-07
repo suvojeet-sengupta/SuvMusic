@@ -223,9 +223,8 @@ private fun InputView(onImport: (String) -> Unit) {
 
 private fun isValidSpotifyUrl(url: String): Boolean {
     val cleanUrl = url.trim()
-    return cleanUrl.contains("spotify.com/playlist") || 
-           cleanUrl.contains("spotify.link") || 
-           (cleanUrl.contains("open.spotify.com") && cleanUrl.contains("playlist"))
+    return cleanUrl.contains("spotify.com/") || 
+           cleanUrl.contains("spotify.link")
 }
 
 @Composable
