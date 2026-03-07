@@ -29,6 +29,7 @@ data class ImportStatus(
     val total: Int = 0,
     val progress: Int = 0,
     val successCount: Int = 0,
+    val failedSongs: List<Pair<String, String>> = emptyList(),
     val error: String? = null
 ) {
     enum class State {
@@ -106,29 +107,39 @@ class SpotifyImportService : Service() {
 
                 val total = spotifySongs.size
                 var successCount = 0
+                val failedSongs = mutableListOf<Pair<String, String>>()
 
                 _importState.update { it.copy(state = ImportStatus.State.PROCESSING, total = total, progress = 0) }
 
-                spotifySongs.forEachIndexed { index, (title, artist) ->
+                spotifySongs.forEachIndexed { index, track ->
                     if (!isActive) return@forEachIndexed
+                    val title = track.title
+                    val artist = track.artist
+                    val duration = track.durationMs
 
                     _importState.update { 
                         it.copy(
                             currentSong = title,
                             currentArtist = artist,
                             progress = index + 1,
-                            thumbnail = null // Could be updated if we had art
+                            thumbnail = null
                         )
                     }
                     updateNotification("Importing: $title", index + 1, total, false)
 
                     // Find Match
-                    val match = spotifyImportHelper.findMatch(title, artist)
+                    val match = spotifyImportHelper.findMatch(title, artist, duration)
                     
                     if (match != null) {
-                         _importState.update { it.copy(thumbnail = match.thumbnailUrl) } // Update thumbnail
+                         _importState.update { it.copy(thumbnail = match.thumbnailUrl) }
                          val added = youTubeRepository.addSongToPlaylist(playlistId, match.id)
-                         if (added) successCount++
+                         if (added) {
+                             successCount++
+                         } else {
+                             failedSongs.add(title to artist)
+                         }
+                    } else {
+                        failedSongs.add(title to artist)
                     }
                     
                     // Small artificial delay for very fast loops to allow UI/Notif to update
@@ -138,7 +149,8 @@ class SpotifyImportService : Service() {
                 _importState.update { 
                     it.copy(
                         state = ImportStatus.State.COMPLETED,
-                        successCount = successCount
+                        successCount = successCount,
+                        failedSongs = failedSongs
                     ) 
                 }
                 showCompletionNotification(successCount, total)
