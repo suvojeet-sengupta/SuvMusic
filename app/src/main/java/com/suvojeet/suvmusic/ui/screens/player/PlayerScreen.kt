@@ -711,9 +711,17 @@ fun OverlaysContent(
                 onOverlayChange(PlayerOverlay.None)
                 actions.onListenTogetherClick() 
             }, 
-            onPlaybackSpeed = { onOverlayChange(PlayerOverlay.PlaybackSpeed) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.Equalizer) },
-            currentSpeed = playerState.playbackSpeed
-        )
+            onPlaybackSpeed = { onOverlayChange(PlayerOverlay.None) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.Equalizer) },
+            currentSpeed = playerState.playbackSpeed,
+            onSetRingtone = { 
+                if (ringtoneViewModel.ringtoneHelper.hasSettingsPermission(context)) {
+                    ringtoneViewModel.showTrimmer(menuSong)
+                } else {
+                    Toast.makeText(context, "Please allow 'Modify System Settings' permission", Toast.LENGTH_LONG).show()
+                    ringtoneViewModel.ringtoneHelper.requestSettingsPermission(context)
+                }
+            }
+            )
     }
 
     // Simplified remaining overlays
@@ -753,6 +761,32 @@ fun OverlaysContent(
         onRefreshDevices = { actions.onRefreshDevices() },
         accentColor = dominantColors.accent
     )
+
+    // Ringtone Dialogs
+    val ringtoneUiState by ringtoneViewModel.uiState.collectAsStateWithLifecycle()
+    if (ringtoneUiState.showTrimmer && ringtoneUiState.targetSong != null) {
+        RingtoneTrimmerDialog(
+            song = ringtoneUiState.targetSong!!,
+            onDismiss = { ringtoneViewModel.hideTrimmer() },
+            onConfirm = { start, end -> 
+                ringtoneViewModel.setAsRingtone(context, ringtoneUiState.targetSong!!, start, end)
+            }
+        )
+    }
+    
+    if (ringtoneUiState.showProgress) {
+        RingtoneProgressDialog(
+            progress = ringtoneUiState.progress,
+            status = ringtoneUiState.statusMessage,
+            isComplete = ringtoneUiState.isComplete,
+            isSuccess = ringtoneUiState.isSuccess,
+            onDismiss = { ringtoneViewModel.dismissProgress() },
+            onOpenSettings = { 
+                ringtoneViewModel.ringtoneHelper.openRingtoneSettings(context, ringtoneUiState.ringtoneUri)
+                ringtoneViewModel.dismissProgress()
+            }
+        )
+    }
 
     if (isFullScreen) {
         FullScreenVideoPlayer(viewModel = playerViewModel, dominantColors = dominantColors, onDismiss = { playerViewModel.setFullScreen(false) })
