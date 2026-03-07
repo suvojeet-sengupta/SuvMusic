@@ -266,7 +266,7 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null) = streamingService.getVideoStreamResult(videoId, quality)
 
-    suspend fun getStreamUrlForDownload(videoId: String): String? = streamingService.getStreamUrlForDownload(videoId)
+    suspend fun getStreamUrlForDownload(videoId: String): Pair<String, String>? = streamingService.getStreamUrlForDownload(videoId)
 
     /**
      * Get a muxed (video+audio combined) stream URL for video download.

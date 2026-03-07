@@ -289,7 +289,7 @@ class DownloadRepository @Inject constructor(
                     if (deleted) return true
                 }
                 
-                val extensions = listOf("mp3", "aac", "flac", "wav", "ogg")
+                val extensions = listOf("mp3", "aac", "flac", "wav", "ogg", "opus")
                 for (ext in extensions) {
                     val altFile = File(targetFolder, "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.$ext")
                     if (altFile.exists()) {
@@ -372,26 +372,26 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private suspend fun saveFileToPublicDownloads(songId: String, artist: String, title: String, inputStream: InputStream, subfolder: String? = null): Uri? {
-        val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.m4a"
-        
+    private suspend fun saveFileToPublicDownloads(songId: String, artist: String, title: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? {
+        val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.$extension"
+
         val customLocationUri = sessionManager.getDownloadLocation()
         if (customLocationUri != null) {
-            return saveToCustomLocation(fileName, inputStream, customLocationUri, subfolder)
+            return saveToCustomLocation(fileName, inputStream, customLocationUri, subfolder, extension)
         }
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            saveToMediaStore(songId, fileName, inputStream, subfolder)
+            saveToMediaStore(songId, fileName, inputStream, subfolder, extension)
         } else {
             saveToPublicFolder(songId, fileName, inputStream, subfolder)
         }
     }
 
-    private fun saveToCustomLocation(fileName: String, inputStream: InputStream, treeUri: String, subfolder: String? = null): Uri? {
+    private fun saveToCustomLocation(fileName: String, inputStream: InputStream, treeUri: String, subfolder: String? = null, extension: String = "m4a"): Uri? {
         return try {
             val rootUri = Uri.parse(treeUri)
             var rootFolder = DocumentFile.fromTreeUri(context, rootUri) ?: return null
-            
+
             if (subfolder != null) {
                 val sanitizedSub = sanitizeFileName(subfolder)
                 var subDir = rootFolder.findFile(sanitizedSub)
@@ -406,12 +406,13 @@ class DownloadRepository @Inject constructor(
             val existingFile = rootFolder.findFile(fileName)
             existingFile?.delete()
 
-            val newFile = rootFolder.createFile("audio/m4a", fileName) ?: return null
-            
+            val mimeType = if (extension == "opus") "audio/opus" else "audio/m4a"
+            val newFile = rootFolder.createFile(mimeType, fileName) ?: return null
+
             context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
                 inputStream.copyTo(output)
             }
-            
+
             newFile.uri
         } catch (e: Exception) {
             Log.e(TAG, "Error saving to custom location", e)
@@ -419,7 +420,7 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null): Uri? {
+    private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? {
         return try {
             val relativePath = if (subfolder != null) {
                 "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER/${sanitizeFileName(subfolder)}"
@@ -427,9 +428,10 @@ class DownloadRepository @Inject constructor(
                 "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER"
             }
 
+            val mimeType = if (extension == "opus") "audio/opus" else "audio/m4a"
             val contentValues = ContentValues().apply {
                 put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
+                put(MediaStore.Audio.Media.MIME_TYPE, mimeType)
                 put(MediaStore.Audio.Media.RELATIVE_PATH, relativePath)
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
             }
@@ -461,7 +463,7 @@ class DownloadRepository @Inject constructor(
             } else {
                 rootFolder
             }
-            
+
             val file = File(targetFolder, fileName)
             FileOutputStream(file).use { outputStream ->
                 inputStream.copyTo(outputStream)
@@ -472,7 +474,7 @@ class DownloadRepository @Inject constructor(
             null
         }
     }
-    
+
     private suspend fun saveFileWithProgress(
         songId: String,
         artist: String,
@@ -480,18 +482,19 @@ class DownloadRepository @Inject constructor(
         inputStream: InputStream,
         contentLength: Long,
         subfolder: String? = null,
-        onProgress: (Float) -> Unit
+        onProgress: (Float) -> Unit,
+        extension: String = "m4a"
     ): Uri? {
-        val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.m4a"
-        
+        val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.$extension"
+
         val customLocationUri = sessionManager.getDownloadLocation()
         if (customLocationUri != null) {
-            return saveToCustomLocationWithProgress(fileName, inputStream, contentLength, customLocationUri, subfolder, onProgress)
+            return saveToCustomLocationWithProgress(fileName, inputStream, contentLength, customLocationUri, subfolder, onProgress, extension)
         }
 
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                saveToMediaStoreWithProgress(fileName, inputStream, contentLength, subfolder, onProgress)
+                saveToMediaStoreWithProgress(fileName, inputStream, contentLength, subfolder, onProgress, extension)
             } else {
                 saveToPublicFolderWithProgress(fileName, inputStream, contentLength, subfolder, onProgress)
             }
@@ -507,12 +510,13 @@ class DownloadRepository @Inject constructor(
         contentLength: Long,
         treeUri: String,
         subfolder: String? = null,
-        onProgress: (Float) -> Unit
+        onProgress: (Float) -> Unit,
+        extension: String = "m4a"
     ): Uri? {
         return try {
             val rootUri = Uri.parse(treeUri)
             var rootFolder = DocumentFile.fromTreeUri(context, rootUri) ?: return null
-            
+
             if (subfolder != null) {
                 val sanitizedSub = sanitizeFileName(subfolder)
                 var subDir = rootFolder.findFile(sanitizedSub)
@@ -527,8 +531,9 @@ class DownloadRepository @Inject constructor(
             val existingFile = rootFolder.findFile(fileName)
             existingFile?.delete()
 
-            val newFile = rootFolder.createFile("audio/m4a", fileName) ?: return null
-            
+            val mimeType = if (extension == "opus") "audio/opus" else "audio/m4a"
+            val newFile = rootFolder.createFile(mimeType, fileName) ?: return null
+
             context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
                 copyWithProgress(inputStream, output, contentLength, onProgress)
             }
@@ -544,7 +549,8 @@ class DownloadRepository @Inject constructor(
         inputStream: InputStream,
         contentLength: Long,
         subfolder: String? = null,
-        onProgress: (Float) -> Unit
+        onProgress: (Float) -> Unit,
+        extension: String = "m4a"
     ): Uri? {
         return try {
             val relativePath = if (subfolder != null) {
@@ -553,9 +559,10 @@ class DownloadRepository @Inject constructor(
                 "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER"
             }
 
+            val mimeType = if (extension == "opus") "audio/opus" else "audio/m4a"
             val contentValues = ContentValues().apply {
                 put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Audio.Media.MIME_TYPE, "audio/m4a")
+                put(MediaStore.Audio.Media.MIME_TYPE, mimeType)
                 put(MediaStore.Audio.Media.RELATIVE_PATH, relativePath)
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
             }
@@ -577,8 +584,7 @@ class DownloadRepository @Inject constructor(
             Log.e(TAG, "Error saving to MediaStore with progress", e)
             null
         }
-    }
-    
+    }    
     private fun saveToPublicFolderWithProgress(
         fileName: String,
         inputStream: InputStream,
@@ -776,16 +782,20 @@ class DownloadRepository @Inject constructor(
         if (job != null) activeDownloadJobs[song.id] = job
         
         try {
-            val streamUrl = when (song.source) {
-                SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id, 320)
+            val streamResult = when (song.source) {
+                SongSource.JIOSAAVN -> {
+                    val url = jioSaavnRepository.getStreamUrl(song.id, 320)
+                    if (url != null) url to "m4a" else null
+                }
                 else -> youTubeRepository.getStreamUrlForDownload(song.id)
             }
-            if (streamUrl == null) {
+            if (streamResult == null) {
                 downloadMutex.withLock { _downloadingIds.update { it - song.id } }
                 return@withContext false
             }
             
-            return@withContext downloadUsingSharedCache(song, streamUrl)
+            val (streamUrl, extension) = streamResult
+            return@withContext downloadUsingSharedCache(song, streamUrl, extension)
         } catch (e: Exception) {
             Log.e(TAG, "Download error for ${song.id}", e)
             downloadMutex.withLock { _downloadingIds.update { it - song.id } }
@@ -796,7 +806,7 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private suspend fun downloadUsingSharedCache(song: Song, streamUrl: String): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun downloadUsingSharedCache(song: Song, streamUrl: String, extension: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val uri = android.net.Uri.parse(streamUrl)
             val dataSpec = androidx.media3.datasource.DataSpec.Builder()
@@ -810,7 +820,7 @@ class DownloadRepository @Inject constructor(
             
             _downloadProgress.update { it + (song.id to 0f) }
             
-            val tempFile = File(context.cacheDir, "${song.id}_download.m4a")
+            val tempFile = File(context.cacheDir, "${song.id}_download.$extension")
             val inputStream = androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec)
             
             FileOutputStream(tempFile).use { outputStream ->
@@ -823,7 +833,7 @@ class DownloadRepository @Inject constructor(
             tagAudioFile(tempFile, song)
             
             val downloadedUri = tempFile.inputStream().use { input ->
-                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath)
+                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath, extension)
             }
             
             if (tempFile.exists()) tempFile.delete()
@@ -885,16 +895,17 @@ class DownloadRepository @Inject constructor(
         _downloadProgress.update { it + (song.id to 0f) }
         
         try {
-            val streamUrl = youTubeRepository.getStreamUrlForDownload(song.id)
-            if (streamUrl == null) {
+            val streamResult = youTubeRepository.getStreamUrlForDownload(song.id)
+            if (streamResult == null) {
                 _downloadingIds.update { it - song.id }
                 _downloadProgress.update { it - song.id }
                 return@withContext false
             }
             
+            val (streamUrl, extension) = streamResult
             val tempDir = File(context.cacheDir, "progressive_downloads")
             if (!tempDir.exists()) tempDir.mkdirs()
-            val tempFile = File(tempDir, "${song.id}.m4a.tmp")
+            val tempFile = File(tempDir, "${song.id}.$extension.tmp")
             
             val request = Request.Builder().url(streamUrl).build()
             val response = downloadClient.newCall(request).execute()
@@ -936,7 +947,7 @@ class DownloadRepository @Inject constructor(
             
             tagAudioFile(tempFile, song)
             val finalUri = tempFile.inputStream().use { input ->
-                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath)
+                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath, extension)
             }
             tempFile.delete()
             
