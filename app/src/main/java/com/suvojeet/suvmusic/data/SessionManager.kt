@@ -196,6 +196,22 @@ class SessionManager @Inject constructor(
         private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
+        private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
+    }
+    
+    // --- Home Screen Preferences ---
+
+    suspend fun getForYouBannerDismissedAt(): Long =
+        context.dataStore.data.first()[FOR_YOU_BANNER_DISMISSED_AT_KEY] ?: 0L
+
+    val forYouBannerDismissedAtFlow: Flow<Long> = context.dataStore.data.map { preferences ->
+        preferences[FOR_YOU_BANNER_DISMISSED_AT_KEY] ?: 0L
+    }
+
+    suspend fun setForYouBannerDismissedAt(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[FOR_YOU_BANNER_DISMISSED_AT_KEY] = timestamp
+        }
     }
     
     // --- Logging ---
