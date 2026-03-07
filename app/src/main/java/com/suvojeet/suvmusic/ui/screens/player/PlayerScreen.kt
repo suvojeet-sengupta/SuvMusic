@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens.player
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -7,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -335,7 +337,10 @@ fun PlayerScreen(
                             handleDoubleTapSeek = handleDoubleTapSeek,
                             onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
                             onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                            onRecenterAr = { playerViewModel.calibrateAudioAr() }
+                            onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                            player = player,
+                            isFullScreen = isFullScreen,
+                            onSetFullScreen = { playerViewModel.setFullScreen(it) }
                         )
                     } else {
                         val isCompactHeight = maxHeight < 600.dp
@@ -433,61 +438,68 @@ fun PortraitPlayerContent(
         Spacer(modifier = Modifier.weight(1f))
         
         // Show Video or Artwork in the same center space
-        AnimatedVisibility(
-            visible = playerState.isVideoMode && player != null && !isFullScreen,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 })
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxWidth(currentArtworkSize.fraction)
-                    .aspectRatio(1f)
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.Black)
-                        .clickable { onSetFullScreen(true) },
-                    tonalElevation = 16.dp,
-                    shadowElevation = 16.dp
-                ) {
-                    AndroidView(
-                        factory = { context ->
-                            PlayerView(context).apply {
-                                this.player = player
-                                useController = false
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                setBackgroundColor(android.graphics.Color.BLACK)
+            AnimatedContent(
+                targetState = playerState.isVideoMode && player != null && !isFullScreen,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(500)) togetherWith
+                    fadeOut(animationSpec = tween(500))
+                },
+                label = "video_artwork_transition"
+            ) { isVideo ->
+                if (isVideo) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxWidth(ArtworkSize.LARGE.fraction)
+                            .aspectRatio(1f)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth(currentArtworkSize.fraction / ArtworkSize.LARGE.fraction)
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black)
+                                .clickable { onSetFullScreen(true) },
+                            tonalElevation = 16.dp,
+                            shadowElevation = 16.dp
+                        ) {
+                            AndroidView(
+                                factory = { context ->
+                                    PlayerView(context).apply {
+                                        this.player = player
+                                        useController = false
+                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                        setBackgroundColor(android.graphics.Color.BLACK)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            
+                            // Small expand icon overlay
+                            Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
+                                Icon(
+                                    imageVector = Icons.Filled.Fullscreen,
+                                    contentDescription = "Full Screen",
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
+                                )
                             }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    
-                    // Small expand icon overlay
-                    Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
-                        Icon(
-                            imageVector = Icons.Filled.Fullscreen,
-                            contentDescription = "Full Screen",
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
-                        )
+                        }
                     }
+                } else {
+                    AlbumArtwork(
+                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = playerState.isLoading,
+                        onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
+                        onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
+                    )
                 }
             }
-        }
-        
-        AnimatedVisibility(
-            visible = !(playerState.isVideoMode && player != null && !isFullScreen),
-            enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 4 }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 4 })
-        ) {
-            AlbumArtwork(
-                imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = playerState.isLoading,
-                onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
-                onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
-            )
         }
         
         Spacer(modifier = Modifier.weight(1f))
@@ -534,15 +546,64 @@ fun LandscapePlayerContent(
     audioArEnabled: Boolean, actions: PlayerScreenActions, onShowActions: () -> Unit, onShowLyrics: () -> Unit, onShowQueue: () -> Unit,
     onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit,
     isVideoMode: Boolean, onToggleVideoMode: () -> Unit, handleDoubleTapSeek: (Boolean) -> Unit, onShapeChange: (ArtworkShape) -> Unit,
-    onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit
+    onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
+    player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit
 ) {
     Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.weight(0.45f).fillMaxHeight().padding(end = 16.dp), contentAlignment = Alignment.Center) {
-            AlbumArtwork(
-                imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = playerState.isLoading,
-                onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
-                onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
-            )
+            AnimatedContent(
+                targetState = isVideoMode && player != null && !isFullScreen,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(500)) togetherWith
+                    fadeOut(animationSpec = tween(500))
+                },
+                label = "video_artwork_transition_landscape"
+            ) { isVideo ->
+                if (isVideo) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxHeight(ArtworkSize.LARGE.fraction).aspectRatio(1f)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxHeight(currentArtworkSize.fraction / ArtworkSize.LARGE.fraction)
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black)
+                                .clickable { onSetFullScreen(true) },
+                            tonalElevation = 16.dp,
+                            shadowElevation = 16.dp
+                        ) {
+                            AndroidView(
+                                factory = { context ->
+                                    PlayerView(context).apply {
+                                        this.player = player
+                                        useController = false
+                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                        setBackgroundColor(android.graphics.Color.BLACK)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            
+                            Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
+                                Icon(
+                                    imageVector = Icons.Filled.Fullscreen,
+                                    contentDescription = "Full Screen",
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    AlbumArtwork(
+                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = playerState.isLoading,
+                        onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
+                        onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
+                    )
+                }
+            }
         }
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
