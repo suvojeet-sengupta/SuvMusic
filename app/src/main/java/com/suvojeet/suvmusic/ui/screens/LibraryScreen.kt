@@ -623,7 +623,7 @@ fun PlaylistsGrid(
         }
         
         // 2. User Playlists
-        items(uiState.playlists) { playlist ->
+        items(uiState.playlists, key = { it.id }) { playlist ->
             GridPlaylistCard(
                 playlist = playlist,
                 onClick = { onPlaylistClick(playlist) }
@@ -848,7 +848,7 @@ fun PlaylistsList(
              )
          }
 
-         items(uiState.playlists) { playlist ->
+         items(uiState.playlists, key = { it.id }) { playlist ->
             // Re-use existing list item style or create simplified one
              Row(
                 modifier = Modifier

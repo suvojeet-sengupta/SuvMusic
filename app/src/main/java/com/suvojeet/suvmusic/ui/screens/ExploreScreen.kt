@@ -78,7 +78,7 @@ fun ExploreScreen(
                         contentPadding = PaddingValues(bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
-                        items(uiState.sections) { section ->
+                        items(uiState.sections, key = { it.title }) { section ->
                             when (section.type) {
                                 com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList -> {
                                     LargeCardWithListSection(
