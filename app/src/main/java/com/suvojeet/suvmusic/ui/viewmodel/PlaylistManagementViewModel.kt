@@ -135,8 +135,7 @@ class PlaylistManagementViewModel @Inject constructor(
                     val added = if (syncWithYt && sessionManager.isLoggedIn()) {
                         youTubeRepository.addSongToPlaylist(playlistId, song.id)
                     } else {
-                         // For local playlist, we need to implement adding song (LibraryRepository logic)
-                         // Assuming savePlaylist works for updates or we have addSongToPlaylist in libraryRepo
+                         // Local playlist: libraryRepository handles the addition
                          try {
                              libraryRepository.addSongToPlaylist(playlistId, song)
                              true
@@ -152,7 +151,7 @@ class PlaylistManagementViewModel @Inject constructor(
                                 showCreatePlaylistDialog = false,
                                 showAddToPlaylistSheet = false,
                                 selectedSong = null,
-                                successMessage = "Created \"$title\" and added song"
+                                successMessage = "Created \"$title\" and added ${song.title}"
                             )
                         }
                     } else {
@@ -196,15 +195,24 @@ class PlaylistManagementViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isAddingSong = true) }
             
-            val success = youTubeRepository.addSongToPlaylist(playlistId, song.id)
+            val success = if (playlistId.startsWith("local_")) {
+                try {
+                    libraryRepository.addSongToPlaylist(playlistId, song)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            } else {
+                youTubeRepository.addSongToPlaylist(playlistId, song.id)
+            }
             
             _uiState.update { 
                 it.copy(
                     isAddingSong = false,
                     showAddToPlaylistSheet = false,
                     selectedSong = null,
-                    successMessage = if (success) "Added to playlist" else null,
-                    errorMessage = if (!success) "Failed to add to playlist" else null
+                    successMessage = if (success) "Added ${song.title} to playlist" else null,
+                    errorMessage = if (!success) "Failed to add ${song.title} to playlist" else null
                 )
             }
         }

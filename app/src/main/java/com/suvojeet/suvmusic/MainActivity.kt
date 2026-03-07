@@ -330,11 +330,46 @@ fun SuvMusicApp(
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val mainViewModel: MainViewModel = hiltViewModel()
+    val playlistManagementViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
+    
     val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
+    val playlistManagementUiState by playlistManagementViewModel.uiState.collectAsStateWithLifecycle()
 
     val isLoggedIn by sessionManager.isLoggedInFlow.collectAsStateWithLifecycle(initialValue = false)
 
     val scope = androidx.compose.runtime.rememberCoroutineScope()    
+    
+    // Handle events from other viewmodels for global sheets
+    val homeViewModel: com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel = hiltViewModel()
+    val searchViewModel: com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel = hiltViewModel()
+
+    LaunchedEffect(Unit) {
+        homeViewModel.events.collect { event ->
+            if (event is com.suvojeet.suvmusic.ui.viewmodel.HomeEvent.ShowAddToPlaylistSheet) {
+                playlistManagementViewModel.showAddToPlaylistSheet(event.song)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        searchViewModel.events.collect { event ->
+            if (event is com.suvojeet.suvmusic.ui.viewmodel.SearchEvent.ShowAddToPlaylistSheet) {
+                playlistManagementViewModel.showAddToPlaylistSheet(event.song)
+            }
+        }
+    }
+
+    // Handle messages from PlaylistManagement
+    LaunchedEffect(playlistManagementUiState.successMessage, playlistManagementUiState.errorMessage) {
+        playlistManagementUiState.successMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            playlistManagementViewModel.clearMessages()
+        }
+        playlistManagementUiState.errorMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            playlistManagementViewModel.clearMessages()
+        }
+    }
     // Optimized states to reduce recompositions
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
@@ -904,6 +939,29 @@ fun SuvMusicApp(
                 )
             }
             else -> {}
+        }
+
+        // Global Playlist Dialogs
+        playlistManagementUiState.selectedSong?.let { song ->
+            com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
+                song = song,
+                isVisible = playlistManagementUiState.showAddToPlaylistSheet,
+                playlists = playlistManagementUiState.playlists,
+                isLoading = playlistManagementUiState.isLoadingPlaylists || playlistManagementUiState.isAddingSong,
+                onDismiss = { playlistManagementViewModel.hideAddToPlaylistSheet() },
+                onAddToPlaylist = { playlistId -> playlistManagementViewModel.addSongToPlaylist(playlistId) },
+                onCreateNewPlaylist = { playlistManagementViewModel.showCreatePlaylistDialog() }
+            )
+            
+            com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog(
+                isVisible = playlistManagementUiState.showCreatePlaylistDialog,
+                isCreating = playlistManagementUiState.isCreatingPlaylist,
+                isLoggedIn = isLoggedIn,
+                onDismiss = { playlistManagementViewModel.hideCreatePlaylistDialog() },
+                onCreate = { title, desc, isPrivate, sync ->
+                    playlistManagementViewModel.createPlaylist(title, desc, isPrivate, sync)
+                }
+            )
         }
     }
 }
