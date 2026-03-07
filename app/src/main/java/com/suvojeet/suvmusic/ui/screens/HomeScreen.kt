@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
@@ -209,12 +212,18 @@ fun HomeScreen(
                         // Personalized "For You" Banner — shown when logged in
                         if (uiState.isLoggedIn) {
                             item(key = "for_you_banner", contentType = "for_you_banner") {
-                                ForYouBanner(
-                                    onStartRadio = onStartRadio,
-                                    modifier = Modifier
-                                        .padding(horizontal = 16.dp)
-                                        .animateEnter(index = 2)
-                                )
+                                AnimatedVisibility(
+                                    visible = uiState.isForYouBannerVisible,
+                                    exit = fadeOut() + shrinkVertically()
+                                ) {
+                                    ForYouBanner(
+                                        onStartRadio = onStartRadio,
+                                        onDismiss = viewModel::onDismissForYouBanner,
+                                        modifier = Modifier
+                                            .padding(horizontal = 16.dp)
+                                            .animateEnter(index = 2)
+                                    )
+                                }
                             }
                         }
 
@@ -1311,6 +1320,7 @@ private fun AppFooter(modifier: Modifier = Modifier) {
 @Composable
 private fun ForYouBanner(
     onStartRadio: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -1319,72 +1329,90 @@ private fun ForYouBanner(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        RoundedCornerShape(12.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Made for you",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Based on your listening history",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Surface(
-                modifier = Modifier
-                    .bounceClick(
-                        shape = RoundedCornerShape(20.dp),
-                        onClick = onStartRadio
-                    ),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.primary
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
+                        imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Radio",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Made for you",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Based on your listening history",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .bounceClick(
+                            shape = RoundedCornerShape(20.dp),
+                            onClick = onStartRadio
+                        ),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Radio",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            }
+
+            // Close button in top-right
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
