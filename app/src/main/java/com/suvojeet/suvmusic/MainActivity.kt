@@ -126,6 +126,7 @@ class MainActivity : ComponentActivity() {
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
+        com.suvojeet.suvmusic.util.AppLog.i("MainActivity") { "onCreate started" }
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         
