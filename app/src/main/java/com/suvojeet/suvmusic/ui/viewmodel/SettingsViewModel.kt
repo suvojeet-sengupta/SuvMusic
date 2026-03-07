@@ -1278,7 +1278,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun sharePersistentLogs() {
-        val logFile = com.suvojeet.suvmusic.util.AppLog.getLogFile() ?: return
+        val logFile = com.suvojeet.suvmusic.util.AppLog.logFile ?: return
         if (!logFile.exists()) return
         shareBugReport(logFile)
     }
