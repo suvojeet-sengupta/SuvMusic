@@ -84,7 +84,7 @@ fun AddToPlaylistSheet(
     onAddToPlaylist: (playlistId: String) -> Unit,
     onCreateNewPlaylist: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     
     if (isVisible) {
         ModalBottomSheet(
@@ -92,7 +92,16 @@ fun AddToPlaylistSheet(
             sheetState = sheetState,
             containerColor = DarkBackground,
             contentColor = TextPrimary,
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) },
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .size(width = 36.dp, height = 5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(TextSecondary.copy(alpha = 0.3f))
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
@@ -102,128 +111,144 @@ fun AddToPlaylistSheet(
                 // Header
                 Text(
                     text = "Add to Playlist",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                 )
                 
-                // Song info
-                Row(
+                // Song info - Compact Preview
+                Surface(
+                    color = DarkSurface.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
                 ) {
-                    AsyncImage(
-                        model = song.thumbnailUrl,
-                        contentDescription = song.title,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = song.thumbnailUrl,
+                            contentDescription = song.title,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
                         )
-                        Text(
-                            text = song.artist,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary,
-                            maxLines = 1
-                        )
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = song.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = song.artist,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
                 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 16.dp),
-                    color = TextSecondary.copy(alpha = 0.2f)
-                )
-                
-                // Create new playlist button with gradient
+                // New Playlist Button - Gradient Accent
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.Transparent,
+                    onClick = onCreateNewPlaylist,
+                    shape = RoundedCornerShape(16.dp),
+                    color = DarkSurface,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable { onCreateNewPlaylist() }
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(Brush.linearGradient(AccentGradient)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = TextPrimary,
+                                tint = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                         
                         Spacer(modifier = Modifier.width(16.dp))
                         
-                        Column {
-                            Text(
-                                text = "New Playlist",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "Create a new playlist",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
+                        Text(
+                            text = "New Playlist...",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AccentRed
+                        )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                    color = TextSecondary.copy(alpha = 0.1f)
+                )
                 
                 // Playlists list
                 if (isLoading) {
-                    Row(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalArrangement = Arrangement.Center
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = AccentRed)
+                        CircularProgressIndicator(color = AccentRed, strokeWidth = 3.dp)
                     }
                 } else if (playlists.isEmpty()) {
-                    Text(
-                        text = "No playlists found. Create one!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(40.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                            contentDescription = null,
+                            tint = TextSecondary.copy(alpha = 0.3f),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "You don't have any playlists yet",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 } else {
                     Text(
-                        text = "YOUR PLAYLISTS",
+                        text = "CHOOSE A PLAYLIST",
                         style = MaterialTheme.typography.labelMedium,
                         color = TextSecondary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp,
+                        modifier = Modifier.padding(horizontal = 24.dp, bottom = 12.dp)
                     )
                     
                     LazyColumn(
-                        modifier = Modifier.height(300.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(350.dp)
                     ) {
                         items(
                             items = playlists,
@@ -233,14 +258,14 @@ fun AddToPlaylistSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onAddToPlaylist(playlist.getPlaylistId()) }
-                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                    .padding(horizontal = 24.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 // Thumbnail
                                 Box(
                                     modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(10.dp))
                                         .background(DarkSurface)
                                 ) {
                                     if (!playlist.thumbnailUrl.isNullOrEmpty()) {
@@ -254,7 +279,7 @@ fun AddToPlaylistSheet(
                                         Icon(
                                             imageVector = Icons.Default.MusicNote,
                                             contentDescription = null,
-                                            tint = TextSecondary,
+                                            tint = TextSecondary.copy(alpha = 0.5f),
                                             modifier = Modifier
                                                 .align(Alignment.Center)
                                                 .size(24.dp)
@@ -267,17 +292,34 @@ fun AddToPlaylistSheet(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = playlist.name,
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = TextPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Text(
-                                        text = "${playlist.songCount} songs",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = playlist.uploaderName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                        if (playlist.songCount > 0) {
+                                            Text(
+                                                text = " • ${playlist.songCount} songs",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
                                 }
+                                
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = TextSecondary.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
