@@ -38,10 +38,15 @@ class SpotifyImportHelper @Inject constructor(
         var playlistName = "Spotify Import ${System.currentTimeMillis() / 1000}"
 
         try {
-            val playlistId = extractPlaylistId(url)
+            // Resolve shortened links if necessary (common in mobile sharing)
+            val finalUrl = if (url.contains("spotify.link") || (url.contains("open.spotify.com") && !url.contains("playlist/"))) {
+                resolveShortenedUrl(url) ?: url
+            } else url
+
+            val playlistId = extractPlaylistId(finalUrl)
             
             if (playlistId != null) {
-                val accessToken = getSpotifyAccessToken(url)
+                val accessToken = getSpotifyAccessToken(finalUrl)
                 if (accessToken != null) {
                     try {
                         val (name, apiTracks) = fetchSpotifyTracksWithApi(playlistId, accessToken)
@@ -101,9 +106,9 @@ class SpotifyImportHelper @Inject constructor(
                 }
             }
 
-            // Scrape original URL (minimal info)
+            // Final fallback: Scrape original URL (minimal info)
             if (tracks.isEmpty()) {
-                val doc = Jsoup.connect(url)
+                val doc = Jsoup.connect(finalUrl)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .get()
                 
@@ -128,6 +133,26 @@ class SpotifyImportHelper @Inject constructor(
             Log.w("SpotifyImportHelper", "Spotify operation failed", e)
         }
         playlistName to tracks
+    }
+
+    private suspend fun resolveShortenedUrl(shortUrl: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url(shortUrl)
+                    .build()
+                
+                // OkHttp automatically follows redirects by default
+                val response = okHttpClient.newCall(request).execute()
+                val finalUrl = response.request.url.toString()
+                response.close()
+                Log.i("SpotifyImportHelper", "Resolved $shortUrl to $finalUrl")
+                finalUrl
+            } catch (e: Exception) {
+                Log.w("SpotifyImportHelper", "Failed to resolve short URL: $shortUrl", e)
+                null
+            }
+        }
     }
 
     private fun extractPlaylistId(url: String): String? {
@@ -248,8 +273,9 @@ class SpotifyImportHelper @Inject constructor(
 
         var pageCount = 0
         var consecutiveErrors = 0
+        val maxSongs = 3000
 
-        while (nextUrl != null) {
+        while (nextUrl != null && tracks.size < maxSongs) {
             val currentNextUrl: String = nextUrl!!
             try {
                 val request = Request.Builder()
