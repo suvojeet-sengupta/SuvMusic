@@ -155,22 +155,17 @@ fun HomeScreen(
                 val lazyListState = rememberLazyListState()
 
                 // Infinite scroll detection — trigger slightly earlier for seamless loading
-                // Emit Pair(lastVisibleIndex, totalItems) so that when new items load and
-                // user is still near the bottom, distinctUntilChanged sees a new value
-                // and re-fires loadMore() automatically until the exact end is reached.
-                // Infinite scroll detection with debounce to prevent rapid-fire loadMore calls.
-                // Uses collectLatest so fast flings cancel pending loads automatically.
-                LaunchedEffect(lazyListState) {
+                LaunchedEffect(lazyListState, uiState.isLoadingMore) {
                     snapshotFlow {
                         val layoutInfo = lazyListState.layoutInfo
                         val totalItems = layoutInfo.totalItemsCount
                         val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                        lastVisibleIndex >= totalItems - 5 && totalItems > 0
+                        // Trigger when 8 items from bottom and NOT already loading
+                        lastVisibleIndex >= totalItems - 8 && totalItems > 0 && !uiState.isLoadingMore
                     }
                         .distinctUntilChanged()
                         .filter { it }
                         .collectLatest {
-                            delay(300) // debounce to avoid race with ViewModel state update
                             viewModel.loadMore()
                         }
                 }
@@ -496,7 +491,7 @@ fun HomeScreen(
                                 LoadingMoreIndicator(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 16.dp)
+                                        .padding(vertical = 32.dp)
                                 )
                             }
                         }
