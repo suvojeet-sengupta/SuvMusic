@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -227,6 +228,7 @@ fun ConnectToServerContent(
     onServerUrlChange: (String) -> Unit,
     dominantColors: DominantColors
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -375,6 +377,13 @@ fun ConnectToServerContent(
             )
         }
         
+        Spacer(modifier = Modifier.height(40.dp))
+        
+        NyxCredit(onClick = {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://nyx.meowery.eu/"))
+            context.startActivity(intent)
+        })
+        
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
@@ -430,6 +439,7 @@ fun SetupContent(
     onUnblockUser: (String) -> Unit,
     dominantColors: DominantColors
 ) {
+    val context = LocalContext.current
     var roomCode by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
     var showLogs by remember { mutableStateOf(false) }
@@ -597,6 +607,13 @@ fun SetupContent(
             dominantColors = dominantColors
         )
         
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        NyxCredit(onClick = {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://nyx.meowery.eu/"))
+            context.startActivity(intent)
+        })
+        
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
@@ -748,12 +765,12 @@ fun RoomContent(
     onCopyCode: (String) -> Unit,
     onSync: () -> Unit,
     onBlockUser: (String) -> Unit,
-    bufferingUsers: Set<String>,
+    bufferingUsers: List<String>,
     viewModel: ListenTogetherViewModel,
     dominantColors: DominantColors
 ) {
     val room = uiState.roomState ?: return
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val pendingRequests by viewModel.pendingJoinRequests.collectAsState()
     
     LazyColumn(
@@ -833,7 +850,11 @@ fun RoomContent(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Surface(
-                        onClick = { onCopyCode(room.roomCode) },
+                        onClick = { 
+                            val clipData = android.content.ClipData.newPlainText("Room Code", room.roomCode)
+                            clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(clipData))
+                            Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
+                        },
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerHighest,
                         modifier = Modifier.scale(1.1f)
@@ -1021,7 +1042,10 @@ fun RoomContent(
         // Footer Actions
         item {
             Spacer(modifier = Modifier.height(16.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
                         onClick = {
@@ -1074,6 +1098,13 @@ fun RoomContent(
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                NyxCredit(onClick = {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://nyx.meowery.eu/"))
+                    context.startActivity(intent)
+                })
             }
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -1484,5 +1515,28 @@ fun BlockedUsersSheet(
                 Text("Close")
             }
         }
+    }
+}
+
+@Composable
+fun NyxCredit(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(
+        modifier = modifier
+            .clip(CircleShape)
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Integration by ",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        Text(
+            text = "Nyx",
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        )
     }
 }
