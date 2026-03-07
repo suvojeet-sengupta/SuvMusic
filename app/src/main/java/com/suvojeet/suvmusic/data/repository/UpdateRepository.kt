@@ -1,14 +1,23 @@
 package com.suvojeet.suvmusic.data.repository
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import androidx.core.content.FileProvider
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import com.suvojeet.suvmusic.BuildConfig
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppUpdate
+import com.suvojeet.suvmusic.data.model.UpdateState
+import com.suvojeet.suvmusic.data.model.UpdateChannel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -22,56 +31,81 @@ import javax.inject.Singleton
  */
 @Singleton
 class UpdateRepository @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val sessionManager: SessionManager
 ) {
     private val client = OkHttpClient.Builder()
         .followRedirects(true)
         .build()
     
     private val gson = Gson()
+
+    private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
+    val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
+
+    private var downloadedApkFile: File? = null
     
     companion object {
-        // GitHub repository info - update these with your repo details
+        // GitHub repository info
         private const val GITHUB_OWNER = "suvojeet-sengupta"
         private const val GITHUB_REPO = "SuvMusic"
-        private const val API_URL = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
+        
+        // Interval for automatic update checks (24 hours)
+        private const val AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000L
     }
     
     /**
      * Check for updates from GitHub Releases.
-     * Returns AppUpdate if available, null otherwise.
      */
-    suspend fun checkForUpdate(channel: com.suvojeet.suvmusic.data.model.UpdateChannel): Result<AppUpdate?> = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(
+        channel: UpdateChannel,
+        forceCheck: Boolean = false
+    ): Result<AppUpdate?> = withContext(Dispatchers.IO) {
+        // Check if we should skip automatic check
+        if (!forceCheck) {
+            val lastCheckTime = sessionManager.getLastUpdateCheckTime()
+            if (System.currentTimeMillis() - lastCheckTime < AUTO_CHECK_INTERVAL) {
+                return@withContext Result.success(null)
+            }
+        }
+
+        _updateState.value = UpdateState.Checking
+
         try {
-            // Fetch releases list (max 5) to find the latest based on channel
+            // Fetch releases list
             val url = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases?per_page=10"
             
             val request = Request.Builder()
                 .url(url)
                 .header("Accept", "application/vnd.github.v3+json")
-                .header("User-Agent", "SuvMusic-App") // Required by GitHub API
+                .header("User-Agent", "SuvMusic-App")
                 .build()
             
             val response = client.newCall(request).execute()
             
             if (!response.isSuccessful) {
                 if (response.code == 403) {
-                    return@withContext Result.failure(Exception("GitHub API Rate limit exceeded. Try again later."))
+                    val rateLimitError = "GitHub API Rate limit exceeded. Try again later."
+                    if (forceCheck) _updateState.value = UpdateState.Error(rateLimitError)
+                    return@withContext Result.failure(Exception(rateLimitError))
                 }
-                return@withContext Result.failure(Exception("Failed to check for updates: HTTP ${response.code}"))
+                val httpError = "Failed to check for updates: HTTP ${response.code}"
+                if (forceCheck) _updateState.value = UpdateState.Error(httpError)
+                return@withContext Result.failure(Exception(httpError))
             }
             
             val body = response.body.string()
-            val releasesArray = gson.fromJson(body, com.google.gson.JsonArray::class.java)
+            val releasesArray = gson.fromJson(body, JsonArray::class.java)
             
             if (releasesArray.size() == 0) {
+                sessionManager.setLastUpdateCheckTime(System.currentTimeMillis())
+                _updateState.value = if (forceCheck) UpdateState.NoUpdate else UpdateState.Idle
                 return@withContext Result.success(null)
             }
             
             // Filter releases based on channel
             val selectedRelease = when (channel) {
-                com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE -> {
-                    // Find the first release that is NOT a pre-release
+                UpdateChannel.STABLE -> {
                     var latestStable: JsonObject? = null
                     for (element in releasesArray) {
                         val release = element.asJsonObject
@@ -82,8 +116,7 @@ class UpdateRepository @Inject constructor(
                     }
                     latestStable
                 }
-                com.suvojeet.suvmusic.data.model.UpdateChannel.NIGHTLY -> {
-                    // Just pick the absolute latest non-draft release
+                UpdateChannel.NIGHTLY -> {
                     var latestNightly: JsonObject? = null
                     for (element in releasesArray) {
                         val release = element.asJsonObject
@@ -94,25 +127,24 @@ class UpdateRepository @Inject constructor(
                     }
                     latestNightly
                 }
-            } ?: return@withContext Result.success(null)
+            } 
+            
+            if (selectedRelease == null) {
+                sessionManager.setLastUpdateCheckTime(System.currentTimeMillis())
+                _updateState.value = if (forceCheck) UpdateState.NoUpdate else UpdateState.Idle
+                return@withContext Result.success(null)
+            }
 
-            // Parse version from tag_name (e.g., "v1.2.0-beta.1" -> "1.2.0-beta.1")
             val tagName = selectedRelease.get("tag_name")?.asString ?: return@withContext Result.failure(Exception("No tag found"))
             val versionName = tagName.removePrefix("v")
-            
-            // Parse release notes, date, and pre-release status
             val releaseNotes = selectedRelease.get("body")?.asString ?: "No release notes available"
             val publishedAt = selectedRelease.get("published_at")?.asString ?: ""
             val isPreRelease = selectedRelease.get("prerelease")?.asBoolean ?: false
             
-            // Find APK download URL from assets (prioritize arm64-v8a or universal if possible)
             val assets = selectedRelease.getAsJsonArray("assets")
             var downloadUrl = ""
-            
-            // Prioritize architectures: Universal > arm64-v8a > Others
             val priorityKeywords = listOf("universal", "arm64-v8a", "arm64", "v8a")
             
-            // First pass: try to find priority assets
             for (keyword in priorityKeywords) {
                 for (asset in assets) {
                     val assetObj = asset.asJsonObject
@@ -125,7 +157,6 @@ class UpdateRepository @Inject constructor(
                 if (downloadUrl.isNotEmpty()) break
             }
             
-            // Second pass: fallback to any .apk if no priority found
             if (downloadUrl.isEmpty()) {
                 for (asset in assets) {
                     val assetObj = asset.asJsonObject
@@ -138,7 +169,9 @@ class UpdateRepository @Inject constructor(
             }
             
             if (downloadUrl.isEmpty()) {
-                return@withContext Result.failure(Exception("No APK found in the latest ${channel.name.lowercase()} release"))
+                val noApkError = "No APK found in the latest ${channel.name.lowercase()} release"
+                if (forceCheck) _updateState.value = UpdateState.Error(noApkError)
+                return@withContext Result.failure(Exception(noApkError))
             }
             
             val currentVersionName = getCurrentVersionName()
@@ -154,7 +187,6 @@ class UpdateRepository @Inject constructor(
                 isPreRelease = isPreRelease
             )
             
-            // Robust version comparison
             val isNewer = isVersionNewer(
                 currentVersion = currentVersionName,
                 remoteVersion = versionName,
@@ -164,19 +196,21 @@ class UpdateRepository @Inject constructor(
                 remoteTimestamp = parsePublishedDate(publishedAt)
             )
 
+            sessionManager.setLastUpdateCheckTime(System.currentTimeMillis())
+
             if (isNewer) {
+                _updateState.value = UpdateState.UpdateAvailable(update)
                 Result.success(update)
             } else {
+                _updateState.value = if (forceCheck) UpdateState.NoUpdate else UpdateState.Idle
                 Result.success(null)
             }
         } catch (e: Exception) {
+            if (forceCheck) _updateState.value = UpdateState.Error(e.message ?: "Unknown error")
             Result.failure(e)
         }
     }
 
-    /**
-     * Determines if the remote version is newer than the current version.
-     */
     private fun isVersionNewer(
         currentVersion: String,
         remoteVersion: String,
@@ -185,22 +219,10 @@ class UpdateRepository @Inject constructor(
         currentTimestamp: Long,
         remoteTimestamp: Long
     ): Boolean {
-        // 1. Primary: Compare version codes (generated from version names)
         if (remoteCode > currentCode) return true
         if (remoteCode < currentCode) return false
+        if (currentVersion == remoteVersion) return false 
         
-        // 2. Secondary: If codes match, check if they are exactly the same
-        if (currentVersion == remoteVersion) {
-            // For Nightly, same version might mean a re-published build
-            // But only if the remote build is significantly newer than the local install
-            // And only if it's a pre-release/nightly build
-            // Actually, to avoid annoying users, if version matches exactly, we should NOT update
-            // unless we have a specific reason. Most users don't want to re-download the same thing.
-            return false 
-        }
-        
-        // 3. Tertiary: Compare suffixes (e.g. 1.3.0.0-nightly vs 1.3.0.0)
-        // Usually, 1.3.0.0 is considered NEWER than 1.3.0.0-beta
         return try {
             compareVersions(remoteVersion, currentVersion) > 0
         } catch (e: Exception) {
@@ -209,18 +231,13 @@ class UpdateRepository @Inject constructor(
     }
 
     private fun compareVersions(v1: String, v2: String): Int {
-        // Remove 'v' prefix if present
         val cleanV1 = v1.removePrefix("v")
         val cleanV2 = v2.removePrefix("v")
-
-        // Split into numeric part and qualifier part (e.g. "1.2.0" and "beta.1")
         val parts1 = cleanV1.split("-", limit = 2)
         val parts2 = cleanV2.split("-", limit = 2)
-        
         val numeric1 = parts1[0].split(".")
         val numeric2 = parts2[0].split(".")
         
-        // Compare numeric parts
         val length = maxOf(numeric1.size, numeric2.size)
         for (i in 0 until length) {
             val n1 = numeric1.getOrNull(i)?.toIntOrNull() ?: 0
@@ -228,21 +245,16 @@ class UpdateRepository @Inject constructor(
             if (n1 != n2) return n1.compareTo(n2)
         }
         
-        // If numeric parts are identical, check qualifiers
         val q1 = parts1.getOrNull(1)
         val q2 = parts2.getOrNull(1)
-        
         if (q1 == q2) return 0
-        if (q1 == null) return 1 // v1 has no qualifier, so it's a stable release, newer than v2's pre-release
-        if (q2 == null) return -1 // v2 has no qualifier, so it's newer
-        
-        // Both have qualifiers, compare them lexicographically
+        if (q1 == null) return 1 
+        if (q2 == null) return -1 
         return q1.compareTo(q2, ignoreCase = true)
     }
 
     private fun parsePublishedDate(dateString: String): Long {
         return try {
-            // ISO 8601 format: 2024-01-28T10:00:00Z
             val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
             format.timeZone = java.util.TimeZone.getTimeZone("UTC")
             format.parse(dateString)?.time ?: 0L
@@ -255,19 +267,15 @@ class UpdateRepository @Inject constructor(
         return try {
             context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
         } catch (e: Exception) {
-            System.currentTimeMillis() // Fallback to now to avoid unnecessary updates if check fails
+            System.currentTimeMillis()
         }
     }
     
-    /**
-     * Download APK file to cache directory.
-     * Returns the downloaded file path.
-     */
     suspend fun downloadApk(
         downloadUrl: String,
-        versionName: String,
-        onProgress: (Int) -> Unit
+        versionName: String
     ): Result<File> = withContext(Dispatchers.IO) {
+        _updateState.value = UpdateState.Downloading(0)
         try {
             val request = Request.Builder()
                 .url(downloadUrl)
@@ -276,19 +284,16 @@ class UpdateRepository @Inject constructor(
             val response = client.newCall(request).execute()
             
             if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("Download failed: ${response.code}"))
+                val error = "Download failed: ${response.code}"
+                _updateState.value = UpdateState.Error(error)
+                return@withContext Result.failure(Exception(error))
             }
             
             val body = response.body
             val contentLength = body.contentLength()
             
-            // Create updates directory in cache
             val updatesDir = File(context.cacheDir, "updates")
-            if (!updatesDir.exists()) {
-                updatesDir.mkdirs()
-            }
-            
-            // Clean old APKs
+            if (!updatesDir.exists()) updatesDir.mkdirs()
             updatesDir.listFiles()?.forEach { it.delete() }
             
             val apkFile = File(updatesDir, "SuvMusic-$versionName.apk")
@@ -302,24 +307,63 @@ class UpdateRepository @Inject constructor(
                     while (input.read(buffer).also { read = it } != -1) {
                         output.write(buffer, 0, read)
                         bytesRead += read
-                        
                         if (contentLength > 0) {
                             val progress = ((bytesRead * 100) / contentLength).toInt()
-                            onProgress(progress)
+                            _updateState.value = UpdateState.Downloading(progress)
                         }
                     }
                 }
             }
             
+            downloadedApkFile = apkFile
+            _updateState.value = UpdateState.Downloaded
             Result.success(apkFile)
         } catch (e: Exception) {
+            _updateState.value = UpdateState.Error(e.message ?: "Download failed")
             Result.failure(e)
         }
     }
-    
-    /**
-     * Get current app version name.
-     */
+
+    fun installUpdate() {
+        val apkFile = downloadedApkFile ?: return
+        if (!apkFile.exists()) {
+            _updateState.value = UpdateState.Error("APK file not found")
+            return
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    val settingsIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(settingsIntent)
+                    return
+                }
+            }
+
+            val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                FileProvider.getUriForFile(context, "${context.packageName}.provider", apkFile)
+            } else {
+                Uri.fromFile(apkFile)
+            }
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            _updateState.value = UpdateState.Error("Failed to install: ${e.message}")
+        }
+    }
+
+    fun resetUpdateState() {
+        _updateState.value = UpdateState.Idle
+    }
+
     fun getCurrentVersionName(): String {
         return try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0.0"
@@ -328,23 +372,17 @@ class UpdateRepository @Inject constructor(
         }
     }
     
-    /**
-     * Parse version name to version code.
-     * Supports both 3-digit (1.0.0) and 4-digit (1.0.0.0) formats.
-     * Format: major * 1000000 + minor * 10000 + patch * 100 + build
-     */
     private fun parseVersionCode(versionName: String): Int {
         return try {
-            // Remove any non-numeric suffixes (like -beta or -nightly) for code calculation
             val cleanVersion = versionName.split("-")[0].split("+")[0]
             val parts = cleanVersion.split(".")
-            
             val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
             val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
             val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
             val build = parts.getOrNull(3)?.toIntOrNull() ?: 0
-            
-            // Using a larger multiplier to accommodate 4 parts safely
+            // Using base 100 for each part to avoid Int overflow while supporting 4 parts
+            // Max value: 21 * 1,000,000 + 99 * 10,000 + 99 * 100 + 99 = 21,999,999 (safe within Int.MAX_VALUE)
+            // Actually let's use slightly more space for major
             major * 1000000 + minor * 10000 + patch * 100 + build
         } catch (e: Exception) {
             0
