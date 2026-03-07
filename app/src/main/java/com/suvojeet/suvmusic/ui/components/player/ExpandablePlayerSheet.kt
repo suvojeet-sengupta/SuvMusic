@@ -51,6 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -536,22 +539,47 @@ private fun PillMiniPlayer(
                     .padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Album Art with Circular Progress
+                // Album Art with Custom Dotted Circular Progress (Seekbar Pattern)
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .padding(4.dp),
+                        .padding(2.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Circular Progress
-                    androidx.compose.material3.CircularProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxSize(),
-                        color = dominantColors.accent,
-                        trackColor = dominantColors.onBackground.copy(alpha = 0.2f),
-                        strokeWidth = 2.dp,
-                        strokeCap = StrokeCap.Round
-                    )
+                    val activeColor = dominantColors.accent
+                    val trackColor = dominantColors.onBackground.copy(alpha = 0.2f)
+                    
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val strokeWidth = 2.dp.toPx()
+                        val dashSize = 2.dp.toPx()
+                        val gapSize = 3.dp.toPx()
+                        
+                        // Track (Background Dots)
+                        drawArc(
+                            color = trackColor,
+                            startAngle = -90f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            style = Stroke(
+                                width = strokeWidth,
+                                cap = StrokeCap.Round,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashSize, gapSize), 0f)
+                            )
+                        )
+                        
+                        // Progress (Active Dots)
+                        drawArc(
+                            color = activeColor,
+                            startAngle = -90f,
+                            sweepAngle = progress * 360f,
+                            useCenter = false,
+                            style = Stroke(
+                                width = strokeWidth,
+                                cap = StrokeCap.Round,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashSize, gapSize), 0f)
+                            )
+                        )
+                    }
                     
                     // Album Art
                     Box(
