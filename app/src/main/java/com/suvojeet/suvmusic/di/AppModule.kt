@@ -55,9 +55,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideUpdateRepository(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        sessionManager: SessionManager
     ): UpdateRepository {
-        return UpdateRepository(context)
+        return UpdateRepository(context, sessionManager)
     }
     
     @Provides
