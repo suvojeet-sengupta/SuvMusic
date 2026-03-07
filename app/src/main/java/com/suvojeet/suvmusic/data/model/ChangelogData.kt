@@ -11,10 +11,13 @@ object ChangelogData {
     val entries = listOf(
         ChangelogEntry(
             version = "2.0.0.0",
-            date = "March 7, 2026",
+            date = "March 8, 2026",
             isLatest = true,
             changes = listOf(
                 "Next-Gen Personalization: High-performance Recommendation Engine with JNI-based native scoring, genre affinity vectors, and deep YouTube Music integration.",
+                "Persistent Logging & Diagnostics: Integrated a robust file-based logging system that captures startup events and provides a 'Share App Logs' feature for easier troubleshooting.",
+                "Performance Optimization: Implemented explicit keys in all major LazyColumn and LazyGrid lists, significantly reducing UI re-composition and ensuring buttery-smooth scrolling.",
+                "App Health & Crash Reporting: Fully optimized ACRA integration for Android 16, capturing more detailed system context (RAM, Display, Build ID) in every bug report.",
                 "Cinematic Player Transitions: Completely refactored Video Mode using AnimatedContent for seamless cross-fading between artwork and video without UI layout shifts.",
                 "Infinite Play (Radio Mode): New toggle in the Queue screen that automatically extends your session with similar songs when the queue nears the end.",
                 "Interactive Queue: Added full context (3-dot) menus to every item in the queue, including 'Now Playing', allowing for deep song management without leaving the list.",
@@ -23,8 +26,7 @@ object ChangelogData {
                 "Listen Together 2.0: Massive redesign with Material 3 Expressive UI and ultra-low latency Protobuf-based binary transport for perfect real-time synchronization.",
                 "MiniPlayer UI: Added dotted progress indicator for a more refined and modern aesthetic.",
                 "Ringtone Engine: Fully restored 'Set as Ringtone' feature with integrated audio trimmer, progress tracking, and robust system permission handling.",
-                "Enhanced Privacy & Security: Migrated sensitive API metadata to encrypted storage and centralized security configurations.",
-                "Under-the-hood Stability: Improved audio decoder resilience, fixed critical queue indexing bugs, and optimized startup routines for a faster, crash-free experience."
+                "Under-the-hood Stability: Resolved JVM signature clashes in logging utilities, fixed critical coroutine import errors, and improved audio decoder resilience on newer Android versions."
             )
         ),
         ChangelogEntry(
