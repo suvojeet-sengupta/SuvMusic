@@ -10,9 +10,28 @@ data class ChangelogEntry(
 object ChangelogData {
     val entries = listOf(
         ChangelogEntry(
+            version = "2.0.0.0",
+            date = "March 7, 2026",
+            isLatest = true,
+            changes = listOf(
+                "Smart Recommendation Engine: Native scoring system with genre vectors and deep YouTube integration",
+                "Infinite Play: New toggle in Queue screen to automatically fetch similar songs",
+                "Made for You: Personalized mixes (Daily Mix, Genre Mix, Contextual Mixes)",
+                "Closeable Recommendations: Dismiss personalized banners with adaptive 7-day cooldown",
+                "Per-Song Action Menus: 3-dot menus for all queue items including Now Playing",
+                "Advanced Listen Together: Redesigned with Material 3 Expressive and low-latency Protobuf transport",
+                "User Profiles: Personalized settings with radiant UI and user profile integration",
+                "Video Mode 2.0: Smooth transitions and stabilized layouts in portrait and landscape",
+                "Home Screen Redesign: Professional UI with infinite scrolling and smoother animations",
+                "Modern Queue UI: Absolute indexing, better density, and enhanced visual feedback",
+                "Set as Ringtone: Fully restored with permission handling and integrated trimmer",
+                "Significant Performance: JNI-based scoring, binary transport for sync, and UI optimizations"
+            )
+        ),
+        ChangelogEntry(
             version = "1.3.1.2",
             date = "March 1, 2026",
-            isLatest = true,
+            isLatest = false,
             changes = listOf(
                 "Integrated ACRA crash reporting with Telegram and download log sharing",
                 "Added iOS-style liquid glass bottom navigation (toggleable in Settings)",
