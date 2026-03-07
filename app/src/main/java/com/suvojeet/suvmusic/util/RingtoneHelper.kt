@@ -452,4 +452,28 @@ class RingtoneHelper @Inject constructor(
             context.startActivity(intent)
         }
     }
+
+    /**
+     * Check if we have permission to write system settings
+     */
+    fun hasSettingsPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.System.canWrite(context)
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Request permission to write system settings
+     */
+    fun requestSettingsPermission(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+    }
 }
