@@ -126,6 +126,7 @@ class MainActivity : ComponentActivity() {
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         
@@ -134,7 +135,6 @@ class MainActivity : ComponentActivity() {
             !mainViewModel.uiState.value.isReady
         }
         
-        enableEdgeToEdge()
         enableMaxRefreshRate()
         
         // Initialize audio manager for volume control
