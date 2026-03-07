@@ -6,8 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -478,11 +476,8 @@ fun NavGraph(
         }
 
         composable(Destination.Credits.route) {
-            val settingsViewModel = androidx.hilt.navigation.compose.hiltViewModel<com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel>()
-            val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
             com.suvojeet.suvmusic.ui.screens.CreditsScreen(
-                onBackClick = { navController.popBackStack() },
-                isPremium = settingsUiState.isPremium
+                onBackClick = { navController.popBackStack() }
             )
         }
 

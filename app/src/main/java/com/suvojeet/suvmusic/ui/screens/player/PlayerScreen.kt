@@ -127,7 +127,6 @@ data class PlayerScreenState(
     val isLoadingMoreSongs: Boolean = false,
     val selectedLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
     val enabledLyricsProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
-    val isPremium: Boolean = false,
     val sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     val sleepTimerRemainingMs: Long? = null
 )
@@ -350,7 +349,6 @@ fun PlayerScreen(
                             onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
                             onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
                             onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                            isPremium = state.isPremium,
                             player = player,
                             isFullScreen = isFullScreen,
                             onSetFullScreen = { playerViewModel.setFullScreen(it) }
@@ -361,7 +359,6 @@ fun PlayerScreen(
                             song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
                             currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
                             sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, player = player, isFullScreen = isFullScreen,
-                            isPremium = state.isPremium,
                             isCompactHeight = isCompactHeight, actions = actions,
                             onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
                             onShowQueue = { activeOverlay = PlayerOverlay.Queue },
@@ -427,7 +424,6 @@ fun PortraitPlayerContent(
     audioArEnabled: Boolean,
     player: Player?,
     isFullScreen: Boolean,
-    isPremium: Boolean,
     isCompactHeight: Boolean,
     actions: PlayerScreenActions,
     onShowActions: () -> Unit,
@@ -522,7 +518,7 @@ fun PortraitPlayerContent(
         SongInfoSection(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
-            isPremium = isPremium, dominantColors = dominantColors, compact = isCompactHeight
+            dominantColors = dominantColors, compact = isCompactHeight
         )
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
@@ -562,7 +558,6 @@ fun LandscapePlayerContent(
     onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit,
     isVideoMode: Boolean, onToggleVideoMode: () -> Unit, handleDoubleTapSeek: (Boolean) -> Unit, onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
-    isPremium: Boolean,
     player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit
 ) {
     Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -624,7 +619,7 @@ fun LandscapePlayerContent(
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
             Spacer(modifier = Modifier.height(8.dp))
-            SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, isPremium = isPremium, dominantColors = dominantColors)
+            SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, dominantColors = dominantColors)
             Spacer(modifier = Modifier.height(16.dp))
             WaveformSeeker(progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) }, modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent, inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f), initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange, duration = playerState.duration, sponsorSegments = sponsorSegments)
             TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
@@ -739,7 +734,7 @@ fun OverlaysContent(
     )
 
     if (song != null) {
-        SongInfoSheet(song = song, isVisible = activeOverlay is PlayerOverlay.SongInfo, onDismiss = { if (currentOverlay is PlayerOverlay.SongInfo) onOverlayChange(PlayerOverlay.None) }, onArtistClick = actions.onArtistClick, isPremium = state.isPremium, audioCodec = playerState.audioCodec, audioBitrate = playerState.audioBitrate)
+        SongInfoSheet(song = song, isVisible = activeOverlay is PlayerOverlay.SongInfo, onDismiss = { if (currentOverlay is PlayerOverlay.SongInfo) onOverlayChange(PlayerOverlay.None) }, onArtistClick = actions.onArtistClick, audioCodec = playerState.audioCodec, audioBitrate = playerState.audioBitrate)
     }
 
     if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {
