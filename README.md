@@ -51,7 +51,9 @@
 - **Listen Together**: Real-time synchronized listening rooms with low-latency network protocols.
 - **Music Haptics**: Beat-synchronized tactile feedback for immersive listening.
 - **Spotify Migration**: Direct playlist importing from Spotify accounts.
+- **Persistent Logging & Diagnostics**: Integrated file-based logging system with startup log capture and built-in bug reporting for advanced troubleshooting.
 - **Smart Asset Management**: Batch download capabilities with background service support and persistent caching.
+- **ACRA Crash Reporting**: Automated, detailed crash reports with notification and logcat integration for faster debugging.
 
 ---
 
@@ -78,10 +80,12 @@
 
 SuvMusic is engineered using modern Android development standards.
 
-- **Frontend**: 100% Jetpack Compose for a reactive and fluid user interface.
+- **Frontend**: 100% Jetpack Compose for a reactive and fluid user interface with optimized list rendering for large datasets.
 - **Architecture**: Clean Architecture with MVVM, Hilt Dependency Injection, Room Database, and Kotlin Coroutines.
+- **Images & Caching**: Powered by **Coil** with aggressive disk/memory caching policies for offline-ready image loading.
 - **Audio Core**: Custom C23 Native Engine via JNI for high-performance DSP (Limiter, Soft Clipping, EQ).
 - **Networking**: Retrofit & OkHttp with custom extractors for high-fidelity stream resolution.
+- **Error Reporting**: **ACRA (Application Crash Reports for Android)** for automated diagnostic collection.
 
 ---
 
