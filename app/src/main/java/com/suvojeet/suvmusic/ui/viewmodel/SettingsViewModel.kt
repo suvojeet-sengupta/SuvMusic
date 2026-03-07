@@ -193,12 +193,15 @@ class SettingsViewModel @Inject constructor(
         }
     }
     
-    private var downloadJob: Job? = null
-    private var downloadedApkFile: File? = null
-    
     init {
         loadSettings()
         
+        viewModelScope.launch {
+            updateRepo.updateState.collect { state ->
+                _uiState.update { it.copy(updateState = state) }
+            }
+        }
+
         viewModelScope.launch {
             sessionManager.audioQualityFlow.collect { quality ->
                 _uiState.update { it.copy(audioQuality = quality) }
@@ -963,23 +966,8 @@ class SettingsViewModel @Inject constructor(
      */
     fun checkForUpdates() {
         viewModelScope.launch {
-            _uiState.update { it.copy(updateState = UpdateState.Checking) }
-            
             val channel = sessionManager.getUpdateChannel()
-            
-            updateRepo.checkForUpdate(channel)
-                .onSuccess { update ->
-                    if (update != null) {
-                        _uiState.update { it.copy(updateState = UpdateState.UpdateAvailable(update)) }
-                    } else {
-                        _uiState.update { it.copy(updateState = UpdateState.NoUpdate) }
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update { 
-                        it.copy(updateState = UpdateState.Error(error.message ?: "Unknown error"))
-                    }
-                }
+            updateRepo.checkForUpdate(channel, forceCheck = true)
         }
     }
     
@@ -994,24 +982,8 @@ class SettingsViewModel @Inject constructor(
      * Download the update APK.
      */
     fun downloadUpdate(downloadUrl: String, versionName: String) {
-        downloadJob = viewModelScope.launch {
-            _uiState.update { it.copy(updateState = UpdateState.Downloading(0)) }
-            
-            updateRepo.downloadApk(
-                downloadUrl = downloadUrl,
-                versionName = versionName,
-                onProgress = { progress ->
-                    _uiState.update { it.copy(updateState = UpdateState.Downloading(progress)) }
-                }
-            ).onSuccess { file ->
-                downloadedApkFile = file
-                _uiState.update { it.copy(updateState = UpdateState.Downloaded) }
-                installUpdate()
-            }.onFailure { error ->
-                _uiState.update { 
-                    it.copy(updateState = UpdateState.Error(error.message ?: "Download failed"))
-                }
-            }
+        viewModelScope.launch {
+            updateRepo.downloadApk(downloadUrl, versionName)
         }
     }
     
@@ -1019,64 +991,21 @@ class SettingsViewModel @Inject constructor(
      * Install the downloaded APK.
      */
     fun installUpdate() {
-        val apkFile = downloadedApkFile ?: return
-        if (!apkFile.exists()) {
-             _uiState.update { it.copy(updateState = UpdateState.Error("APK file not found")) }
-             return
-        }
-        
-        try {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.provider",
-                        apkFile
-                    )
-                } else {
-                    Uri.fromFile(apkFile)
-                }
-                
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-            }
-            
-            // On Android 11+ we can check if we have the permission
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (!context.packageManager.canRequestPackageInstalls()) {
-                    // Start the settings activity for user to grant the permission
-                    val settingsIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(settingsIntent)
-                    // The user will have to return and click "Install" again or 
-                    // we could rely on the system's own prompt
-                }
-            }
-            
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            _uiState.update { 
-                it.copy(updateState = UpdateState.Error("Installation failed: ${e.localizedMessage}"))
-            }
-        }
+        updateRepo.installUpdate()
     }
     
     /**
      * Cancel ongoing download.
      */
     fun cancelDownload() {
-        downloadJob?.cancel()
-        downloadJob = null
-        _uiState.update { it.copy(updateState = UpdateState.Idle) }
+        updateRepo.resetUpdateState()
     }
     
     /**
      * Reset update state to idle.
      */
     fun resetUpdateState() {
-        _uiState.update { it.copy(updateState = UpdateState.Idle) }
+        updateRepo.resetUpdateState()
     }
     
     fun setAudioQuality(quality: AudioQuality) {
