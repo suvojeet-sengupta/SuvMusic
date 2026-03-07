@@ -180,7 +180,7 @@ fun ArtistScreen(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(artist.albums) { album ->
+                                items(artist.albums, key = { it.id }) { album ->
                                     ArtistContentCard(
                                         title = album.title,
                                         subtitle = album.year,
@@ -207,7 +207,7 @@ fun ArtistScreen(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(artist.singles) { single ->
+                                items(artist.singles, key = { it.id }) { single ->
                                     ArtistContentCard(
                                         title = single.title,
                                         subtitle = single.year,
@@ -251,7 +251,7 @@ fun ArtistScreen(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(artist.featuredPlaylists) { playlist ->
+                                items(artist.featuredPlaylists, key = { it.id }) { playlist ->
                                     ArtistContentCard(
                                         title = playlist.title,
                                         subtitle = "Playlist", // Or author if available
@@ -275,7 +275,7 @@ fun ArtistScreen(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(artist.relatedArtists) { related ->
+                                items(artist.relatedArtists, key = { it.id }) { related ->
                                     ArtistCircleCard(
                                         artist = related,
                                         onClick = { onArtistClick(related) }
