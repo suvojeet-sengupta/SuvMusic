@@ -14,18 +14,16 @@ object ChangelogData {
             date = "March 7, 2026",
             isLatest = true,
             changes = listOf(
-                "Smart Recommendation Engine: Native scoring system with genre vectors and deep YouTube integration",
-                "Infinite Play: New toggle in Queue screen to automatically fetch similar songs",
-                "Made for You: Personalized mixes (Daily Mix, Genre Mix, Contextual Mixes)",
-                "Closeable Recommendations: Dismiss personalized banners with adaptive 7-day cooldown",
-                "Per-Song Action Menus: 3-dot menus for all queue items including Now Playing",
-                "Advanced Listen Together: Redesigned with Material 3 Expressive and low-latency Protobuf transport",
-                "User Profiles: Personalized settings with radiant UI and user profile integration",
-                "Video Mode 2.0: Smooth transitions and stabilized layouts in portrait and landscape",
-                "Home Screen Redesign: Professional UI with infinite scrolling and smoother animations",
-                "Modern Queue UI: Absolute indexing, better density, and enhanced visual feedback",
-                "Set as Ringtone: Fully restored with permission handling and integrated trimmer",
-                "Significant Performance: JNI-based scoring, binary transport for sync, and UI optimizations"
+                "Next-Gen Personalization: High-performance Recommendation Engine with JNI-based native scoring, genre affinity vectors, and deep YouTube Music integration.",
+                "Cinematic Player Transitions: Completely refactored Video Mode using AnimatedContent for seamless cross-fading between artwork and video without UI layout shifts.",
+                "Infinite Play (Radio Mode): New toggle in the Queue screen that automatically extends your session with similar songs when the queue nears the end.",
+                "Interactive Queue: Added full context (3-dot) menus to every item in the queue, including 'Now Playing', allowing for deep song management without leaving the list.",
+                "Adaptive Recommendations: 'Made for You' banners are now closeable with a 7-day persistence logic, automatically switching to a 'Daily Mix' style when dismissed.",
+                "Infinite Home Feed: Optimized auto-loading logic that proactively fetches diverse recommendation strategies (Artist Deep-dives, Nostalgia, Blended Genres) as you scroll.",
+                "Listen Together 2.0: Massive redesign with Material 3 Expressive UI and ultra-low latency Protobuf-based binary transport for perfect real-time synchronization.",
+                "Ringtone Engine: Fully restored 'Set as Ringtone' feature with integrated audio trimmer, progress tracking, and robust system permission handling.",
+                "Enhanced Privacy & Security: Migrated sensitive API metadata to encrypted storage and centralized security configurations.",
+                "Under-the-hood Stability: Improved audio decoder resilience, fixed critical queue indexing bugs, and optimized startup routines for a faster, crash-free experience."
             )
         ),
         ChangelogEntry(
