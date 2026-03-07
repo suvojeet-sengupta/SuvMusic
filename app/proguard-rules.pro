@@ -98,6 +98,10 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
+## Protobuf
+-keep class com.google.protobuf.** { *; }
+-dontwarn com.google.protobuf.**
+
 ## Listen Together Protobuf
--keep class com.suvojeet.suvmusic.listentogether.proto.** { *; }
--keepclassmembers class com.suvojeet.suvmusic.listentogether.proto.** { *; }
+-keep class com.suvojeet.suvmusic.shareplay.proto.** { *; }
+-keepclassmembers class com.suvojeet.suvmusic.shareplay.proto.** { *; }
