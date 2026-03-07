@@ -79,13 +79,14 @@ class RingtoneHelper @Inject constructor(
                 }
             } else {
                 // Get stream URL
-                val streamUrl = youTubeRepository.getStreamUrlForDownload(song.id)
-                if (streamUrl == null) {
+                val streamResult = youTubeRepository.getStreamUrlForDownload(song.id)
+                if (streamResult == null) {
                     withContext(Dispatchers.Main) {
                         onComplete(false, "Failed to get audio stream", null)
                     }
                     return@withContext
                 }
+                val streamUrl = streamResult.first
                 
                 onProgress(0.1f, "Fetching audio...")
                 
@@ -301,13 +302,14 @@ class RingtoneHelper @Inject constructor(
                 }
             } else {
                 // Get stream URL
-                val streamUrl = youTubeRepository.getStreamUrlForDownload(song.id)
-                if (streamUrl == null) {
+                val streamResult = youTubeRepository.getStreamUrlForDownload(song.id)
+                if (streamResult == null) {
                     withContext(Dispatchers.Main) {
                         onComplete(false, "Failed to get audio stream", null)
                     }
                     return@withContext
                 }
+                val streamUrl = streamResult.first
                 
                 onProgress(0.1f, "Fetching audio (using cache if available)...")
                 
