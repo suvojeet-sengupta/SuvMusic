@@ -352,6 +352,15 @@ fun SettingsScreen(
                             checked = uiState.loggingEnabled,
                             onCheckedChange = { viewModel.setLoggingEnabled(it) }
                         )
+                        
+                        if (uiState.loggingEnabled) {
+                            HorizontalDivider()
+                            SettingsActionItem(
+                                icon = Icons.Default.Info,
+                                title = "Share App Logs",
+                                onClick = { viewModel.sharePersistentLogs() }
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }

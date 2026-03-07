@@ -1,45 +1,107 @@
 package com.suvojeet.suvmusic.util
 
+import android.content.Context
 import android.util.Log
 import com.suvojeet.suvmusic.BuildConfig
+import java.io.File
+import java.io.FileOutputStream
+import java.io.PrintWriter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.Executors
 
 /**
- * Debug-gated logging utility.
- * All debug/info/warning logs are stripped in release builds.
- * Error logs are always emitted since they indicate real problems.
+ * Debug-gated logging utility with optional persistent file logging.
  */
 object AppLog {
-    
-    inline fun d(tag: String, message: () -> String) {
-        if (BuildConfig.DEBUG) {
-            Log.d(tag, message())
-        }
-    }
-    
-    inline fun i(tag: String, message: () -> String) {
-        if (BuildConfig.DEBUG) {
-            Log.i(tag, message())
-        }
-    }
-    
-    inline fun w(tag: String, message: () -> String) {
-        if (BuildConfig.DEBUG) {
-            Log.w(tag, message())
-        }
-    }
-    
-    inline fun w(tag: String, message: () -> String, throwable: Throwable) {
-        if (BuildConfig.DEBUG) {
-            Log.w(tag, message(), throwable)
-        }
-    }
-    
-    /** Error logs are always emitted — they indicate real problems. */
-    fun e(tag: String, message: String, throwable: Throwable? = null) {
-        if (throwable != null) {
-            Log.e(tag, message, throwable)
+    private var isLoggingEnabled = false
+    private var logFile: File? = null
+    private val executor = Executors.newSingleThreadExecutor()
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+
+    fun init(context: Context, enabled: Boolean) {
+        isLoggingEnabled = enabled
+        if (enabled) {
+            val logDir = File(context.cacheDir, "logs")
+            if (!logDir.exists()) logDir.mkdirs()
+            // Keep one main log file, maybe rotate it if it gets too big
+            logFile = File(logDir, "app_logs.txt")
+            
+            // Optional: Start with a separator for new session
+            logToFile("SYSTEM", "--- App Started / Logging Initialized ---")
         } else {
-            Log.e(tag, message)
+            logFile = null
+        }
+    }
+
+    private fun logToFile(tag: String, message: String, throwable: Throwable? = null) {
+        if (!isLoggingEnabled || logFile == null) return
+
+        executor.execute {
+            try {
+                FileOutputStream(logFile, true).use { fos ->
+                    PrintWriter(fos).use { pw ->
+                        val timestamp = dateFormat.format(Date())
+                        pw.println("$timestamp [$tag] $message")
+                        throwable?.printStackTrace(pw)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("AppLog", "Failed to write to log file", e)
+            }
+        }
+    }
+
+    inline fun d(tag: String, message: () -> String) {
+        val msg = message()
+        if (BuildConfig.DEBUG || isLoggingEnabled) {
+            Log.d(tag, msg)
+            if (isLoggingEnabled) logToFile(tag, msg)
+        }
+    }
+
+    inline fun i(tag: String, message: () -> String) {
+        val msg = message()
+        if (BuildConfig.DEBUG || isLoggingEnabled) {
+            Log.i(tag, msg)
+            if (isLoggingEnabled) logToFile(tag, msg)
+        }
+    }
+
+    inline fun w(tag: String, message: () -> String) {
+        val msg = message()
+        if (BuildConfig.DEBUG || isLoggingEnabled) {
+            Log.w(tag, msg)
+            if (isLoggingEnabled) logToFile(tag, msg)
+        }
+    }
+
+    inline fun w(tag: String, message: () -> String, throwable: Throwable) {
+        val msg = message()
+        if (BuildConfig.DEBUG || isLoggingEnabled) {
+            Log.w(tag, msg, throwable)
+            if (isLoggingEnabled) logToFile(tag, msg, throwable)
+        }
+    }
+
+    fun e(tag: String, message: String, throwable: Throwable? = null) {
+        Log.e(tag, message, throwable)
+        if (isLoggingEnabled) {
+            logToFile(tag, message, throwable)
+        }
+    }
+    
+    fun getLogFile(): File? = logFile
+    
+    fun clearLogs() {
+        executor.execute {
+            try {
+                logFile?.delete()
+                logFile?.createNewFile()
+            } catch (e: Exception) {
+                Log.e("AppLog", "Failed to clear log file", e)
+            }
         }
     }
 }
