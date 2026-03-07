@@ -63,8 +63,12 @@ fun HorizontalCarouselSection(
 ) {
     if (section.items.isEmpty()) return
 
-    val songs = remember(section.items) {
-        section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    val items = remember(section.items) {
+        section.items.distinctBy { it.id }
+    }
+
+    val songs = remember(items) {
+        items.filterIsInstance<HomeItem.SongItem>().map { it.song }
     }
 
     Column(modifier = modifier) {
@@ -76,7 +80,7 @@ fun HorizontalCarouselSection(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             itemsIndexed(
-                items = section.items,
+                items = items,
                 key = { _, item -> item.id },
                 contentType = { _, item -> item::class }
             ) { index, item ->
@@ -87,7 +91,7 @@ fun HorizontalCarouselSection(
                             onSongClick = onSongClick,
                             onPlaylistClick = onPlaylistClick,
                             onAlbumClick = onAlbumClick,
-                            sectionItems = section.items,
+                            sectionItems = items,
                             onSongMoreClick = onSongMoreClick
                         )
                     }
@@ -97,7 +101,7 @@ fun HorizontalCarouselSection(
                             onSongClick = onSongClick, 
                             onPlaylistClick = onPlaylistClick, 
                             onAlbumClick = onAlbumClick,
-                            sectionItems = section.items,
+                            sectionItems = items,
                             onSongMoreClick = onSongMoreClick
                         )
                     }
@@ -107,7 +111,7 @@ fun HorizontalCarouselSection(
                             onSongClick = onSongClick, 
                             onPlaylistClick = onPlaylistClick, 
                             onAlbumClick = onAlbumClick,
-                            sectionItems = section.items,
+                            sectionItems = items,
                             onSongMoreClick = onSongMoreClick
                         )
                     }
@@ -345,10 +349,13 @@ fun QuickPicksSection(
 ) {
     if (section.items.isEmpty()) return
 
-    val songs = remember(section.items) {
-        section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    val items = remember(section.items) {
+        section.items.distinctBy { it.id }
     }
-    val chunkedItems = remember(section.items) { section.items.chunked(4) }
+    val songs = remember(items) {
+        items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    }
+    val chunkedItems = remember(items) { items.chunked(4) }
     val lazyListState = rememberLazyListState()
     
     Column(
@@ -502,8 +509,9 @@ fun CommunityCarouselSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val items = section.items.filterIsInstance<HomeItem.PlaylistItem>().distinctBy { it.playlist.id }
             items(
-                items = section.items.filterIsInstance<HomeItem.PlaylistItem>(),
+                items = items,
                 key = { it.playlist.id }
             ) { item ->
                 CommunityPlaylistCard(

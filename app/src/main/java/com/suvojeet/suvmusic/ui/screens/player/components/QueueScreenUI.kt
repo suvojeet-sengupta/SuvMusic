@@ -316,7 +316,7 @@ fun ModernQueueView(
                 // 1. History Section
                 if (playedSongs.isNotEmpty()) {
                     item { ModernHeader("History", dominantColors) }
-                    itemsIndexed(playedSongs, key = { _, s -> "history_${s.id}" }) { index, song ->
+                    itemsIndexed(playedSongs, key = { index, s -> "history_${s.id}_$index" }) { index, song ->
                         ModernQueueItem(
                             song = song,
                             isCurrent = false,
@@ -357,7 +357,7 @@ fun ModernQueueView(
                             dominantColors 
                         ) 
                     }
-                    itemsIndexed(upNextSongs, key = { _, s -> "next_${s.id}" }) { indexInList, song ->
+                    itemsIndexed(upNextSongs, key = { indexInList, s -> "next_${s.id}_$indexInList" }) { indexInList, song ->
                         // CRITICAL FIX: Absolute index in full queue
                         val actualIndex = currentIndex + 1 + indexInList
                         

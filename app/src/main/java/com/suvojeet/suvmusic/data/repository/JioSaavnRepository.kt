@@ -352,7 +352,7 @@ class JioSaavnRepository @Inject constructor(
                             parseSong(obj)?.let { com.suvojeet.suvmusic.data.model.HomeItem.SongItem(it) }
                         }
                         "album" -> {
-                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val id = obj.get("id")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                             val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
                             val image = obj.get("image")?.asString?.toHighResImage()
                             val artist = obj.get("primary_artists")?.asString ?: obj.get("music")?.asString ?: ""
@@ -363,7 +363,7 @@ class JioSaavnRepository @Inject constructor(
                             )
                         }
                         "playlist" -> {
-                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val id = obj.get("id")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                             val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
                             val image = obj.get("image")?.asString?.toHighResImage()
                             val count = obj.get("song_count")?.asInt ?: obj.get("count")?.asInt ?: 0
@@ -373,7 +373,7 @@ class JioSaavnRepository @Inject constructor(
                             )
                         }
                         "chart" -> {
-                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val id = obj.get("id")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                             val title = obj.get("title")?.asString ?: "Chart"
                             val image = obj.get("image")?.asString?.toHighResImage()
                             val count = obj.get("count")?.asInt ?: 0
@@ -383,7 +383,7 @@ class JioSaavnRepository @Inject constructor(
                             )
                         }
                         "radio_station" -> {
-                            val id = obj.get("id")?.asString ?: return@mapNotNull null
+                            val id = obj.get("id")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                             val title = obj.get("title")?.asString ?: "Radio"
                             val image = obj.get("image")?.asString?.toHighResImage()
                             
@@ -392,7 +392,7 @@ class JioSaavnRepository @Inject constructor(
                             )
                         }
                         "artist" -> {
-                             val id = obj.get("id")?.asString ?: return@mapNotNull null
+                             val id = obj.get("id")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                             val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
                             val image = obj.get("image")?.asString?.toHighResImage()
                              com.suvojeet.suvmusic.data.model.HomeItem.ArtistItem(
@@ -721,8 +721,8 @@ class JioSaavnRepository @Inject constructor(
                 if (radioList != null && radioList.size() > 0) {
                     val radioItems = radioList.take(8).mapNotNull { radioElement ->
                         val radioObj = radioElement.asJsonObject
-                        val radioId = radioObj.get("id")?.asString 
-                            ?: radioObj.get("stationid")?.asString ?: return@mapNotNull null
+                        val radioId = (radioObj.get("id")?.asString 
+                            ?: radioObj.get("stationid")?.asString)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                         val name = radioObj.get("name")?.asString 
                             ?: radioObj.get("title")?.asString ?: "Radio"
                         val image = radioObj.get("image")?.asString?.toHighResImage()
@@ -855,8 +855,9 @@ class JioSaavnRepository @Inject constructor(
     
     private fun parseSong(json: JsonObject): Song? {
         return try {
-            val id = json.get("id")?.asString 
-                ?: json.get("perma_url")?.asString?.substringAfterLast("/")
+            val id = (json.get("id")?.asString 
+                ?: json.get("perma_url")?.asString?.substringAfterLast("/"))
+                ?.takeIf { it.isNotBlank() }
                 ?: return null
             
             // Check for more_info object
