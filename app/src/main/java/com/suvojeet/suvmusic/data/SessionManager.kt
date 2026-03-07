@@ -197,6 +197,18 @@ class SessionManager @Inject constructor(
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
+        private val LAST_UPDATE_CHECK_TIME_KEY = longPreferencesKey("last_update_check_time")
+    }
+    
+    // --- Update Preferences ---
+
+    suspend fun getLastUpdateCheckTime(): Long =
+        context.dataStore.data.first()[LAST_UPDATE_CHECK_TIME_KEY] ?: 0L
+
+    suspend fun setLastUpdateCheckTime(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_UPDATE_CHECK_TIME_KEY] = timestamp
+        }
     }
     
     // --- Home Screen Preferences ---
