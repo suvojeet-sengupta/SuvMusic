@@ -15,8 +15,12 @@ import java.util.concurrent.Executors
  * Debug-gated logging utility with optional persistent file logging.
  */
 object AppLog {
-    private var isLoggingEnabled = false
-    private var logFile: File? = null
+    @PublishedApi
+    internal var isLoggingEnabled = false
+    
+    @PublishedApi
+    internal var logFile: File? = null
+    
     private val executor = Executors.newSingleThreadExecutor()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
@@ -35,7 +39,8 @@ object AppLog {
         }
     }
 
-    private fun logToFile(tag: String, message: String, throwable: Throwable? = null) {
+    @PublishedApi
+    internal fun logToFile(tag: String, message: String, throwable: Throwable? = null) {
         if (!isLoggingEnabled || logFile == null) return
 
         executor.execute {
@@ -54,32 +59,32 @@ object AppLog {
     }
 
     inline fun d(tag: String, message: () -> String) {
-        val msg = message()
         if (BuildConfig.DEBUG || isLoggingEnabled) {
+            val msg = message()
             Log.d(tag, msg)
             if (isLoggingEnabled) logToFile(tag, msg)
         }
     }
 
     inline fun i(tag: String, message: () -> String) {
-        val msg = message()
         if (BuildConfig.DEBUG || isLoggingEnabled) {
+            val msg = message()
             Log.i(tag, msg)
             if (isLoggingEnabled) logToFile(tag, msg)
         }
     }
 
     inline fun w(tag: String, message: () -> String) {
-        val msg = message()
         if (BuildConfig.DEBUG || isLoggingEnabled) {
+            val msg = message()
             Log.w(tag, msg)
             if (isLoggingEnabled) logToFile(tag, msg)
         }
     }
 
     inline fun w(tag: String, message: () -> String, throwable: Throwable) {
-        val msg = message()
         if (BuildConfig.DEBUG || isLoggingEnabled) {
+            val msg = message()
             Log.w(tag, msg, throwable)
             if (isLoggingEnabled) logToFile(tag, msg, throwable)
         }
