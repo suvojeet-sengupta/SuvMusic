@@ -2023,13 +2023,33 @@ class YouTubeRepository @Inject constructor(
      */
     suspend fun getUserEditablePlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         try {
-            if (!sessionManager.isLoggedIn()) return@withContext emptyList()
+            val playlists = mutableListOf<PlaylistDisplayItem>()
+            
+            // 1. Add Local Playlists
+            try {
+                val localPlaylists = libraryRepository.getSavedPlaylists().firstOrNull() ?: emptyList()
+                localPlaylists.forEach { item ->
+                    playlists.add(
+                        PlaylistDisplayItem(
+                            id = item.id,
+                            name = item.title,
+                            url = "",
+                            uploaderName = item.subtitle ?: "You",
+                            thumbnailUrl = item.thumbnailUrl,
+                            songCount = 0 // Will be updated by flow or if we fetch songs
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            if (!sessionManager.isLoggedIn()) return@withContext playlists
             
             val response = fetchInternalApi("FEmusic_liked_playlists")
-            if (response.isEmpty()) return@withContext emptyList()
+            if (response.isEmpty()) return@withContext playlists
             
             val json = JSONObject(response)
-            val playlists = mutableListOf<PlaylistDisplayItem>()
             
             // Parse the response to get user playlists
             val contents = json.optJSONObject("contents")
@@ -2058,11 +2078,16 @@ class YouTubeRepository @Inject constructor(
                             
                             val playlist = musicItem?.let { parsePlaylistItem(it) }
                             if (playlist != null) {
-                                // Filter out auto-generated playlists
+                                // Filter out auto-generated playlists and only show user-created ones
                                 val playlistId = playlist.id
+                                val isUserCreated = playlist.uploaderName == "You" || 
+                                                  playlist.uploaderName == "YouTube User" ||
+                                                  playlist.uploaderName.contains("You", ignoreCase = true)
+                                                  
                                 if (!playlistId.startsWith("RDAMPL") && 
                                     !playlistId.startsWith("LM") &&
-                                    playlistId.isNotEmpty()) {
+                                    playlistId.isNotEmpty() &&
+                                    isUserCreated) {
                                     playlists.add(playlist)
                                 }
                             }
@@ -2071,7 +2096,7 @@ class YouTubeRepository @Inject constructor(
                 }
             }
             
-            playlists
+            playlists.distinctBy { it.id }
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
@@ -2105,13 +2130,19 @@ class YouTubeRepository @Inject constructor(
         
         if (browseId.isNullOrEmpty()) return null
 
-        // Subtitle often contains "Author • Song count"
+        // Subtitle often contains "Author • Song count" or "Author • Year"
         val subtitle = extractFullSubtitle(item)
         
         // Simple heuristic for song count and uploader
         val parts = subtitle.split("•").map { it.trim() }
         
-        val uploader = parts.firstOrNull { !it.contains("song", ignoreCase = true) } ?: "YouTube User"
+        // In "Library" view, user playlists often have "You • X songs"
+        // or just "X songs" (where uploader is implicitly the user)
+        val uploader = if (parts.size >= 1 && !parts[0].contains("song", ignoreCase = true)) {
+            parts[0]
+        } else {
+            "You" // Default to "You" for library items if not specified
+        }
 
         return PlaylistDisplayItem(
             id = browseId,
