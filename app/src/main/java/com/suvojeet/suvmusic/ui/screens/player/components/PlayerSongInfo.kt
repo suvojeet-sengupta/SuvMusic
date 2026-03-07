@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +58,7 @@ fun SongInfoSection(
     onMoreClick: () -> Unit,
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (String) -> Unit = {},
+    isPremium: Boolean = false,
     dominantColors: DominantColors,
     compact: Boolean = false
 ) {
@@ -74,20 +77,39 @@ fun SongInfoSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song?.title ?: "No song playing",
-                style = if (compact) {
-                    MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                } else {
-                    MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                },
-                color = dominantColors.onBackground,
-                maxLines = if (compact) 1 else 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    // Album navigation disabled as Song model doesn't consistently have albumId
-                    // .clickable { onAlbumClick(song.albumId) }
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = song?.title ?: "No song playing",
+                    style = if (compact) {
+                        MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    } else {
+                        MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                    },
+                    color = dominantColors.onBackground,
+                    maxLines = if (compact) 1 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                if (isPremium) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFFFD700).copy(alpha = 0.9f)) // Gold
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "PREMIUM",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Black,
+                                fontSize = 10.sp,
+                                color = Color.Black
+                            )
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
 
@@ -131,7 +153,7 @@ fun SongInfoSection(
                         text = when (song.source) {
                             SongSource.JIOSAAVN -> "HQ Audio • 320kbps"
                             SongSource.LOCAL -> "Local"
-                            else -> "Opus • HQ Audio"
+                            else -> if (isPremium) "Premium High Quality" else "Opus • HQ Audio"
                         },
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Medium,
