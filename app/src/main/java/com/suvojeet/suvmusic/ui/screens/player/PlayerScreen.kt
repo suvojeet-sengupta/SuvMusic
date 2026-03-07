@@ -175,7 +175,7 @@ fun PlayerScreen(
     actions: PlayerScreenActions,
     player: Player? = null,
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
-    ringtoneViewModel: RingtoneViewModel = hiltViewModel(),
+    ringtoneViewModel: RingtoneViewModel = hiltViewModel<RingtoneViewModel>(),
     playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
     mainViewModel: com.suvojeet.suvmusic.ui.viewmodel.MainViewModel = hiltViewModel(),
     volumeKeyEvents: SharedFlow<Unit>? = null
@@ -285,8 +285,9 @@ fun PlayerScreen(
 
     val coroutineScope = rememberCoroutineScope()
     BackHandler { 
-        if (activeOverlay != PlayerOverlay.None) {
-            if (activeOverlay is PlayerOverlay.Actions && activeOverlay.fromQueue) {
+        val overlay = activeOverlay
+        if (overlay != PlayerOverlay.None) {
+            if (overlay is PlayerOverlay.Actions && overlay.fromQueue) {
                 activeOverlay = PlayerOverlay.Queue
             } else {
                 activeOverlay = PlayerOverlay.None 
@@ -379,7 +380,7 @@ fun PlayerScreen(
                 OverlaysContent(
                     state = state, actions = actions.copy(onClearQueue = { playerViewModel.clearQueue() }), activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
                     dominantColors = dominantColors, playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
-                    ringtoneViewModel = hiltViewModel(), // Simplified for brevity
+                    ringtoneViewModel = hiltViewModel<RingtoneViewModel>(), // Explicit type for clarity and to fix inference errors
                     historySongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
                     isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
                     volumeSliderEnabled = volumeSliderEnabled, volumeKeyEvents = volumeKeyEvents,
@@ -694,8 +695,9 @@ fun OverlaysContent(
         SongActionsSheet(
             song = menuSong, isVisible = activeOverlay is PlayerOverlay.Actions, 
             onDismiss = { 
-                if (currentOverlay is PlayerOverlay.Actions) {
-                    if (currentOverlay.fromQueue) onOverlayChange(PlayerOverlay.Queue)
+                val overlay = currentOverlay
+                if (overlay is PlayerOverlay.Actions) {
+                    if (overlay.fromQueue) onOverlayChange(PlayerOverlay.Queue)
                     else onOverlayChange(PlayerOverlay.None)
                 }
             }, 
@@ -766,8 +768,10 @@ fun OverlaysContent(
     val ringtoneUiState by ringtoneViewModel.uiState.collectAsStateWithLifecycle()
     if (ringtoneUiState.showTrimmer && ringtoneUiState.targetSong != null) {
         RingtoneTrimmerDialog(
+            isVisible = true,
             song = ringtoneUiState.targetSong!!,
             onDismiss = { ringtoneViewModel.hideTrimmer() },
+            onResolveStreamUrl = { ringtoneViewModel.getStreamUrl(it) },
             onConfirm = { start, end -> 
                 ringtoneViewModel.setAsRingtone(context, ringtoneUiState.targetSong!!, start, end)
             }
@@ -776,8 +780,9 @@ fun OverlaysContent(
     
     if (ringtoneUiState.showProgress) {
         RingtoneProgressDialog(
+            isVisible = true,
             progress = ringtoneUiState.progress,
-            status = ringtoneUiState.statusMessage,
+            statusMessage = ringtoneUiState.statusMessage,
             isComplete = ringtoneUiState.isComplete,
             isSuccess = ringtoneUiState.isSuccess,
             onDismiss = { ringtoneViewModel.dismissProgress() },
