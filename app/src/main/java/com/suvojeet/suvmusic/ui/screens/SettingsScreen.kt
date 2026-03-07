@@ -181,13 +181,36 @@ fun SettingsScreen(
                             // User Info
                             ListItem(
                                 headlineContent = {
-                                    Text(
-                                        text = uiState.userName ?: "Signed In",
-                                        fontWeight = FontWeight.ExtraBold,
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        letterSpacing = (-0.5).sp
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = uiState.userName ?: "Signed In",
+                                            fontWeight = FontWeight.ExtraBold,
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            letterSpacing = (-0.5).sp,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                        
+                                        if (uiState.isPremium) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(Color(0xFFFFD700).copy(alpha = 0.9f)) // Gold
+                                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "PREMIUM",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Black,
+                                                        fontSize = 11.sp,
+                                                        color = Color.Black,
+                                                        letterSpacing = 0.5.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
                                 },
                                 supportingContent = {
                                     val email = uiState.storedAccounts.firstOrNull()?.email

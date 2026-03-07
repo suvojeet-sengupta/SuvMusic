@@ -105,6 +105,7 @@ fun SongInfoSheet(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onArtistClick: (String) -> Unit = {},
+    isPremium: Boolean = false,
     audioCodec: String? = null,
     audioBitrate: Int? = null,
     viewModel: SongInfoViewModel = hiltViewModel()
@@ -261,6 +262,15 @@ fun SongInfoSheet(
                         }
                         
                         Badge(text = sourceBadge)
+                        
+                        if (isPremium) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Badge(
+                                text = "PREMIUM",
+                                backgroundColor = Color(0xFFFFD700),
+                                textColor = Color.Black
+                            )
+                        }
                         
                         // Show actual codec from player
                         if (audioCodec != null) {
