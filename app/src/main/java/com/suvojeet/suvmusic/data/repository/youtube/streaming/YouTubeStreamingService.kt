@@ -199,8 +199,19 @@ class YouTubeStreamingService @Inject constructor(
                         if (videoUrl != null && audioUrl != null) {
                             android.util.Log.d("YouTubeStreaming", "Using video-only stream: ${bestVideoStream.resolution} + audio: ${bestAudioStream.averageBitrate}kbps")
                             
-                            streamCache.put(videoCacheKey, CachedStream(videoUrl, System.currentTimeMillis()))
-                            streamCache.put(audioCacheKey, CachedStream(audioUrl, System.currentTimeMillis()))
+                            val videoExtension = when (bestVideoStream.format?.name?.uppercase()) {
+                                "M4V", "MP4" -> "mp4"
+                                "WEBM" -> "webm"
+                                else -> "mp4"
+                            }
+                            val audioExtension = when (bestAudioStream.format?.name?.uppercase()) {
+                                "M4A", "AAC" -> "m4a"
+                                "WEBM", "OPUS" -> "opus"
+                                else -> "m4a"
+                            }
+                            
+                            streamCache.put(videoCacheKey, CachedStream(videoUrl, videoExtension, System.currentTimeMillis()))
+                            streamCache.put(audioCacheKey, CachedStream(audioUrl, audioExtension, System.currentTimeMillis()))
                             
                             videoResult = VideoStreamResult(
                                 videoUrl = videoUrl,
@@ -238,7 +249,12 @@ class YouTubeStreamingService @Inject constructor(
                     android.util.Log.d("YouTubeStreaming", "Using muxed stream: ${bestMuxedStream.resolution}")
                     
                     val url = bestMuxedStream.content
-                    streamCache.put(videoCacheKey, CachedStream(url, System.currentTimeMillis()))
+                    val extension = when (bestMuxedStream.format?.name?.uppercase()) {
+                        "MP4", "M4V" -> "mp4"
+                        "WEBM" -> "webm"
+                        else -> "mp4"
+                    }
+                    streamCache.put(videoCacheKey, CachedStream(url, extension, System.currentTimeMillis()))
                     videoResult = VideoStreamResult(
                         videoUrl = url,
                         audioUrl = null,  // Muxed stream - no separate audio needed
