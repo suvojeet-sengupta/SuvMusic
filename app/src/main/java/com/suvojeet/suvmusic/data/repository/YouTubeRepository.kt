@@ -928,7 +928,7 @@ class YouTubeRepository @Inject constructor(
             }
 
             if (songs.isNotEmpty()) {
-                val finalPlaylist = playlist.copy(songs = songs.distinctBy { it.id })
+                val finalPlaylist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
                 // libraryRepository.savePlaylist(finalPlaylist)
                 return@withContext finalPlaylist
             }
@@ -2282,7 +2282,7 @@ class YouTubeRepository @Inject constructor(
                 } catch (e: Exception) { }
             }
         } catch (e: Exception) { }
-        return songs.distinctBy { it.id }
+        return songs.distinctBy { it.setVideoId ?: it.id }
     }
     
     private fun parsePlaylistsFromInternalJson(json: String): List<PlaylistDisplayItem> {
