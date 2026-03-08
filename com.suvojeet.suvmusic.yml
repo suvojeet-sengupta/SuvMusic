@@ -23,8 +23,15 @@ Builds:
     subdir: app
     gradle:
       - yes
+    srclibs:
+      - NewPipeExtractor@1ddc27cd5cbe217d28d501def2c7a76ad0dfa0dc
     prebuild: |-
       sed -i 's|maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2/") }|mavenCentral()|g' ../settings.gradle.kts
+      sed -i 's|maven { url = uri("https://jitpack.io") }|mavenCentral()|g' ../settings.gradle.kts
+      sed -i "s|com.github.TeamNewPipe:NewPipeExtractor:v0.26.0|$$NewPipeExtractor$$|g" extractor/build.gradle.kts
+      pushd $$NewPipeExtractor$$
+      ./gradlew assemble
+      popd
 
 MaintainerNotes: |-
   The app requires NonFreeNet due to interaction with third-party, non-free network services (YouTube, KuGou, LrcLib). The tracking AntiFeature is due to the usage of ACRA for automated crash reporting.
