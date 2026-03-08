@@ -66,11 +66,10 @@ import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
 import com.suvojeet.suvmusic.ui.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.MainViewModel
-import com.suvojeet.suvmusic.data.model.UpdateState
+import com.suvojeet.suvmusic.updater.UpdateViewModel
+import com.suvojeet.suvmusic.updater.UpdateDialog
+import com.suvojeet.suvmusic.updater.UpdateState
 import androidx.activity.viewModels
-import com.suvojeet.suvmusic.ui.components.UpdateAvailableDialog
-import com.suvojeet.suvmusic.ui.components.DownloadProgressDialog
-import com.suvojeet.suvmusic.ui.components.UpdateErrorDialog
 import com.suvojeet.suvmusic.util.NetworkMonitor
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.material.icons.filled.Lock
@@ -89,6 +88,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 class MainActivity : ComponentActivity() {
     
     private val mainViewModel: MainViewModel by viewModels()
+    private val updateViewModel: UpdateViewModel by viewModels()
     
     @Inject
     lateinit var networkMonitor: NetworkMonitor
@@ -140,6 +140,8 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
         enableMaxRefreshRate()
+        
+        updateViewModel.checkForUpdate(com.suvojeet.suvmusic.BuildConfig.VERSION_CODE)
         
         // Initialize audio manager for volume control
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -922,33 +924,15 @@ fun SuvMusicApp(
             )
         }
 
-        // Global Update Dialogs
-        when (val state = mainUiState.updateState) {
-            is com.suvojeet.suvmusic.data.model.UpdateState.UpdateAvailable -> {
-                UpdateAvailableDialog(
-                    update = state.update,
-                    currentVersion = mainUiState.currentVersion,
-                    onDownload = { mainViewModel.downloadUpdate(state.update.downloadUrl, state.update.versionName) },
-                    onDismiss = { mainViewModel.dismissUpdateDialog() }
-                )
-            }
-            is com.suvojeet.suvmusic.data.model.UpdateState.Downloading -> {
-                DownloadProgressDialog(
-                    progress = state.progress,
-                    onCancel = { mainViewModel.cancelDownload() }
-                )
-            }
-            is com.suvojeet.suvmusic.data.model.UpdateState.Error -> {
-                UpdateErrorDialog(
-                    errorMessage = state.message,
-                    onRetry = { mainViewModel.dismissUpdateDialog() }, // Just dismiss for now on auto-check error
-                    onDismiss = { mainViewModel.dismissUpdateDialog() }
-                )
-            }
-            else -> {}
-        }
-
         // Global Playlist Dialogs
+        val updateState by updateViewModel.updateState.collectAsStateWithLifecycle()
+        if (updateState is UpdateState.UpdateAvailable) {
+            UpdateDialog(
+                updateInfo = (updateState as UpdateState.UpdateAvailable).info,
+                onDismiss = { updateViewModel.dismissDialog() }
+            )
+        }
+        
         playlistManagementUiState.selectedSong?.let { song ->
             com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
                 song = song,

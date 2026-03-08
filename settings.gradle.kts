@@ -17,6 +17,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "SuvMusic"
 include(":app")
+include(":updater")
 include(":media-source")
 include(":scrobbler")
 include(":lyric-simpmusic")
