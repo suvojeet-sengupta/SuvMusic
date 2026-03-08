@@ -565,10 +565,8 @@ fun SuvMusicApp(
     // or if dismissed.
     val showMiniPlayer = !isMiniPlayerDismissed && currentRoute != Destination.YouTubeLogin.route && hasSong
     
-    // Don't show global volume indicator on PlayerScreen (it has its own) - 
-    // For now, simpler to just show it if we have a song, unless we are in expanded state?
-    // Let's keep it simple: show if song Playing
-    val showGlobalVolumeIndicator = hasSong
+    // Don't show global volume indicator on PlayerScreen (it has its own)
+    val showGlobalVolumeIndicator = hasSong && !isPlayerExpanded
     
     // Extract dominant colors from current song's album art
     val isAppInDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
