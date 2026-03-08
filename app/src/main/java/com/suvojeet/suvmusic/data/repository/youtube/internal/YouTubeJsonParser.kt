@@ -239,9 +239,71 @@ class YouTubeJsonParser @Inject constructor() {
                         ?.optString("continuation")
                     if (!token.isNullOrEmpty()) return token
                 }
+
+                // Also check for inline continuationItemRenderer inside sectionListContinuation shelves
+                if (sectionContinuation != null) {
+                    val sectionContents = sectionContinuation.optJSONArray("contents")
+                    if (sectionContents != null) {
+                        for (i in 0 until sectionContents.length()) {
+                            val shelf = sectionContents.optJSONObject(i)
+                                ?.optJSONObject("musicPlaylistShelfRenderer")
+                                ?: sectionContents.optJSONObject(i)
+                                    ?.optJSONObject("musicShelfRenderer")
+                            val shelfContents = shelf?.optJSONArray("contents")
+                            val inlineToken = extractContinuationItemToken(shelfContents)
+                            if (inlineToken != null) return inlineToken
+                            // Also check shelf-level continuations
+                            val shelfContinuations = shelf?.optJSONArray("continuations")
+                            if (shelfContinuations != null) {
+                                val token = shelfContinuations.optJSONObject(0)
+                                    ?.optJSONObject("nextContinuationData")
+                                    ?.optString("continuation")
+                                if (!token.isNullOrEmpty()) return token
+                            }
+                        }
+                    }
+                }
             }
 
-            // 2. Initial page structure (browse results)
+            // 2. Playlist initial page (twoColumnBrowseResultsRenderer with secondaryContents)
+            val secondaryContents = json.optJSONObject("contents")
+                ?.optJSONObject("twoColumnBrowseResultsRenderer")
+                ?.optJSONObject("secondaryContents")
+                ?.optJSONObject("sectionListRenderer")
+            if (secondaryContents != null) {
+                val secContents = secondaryContents.optJSONArray("contents")
+                if (secContents != null) {
+                    for (i in 0 until secContents.length()) {
+                        val shelf = secContents.optJSONObject(i)
+                            ?.optJSONObject("musicPlaylistShelfRenderer")
+                            ?: secContents.optJSONObject(i)
+                                ?.optJSONObject("musicShelfRenderer")
+                        if (shelf != null) {
+                            // Check for inline continuationItemRenderer in content array
+                            val inlineToken = extractContinuationItemToken(shelf.optJSONArray("contents"))
+                            if (inlineToken != null) return inlineToken
+                            // Check shelf-level continuations
+                            val continuations = shelf.optJSONArray("continuations")
+                            if (continuations != null) {
+                                val token = continuations.optJSONObject(0)
+                                    ?.optJSONObject("nextContinuationData")
+                                    ?.optString("continuation")
+                                if (!token.isNullOrEmpty()) return token
+                            }
+                        }
+                    }
+                }
+                // Check sectionListRenderer-level continuations
+                val secContinuations = secondaryContents.optJSONArray("continuations")
+                if (secContinuations != null) {
+                    val token = secContinuations.optJSONObject(0)
+                        ?.optJSONObject("nextContinuationData")
+                        ?.optString("continuation")
+                    if (!token.isNullOrEmpty()) return token
+                }
+            }
+
+            // 3. Initial page structure (singleColumnBrowseResultsRenderer)
             val contentsArr = json.optJSONObject("contents")
                 ?.optJSONObject("singleColumnBrowseResultsRenderer")
                 ?.optJSONArray("tabs")
@@ -258,21 +320,26 @@ class YouTubeJsonParser @Inject constructor() {
                 for (i in 0 until contentsArr.length()) {
                     val item = contentsArr.optJSONObject(i)
 
-                    // Target Playlist or Shelf renderers first
                     val targetShelf = item?.optJSONObject("musicPlaylistShelfRenderer")
                         ?: item?.optJSONObject("musicShelfRenderer")
 
-                    val continuations = targetShelf?.optJSONArray("continuations")
-                    if (continuations != null) {
-                        val token = continuations.optJSONObject(0)
-                            ?.optJSONObject("nextContinuationData")
-                            ?.optString("continuation")
-                        if (!token.isNullOrEmpty()) return token
+                    if (targetShelf != null) {
+                        // Check inline continuationItemRenderer
+                        val inlineToken = extractContinuationItemToken(targetShelf.optJSONArray("contents"))
+                        if (inlineToken != null) return inlineToken
+                        // Check shelf-level continuations
+                        val continuations = targetShelf.optJSONArray("continuations")
+                        if (continuations != null) {
+                            val token = continuations.optJSONObject(0)
+                                ?.optJSONObject("nextContinuationData")
+                                ?.optString("continuation")
+                            if (!token.isNullOrEmpty()) return token
+                        }
                     }
                 }
             }
 
-            // 3. Fallback for sectionList continuation
+            // 4. Fallback for sectionList continuation
             val sectionListContinuation = json.optJSONObject("contents")
                 ?.optJSONObject("singleColumnBrowseResultsRenderer")
                 ?.optJSONArray("tabs")
@@ -292,18 +359,53 @@ class YouTubeJsonParser @Inject constructor() {
                 if (!token.isNullOrEmpty()) return token
             }
 
-            // 4. Recursive search as final resort
+            // 5. onResponseReceivedActions (appended continuation items)
+            val appendedItems = json.optJSONArray("onResponseReceivedActions")
+                ?.optJSONObject(0)
+                ?.optJSONObject("appendContinuationItemsAction")
+                ?.optJSONArray("continuationItems")
+            if (appendedItems != null) {
+                val inlineToken = extractContinuationItemToken(appendedItems)
+                if (inlineToken != null) return inlineToken
+            }
+
+            // 6. Recursive search as final resort
             return findContinuationTokenRecursive(json)
 
         } catch (e: Exception) {
             return null
         }
     }
+
+    /**
+     * Extract continuation token from inline continuationItemRenderer in a content array.
+     * YouTube embeds these as the last item in content lists.
+     */
+    private fun extractContinuationItemToken(contents: JSONArray?): String? {
+        if (contents == null) return null
+        for (i in contents.length() - 1 downTo 0) {
+            val item = contents.optJSONObject(i) ?: continue
+            val continuationItem = item.optJSONObject("continuationItemRenderer") ?: continue
+            val token = continuationItem.optJSONObject("continuationEndpoint")
+                ?.optJSONObject("continuationCommand")
+                ?.optString("token")
+            if (!token.isNullOrEmpty()) return token
+        }
+        return null
+    }
     
     private fun findContinuationTokenRecursive(node: Any): String? {
         if (node is JSONObject) {
             if (node.has("nextContinuationData")) {
                 return node.getJSONObject("nextContinuationData").optString("continuation")
+            }
+            // Also check for continuationItemRenderer (inline continuation format)
+            if (node.has("continuationItemRenderer")) {
+                val token = node.optJSONObject("continuationItemRenderer")
+                    ?.optJSONObject("continuationEndpoint")
+                    ?.optJSONObject("continuationCommand")
+                    ?.optString("token")
+                if (!token.isNullOrEmpty()) return token
             }
             val keys = node.keys()
             while (keys.hasNext()) {
