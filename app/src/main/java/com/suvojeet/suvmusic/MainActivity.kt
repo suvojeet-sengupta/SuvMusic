@@ -196,6 +196,7 @@ class MainActivity : ComponentActivity() {
                     downloadRepository = downloadRepository,
                     sessionManager = sessionManager, // Pass the injected instance
                     youTubeRepository = youTubeRepository,
+                    updateViewModel = updateViewModel,
                     onPlaybackStateChanged = { hasSong -> 
                         isSongPlaying = hasSong
                         // Update PiP params whenever playback state changes
@@ -324,6 +325,7 @@ fun SuvMusicApp(
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     sessionManager: SessionManager, // Injected instance passed from MainActivity
     youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository,
+    updateViewModel: com.suvojeet.suvmusic.updater.UpdateViewModel,
     onPlaybackStateChanged: (Boolean) -> Unit,
     onVolumeSliderEnabledChanged: (Boolean) -> Unit = {}
 ) {

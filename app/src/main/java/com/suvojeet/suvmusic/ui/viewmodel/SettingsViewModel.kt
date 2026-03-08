@@ -16,7 +16,6 @@ import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
-import com.suvojeet.suvmusic.data.model.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -121,7 +120,10 @@ data class SettingsUiState(
     val navBarAlpha: Float = 0.9f,
     val downloadLocation: String? = null,
     val loggingEnabled: Boolean = false,
-    val isBugReportingSessionActive: Boolean = false
+    val isBugReportingSessionActive: Boolean = false,
+    // Updater
+    val currentVersion: String = "",
+    val updateChannel: String = "Stable"
 )
 
 @HiltViewModel
@@ -617,6 +619,7 @@ class SettingsViewModel @Inject constructor(
                     scrobbleMinDuration = scrobbleMinDuration,
                     scrobbleDelaySeconds = scrobbleDelaySeconds,
 
+                    currentVersion = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME,
                     updateChannel = updateChannel,
                     preferredLanguages = preferredLanguages,
                     youtubeHistorySyncEnabled = youtubeHistorySyncEnabled,
