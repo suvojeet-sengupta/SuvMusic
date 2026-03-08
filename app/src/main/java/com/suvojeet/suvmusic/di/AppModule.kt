@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
-import com.suvojeet.suvmusic.data.repository.UpdateRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
@@ -51,15 +50,6 @@ object AppModule {
         @ApplicationContext context: Context
     ): LocalAudioRepository {
         return LocalAudioRepository(context)
-    }
-    
-    @Provides
-    @Singleton
-    fun provideUpdateRepository(
-        @ApplicationContext context: Context,
-        sessionManager: SessionManager
-    ): UpdateRepository {
-        return UpdateRepository(context, sessionManager)
     }
     
     @Provides

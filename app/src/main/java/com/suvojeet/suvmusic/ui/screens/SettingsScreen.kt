@@ -81,12 +81,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.data.model.UpdateState
-import com.suvojeet.suvmusic.ui.components.CheckingUpdateDialog
-import com.suvojeet.suvmusic.ui.components.DownloadProgressDialog
-import com.suvojeet.suvmusic.ui.components.NoUpdateDialog
-import com.suvojeet.suvmusic.ui.components.UpdateAvailableDialog
-import com.suvojeet.suvmusic.ui.components.UpdateErrorDialog
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -109,8 +103,7 @@ fun SettingsScreen(
     onSponsorBlockClick: () -> Unit = {},
     onCreditsClick: () -> Unit = {},
     onLastFmClick: () -> Unit = {},
-    onDiscordClick: () -> Unit = {},
-    onUpdaterClick: () -> Unit = {}
+    onDiscordClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -118,8 +111,6 @@ fun SettingsScreen(
     var showBugDescriptionDialog by remember { mutableStateOf(false) }
     var bugDescription by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
-    
-    var showUpdateChannelDialog by remember { mutableStateOf(false) }
     
     // Floating Player
     val context = LocalContext.current
@@ -572,25 +563,6 @@ fun SettingsScreen(
                             subtitle = "Version ${uiState.currentVersion}",
                             onClick = onAboutClick
                         )
-                        
-                        HorizontalDivider()
-                        
-                        // Update Channel
-                        SettingsNavigationItem(
-                            icon = Icons.Default.Tune, // Or another relevant icon like Build
-                            title = "Update Channel",
-                            subtitle = uiState.updateChannel.name.lowercase().replaceFirstChar { it.uppercase() },
-                            onClick = { showUpdateChannelDialog = true }
-                        )
-
-                        HorizontalDivider()
-                        
-                        SettingsNavigationItem(
-                            icon = Icons.Default.SystemUpdate,
-                            title = "Updater",
-                            subtitle = "Check for app updates and changelogs",
-                            onClick = onUpdaterClick
-                        )
                     }
                     Spacer(modifier = Modifier.height(32.dp))
                 }
@@ -837,81 +809,6 @@ fun SettingsScreen(
             },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
-    }
-
-    // Update Channel Dialog
-    if (showUpdateChannelDialog) {
-        AlertDialog(
-            onDismissRequest = { showUpdateChannelDialog = false },
-            title = { Text("Select Update Channel") },
-            text = {
-                Column {
-                    com.suvojeet.suvmusic.data.model.UpdateChannel.entries.forEach { channel ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setUpdateChannel(channel)
-                                    showUpdateChannelDialog = false
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            androidx.compose.material3.RadioButton(
-                                selected = uiState.updateChannel == channel,
-                                onClick = {
-                                    viewModel.setUpdateChannel(channel)
-                                    showUpdateChannelDialog = false
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = channel.name.lowercase().replaceFirstChar { it.uppercase() },
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                if (channel == com.suvojeet.suvmusic.data.model.UpdateChannel.NIGHTLY) {
-                                    Text(
-                                        text = "Get the latest features (potentially unstable)",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showUpdateChannelDialog = false }) { Text("Cancel") }
-            },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    }
-
-    // Update Dialogs
-    when (val updateState = uiState.updateState) {
-        is UpdateState.Checking -> CheckingUpdateDialog()
-        is UpdateState.UpdateAvailable -> UpdateAvailableDialog(
-            update = updateState.update,
-            currentVersion = uiState.currentVersion,
-            onDownload = { viewModel.downloadUpdate(updateState.update.downloadUrl, updateState.update.versionName) },
-            onDismiss = { viewModel.resetUpdateState() }
-        )
-        is UpdateState.NoUpdate -> NoUpdateDialog(
-            currentVersion = uiState.currentVersion,
-            onDismiss = { viewModel.resetUpdateState() }
-        )
-        is UpdateState.Downloading -> DownloadProgressDialog(
-            progress = updateState.progress,
-            onCancel = { viewModel.cancelDownload() }
-        )
-        is UpdateState.Error -> UpdateErrorDialog(
-            errorMessage = updateState.message,
-            onRetry = { viewModel.checkForUpdates() },
-            onDismiss = { viewModel.resetUpdateState() }
-        )
-        else -> {}
     }
 }
 

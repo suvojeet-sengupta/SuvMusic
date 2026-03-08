@@ -1,12 +1,11 @@
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.android.application) apply false
-    id("com.android.library")
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
-    kotlin("plugin.serialization") version "1.9.22"
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -69,7 +68,7 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+    implementation(libs.kotlinx.serialization.json)
 
     // Hilt
     implementation(libs.hilt.android)

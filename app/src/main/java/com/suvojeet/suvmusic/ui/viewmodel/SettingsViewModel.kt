@@ -16,11 +16,11 @@ import com.suvojeet.suvmusic.data.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.data.model.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.data.model.ThemeMode
-import com.suvojeet.suvmusic.data.model.UpdateState
-import com.suvojeet.suvmusic.data.repository.UpdateRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.data.MusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,8 +53,6 @@ data class SettingsUiState(
     val automixEnabled: Boolean = true,
     val volumeSliderEnabled: Boolean = true,
     val musicSource: MusicSource = MusicSource.YOUTUBE,
-    val updateState: UpdateState = UpdateState.Idle,
-    val currentVersion: String = "",
     val doubleTapSeekSeconds: Int = 10,
     val volumeNormalizationEnabled: Boolean = true,
     val betterLyricsEnabled: Boolean = true,
@@ -96,8 +94,6 @@ data class SettingsUiState(
     val scrobbleDelayPercent: Float = 0.5f,
     val scrobbleMinDuration: Int = 30, // seconds
     val scrobbleDelaySeconds: Int = 180, // seconds
-    // Updates
-    val updateChannel: com.suvojeet.suvmusic.data.model.UpdateChannel = com.suvojeet.suvmusic.data.model.UpdateChannel.STABLE,
     // Content Preferences
     val preferredLanguages: Set<String> = emptySet(),
     val youtubeHistorySyncEnabled: Boolean = false,
@@ -132,7 +128,6 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val youtubeRepository: YouTubeRepository,
-    private val updateRepo: UpdateRepository,
     private val lastFmRepository: LastFmRepository,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
     @param:ApplicationContext private val context: Context
@@ -197,12 +192,6 @@ class SettingsViewModel @Inject constructor(
     init {
         loadSettings()
         
-        viewModelScope.launch {
-            updateRepo.updateState.collect { state ->
-                _uiState.update { it.copy(updateState = state) }
-            }
-        }
-
         viewModelScope.launch {
             sessionManager.audioQualityFlow.collect { quality ->
                 _uiState.update { it.copy(audioQuality = quality) }
@@ -593,7 +582,6 @@ class SettingsViewModel @Inject constructor(
                     automixEnabled = automixEnabled,
                     volumeSliderEnabled = volumeSliderEnabled,
                     musicSource = musicSource,
-                    currentVersion = updateRepo.getCurrentVersionName(),
                     doubleTapSeekSeconds = doubleTapSeekSeconds,
                     volumeNormalizationEnabled = volumeNormalizationEnabled,
                     betterLyricsEnabled = betterLyricsEnabled,
@@ -970,53 +958,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Check for updates from GitHub Releases.
-     */
-    fun checkForUpdates() {
-        viewModelScope.launch {
-            val channel = sessionManager.getUpdateChannel()
-            updateRepo.checkForUpdate(channel, forceCheck = true)
-        }
-    }
-    
-    fun setUpdateChannel(channel: com.suvojeet.suvmusic.data.model.UpdateChannel) {
-        viewModelScope.launch {
-            sessionManager.setUpdateChannel(channel)
-            _uiState.update { it.copy(updateChannel = channel) }
-        }
-    }
-    
-    /**
-     * Download the update APK.
-     */
-    fun downloadUpdate(downloadUrl: String, versionName: String) {
-        viewModelScope.launch {
-            updateRepo.downloadApk(downloadUrl, versionName)
-        }
-    }
-    
-    /**
-     * Install the downloaded APK.
-     */
-    fun installUpdate() {
-        updateRepo.installUpdate()
-    }
-    
-    /**
-     * Cancel ongoing download.
-     */
-    fun cancelDownload() {
-        updateRepo.resetUpdateState()
-    }
-    
-    /**
-     * Reset update state to idle.
-     */
-    fun resetUpdateState() {
-        updateRepo.resetUpdateState()
-    }
-    
     fun setAudioQuality(quality: AudioQuality) {
         viewModelScope.launch {
             sessionManager.setAudioQuality(quality)
