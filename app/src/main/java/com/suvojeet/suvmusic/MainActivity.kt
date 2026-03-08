@@ -89,6 +89,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 class MainActivity : ComponentActivity() {
     
     private val mainViewModel: MainViewModel by viewModels()
+    private val updateViewModel: com.suvojeet.suvmusic.ui.viewmodel.UpdateViewModel by viewModels()
     
     @Inject
     lateinit var networkMonitor: NetworkMonitor
@@ -186,6 +187,17 @@ class MainActivity : ComponentActivity() {
                 appTheme = appTheme,
                 pureBlack = pureBlackEnabled
             ) {
+                // Observe updates
+                val updateInfo by updateViewModel.updateState.collectAsStateWithLifecycle()
+                
+                // Show update dialog if available
+                updateInfo?.let {
+                    com.suvojeet.suvmusic.ui.components.UpdateDialog(
+                        updateInfo = it,
+                        onDismiss = { updateViewModel.dismissUpdate() }
+                    )
+                }
+
                 SuvMusicApp(
                     intent = intent,
                     networkMonitor = networkMonitor,
