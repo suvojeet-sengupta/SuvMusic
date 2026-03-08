@@ -99,6 +99,7 @@ fun ExpandablePlayerSheet(
     onExpandChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     userAlpha: Float = 0f,
+    swipeDownToDismissEnabled: Boolean = true,
     style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
     expandedContent: @Composable (onCollapse: () -> Unit) -> Unit
 ) {
@@ -184,7 +185,7 @@ fun ExpandablePlayerSheet(
                      .align(Alignment.TopCenter) // Align to top, leaving bottom padding area empty
                      .graphicsLayer {
                          // Visual feedback for swipe down to dismiss
-                         if (expansion.value < 0f) {
+                         if (expansion.value < 0f && swipeDownToDismissEnabled) {
                              translationY = -expansion.value * dragRange * 0.8f
                          }
                      }
@@ -194,7 +195,7 @@ fun ExpandablePlayerSheet(
                         detectVerticalDragGestures(
                             onDragEnd = {
                                 coroutineScope.launch {
-                                    if (expansion.value < -0.15f) {
+                                    if (expansion.value < -0.15f && swipeDownToDismissEnabled) {
                                         // Swipe down to dismiss/stop
                                         onClose()
                                         // Reset expansion for next time it's shown
@@ -229,8 +230,9 @@ fun ExpandablePlayerSheet(
                                 change.consume()
                                 val delta = -dragAmount / dragRange
                                 coroutineScope.launch {
+                                    val minExpansion = if (swipeDownToDismissEnabled) -0.5f else 0f
                                     expansion.snapTo(
-                                        (expansion.value + delta).coerceIn(-0.5f, 1f)
+                                        (expansion.value + delta).coerceIn(minExpansion, 1f)
                                     )
                                 }
                             }

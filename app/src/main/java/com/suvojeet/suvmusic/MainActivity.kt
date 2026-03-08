@@ -327,6 +327,7 @@ fun SuvMusicApp(
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
     val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.FLOATING_PILL)
+    val swipeDownToDismissEnabled by sessionManager.swipeDownToDismissEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
@@ -815,6 +816,7 @@ fun SuvMusicApp(
             isExpanded = isPlayerExpanded,
             userAlpha = miniPlayerAlpha,
             style = miniPlayerStyle,
+            swipeDownToDismissEnabled = swipeDownToDismissEnabled,
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
             },
