@@ -7,6 +7,9 @@ WebSite: https://github.com/suvojeet-sengupta/SuvMusic
 SourceCode: https://github.com/suvojeet-sengupta/SuvMusic
 IssueTracker: https://github.com/suvojeet-sengupta/SuvMusic/issues
 
+RepoType: git
+Repo: https://github.com/suvojeet-sengupta/SuvMusic.git
+
 AutoName: SuvMusic
 Description: |-
   SuvMusic is a premium, open-source music streaming application designed for high-resolution audio enthusiasts. Built with Jetpack Compose and a custom C++ Native Audio Engine, it provides an ad-free experience with advanced features bridging the gap between cloud streaming and professional local playback.
