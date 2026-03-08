@@ -10,21 +10,7 @@ IssueTracker: https://github.com/suvojeet-sengupta/SuvMusic/issues
 RepoType: git
 Repo: https://github.com/suvojeet-sengupta/SuvMusic.git
 
-AutoName: SuvMusic
-Description: |-
-  SuvMusic is a premium, open-source music streaming application designed for high-resolution audio enthusiasts. Built with Jetpack Compose and a custom C++ Native Audio Engine, it provides an ad-free experience with advanced features bridging the gap between cloud streaming and professional local playback.
 
-  Core Features:
-  • Native Audio Engine: High-fidelity playback powered by a custom C++ JNI layer for low-latency digital signal processing.
-  • Parametric EQ & Spatial Audio: 10-band ISO standard equalizer and real-time 3D sound positioning.
-  • Material 3 Interface: Dynamic theming engine that adjusts colors based on album artwork.
-  • Synchronized Lyrics: Real-time, word-by-word lyrics from LRCLIB, Kugou, and SimpMusic.
-  • Listen Together: Real-time synchronized listening rooms for shared experiences.
-  • Spotify Migration: Direct playlist importing from Spotify accounts.
-  • Music Haptics: Beat-synchronized tactile feedback for immersive listening.
-  • Advanced Caching: High-quality stream resolution and smart offline management.
-
-  SuvMusic is 100% open-source and respects your privacy.
 
 AntiFeatures:
   - NonFreeNet
