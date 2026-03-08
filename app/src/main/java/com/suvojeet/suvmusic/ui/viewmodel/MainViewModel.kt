@@ -1,27 +1,19 @@
 package com.suvojeet.suvmusic.ui.viewmodel
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.UpdateState
-import com.suvojeet.suvmusic.data.model.UpdateChannel
-import com.suvojeet.suvmusic.data.repository.UpdateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
-import androidx.media3.datasource.cache.Cache
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,7 +27,6 @@ sealed class MainEvent {
 }
 
 data class MainUiState(
-    val updateState: UpdateState = UpdateState.Idle,
     val currentVersion: String = "",
     val isInPictureInPictureMode: Boolean = false,
     val isReady: Boolean = false
@@ -43,7 +34,6 @@ data class MainUiState(
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val updateRepository: UpdateRepository,
     private val sessionManager: SessionManager,
     private val lastFmRepository: LastFmRepository,
     private val playerCache: dagger.Lazy<androidx.media3.datasource.cache.Cache>,
@@ -57,26 +47,10 @@ class MainViewModel @Inject constructor(
     val events: SharedFlow<MainEvent> = _events.asSharedFlow()
 
     init {
-        // Load current version and check for basic initialization status
-        _uiState.update { it.copy(currentVersion = updateRepository.getCurrentVersionName()) }
-        
-        // Observe update state from repository
+        // App is now "ready" to remove splash screen (basic setup complete)
         viewModelScope.launch {
-            updateRepository.updateState.collect { state ->
-                _uiState.update { it.copy(updateState = state) }
-            }
-        }
-
-        viewModelScope.launch {
-            // Check for updates asynchronously (respects 24h interval)
-            delay(2000)
-            val channel = sessionManager.getUpdateChannel()
-            updateRepository.checkForUpdate(channel)
-            
             // Auto-clear cache if needed
             checkAndClearCache()
-            
-            // App is now "ready" to remove splash screen (basic setup complete)
             _uiState.update { it.copy(isReady = true) }
         }
     }
@@ -166,24 +140,6 @@ class MainViewModel @Inject constructor(
         } catch (e: Exception) {
             null
         }
-    }
-
-    fun downloadUpdate(downloadUrl: String, versionName: String) {
-        viewModelScope.launch {
-            updateRepository.downloadApk(downloadUrl, versionName)
-        }
-    }
-
-    fun installUpdate() {
-        updateRepository.installUpdate()
-    }
-
-    fun cancelDownload() {
-        updateRepository.resetUpdateState()
-    }
-
-    fun dismissUpdateDialog() {
-        updateRepository.resetUpdateState()
     }
 
     fun setPictureInPictureMode(inPip: Boolean) {

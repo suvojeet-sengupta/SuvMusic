@@ -37,7 +37,6 @@ import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
-import com.suvojeet.suvmusic.data.model.UpdateChannel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -161,7 +160,6 @@ class SessionManager @Inject constructor(
         private val SCROBBLE_DELAY_PERCENT_KEY = floatPreferencesKey("scrobble_delay_percent")
         private val SCROBBLE_MIN_DURATION_KEY = intPreferencesKey("scrobble_min_duration")
         private val SCROBBLE_DELAY_SECONDS_KEY = intPreferencesKey("scrobble_delay_seconds")
-        private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
         private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
         private val IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY = booleanPreferencesKey("ignore_audio_focus_during_calls")
@@ -198,22 +196,9 @@ class SessionManager @Inject constructor(
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
-        private val LAST_UPDATE_CHECK_TIME_KEY = longPreferencesKey("last_update_check_time")
-    }
-    
-    // --- Update Preferences ---
-
-    suspend fun getLastUpdateCheckTime(): Long =
-        context.dataStore.data.first()[LAST_UPDATE_CHECK_TIME_KEY] ?: 0L
-
-    suspend fun setLastUpdateCheckTime(timestamp: Long) {
-        context.dataStore.edit { preferences ->
-            preferences[LAST_UPDATE_CHECK_TIME_KEY] = timestamp
         }
-    }
-    
-    // --- Home Screen Preferences ---
 
+        // --- Home Screen Preferences ---
     suspend fun getForYouBannerDismissedAt(): Long =
         context.dataStore.data.first()[FOR_YOU_BANNER_DISMISSED_AT_KEY] ?: 0L
 
@@ -2106,24 +2091,7 @@ class SessionManager @Inject constructor(
             put("localUri", song.localUri?.toString() ?: "")
         }
     }
-    suspend fun getUpdateChannel(): UpdateChannel {
-        val channelName = context.dataStore.data.first()[UPDATE_CHANNEL_KEY]
-        return channelName?.let {
-            try { UpdateChannel.valueOf(it) } catch (e: Exception) { UpdateChannel.STABLE }
-        } ?: UpdateChannel.STABLE
-    }
 
-    val updateChannelFlow: Flow<UpdateChannel> = context.dataStore.data.map { preferences ->
-        preferences[UPDATE_CHANNEL_KEY]?.let {
-            try { UpdateChannel.valueOf(it) } catch (e: Exception) { UpdateChannel.STABLE }
-        } ?: UpdateChannel.STABLE
-    }
-
-    suspend fun setUpdateChannel(channel: UpdateChannel) {
-        context.dataStore.edit { preferences ->
-            preferences[UPDATE_CHANNEL_KEY] = channel.name
-        }
-    }
 }
 
 /**

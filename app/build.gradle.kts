@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.protobuf)
-    kotlin("plugin.serialization") version "1.9.22"
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -135,7 +135,7 @@ protobuf {
 
 dependencies {
     // Core Library Desugaring for Java 8+ APIs on older Android
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.4")
+    coreLibraryDesugaring(libs.android.desugarJdkLibs)
     
     // Logging & Crash Reporting
     implementation(libs.acra.core)
@@ -228,7 +228,7 @@ dependencies {
     implementation(libs.ktor.client.websockets)
     
     // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+    implementation(libs.kotlinx.serialization.json)
     
     // Tagging
     implementation(libs.jaudiotagger)
@@ -247,6 +247,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(project(":media-source"))
+    implementation(project(":updater"))
     implementation(project(":core:data"))
     implementation(project(":core:domain"))
     implementation(project(":core:ui"))
