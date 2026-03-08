@@ -76,6 +76,15 @@
 
 ---
 
+## F-Droid Anti-Features
+
+As an open-source project committed to transparency, SuvMusic discloses the following "Anti-Features" for users and F-Droid reviewers:
+
+- **Non-Free Network Services**: SuvMusic interacts with third-party, non-free network services (including YouTube, KuGou, LrcLib, and SimpMusic) to provide music streaming, metadata extraction (via **NewPipe Extractor**), and synchronized lyrics. These services are external to the app and governed by their respective terms of service.
+- **Tracking**: The app utilizes **ACRA (Application Crash Reports for Android)** for automated crash reporting. While ACRA is open-source, it is technically categorized as tracking by F-Droid because it sends diagnostic data (device info, stack traces) to the developer-controlled endpoint to improve app stability.
+
+---
+
 ## Technical Specifications
 
 SuvMusic is engineered using modern Android development standards.
