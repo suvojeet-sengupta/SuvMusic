@@ -918,21 +918,31 @@ class YouTubeRepository @Inject constructor(
             // Fix: Try multiple paths for initial continuation token as seen in Metrolist
             var continuationToken = extractContinuationToken(currentJson)
             if (continuationToken == null) {
-                // Try specifically from musicPlaylistShelfRenderer.continuations
+                // Try specifically from musicPlaylistShelfRenderer/musicShelfRenderer continuations
                 try {
                     val root = JSONObject(json)
-                    val contents = root.optJSONObject("contents")
+                    val twoCol = root.optJSONObject("contents")
                         ?.optJSONObject("twoColumnBrowseResultsRenderer")
-                        ?.optJSONArray("tabs")
+
+                    // Check secondaryContents first (newer YTM layout for playlists)
+                    val secondaryContents = twoCol?.optJSONObject("secondaryContents")
+                        ?.optJSONObject("sectionListRenderer")
+                        ?.optJSONArray("contents")
+
+                    // Fallback to primary tabs
+                    val primaryContents = twoCol?.optJSONArray("tabs")
                         ?.optJSONObject(0)
                         ?.optJSONObject("tabRenderer")
                         ?.optJSONObject("content")
                         ?.optJSONObject("sectionListRenderer")
                         ?.optJSONArray("contents")
+
+                    val contents = secondaryContents ?: primaryContents
                     
                     if (contents != null) {
                         for (i in 0 until contents.length()) {
                             val shelf = contents.optJSONObject(i)?.optJSONObject("musicPlaylistShelfRenderer")
+                                ?: contents.optJSONObject(i)?.optJSONObject("musicShelfRenderer")
                             if (shelf != null) {
                                 val continuations = shelf.optJSONArray("continuations")
                                 if (continuations != null) {

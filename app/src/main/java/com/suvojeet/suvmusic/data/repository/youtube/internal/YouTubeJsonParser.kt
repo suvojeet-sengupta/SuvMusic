@@ -251,7 +251,7 @@ class YouTubeJsonParser @Inject constructor() {
                 ?.optJSONObject("sectionListRenderer")
                 ?.optJSONArray("contents")
 
-            // 3. Initial page structure (browse results - twoColumn)
+            // 3. Initial page structure (browse results - twoColumn, primary tabs)
             val twoColumnContents = json.optJSONObject("contents")
                 ?.optJSONObject("twoColumnBrowseResultsRenderer")
                 ?.optJSONArray("tabs")
@@ -261,7 +261,14 @@ class YouTubeJsonParser @Inject constructor() {
                 ?.optJSONObject("sectionListRenderer")
                 ?.optJSONArray("contents")
 
-            val contentsArr = singleColumnContents ?: twoColumnContents ?: json.optJSONObject("contents")
+            // 3b. twoColumn secondaryContents (playlist songs are often here)
+            val secondaryContents = json.optJSONObject("contents")
+                ?.optJSONObject("twoColumnBrowseResultsRenderer")
+                ?.optJSONObject("secondaryContents")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+
+            val contentsArr = singleColumnContents ?: secondaryContents ?: twoColumnContents ?: json.optJSONObject("contents")
                 ?.optJSONObject("sectionListRenderer")
                 ?.optJSONArray("contents")
 
@@ -285,8 +292,13 @@ class YouTubeJsonParser @Inject constructor() {
                 }
             }
 
-            // 4. Fallback for sectionList continuation
-            val sectionListContinuation = (json.optJSONObject("contents")
+            // 4. Fallback for sectionList continuation (including secondaryContents)
+            val sectionListContinuation = json.optJSONObject("contents")
+                ?.optJSONObject("twoColumnBrowseResultsRenderer")
+                ?.optJSONObject("secondaryContents")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("continuations")
+                ?: (json.optJSONObject("contents")
                 ?.optJSONObject("singleColumnBrowseResultsRenderer") ?: json.optJSONObject("contents")
                 ?.optJSONObject("twoColumnBrowseResultsRenderer"))
                 ?.optJSONArray("tabs")
