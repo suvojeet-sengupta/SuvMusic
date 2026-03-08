@@ -141,6 +141,7 @@ class SessionManager @Inject constructor(
         private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
+        private val SWIPE_DOWN_TO_DISMISS_ENABLED_KEY = booleanPreferencesKey("swipe_down_to_dismiss_enabled")
         private val PLAYER_ANIMATED_BACKGROUND_KEY = booleanPreferencesKey("player_animated_background")
         private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
         private val VOLUME_BOOST_ENABLED_KEY = booleanPreferencesKey("volume_boost_enabled")
@@ -836,6 +837,19 @@ class SessionManager @Inject constructor(
     suspend fun setKeepScreenOnEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[KEEP_SCREEN_ON_KEY] = enabled
+        }
+    }
+
+    suspend fun isSwipeDownToDismissEnabled(): Boolean =
+        context.dataStore.data.first()[SWIPE_DOWN_TO_DISMISS_ENABLED_KEY] ?: true
+
+    val swipeDownToDismissEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SWIPE_DOWN_TO_DISMISS_ENABLED_KEY] ?: true
+    }
+
+    suspend fun setSwipeDownToDismissEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[SWIPE_DOWN_TO_DISMISS_ENABLED_KEY] = enabled
         }
     }
 
