@@ -70,6 +70,7 @@ data class SettingsUiState(
     val stopMusicOnTaskClear: Boolean = false,
     val pauseMusicOnMediaMuted: Boolean = false,
     val keepScreenOn: Boolean = false,
+    val swipeDownToDismissEnabled: Boolean = true,
     // Appearance
     val pureBlackEnabled: Boolean = false,
     val playerAnimatedBackgroundEnabled: Boolean = true,
@@ -289,6 +290,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.keepScreenOnEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(keepScreenOn = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.swipeDownToDismissEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(swipeDownToDismissEnabled = enabled) }
             }
         }
 
@@ -528,6 +535,7 @@ class SettingsViewModel @Inject constructor(
             val stopMusicOnTaskClear = sessionManager.isStopMusicOnTaskClearEnabled()
             val pauseMusicOnMediaMuted = sessionManager.isPauseMusicOnMediaMutedEnabled()
             val keepScreenOn = sessionManager.isKeepScreenOnEnabled()
+            val swipeDownToDismissEnabled = sessionManager.isSwipeDownToDismissEnabled()
             val pureBlackEnabled = sessionManager.isPureBlackEnabled()
             val playerAnimatedBackgroundEnabled = sessionManager.isPlayerAnimatedBackgroundEnabled()
             val sponsorBlockEnabled = sessionManager.isSponsorBlockEnabled()
@@ -600,6 +608,7 @@ class SettingsViewModel @Inject constructor(
                     stopMusicOnTaskClear = stopMusicOnTaskClear,
                     pauseMusicOnMediaMuted = pauseMusicOnMediaMuted,
                     keepScreenOn = keepScreenOn,
+                    swipeDownToDismissEnabled = swipeDownToDismissEnabled,
                     pureBlackEnabled = pureBlackEnabled,
                     playerAnimatedBackgroundEnabled = playerAnimatedBackgroundEnabled,
                     preferredLyricsProvider = preferredLyricsProvider,
@@ -1176,6 +1185,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setKeepScreenOnEnabled(enabled)
             _uiState.update { it.copy(keepScreenOn = enabled) }
+        }
+    }
+
+    fun setSwipeDownToDismissEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setSwipeDownToDismissEnabled(enabled)
+            _uiState.update { it.copy(swipeDownToDismissEnabled = enabled) }
         }
     }
 

@@ -807,6 +807,26 @@ fun PlaybackSettingsScreen(
             PlaybackSectionTitle("Gestures")
             
             ListItem(
+                headlineContent = { Text("Swipe down to dismiss") },
+                supportingContent = { 
+                    Text("Swipe down on the mini player to stop music and close it.") 
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Gesture,
+                        contentDescription = null
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.swipeDownToDismissEnabled,
+                        onCheckedChange = { viewModel.setSwipeDownToDismissEnabled(it) }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
                 headlineContent = { Text("Double tap to seek") },
                 supportingContent = { 
                     Text("${uiState.doubleTapSeekSeconds} seconds") 
