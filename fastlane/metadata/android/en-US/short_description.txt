@@ -1,1 +1,1 @@
-A modern, simple, and elegant offline music player focusing on privacy.
+A modern, beautiful, and ad-free YouTube Music client prioritizing privacy.
