@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import com.suvojeet.suvmusic.updater.UpdateViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -91,6 +92,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    updateViewModel: UpdateViewModel = hiltViewModel(),
     onLoginClick: () -> Unit = {},
     onPlaybackClick: () -> Unit = {},
     onAppearanceClick: () -> Unit = {},
@@ -562,6 +564,17 @@ fun SettingsScreen(
                             title = "About SuvMusic",
                             subtitle = "Version ${uiState.currentVersion}",
                             onClick = onAboutClick
+                        )
+
+                        HorizontalDivider()
+
+                        SettingsNavigationItem(
+                            icon = Icons.Default.SystemUpdate,
+                            title = "Check for Updates",
+                            subtitle = "Check for app updates and changelogs",
+                            onClick = { 
+                                updateViewModel.checkForUpdate(com.suvojeet.suvmusic.BuildConfig.VERSION_CODE)
+                            }
                         )
                     }
                     Spacer(modifier = Modifier.height(32.dp))
