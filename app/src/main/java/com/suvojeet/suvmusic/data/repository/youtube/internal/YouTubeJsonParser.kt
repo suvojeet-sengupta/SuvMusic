@@ -224,75 +224,75 @@ class YouTubeJsonParser @Inject constructor() {
 
     fun extractContinuationToken(json: JSONObject): String? {
         try {
-            // 1. Get the sectionListRenderer (common root)
-            val sectionListRenderer = json.optJSONObject("contents")
+            // 1. Direct continuation contents (used for next pages)
+            val rootContinuation = json.optJSONObject("continuationContents")
+            if (rootContinuation != null) {
+                val playlistContinuation = rootContinuation.optJSONObject("musicPlaylistShelfContinuation")
+                val shelfContinuation = rootContinuation.optJSONObject("musicShelfContinuation")
+                val sectionContinuation = rootContinuation.optJSONObject("sectionListContinuation") 
+
+                val target = playlistContinuation ?: shelfContinuation ?: sectionContinuation
+                val continuations = target?.optJSONArray("continuations")
+                if (continuations != null) {
+                    val token = continuations.optJSONObject(0)
+                        ?.optJSONObject("nextContinuationData")
+                        ?.optString("continuation")
+                    if (!token.isNullOrEmpty()) return token
+                }
+            }
+
+            // 2. Initial page structure (browse results)
+            val contentsArr = json.optJSONObject("contents")
                 ?.optJSONObject("singleColumnBrowseResultsRenderer")
                 ?.optJSONArray("tabs")
                 ?.optJSONObject(0)
                 ?.optJSONObject("tabRenderer")
                 ?.optJSONObject("content")
                 ?.optJSONObject("sectionListRenderer")
-                ?: json.optJSONObject("continuationContents")
-                ?.optJSONObject("sectionListContinuation")
+                ?.optJSONArray("contents")
+                ?: json.optJSONObject("contents")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
 
-            // 2. Check for direct section continuations (infinite scroll on home/mixed lists)
-            val sectionContinuations = sectionListRenderer?.optJSONArray("continuations")
-            if (sectionContinuations != null) {
-                return sectionContinuations.optJSONObject(0)
+            if (contentsArr != null) {
+                for (i in 0 until contentsArr.length()) {
+                    val item = contentsArr.optJSONObject(i)
+
+                    // Target Playlist or Shelf renderers first
+                    val targetShelf = item?.optJSONObject("musicPlaylistShelfRenderer")
+                        ?: item?.optJSONObject("musicShelfRenderer")
+
+                    val continuations = targetShelf?.optJSONArray("continuations")
+                    if (continuations != null) {
+                        val token = continuations.optJSONObject(0)
+                            ?.optJSONObject("nextContinuationData")
+                            ?.optString("continuation")
+                        if (!token.isNullOrEmpty()) return token
+                    }
+                }
+            }
+
+            // 3. Fallback for sectionList continuation
+            val sectionListContinuation = json.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("continuations")
+                ?: json.optJSONObject("contents")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("continuations")
+
+            if (sectionListContinuation != null) {
+                val token = sectionListContinuation.optJSONObject(0)
                     ?.optJSONObject("nextContinuationData")
                     ?.optString("continuation")
+                if (!token.isNullOrEmpty()) return token
             }
 
-            // 3. Look inside contents for shelf continuations (Playlists, Liked Songs, Shelves)
-            val contents = sectionListRenderer?.optJSONArray("contents")
-                ?: json.optJSONObject("contents")?.optJSONObject("sectionListRenderer")?.optJSONArray("contents")
-
-            if (contents != null) {
-                for (i in 0 until contents.length()) {
-                    val item = contents.optJSONObject(i)
-
-                    // Try MusicPlaylistShelfRenderer (Liked Songs, Playlists)
-                    val playlistShelf = item?.optJSONObject("musicPlaylistShelfRenderer")
-                        ?: json.optJSONObject("continuationContents")?.optJSONObject("musicPlaylistShelfContinuation")
-
-                    var continuations = playlistShelf?.optJSONArray("continuations")
-                    if (continuations != null) {
-                        return continuations.optJSONObject(0)
-                            ?.optJSONObject("nextContinuationData")
-                            ?.optString("continuation")
-                    }
-
-                    // Try MusicShelfRenderer (Category lists, some playlists)
-                    val musicShelf = item?.optJSONObject("musicShelfRenderer")
-                        ?: json.optJSONObject("continuationContents")?.optJSONObject("musicShelfContinuation")
-
-                    continuations = musicShelf?.optJSONArray("continuations")
-                    if (continuations != null) {
-                        return continuations.optJSONObject(0)
-                            ?.optJSONObject("nextContinuationData")
-                            ?.optString("continuation")
-                    }
-                }
-            }
-
-            // 4. Fallback: check root continuationContents directly (standard for next pages)
-            val rootContinuation = json.optJSONObject("continuationContents")
-            if (rootContinuation != null) {
-                val playlistContinuation = rootContinuation.optJSONObject("musicPlaylistShelfContinuation")
-                val shelfContinuation = rootContinuation.optJSONObject("musicShelfContinuation")
-                val sectionContinuation = rootContinuation.optJSONObject("sectionListContinuation") // Added this
-
-                val target = playlistContinuation ?: shelfContinuation ?: sectionContinuation
-                val continuations = target?.optJSONArray("continuations")
-                if (continuations != null) {
-                    return continuations.optJSONObject(0)
-                        ?.optJSONObject("nextContinuationData")
-                        ?.optString("continuation")
-                }
-            }
-            
-            // 5. Recursive Fallback (Deep Search) - Matches "nextContinuationData" anywhere
-            // This is crucial for deeply nested or varying structures
+            // 4. Recursive search as final resort
             return findContinuationTokenRecursive(json)
 
         } catch (e: Exception) {
