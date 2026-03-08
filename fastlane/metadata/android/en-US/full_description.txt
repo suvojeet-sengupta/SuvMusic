@@ -1,14 +1,13 @@
-SuvMusic is a beautiful, open-source offline music and video player with a sleek, minimalist user interface. Designed focusing on aesthetics and user privacy, it requires zero external trackers to function natively playing your local media, yet supports robust integrations with custom plugins.
+SuvMusic is a beautiful, open-source YouTube Music client with a sleek, minimalist user interface. Designed focusing on aesthetics and user privacy, it requires zero external trackers and lets you stream your favorite music completely ad-free.
 
 Key Features:
 • Completely free and open-source (GPL-3.0)
 • Absolutely no ads or telemetrics
 • Beautiful, modern Material You inspired design
-• Plays your local offline audio and video seamlessly
-• Search and stream content with custom plugin support
+• Stream songs natively from YouTube Music
 • Synchronized lyrics via LrcLib
 • Customizable themes and fluid animations
 • Sleep timer
 • Automated crash reporting securely via ACRA (can be disabled)
 
-Built efficiently without unnecessary bloat, SuvMusic respects your system resources while offering a premium listening experience.
+Built efficiently without unnecessary bloat, SuvMusic respects your system resources while offering a premium online listening experience.
