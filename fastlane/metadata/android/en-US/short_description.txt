@@ -1,1 +1,1 @@
-Premium, open-source music streaming application for high-resolution audio.
+A modern, simple, and elegant offline music player focusing on privacy.
