@@ -12,6 +12,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -632,7 +633,7 @@ fun LandscapePlayerContent(
 }
 
 @Composable
-fun OverlaysContent(
+fun BoxScope.OverlaysContent(
     state: PlayerScreenState, actions: PlayerScreenActions, activeOverlay: PlayerOverlay, onOverlayChange: (PlayerOverlay) -> Unit,
     dominantColors: DominantColors, playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel,
     playlistViewModel: PlaylistManagementViewModel, ringtoneViewModel: RingtoneViewModel, historySongs: List<com.suvojeet.suvmusic.core.model.Song>,
@@ -652,7 +653,7 @@ fun OverlaysContent(
 
     // VolumeIndicator
     if (volumeSliderEnabled) {
-        VolumeControl(dominantColors = dominantColors, volumeKeyEvents = volumeKeyEvents, modifier = Modifier.fillMaxHeight(0.3f).padding(end = 16.dp))
+        VolumeControl(dominantColors = dominantColors, volumeKeyEvents = volumeKeyEvents, modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(0.3f).padding(end = 16.dp))
     }
 
     // Queue View
