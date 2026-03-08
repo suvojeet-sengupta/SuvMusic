@@ -713,7 +713,7 @@ fun OverlaysContent(
                 onOverlayChange(PlayerOverlay.None)
                 actions.onListenTogetherClick() 
             }, 
-            onPlaybackSpeed = { onOverlayChange(PlayerOverlay.None) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.Equalizer) },
+            onPlaybackSpeed = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.PlaybackSpeed) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.Equalizer) },
             currentSpeed = playerState.playbackSpeed,
             onSetRingtone = { 
                 if (ringtoneViewModel.ringtoneHelper.hasSettingsPermission(context)) {
