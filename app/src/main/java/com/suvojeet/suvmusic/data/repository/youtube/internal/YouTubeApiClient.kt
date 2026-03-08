@@ -80,6 +80,7 @@ class YouTubeApiClient @Inject constructor(
         
         val jsonBody = """
             {
+                "continuation": "$continuationToken",
                 "context": {
                     "client": {
                         "clientName": "${YouTubeConfig.CLIENT_NAME}",
