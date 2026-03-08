@@ -182,22 +182,34 @@ fun ExpandablePlayerSheet(
                      .height(MiniPlayerHeight)
                      .alpha(miniPlayerAlpha)
                      .align(Alignment.TopCenter) // Align to top, leaving bottom padding area empty
+                     .graphicsLayer {
+                         // Visual feedback for swipe down to dismiss
+                         if (expansion.value < 0f) {
+                             translationY = -expansion.value * dragRange * 0.8f
+                         }
+                     }
                      .zIndex(if (isExpanded) 0f else 1f)
                      // Add gesture detection to MiniPlayer
                      .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragEnd = {
-                                val targetValue = if (expansion.value > 0.4f) 1f else 0f
-                                
                                 coroutineScope.launch {
-                                     expansion.animateTo(
-                                        targetValue = targetValue,
-                                        animationSpec = tween(
-                                            durationMillis = 250,
-                                            easing = FastOutSlowInEasing
+                                    if (expansion.value < -0.15f) {
+                                        // Swipe down to dismiss/stop
+                                        onClose()
+                                        // Reset expansion for next time it's shown
+                                        expansion.snapTo(0f)
+                                    } else {
+                                        val targetValue = if (expansion.value > 0.4f) 1f else 0f
+                                        expansion.animateTo(
+                                            targetValue = targetValue,
+                                            animationSpec = tween(
+                                                durationMillis = 250,
+                                                easing = FastOutSlowInEasing
+                                            )
                                         )
-                                    )
-                                    onExpandChange(targetValue == 1f)
+                                        onExpandChange(targetValue == 1f)
+                                    }
                                 }
                             },
                             onDragCancel = {
@@ -218,7 +230,7 @@ fun ExpandablePlayerSheet(
                                 val delta = -dragAmount / dragRange
                                 coroutineScope.launch {
                                     expansion.snapTo(
-                                        (expansion.value + delta).coerceIn(0f, 1f)
+                                        (expansion.value + delta).coerceIn(-0.5f, 1f)
                                     )
                                 }
                             }
@@ -240,7 +252,8 @@ fun ExpandablePlayerSheet(
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragEnd = {
-                                val targetValue = if (expansion.value > 0.6f) 1f else 0f // Slightly harder to collapse by accident
+                                // Threshold 0.8f makes it easier to collapse (only need to drag down 20%)
+                                val targetValue = if (expansion.value > 0.8f) 1f else 0f 
                                 
                                 coroutineScope.launch {
                                      expansion.animateTo(
@@ -255,7 +268,7 @@ fun ExpandablePlayerSheet(
                             },
                             onDragCancel = {
                                 coroutineScope.launch {
-                                    val targetValue = if (expansion.value > 0.6f) 1f else 0f
+                                    val targetValue = if (expansion.value > 0.8f) 1f else 0f
                                     expansion.animateTo(
                                         targetValue = targetValue,
                                         animationSpec = tween(
