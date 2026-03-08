@@ -37,6 +37,8 @@ Builds:
     subdir: app
     gradle:
       - yes
+    prebuild: |-
+      sed -i 's|maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2/") }|mavenCentral()|g' ../settings.gradle.kts
 
 MaintainerNotes: |-
   The app requires NonFreeNet due to interaction with third-party, non-free network services (YouTube, KuGou, LrcLib). The tracking AntiFeature is due to the usage of ACRA for automated crash reporting.
