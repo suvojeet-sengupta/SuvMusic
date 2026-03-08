@@ -39,9 +39,10 @@ object AppModule {
         streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService,
         searchService: com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService,
         networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor,
-        libraryRepository: LibraryRepository
+        libraryRepository: LibraryRepository,
+        listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
     ): YouTubeRepository {
-        return YouTubeRepository(sessionManager, jsonParser, apiClient, streamingService, searchService, networkMonitor, libraryRepository)
+        return YouTubeRepository(sessionManager, jsonParser, apiClient, streamingService, searchService, networkMonitor, libraryRepository, listeningHistoryRepository)
     }
     
     @Provides

@@ -54,7 +54,8 @@ class YouTubeRepository @Inject constructor(
     private val streamingService: YouTubeStreamingService,
     private val searchService: YouTubeSearchService,
     private val networkMonitor: NetworkMonitor,
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    private val listeningHistoryRepository: ListeningHistoryRepository
 ) {
     companion object {
         private var isInitialized = false
@@ -2251,6 +2252,7 @@ class YouTubeRepository @Inject constructor(
             val items = mutableListOf<JSONObject>()
             findAllObjects(root, "musicResponsiveListItemRenderer", items)
             findAllObjects(root, "musicTwoRowItemRenderer", items)
+            findAllObjects(root, "videoRenderer", items) // Support for main YouTube history
 
             items.forEach { item ->
                 try {
@@ -2283,6 +2285,74 @@ class YouTubeRepository @Inject constructor(
             }
         } catch (e: Exception) { }
         return songs.distinctBy { it.setVideoId ?: it.id }
+    }
+
+    /**
+     * Fetch YouTube Music history and YouTube music-only history, then sync to local history.
+     * This is typically called after login to provide immediate recommendations.
+     */
+    suspend fun fetchAndSyncHistory() = withContext(Dispatchers.IO) {
+        if (!sessionManager.isLoggedIn()) return@withContext
+        
+        try {
+            // 1. Fetch YT Music history
+            val ytmHistory = fetchYouTubeMusicHistory()
+            
+            // 2. Fetch YT music-only history
+            val ytHistory = fetchYouTubeHistory(musicOnly = true)
+            
+            // 3. Sync to local database
+            val combined = (ytmHistory + ytHistory).distinctBy { it.id }
+            
+            combined.forEach { song ->
+                // Record each song as a play event with 100% completion
+                // to signal strong affinity for recommendations.
+                listeningHistoryRepository.recordPlay(
+                    song = song,
+                    durationListenedMs = song.duration,
+                    wasSkipped = false
+                )
+            }
+            
+            android.util.Log.d("YouTubeRepository", "Synced ${combined.size} songs from YouTube history")
+        } catch (e: Exception) {
+            android.util.Log.e("YouTubeRepository", "Failed to sync history", e)
+        }
+    }
+
+    /**
+     * Fetch the user's YouTube Music history from 'FEmusic_history' browse endpoint.
+     */
+    suspend fun fetchYouTubeMusicHistory(): List<Song> {
+        val response = fetchInternalApi("FEmusic_history")
+        if (response.isEmpty()) return emptyList()
+        return parseSongsFromInternalJson(response)
+    }
+
+    /**
+     * Fetch the user's YouTube history from 'FEhistory' browse endpoint.
+     * @param musicOnly If true, filters for items that look like music videos/songs.
+     */
+    suspend fun fetchYouTubeHistory(musicOnly: Boolean = true): List<Song> {
+        val response = fetchInternalApi("FEhistory")
+        if (response.isEmpty()) return emptyList()
+        
+        val songs = parseSongsFromInternalJson(response)
+        
+        return if (musicOnly) {
+            // Filter for items that likely contain music
+            // (heuristic: have "topic", "VEVO", "Music", or are already parsed as songs with duration)
+            songs.filter { song ->
+                song.artist.contains("Topic", ignoreCase = true) ||
+                song.artist.contains("VEVO", ignoreCase = true) ||
+                song.artist.contains("Music", ignoreCase = true) ||
+                song.title.contains("Music Video", ignoreCase = true) ||
+                song.title.contains("Official Video", ignoreCase = true) ||
+                song.duration > 0
+            }
+        } else {
+            songs
+        }
     }
     
     private fun parsePlaylistsFromInternalJson(json: String): List<PlaylistDisplayItem> {
