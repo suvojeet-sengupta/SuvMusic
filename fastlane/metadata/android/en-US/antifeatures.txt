@@ -1,0 +1,2 @@
+Non-Free Network Services: This app interacts with YouTube (via NewPipe Extractor), KuGou, and LrcLib to provide music streaming, metadata, and lyrics. These are third-party services not under the control of the app developer.
+Tracking: This app includes ACRA (Application Crash Reports for Android) for automated, opt-in crash reporting to help developers improve app stability.
