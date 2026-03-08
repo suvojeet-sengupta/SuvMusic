@@ -914,7 +914,39 @@ class YouTubeRepository @Inject constructor(
             // Add Pagination for playlists
             val songs = playlist.songs.toMutableList()
             var currentJson = JSONObject(json)
+            
+            // Fix: Try multiple paths for initial continuation token as seen in Metrolist
             var continuationToken = extractContinuationToken(currentJson)
+            if (continuationToken == null) {
+                // Try specifically from musicPlaylistShelfRenderer.continuations
+                try {
+                    val root = JSONObject(json)
+                    val contents = root.optJSONObject("contents")
+                        ?.optJSONObject("twoColumnBrowseResultsRenderer")
+                        ?.optJSONArray("tabs")
+                        ?.optJSONObject(0)
+                        ?.optJSONObject("tabRenderer")
+                        ?.optJSONObject("content")
+                        ?.optJSONObject("sectionListRenderer")
+                        ?.optJSONArray("contents")
+                    
+                    if (contents != null) {
+                        for (i in 0 until contents.length()) {
+                            val shelf = contents.optJSONObject(i)?.optJSONObject("musicPlaylistShelfRenderer")
+                            if (shelf != null) {
+                                val continuations = shelf.optJSONArray("continuations")
+                                if (continuations != null) {
+                                    continuationToken = continuations.optJSONObject(0)
+                                        ?.optJSONObject("nextContinuationData")
+                                        ?.optString("continuation")
+                                    if (continuationToken != null) break
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) { }
+            }
+
             val seenContinuations = mutableSetOf<String>()
             var pageCount = 0
             while (continuationToken != null && pageCount < 100) { // Limit to 10000 songs
@@ -2275,6 +2307,22 @@ class YouTubeRepository @Inject constructor(
             val items = mutableListOf<JSONObject>()
             findAllObjects(root, "musicResponsiveListItemRenderer", items)
             findAllObjects(root, "musicTwoRowItemRenderer", items)
+            
+            // Also look into onResponseReceivedActions for continuations
+            val actions = root.optJSONArray("onResponseReceivedActions")
+            if (actions != null) {
+                for (i in 0 until actions.length()) {
+                    val action = actions.optJSONObject(i)
+                    val continuationItems = action?.optJSONObject("appendContinuationItemsAction")
+                        ?.optJSONArray("continuationItems")
+                    if (continuationItems != null) {
+                        for (j in 0 until continuationItems.length()) {
+                            val item = continuationItems.optJSONObject(j)
+                            findAllObjects(item, "musicResponsiveListItemRenderer", items)
+                        }
+                    }
+                }
+            }
 
             items.forEach { item ->
                 try {

@@ -241,8 +241,8 @@ class YouTubeJsonParser @Inject constructor() {
                 }
             }
 
-            // 2. Initial page structure (browse results)
-            val contentsArr = json.optJSONObject("contents")
+            // 2. Initial page structure (browse results - singleColumn)
+            val singleColumnContents = json.optJSONObject("contents")
                 ?.optJSONObject("singleColumnBrowseResultsRenderer")
                 ?.optJSONArray("tabs")
                 ?.optJSONObject(0)
@@ -250,7 +250,18 @@ class YouTubeJsonParser @Inject constructor() {
                 ?.optJSONObject("content")
                 ?.optJSONObject("sectionListRenderer")
                 ?.optJSONArray("contents")
-                ?: json.optJSONObject("contents")
+
+            // 3. Initial page structure (browse results - twoColumn)
+            val twoColumnContents = json.optJSONObject("contents")
+                ?.optJSONObject("twoColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+
+            val contentsArr = singleColumnContents ?: twoColumnContents ?: json.optJSONObject("contents")
                 ?.optJSONObject("sectionListRenderer")
                 ?.optJSONArray("contents")
 
@@ -261,6 +272,8 @@ class YouTubeJsonParser @Inject constructor() {
                     // Target Playlist or Shelf renderers first
                     val targetShelf = item?.optJSONObject("musicPlaylistShelfRenderer")
                         ?: item?.optJSONObject("musicShelfRenderer")
+                        ?: item?.optJSONObject("musicEditablePlaylistDetailHeaderRenderer")
+                            ?.optJSONObject("header")?.optJSONObject("musicResponsiveHeaderRenderer")
 
                     val continuations = targetShelf?.optJSONArray("continuations")
                     if (continuations != null) {
@@ -272,9 +285,10 @@ class YouTubeJsonParser @Inject constructor() {
                 }
             }
 
-            // 3. Fallback for sectionList continuation
-            val sectionListContinuation = json.optJSONObject("contents")
-                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+            // 4. Fallback for sectionList continuation
+            val sectionListContinuation = (json.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer") ?: json.optJSONObject("contents")
+                ?.optJSONObject("twoColumnBrowseResultsRenderer"))
                 ?.optJSONArray("tabs")
                 ?.optJSONObject(0)
                 ?.optJSONObject("tabRenderer")
@@ -292,7 +306,47 @@ class YouTubeJsonParser @Inject constructor() {
                 if (!token.isNullOrEmpty()) return token
             }
 
-            // 4. Recursive search as final resort
+            // 5. Continuation Response Actions (Used in subsequent pages)
+            val actions = json.optJSONArray("onResponseReceivedActions")
+            if (actions != null) {
+                for (i in 0 until actions.length()) {
+                    val action = actions.optJSONObject(i)
+                    
+                    // Case A: appendContinuationItemsAction
+                    val appendContinuationItemsAction = action?.optJSONObject("appendContinuationItemsAction")
+                    val continuationItems = appendContinuationItemsAction?.optJSONArray("continuationItems")
+                    if (continuationItems != null) {
+                        for (j in 0 until continuationItems.length()) {
+                            val item = continuationItems.optJSONObject(j)
+                            if (item.has("continuationItemRenderer")) {
+                                val token = item.optJSONObject("continuationItemRenderer")
+                                    ?.optJSONObject("continuationEndpoint")
+                                    ?.optJSONObject("continuationCommand")
+                                    ?.optString("token")
+                                if (!token.isNullOrEmpty()) return token
+                            }
+                        }
+                    }
+
+                    // Case B: reloadContinuationItemsCommand
+                    val reloadContinuationItemsCommand = action?.optJSONObject("reloadContinuationItemsCommand")
+                    val reloadItems = reloadContinuationItemsCommand?.optJSONArray("continuationItems")
+                    if (reloadItems != null) {
+                        for (j in 0 until reloadItems.length()) {
+                            val item = reloadItems.optJSONObject(j)
+                            if (item.has("continuationItemRenderer")) {
+                                val token = item.optJSONObject("continuationItemRenderer")
+                                    ?.optJSONObject("continuationEndpoint")
+                                    ?.optJSONObject("continuationCommand")
+                                    ?.optString("token")
+                                if (!token.isNullOrEmpty()) return token
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 6. Recursive search as final resort
             return findContinuationTokenRecursive(json)
 
         } catch (e: Exception) {
