@@ -196,9 +196,25 @@ class SessionManager @Inject constructor(
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
-        }
+        private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
+    }
 
-        // --- Home Screen Preferences ---
+    // --- Update Channel ---
+
+    suspend fun getUpdateChannel(): String =
+        context.dataStore.data.first()[UPDATE_CHANNEL_KEY] ?: "Stable"
+
+    val updateChannelFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[UPDATE_CHANNEL_KEY] ?: "Stable"
+    }
+
+    suspend fun setUpdateChannel(channel: String) {
+        context.dataStore.edit { preferences ->
+            preferences[UPDATE_CHANNEL_KEY] = channel
+        }
+    }
+
+    // --- Home Screen Preferences ---
     suspend fun getForYouBannerDismissedAt(): Long =
         context.dataStore.data.first()[FOR_YOU_BANNER_DISMISSED_AT_KEY] ?: 0L
 
