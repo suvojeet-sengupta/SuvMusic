@@ -14,6 +14,9 @@ object ChangelogData {
             date = "March 8, 2026",
             isLatest = true,
             changes = listOf(
+                "Spotify Pro Import: Enhanced Spotify integration supporting albums, artists, and individual tracks with real-time fetching progress and mobile share link support.",
+                "YouTube Playlist Pagination: Resolved continuation token issues and pagination limits for large playlists, ensuring all songs are loaded correctly.",
+                "F-Droid Readiness: Added Fastlane metadata and anti-feature disclosures for F-Droid submission.",
                 "Next-Gen Personalization: High-performance Recommendation Engine with JNI-based native scoring, genre affinity vectors, and deep YouTube Music integration.",
                 "Persistent Logging & Diagnostics: Integrated a robust file-based logging system that captures startup events and provides a 'Share App Logs' feature for easier troubleshooting.",
                 "Performance Optimization: Implemented explicit keys in all major LazyColumn and LazyGrid lists, significantly reducing UI re-composition and ensuring buttery-smooth scrolling.",
