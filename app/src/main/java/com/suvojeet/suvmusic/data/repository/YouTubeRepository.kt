@@ -915,8 +915,12 @@ class YouTubeRepository @Inject constructor(
             val songs = playlist.songs.toMutableList()
             var currentJson = JSONObject(json)
             var continuationToken = extractContinuationToken(currentJson)
+            val seenContinuations = mutableSetOf<String>()
             var pageCount = 0
             while (continuationToken != null && pageCount < 100) { // Limit to 10000 songs
+                if (continuationToken in seenContinuations) break
+                seenContinuations.add(continuationToken)
+                
                 val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parseSongsFromInternalJson(continuationResponse)
@@ -1043,6 +1047,26 @@ class YouTubeRepository @Inject constructor(
             
             val json = fetchInternalApi(effectiveBrowseId)
             val album = parseAlbumFromInternalJson(json, browseId)
+            
+            // Add Pagination for albums
+            val songs = album.songs.toMutableList()
+            var currentJson = JSONObject(json)
+            var continuationToken = extractContinuationToken(currentJson)
+            var pageCount = 0
+            while (continuationToken != null && pageCount < 20) { // Albums usually aren't huge, but some boxsets are
+                val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
+                if (continuationResponse.isEmpty()) break
+                val newSongs = parseSongsFromInternalJson(continuationResponse)
+                if (newSongs.isEmpty()) break
+                songs.addAll(newSongs)
+                currentJson = JSONObject(continuationResponse)
+                continuationToken = extractContinuationToken(currentJson)
+                pageCount++
+            }
+
+            if (songs.isNotEmpty()) {
+                return@withContext album.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
+            }
             
             // If parsing returned empty songs and we used VL prefix, album might work differently
             // Return the album regardless - UI will show empty state if needed
@@ -2267,8 +2291,9 @@ class YouTubeRepository @Inject constructor(
                         val title = extractTitle(item)
                         val artist = extractArtist(item)
                         val thumbnailUrl = extractThumbnail(item)
-                        val setVideoId = item.optJSONObject("playlistItemData")?.optString("videoId")
-                        
+                        val setVideoId = item.optJSONObject("playlistItemData")?.optString("playlistSetVideoId")
+                            ?: item.optJSONObject("playlistItemData")?.optString("videoId")
+
                         Song.fromYouTube(
                             videoId = videoId,
                             title = title,
@@ -2278,8 +2303,7 @@ class YouTubeRepository @Inject constructor(
                             thumbnailUrl = thumbnailUrl,
                             setVideoId = setVideoId
                         )?.let { songs.add(it) }
-                    }
-                } catch (e: Exception) { }
+                    }                } catch (e: Exception) { }
             }
         } catch (e: Exception) { }
         return songs.distinctBy { it.setVideoId ?: it.id }
