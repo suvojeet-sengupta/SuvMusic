@@ -97,6 +97,9 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionManager: SessionManager
     
     @Inject
+    lateinit var youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository
+    
+    @Inject
     lateinit var downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
     
     @Inject
@@ -190,6 +193,7 @@ class MainActivity : ComponentActivity() {
                     volumeKeyEvents = _volumeKeyEvents,
                     downloadRepository = downloadRepository,
                     sessionManager = sessionManager, // Pass the injected instance
+                    youTubeRepository = youTubeRepository,
                     onPlaybackStateChanged = { hasSong -> 
                         isSongPlaying = hasSong
                         // Update PiP params whenever playback state changes
@@ -317,6 +321,7 @@ fun SuvMusicApp(
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     sessionManager: SessionManager, // Injected instance passed from MainActivity
+    youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository,
     onPlaybackStateChanged: (Boolean) -> Unit,
     onVolumeSliderEnabledChanged: (Boolean) -> Unit = {}
 ) {
@@ -733,6 +738,7 @@ fun SuvMusicApp(
                             playbackInfo = playbackInfo,
                             playerState = playerState,
                             sessionManager = sessionManager,
+                            youTubeRepository = youTubeRepository,
                             onPlaySong = { songs, index ->
                                 if (songs.isNotEmpty() && index in songs.indices) {
                                     playerViewModel.playSong(songs[index], songs, index)
