@@ -80,6 +80,12 @@ class YouTubeJsonParser @Inject constructor() {
     }
 
     fun extractArtist(item: JSONObject): String {
+        // Try videoRenderer owner fields (Main YouTube)
+        val owner = getRunText(item.optJSONObject("ownerText"))
+            ?: getRunText(item.optJSONObject("longBylineText"))
+            ?: getRunText(item.optJSONObject("shortBylineText"))
+        if (owner != null) return owner
+
         val flexColumns = item.optJSONArray("flexColumns")
         val subtitleFormatted = flexColumns?.optJSONObject(1)
             ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
@@ -136,6 +142,13 @@ class YouTubeJsonParser @Inject constructor() {
     }
 
     fun extractDuration(item: JSONObject): Long {
+        // Try videoRenderer lengthText (Main YouTube)
+        val lengthText = item.optJSONObject("lengthText")?.optString("simpleText")
+        if (lengthText != null) {
+            val duration = parseDurationText(lengthText)
+            if (duration > 0) return duration
+        }
+
         // Try fixedColumns (most common for list items)
         val fixedColumns = item.optJSONArray("fixedColumns")
         if (fixedColumns != null) {

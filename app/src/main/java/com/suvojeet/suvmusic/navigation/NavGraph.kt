@@ -53,6 +53,7 @@ fun NavGraph(
     playbackInfo: PlayerState,
     playerState: PlayerState,
     sessionManager: SessionManager,
+    youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository,
     onPlaySong: (List<Song>, Int) -> Unit,
     onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
@@ -527,8 +528,10 @@ fun NavGraph(
                     // Mark onboarding as completed
                     scope.launch {
                         sessionManager.setOnboardingCompleted(true)
+                        // Fetch and sync history from YouTube to provide better recommendations immediately
+                        youTubeRepository.fetchAndSyncHistory()
                     }
-                    
+
                     // Navigate to Home and clear back stack
                     navController.navigate(Destination.Home.route) {
                         popUpTo(0) { inclusive = true }
