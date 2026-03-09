@@ -714,12 +714,22 @@ private fun MiniPlayerPreview(alpha: Float, style: com.suvojeet.suvmusic.data.mo
 
         // Mini Player Mockup
         val isPill = style == com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL
-        val shape = if (isPill) RoundedCornerShape(32.dp) else RoundedCornerShape(14.dp)
-        val horizontalPadding = if (isPill) 24.dp else 12.dp
+        val isYT = style == com.suvojeet.suvmusic.data.model.MiniPlayerStyle.YT_MUSIC
+        
+        val shape = when {
+            isPill -> RoundedCornerShape(32.dp)
+            isYT -> RoundedCornerShape(0.dp)
+            else -> RoundedCornerShape(14.dp)
+        }
+        val horizontalPadding = when {
+            isPill -> 24.dp
+            isYT -> 12.dp
+            else -> 12.dp
+        }
         
         Surface(
             modifier = Modifier
-                .fillMaxWidth(if (isPill) 0.85f else 0.95f)
+                .fillMaxWidth(if (isPill) 0.85f else if (isYT) 1f else 0.95f)
                 .height(if (isPill) 56.dp else 64.dp)
                 .clip(shape),
             color = Color.Transparent,
@@ -728,29 +738,67 @@ private fun MiniPlayerPreview(alpha: Float, style: com.suvojeet.suvmusic.data.mo
             val effectiveAlpha = alpha
             Box(
                 modifier = Modifier
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = effectiveAlpha),
-                                MaterialTheme.colorScheme.secondary.copy(alpha = effectiveAlpha)
+                    .then(
+                        if (isYT) {
+                            Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = effectiveAlpha))
+                        } else {
+                            Modifier.background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = effectiveAlpha),
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = effectiveAlpha)
+                                    )
+                                )
                             )
-                        )
+                        }
                     )
                     .padding(horizontal = horizontalPadding),
                 contentAlignment = Alignment.CenterStart
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(if (isPill) 38.dp else 42.dp)
-                            .clip(if (isPill) CircleShape else RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Box(modifier = Modifier.width(100.dp).height(8.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), RoundedCornerShape(4.dp)))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(modifier = Modifier.width(60.dp).height(6.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(3.dp)))
+                Column {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(if (isPill) 38.dp else if (isYT) 48.dp else 42.dp)
+                                .clip(if (isPill) CircleShape else RoundedCornerShape(if (isYT) 4.dp else 8.dp))
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Box(modifier = Modifier.width(100.dp).height(8.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), RoundedCornerShape(4.dp)))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Box(modifier = Modifier.width(60.dp).height(6.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(3.dp)))
+                        }
+                        
+                        // Mini controls icons mockup
+                        repeat(2) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = 8.dp)
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                            )
+                        }
+                    }
+                    
+                    if (isYT || !isPill) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.dp)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.4f)
+                                    .height(2.dp)
+                                    .background(MaterialTheme.colorScheme.secondary)
+                            )
+                        }
                     }
                 }
             }
