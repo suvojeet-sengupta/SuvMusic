@@ -536,10 +536,10 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun getNavBarAlpha(): Float = 
-        context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 0.9f
+        context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 1.0f
 
     val navBarAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        preferences[NAV_BAR_ALPHA_KEY] ?: 0.9f
+        preferences[NAV_BAR_ALPHA_KEY] ?: 1.0f
     }
 
     suspend fun setNavBarAlpha(alpha: Float) {
@@ -551,14 +551,14 @@ class SessionManager @Inject constructor(
     suspend fun getMiniPlayerStyle(): MiniPlayerStyle {
         val styleName = context.dataStore.data.first()[MINI_PLAYER_STYLE_KEY]
         return styleName?.let {
-            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.FLOATING_PILL }
-        } ?: MiniPlayerStyle.FLOATING_PILL
+            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.YT_MUSIC }
+        } ?: MiniPlayerStyle.YT_MUSIC
     }
     
     val miniPlayerStyleFlow: Flow<MiniPlayerStyle> = context.dataStore.data.map { preferences ->
         preferences[MINI_PLAYER_STYLE_KEY]?.let {
-            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.FLOATING_PILL }
-        } ?: MiniPlayerStyle.FLOATING_PILL
+            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.YT_MUSIC }
+        } ?: MiniPlayerStyle.YT_MUSIC
     }
     
     suspend fun setMiniPlayerStyle(style: MiniPlayerStyle) {
