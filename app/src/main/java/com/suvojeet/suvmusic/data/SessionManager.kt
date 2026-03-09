@@ -198,7 +198,6 @@ class SessionManager @Inject constructor(
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
-        private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
     }
 
     // --- Home Screen Preferences ---
