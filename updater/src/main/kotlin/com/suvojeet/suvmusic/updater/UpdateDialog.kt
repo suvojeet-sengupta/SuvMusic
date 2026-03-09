@@ -17,7 +17,13 @@ fun UpdateDialog(
     AlertDialog(
         onDismissRequest = { if (!updateInfo.forceUpdate) onDismiss() },
         title = { Text(text = "New Update Available: ${updateInfo.versionName}") },
-        text = { Text(text = updateInfo.changelog) },
+        text = { 
+            Text(
+                text = updateInfo.changelog.ifBlank { 
+                    "A new version of SuvMusic is available. Check the Updater screen for detailed release notes." 
+                }
+            ) 
+        },
         confirmButton = {
             Button(onClick = {
                 uriHandler.openUri(updateInfo.downloadUrl)
