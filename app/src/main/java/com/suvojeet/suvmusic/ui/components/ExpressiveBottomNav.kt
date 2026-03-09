@@ -77,8 +77,9 @@ fun ExpressiveBottomNav(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    alpha: Float = 0.85f,
-    iosLiquidGlassEnabled: Boolean = false
+    alpha: Float = 1.0f,
+    iosLiquidGlassEnabled: Boolean = false,
+    backgroundColor: Color? = null
 ) {
     val navItems = listOf(
         BottomNavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
@@ -100,7 +101,8 @@ fun ExpressiveBottomNav(
             currentDestination = currentDestination,
             onDestinationChange = onDestinationChange,
             modifier = modifier,
-            alpha = alpha
+            alpha = alpha,
+            backgroundColor = backgroundColor
         )
     }
 }
@@ -353,14 +355,19 @@ private fun StandardNavBar(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    alpha: Float = 0.85f
+    alpha: Float = 1.0f,
+    backgroundColor: Color? = null
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = alpha)
+    val containerColor = if (alpha >= 1.0f && backgroundColor != null) {
+        backgroundColor
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = alpha)
+    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(backgroundColor)
+            .background(containerColor)
             .navigationBarsPadding()
     ) {
         Row(
