@@ -9,8 +9,8 @@ import okhttp3.Request
 
 class UpdateChecker(private val client: OkHttpClient) {
     private val json = Json { ignoreUnknownKeys = true }
-    private val url = "https://cdn.jsdelivr.net/gh/suvojeet-sengupta/SuvMusic@main/updater/update.json"
-    private val changelogUrl = "https://cdn.jsdelivr.net/gh/suvojeet-sengupta/SuvMusic@main/updater/changelog.json"
+    private val url = "https://raw.githubusercontent.com/suvojeet-sengupta/SuvMusic/main/updater/update.json"
+    private val changelogUrl = "https://raw.githubusercontent.com/suvojeet-sengupta/SuvMusic/main/updater/changelog.json"
 
     suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
