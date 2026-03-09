@@ -105,7 +105,8 @@ fun SettingsScreen(
     onSponsorBlockClick: () -> Unit = {},
     onCreditsClick: () -> Unit = {},
     onLastFmClick: () -> Unit = {},
-    onDiscordClick: () -> Unit = {}
+    onDiscordClick: () -> Unit = {},
+    onUpdaterClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -572,9 +573,7 @@ fun SettingsScreen(
                             icon = Icons.Default.SystemUpdate,
                             title = "Check for Updates",
                             subtitle = "Check for app updates and changelogs",
-                            onClick = { 
-                                updateViewModel.checkForUpdate(com.suvojeet.suvmusic.BuildConfig.VERSION_CODE)
-                            }
+                            onClick = onUpdaterClick
                         )
                     }
                     Spacer(modifier = Modifier.height(32.dp))
