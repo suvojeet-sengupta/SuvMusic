@@ -98,6 +98,7 @@ fun ExpandablePlayerSheet(
     bottomPadding: Float,
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
+    onArtistClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     userAlpha: Float = 0f,
     swipeDownToDismissEnabled: Boolean = true,
@@ -172,6 +173,7 @@ fun ExpandablePlayerSheet(
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onClose = onClose,
+                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 style = style,
                 onTap = {
@@ -324,7 +326,6 @@ fun ExpandablePlayerSheet(
  * The collapsed mini player row — a compact horizontal bar showing
  * artwork, song title/artist, and play/next controls.
  */
-@Composable
 private fun CollapsedMiniPlayer(
     song: com.suvojeet.suvmusic.core.model.Song,
     playerState: PlayerState,
@@ -334,6 +335,7 @@ private fun CollapsedMiniPlayer(
     onNext: () -> Unit,
     onClose: () -> Unit,
     onTap: () -> Unit,
+    onArtistClick: (String) -> Unit,
     userAlpha: Float = 0f,
     style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
     modifier: Modifier = Modifier
@@ -349,6 +351,7 @@ private fun CollapsedMiniPlayer(
                 onNext = onNext,
                 onClose = onClose,
                 onTap = onTap,
+                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 modifier = modifier
             )
@@ -363,6 +366,7 @@ private fun CollapsedMiniPlayer(
                 onNext = onNext,
                 onClose = onClose,
                 onTap = onTap,
+                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 modifier = modifier
             )
@@ -377,6 +381,7 @@ private fun CollapsedMiniPlayer(
                 onNext = onNext,
                 onClose = onClose,
                 onTap = onTap,
+                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 modifier = modifier
             )
