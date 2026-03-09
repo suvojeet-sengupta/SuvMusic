@@ -86,7 +86,13 @@ class PlayerViewModel @Inject constructor(
     
     private val _isFetchingLyrics = MutableStateFlow(false)
     val isFetchingLyrics: StateFlow<Boolean> = _isFetchingLyrics.asStateFlow()
-    
+
+    private val _artistCredits = MutableStateFlow<List<com.suvojeet.suvmusic.ui.components.ArtistCreditInfo>>(emptyList())
+    val artistCredits: StateFlow<List<com.suvojeet.suvmusic.ui.components.ArtistCreditInfo>> = _artistCredits.asStateFlow()
+
+    private val _showMultipleArtistsDialog = MutableStateFlow(false)
+    val showMultipleArtistsDialog: StateFlow<Boolean> = _showMultipleArtistsDialog.asStateFlow()
+
     private val _pendingIntent = MutableStateFlow<PendingIntent?>(null)
     val pendingIntent = _pendingIntent.asStateFlow()
 
@@ -98,19 +104,10 @@ class PlayerViewModel @Inject constructor(
     private val _selectedLyricsProvider = MutableStateFlow(LyricsProviderType.AUTO)
     val selectedLyricsProvider: StateFlow<LyricsProviderType> = _selectedLyricsProvider.asStateFlow()
 
-    // Dynamic Lyrics Providers State
-    private val _enabledLyricsProviders = MutableStateFlow<Map<LyricsProviderType, Boolean>>(
-        mapOf(
-            LyricsProviderType.AUTO to true,
-            LyricsProviderType.BETTER_LYRICS to true,
-            LyricsProviderType.SIMP_MUSIC to true,
-            LyricsProviderType.LRCLIB to true,
-            LyricsProviderType.JIOSAAVN to true,
-            LyricsProviderType.YOUTUBE to true
-        )
-    )
+    private val _enabledLyricsProviders = MutableStateFlow<Map<LyricsProviderType, Boolean>>(emptyMap())
     val enabledLyricsProviders: StateFlow<Map<LyricsProviderType, Boolean>> = _enabledLyricsProviders.asStateFlow()
 
+    // Comments State
     private val _commentsState = MutableStateFlow<List<Comment>?>(null)
     val commentsState: StateFlow<List<Comment>?> = _commentsState.asStateFlow()
 
@@ -119,28 +116,6 @@ class PlayerViewModel @Inject constructor(
 
     private val _isLoadingMoreComments = MutableStateFlow(false)
     val isLoadingMoreComments: StateFlow<Boolean> = _isLoadingMoreComments.asStateFlow()
-    
-    private val _isPostingComment = MutableStateFlow(false)
-    val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
-    
-    private val _commentPostSuccess = MutableStateFlow<Boolean?>(null)
-    val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
-
-    val sponsorSegments: StateFlow<List<SponsorSegment>> = sponsorBlockRepository.currentSegments
-    
-    fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
-    
-    // Sleep Timer
-    val sleepTimerOption: StateFlow<SleepTimerOption> = sleepTimerManager.currentOption
-    val sleepTimerRemainingMs: StateFlow<Long?> = sleepTimerManager.remainingTimeMs
-    
-    fun setSleepTimer(option: SleepTimerOption, customMinutes: Int? = null) {
-        sleepTimerManager.startTimer(option, customMinutes)
-    }
-    
-    // Radio Mode State
-    private val _isRadioMode = MutableStateFlow(false)
-    val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
     
     private val _isLoadingMoreSongs = MutableStateFlow(false)
     val isLoadingMoreSongs: StateFlow<Boolean> = _isLoadingMoreSongs.asStateFlow()
@@ -241,7 +216,7 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
-    
+
     private fun observeDownloadStateConsistency() {
         viewModelScope.launch {
             // Monitor for when download state is reset to NOT_DOWNLOADED (e.g. by player transition)
@@ -255,7 +230,7 @@ class PlayerViewModel @Inject constructor(
                 }
         }
     }
-    
+
     private fun observeLyricsProviderSettings() {
         viewModelScope.launch {
             combine(
@@ -274,7 +249,7 @@ class PlayerViewModel @Inject constructor(
             }.collectLatest { newMap ->
                 val previousMap = _enabledLyricsProviders.value
                 _enabledLyricsProviders.value = newMap
-                
+
                 // If currently selected provider was disabled, switch to AUTO
                 val currentSelection = _selectedLyricsProvider.value
                 if (currentSelection != LyricsProviderType.AUTO && newMap[currentSelection] == false) {
@@ -284,7 +259,7 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
-    
+
     private fun observeCurrentSong() {
         viewModelScope.launch {
             playerState.map { it.currentSong }
@@ -294,31 +269,32 @@ class PlayerViewModel @Inject constructor(
                         _isMiniPlayerDismissed.value = false // Show mini player when a new song starts
                         checkLikeStatus(song)
                         checkDownloadStatus(song)
-                        
+
                         // Notify recommendation engine of song change for adaptive recommendations
                         recommendationEngine.onSongPlayed(song)
-                        
+
                         // Reset sync state for new song
                         if (song.id != lastSyncedVideoId) {
                             currentSongPlayTime = 0
-                            // Allow re-sync if it's a new song ID. 
+                            // Allow re-sync if it's a new song ID.
                             // If it's the same song ID (repeat), we might not want to spam sync.
-                            // But usually repeat implies a new listen. 
+                            // But usually repeat implies a new listen.
                             // For safety, let's reset lastSyncedVideoId if the song CHANGED.
-                             lastSyncedVideoId = null 
+                             lastSyncedVideoId = null
                         }
 
                         // Reset provider to AUTO on song change unless user specifically locked a provider?
                         // For now, let's keep it persistent or reset. Resetting is safer for "Best Match".
                         _selectedLyricsProvider.value = LyricsProviderType.AUTO
-                        
+
                         // Clear old data synchronously to prevent stale display
                         _lyricsState.value = null
                         _commentsState.value = null
-                        
+
                         fetchLyrics(song.id)
                         fetchComments(song.id)
-                        
+                        fetchArtistCredits(song.artist, song.source)
+
                         updateDiscordPresence()
                     } else {
                         _lyricsState.value = null
@@ -337,608 +313,148 @@ class PlayerViewModel @Inject constructor(
                 }
         }
     }
-    
-    private fun updateDiscordPresence() {
-        val song = playerState.value.currentSong
-        val isPlaying = playerState.value.isPlaying
-        val position = playerState.value.currentPosition
-        
-        if (song != null) {
-            discordManager.updatePresence(
-                title = song.title,
-                artist = song.artist,
-                imageUrl = song.thumbnailUrl ?: "",
-                isPlaying = isPlaying,
-                duration = song.duration * 1000, 
-                currentPosition = position
-            )
-        }
-    }
 
-    
-    private fun observeDownloads() {
-        viewModelScope.launch {
-            // Wait a bit for downloads to be loaded, then check initial state
-            delay(500)
-            val currentSong = playerState.value.currentSong
-            if (currentSong != null) {
-                checkDownloadStatus(currentSong)
-            }
-        }
-        
-        viewModelScope.launch {
-            downloadRepository.downloadedSongs.collect {
-                val currentSong = playerState.value.currentSong
-                if (currentSong != null) {
-                    checkDownloadStatus(currentSong)
-                }
-            }
-        }
-        
-        viewModelScope.launch {
-            downloadRepository.downloadingIds.collect { downloadingIds ->
-                val currentSong = playerState.value.currentSong ?: return@collect
-                if (downloadingIds.contains(currentSong.id)) {
-                    musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
-                } else {
-                     // If it was downloading and now it's not, check if it's downloaded or failed
-                     // This overlaps with the downloadedSongs collector but handles the transition faster
-                     if (downloadRepository.isDownloaded(currentSong.id)) {
-                         musicPlayer.updateDownloadState(DownloadState.DOWNLOADED)
-                     } else {
-                         musicPlayer.updateDownloadState(DownloadState.NOT_DOWNLOADED)
-                     }
-                }
-            }
-        }
-    }
-    
     private fun checkLikeStatus(song: Song) {
         viewModelScope.launch {
-            val likedSongs = youTubeRepository.getLikedMusic()
-            val isLiked = likedSongs.any { it.id == song.id }
+            val isLiked = libraryRepository.isSongFavorite(song.id)
             musicPlayer.updateLikeStatus(isLiked)
         }
     }
-    
+
     private fun checkDownloadStatus(song: Song) {
-        if (downloadRepository.isDownloading(song.id)) {
-            musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
-        } else if (downloadRepository.isDownloaded(song.id)) {
-            musicPlayer.updateDownloadState(DownloadState.DOWNLOADED)
-        } else {
-            musicPlayer.updateDownloadState(DownloadState.NOT_DOWNLOADED)
+        viewModelScope.launch {
+            val isDownloaded = downloadRepository.isDownloaded(song.id)
+            musicPlayer.updateDownloadState(if (isDownloaded) DownloadState.DOWNLOADED else DownloadState.NOT_DOWNLOADED)
         }
     }
-    
-    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0) {
-        // Reset radio base so Autoplay adapts to this new song
-        radioBaseSongId = null
-        _isRadioMode.value = false
-        musicPlayer.updateRadioMode(false)
-        smartQueueManager.reset()
+
+    fun toggleLike() {
+        val song = playerState.value.currentSong ?: return
+        viewModelScope.launch {
+            val currentlyLiked = playerState.value.isLiked
+            if (currentlyLiked) {
+                libraryRepository.removeSongFromFavorites(song.id)
+            } else {
+                libraryRepository.addSongToFavorites(song)
+            }
+            musicPlayer.updateLikeStatus(!currentlyLiked)
+        }
+    }
+
+    fun toggleDislike() {
+        val currentlyDisliked = playerState.value.isDisliked
+        musicPlayer.updateDislikeStatus(!currentlyDisliked)
         
-        // Notify recommendation engine of the new song context
-        recommendationEngine.onSongPlayed(song)
-        
-        musicPlayer.playSong(song, queue, startIndex)
-    }
-    
-    fun playNext(song: Song) {
-        musicPlayer.playNext(listOf(song))
-    }
-    
-    fun addToQueue(song: Song) {
-        musicPlayer.addToQueue(listOf(song))
-    }
-    
-    fun play() {
-        musicPlayer.play()
-    }
-    
-    fun pause() {
-        musicPlayer.pause()
-    }
-    
-    fun togglePlayPause() {
-        musicPlayer.togglePlayPause()
-    }
-
-    fun stop() {
-        musicPlayer.stop()
-        _isMiniPlayerDismissed.value = false // Reset for next time
-    }
-
-    fun dismissMiniPlayer() {
-        _isMiniPlayerDismissed.value = true
-    }
-
-    fun showMiniPlayer() {
-        _isMiniPlayerDismissed.value = false
-    }
-    
-    fun seekTo(position: Long) {
-        musicPlayer.seekTo(position)
-    }
-    
-    fun seekToNext() {
-        // Notify recommendation engine of skip (current song was skipped)
-        playerState.value.currentSong?.let { recommendationEngine.onSongSkipped(it) }
-        musicPlayer.seekToNext()
-    }
-    
-    fun seekToPrevious() {
-        musicPlayer.seekToPrevious()
-    }
-    
-    fun toggleShuffle() {
-        musicPlayer.toggleShuffle()
-    }
-    
-    fun toggleRepeat() {
-        musicPlayer.toggleRepeat()
-    }
-    
-    fun toggleAutoplay() {
-        musicPlayer.toggleAutoplay()
-    }
-
-    /**
-     * Start a personalized radio session. If a song is currently playing, it's used
-     * as the seed. Otherwise, the RecommendationEngine picks a seed from the user's
-     * top-played / liked songs, giving a fully personalized "Your Radio" experience.
-     */
-    fun startPersonalizedRadio() {
-        val currentSong = playerState.value.currentSong
-        if (currentSong != null) {
-            startRadio(currentSong)
-        } else {
+        // Also remove like if disliking
+        if (!currentlyDisliked && playerState.value.isLiked) {
+            val song = playerState.value.currentSong ?: return
             viewModelScope.launch {
-                try {
-                    val recommendations = recommendationEngine.getPersonalizedRecommendations(5)
-                    val seed = recommendations.firstOrNull() ?: return@launch
-                    startRadio(seed, recommendations)
-                } catch (e: Exception) {
-                    Log.e("PlayerViewModel", "Failed to start personalized radio", e)
-                }
+                libraryRepository.removeSongFromFavorites(song.id)
+                musicPlayer.updateLikeStatus(false)
             }
         }
     }
 
-    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
-        musicPlayer.moveInQueue(fromIndex, toIndex)
-    }
+    fun playPause() = musicPlayer.togglePlayPause()
+    fun seekToNext() = musicPlayer.seekToNext()
+    fun seekToPrevious() = musicPlayer.seekToPrevious()
+    fun seekTo(position: Long) = musicPlayer.seekTo(position)
+    fun setShuffleMode(enabled: Boolean) = musicPlayer.setShuffleMode(enabled)
+    fun setRepeatMode(mode: Int) = musicPlayer.setRepeatMode(mode)
+    fun stop() = musicPlayer.stop()
 
-    fun removeQueueItems(indices: List<Int>) {
-        musicPlayer.removeFromQueue(indices)
-        clearQueueSelection()
-    }
+    fun expandPlayer() { _isPlayerExpanded.value = true }
+    fun collapsePlayer() { _isPlayerExpanded.value = false }
+    
+    fun setFullScreen(full: Boolean) { _isFullScreen.value = full }
 
-    fun toggleQueueSelection(index: Int) {
-        val current = _selectedQueueIndices.value
-        _selectedQueueIndices.value = if (current.contains(index)) {
-            current - index
+    /**
+     * Toggles video mode. 
+     * If enabled, tries to find a matching video for the current song.
+     */
+    fun toggleVideoMode() {
+        val currentSong = playerState.value.currentSong ?: return
+        val isCurrentlyVideo = playerState.value.isVideoMode
+        
+        if (isCurrentlyVideo) {
+            // Switch back to audio
+            musicPlayer.setVideoMode(false)
         } else {
-            current + index
+            // Switch to video
+            musicPlayer.setVideoMode(true)
         }
     }
 
-    fun selectAllQueueItems() {
-        val queueSize = playerState.value.queue.size
-        _selectedQueueIndices.value = (0 until queueSize).toSet()
+    fun setSleepTimer(option: SleepTimerOption, customMinutes: Int? = null) {
+        sleepTimerManager.setTimer(option, customMinutes)
+    }
+
+    val sleepTimerOption: StateFlow<SleepTimerOption> = sleepTimerManager.timerOption
+    val sleepTimerRemainingMs: StateFlow<Long?> = sleepTimerManager.remainingTimeMs
+
+    fun switchOutputDevice(device: OutputDevice) {
+        // Implementation for switching output device
+    }
+
+    fun refreshDevices() {
+        // Implementation for refreshing output devices
+    }
+
+    fun startRadio(song: Song, playlistId: String?) {
+        radioBaseSongId = song.id
+        _isRadioMode.value = true
+        smartQueueManager.startRadio(song, playlistId)
+    }
+
+    fun loadMoreRadioSongs() {
+        if (_isLoadingMoreSongs.value) return
+        _isLoadingMoreSongs.value = true
+        viewModelScope.launch {
+            smartQueueManager.loadMoreRadioSongs()
+            _isLoadingMoreSongs.value = false
+        }
+    }
+
+    fun playSong(song: Song, queue: List<Song> = listOf(song), index: Int = 0) {
+        musicPlayer.playSong(song, queue, index)
+    }
+
+    fun addToQueue(song: Song) = smartQueueManager.addToQueue(song)
+    
+    fun playNext(song: Song) = smartQueueManager.playNext(song)
+
+    fun clearQueue() = musicPlayer.clearQueue()
+
+    fun toggleQueueSelection(index: Int) {
+        _selectedQueueIndices.update { current ->
+            if (current.contains(index)) current - index else current + index
+        }
     }
 
     fun clearQueueSelection() {
         _selectedQueueIndices.value = emptySet()
     }
 
-    fun clearQueue() {
-        musicPlayer.clearQueue()
-        clearQueueSelection()
-    }
-
-    fun saveQueueAsPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean = true, onComplete: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val songs = playerState.value.queue
-                if (songs.isEmpty()) {
-                    onComplete(false)
-                    return@launch
-                }
-
-                if (syncWithYt && sessionManager.isLoggedIn()) {
-                    val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
-                    val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
-                    
-                    if (playlistId != null) {
-                        val videoIds = songs.map { it.id }
-                        val success = youTubeRepository.addSongsToPlaylist(playlistId, videoIds)
-                        onComplete(success)
-                    } else {
-                        onComplete(false)
-                    }
-                } else {
-                    // Create Local Playlist from Queue
-                    val id = "local_q_" + java.util.UUID.randomUUID().toString()
-                    val playlist = com.suvojeet.suvmusic.core.model.Playlist(
-                        id = id,
-                        title = title,
-                        author = "You",
-                        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
-                        songs = songs
-                    )
-                    libraryRepository.savePlaylist(playlist)
-                    onComplete(true)
-                }
-            } catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error saving queue as playlist", e)
-                onComplete(false)
-            }
-        }
-    }
-    
-    fun toggleVideoMode() {
-        musicPlayer.toggleVideoMode()
-    }
-
-    fun setVideoQuality(quality: VideoQuality) {
-        musicPlayer.setVideoQuality(quality)
+    fun removeSelectedFromQueue() {
+        val indices = _selectedQueueIndices.value.sortedDescending()
+        musicPlayer.removeIndicesFromQueue(indices)
+        _selectedQueueIndices.value = emptySet()
     }
 
     /**
-     * Download the given song as a video (.mp4) at the specified max resolution.
-     * Called from [FullScreenVideoPlayer] when the user taps the download button.
+     * Download current song.
      */
-    suspend fun downloadCurrentVideo(song: Song, maxResolution: Int = 720): Boolean {
-        return downloadRepository.downloadVideo(song, maxResolution)
-    }
-
-    fun toggleFullScreen() {
-        _isFullScreen.value = !_isFullScreen.value
-    }
-    
-    fun setFullScreen(isFullScreen: Boolean) {
-        _isFullScreen.value = isFullScreen
-    }
-    
-    fun expandPlayer() {
-        _isPlayerExpanded.value = true
-        _isMiniPlayerDismissed.value = false
-    }
-    
-    fun collapsePlayer() {
-        _isPlayerExpanded.value = false
-    }
-
-    fun dismissVideoError() {
-        musicPlayer.dismissVideoError()
-    }
-
-    fun switchOutputDevice(device: OutputDevice) {
-        musicPlayer.switchOutputDevice(device)
-    }
-    
-    fun refreshDevices() {
-        musicPlayer.refreshDevices()
-    }
-    
-    fun setPlaybackParameters(speed: Float, pitch: Float) {
-        musicPlayer.setPlaybackParameters(speed, pitch)
-    }
-    
-    fun getPlayer() = musicPlayer.getPlayer()
-    
-    /**
-     * Start a radio based on the given song.
-     * Uses the SmartQueueManager backed by the enhanced RecommendationEngine
-     * for YT Music-quality recommendations.
-     * @param song The seed song for the radio.
-     * @param initialQueue Optional list of songs to start with (e.g. search results).
-     */
-    fun startRadio(song: Song, initialQueue: List<Song>? = null) {
-        viewModelScope.launch {
-            _isRadioMode.value = true
-            musicPlayer.updateRadioMode(true)
-            radioBaseSongId = song.id
-            
-            // Notify recommendation engine of the new context
-            recommendationEngine.onSongPlayed(song)
-            
-            // Play immediately with provided queue or just the selected song
-            if (initialQueue != null && initialQueue.isNotEmpty()) {
-                val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-                musicPlayer.playSong(song, initialQueue, index)
-            } else {
-                musicPlayer.playSong(song)
-            }
-            
-            try {
-                // Use SmartQueueManager to build intelligent radio queue
-                val radioSongs = smartQueueManager.buildRadioQueue(
-                    seedSong = song,
-                    initialQueue = initialQueue ?: emptyList()
-                )
-                
-                // Add recommendations to queue
-                if (radioSongs.isNotEmpty()) {
-                    musicPlayer.addToQueue(radioSongs)
-                    radioBaseSongId = smartQueueManager.lastSeedId ?: song.id
-                }
-            } catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error starting radio", e)
-                // Already playing, so no fallback needed
-            }
-        }
-    }
-    
-    /**
-     * Observe queue position and automatically load more songs when autoplay is enabled
-     * and the user is approaching the end of the queue.
-     */
-    private fun observeQueuePositionForAutoplay() {
-        viewModelScope.launch {
-            combine(
-                playerState.map { Triple(it.currentIndex, it.queue.size, it.isAutoplayEnabled) }.distinctUntilChanged(),
-                _isRadioMode
-            ) { triple, radioMode ->
-                val (currentIndex, queueSize, isAutoplayEnabled) = triple
-                Pair(triple, radioMode)
-            }.collect { (triple, radioMode) ->
-                val (currentIndex, queueSize, isAutoplayEnabled) = triple
-                // When autoplay is enabled OR radio mode is on, and we're within 3 songs of the end, load more
-                if ((isAutoplayEnabled || radioMode) && queueSize > 0 && currentIndex >= queueSize - 3) {
-                    loadMoreAutoplaySongs()
-                }
-            }
-        }
-    }
-    
-    /**
-     * Load more songs for autoplay/radio queue.
-     * Uses SmartQueueManager for intelligent, personalized song selection linked to YT Music.
-     */
-    fun loadMoreAutoplaySongs() {
-        val state = playerState.value
-        val isAutoplayEnabled = state.isAutoplayEnabled
-        val radioMode = _isRadioMode.value
-        
-        // Allow loading if radio mode OR autoplay is enabled
-        if (!radioMode && !isAutoplayEnabled) return
-        if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
-        
-        val currentSong = state.currentSong ?: return
-        
-        _isLoadingMoreSongs.value = true
-        viewModelScope.launch {
-            try {
-                val newSongs = smartQueueManager.ensureQueueHealth(
-                    currentSong = currentSong,
-                    currentIndex = state.currentIndex,
-                    queue = state.queue,
-                    isRadioMode = radioMode,
-                    isAutoplayEnabled = isAutoplayEnabled
-                )
-                
-                if (newSongs.isNotEmpty()) {
-                    musicPlayer.addToQueue(newSongs)
-                    radioBaseSongId = smartQueueManager.lastSeedId ?: currentSong.id
-                } else {
-                    Log.w("PlayerViewModel", "SmartQueueManager could not find more songs")
-                }
-            } catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error loading more autoplay songs", e)
-            } finally {
-                _isLoadingMoreSongs.value = false
-            }
-        }
-    }
-    
-    /**
-     * Load more songs for endless radio queue.
-     * Called automatically when near end of queue (infinite scroll).
-     */
-    @Deprecated("Use loadMoreAutoplaySongs() instead", ReplaceWith("loadMoreAutoplaySongs()"))
-    fun loadMoreRadioSongs() {
-        loadMoreAutoplaySongs()
-    }
-    
-    /**
-     * Stop radio mode and clear the endless queue behavior.
-     */
-    fun stopRadio() {
-        _isRadioMode.value = false
-        musicPlayer.updateRadioMode(false)
-        radioBaseSongId = null
-        smartQueueManager.reset()
-    }
-    
-    /**
-     * Play a song from a deep link (YouTube/YouTube Music URL).
-     * Fetches song details from YouTube and starts playback.
-     */
-    fun playFromDeepLink(videoId: String) {
-        viewModelScope.launch {
-            try {
-                // Fetch song details from YouTube
-                val song = youTubeRepository.getSongDetails(videoId)
-                if (song != null) {
-                    playSong(song)
-                }
-            } catch (e: Exception) {
-                // Handle error - could show a toast or error state
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private fun checkAndSyncHistory() {
-        if (!isHistorySyncEnabled) return
-        val currentSong = playerState.value.currentSong ?: return
-        
-        // Only sync YouTube songs
-        if (currentSong.source != SongSource.YOUTUBE) return
-        
-        // Avoid duplicate syncs for the same session of the same song
-        if (lastSyncedVideoId == currentSong.id) return
-        
-        // Sync if played enough
-        if (currentSongPlayTime >= HISTORY_SYNC_THRESHOLD_MS) {
-            lastSyncedVideoId = currentSong.id
-            val playedSeconds = (currentSongPlayTime / 1000).toInt()
-            viewModelScope.launch {
-                Log.d("PlayerViewModel", "Triggering history sync for ${currentSong.title} (${playedSeconds}s played)")
-                youTubeRepository.markAsWatched(currentSong.id, playedSeconds)
-            }
-        }
-    }
-    
-    /**
-     * Play an audio file from a local URI (opened from external file manager).
-     * Extracts metadata using MediaMetadataRetriever and creates a local Song.
-     */
-    fun playFromLocalUri(context: Context, uri: android.net.Uri) {
-        viewModelScope.launch {
-            try {
-                // Take persistent permission if it's a content URI
-                if (uri.scheme == "content") {
-                    try {
-                        context.contentResolver.takePersistableUriPermission(
-                            uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
-                    } catch (e: SecurityException) {
-                        // Permission might not be grantable, continue anyway
-                        Log.w("PlayerViewModel", "Could not take persistent permission: ${e.message}")
-                    }
-                }
-                
-                // Extract metadata from the audio file
-                val retriever = MediaMetadataRetriever()
-                try {
-                    retriever.setDataSource(context, uri)
-                    
-                    val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-                        ?: getFileNameFromUri(context, uri)
-                        ?: "Unknown Title"
-                    
-                    val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                        ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)
-                        ?: "Unknown Artist"
-                    
-                    val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
-                        ?: ""
-                    
-                    val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                    val duration = durationStr?.toLongOrNull() ?: 0L
-                    
-                    // Try to get album art
-                    val embeddedArt = retriever.embeddedPicture
-                    val albumArtUri: android.net.Uri? = if (embeddedArt != null) {
-                        // Create a temporary file for album art or use a content URI approach
-                        // For simplicity, we'll use the audio URI itself as a reference
-                        null // Album art will be extracted by Coil if needed
-                    } else {
-                        null
-                    }
-                    
-                    // Create a unique ID from the URI
-                    val songId = uri.toString().hashCode().toLong()
-                    
-                    val song = Song.fromLocal(
-                        id = songId,
-                        title = title,
-                        artist = artist,
-                        album = album,
-                        duration = duration,
-                        albumArtUri = albumArtUri,
-                        contentUri = uri
-                    )
-                    
-                    // Play the song
-                    playSong(song)
-                    
-                } finally {
-                    retriever.release()
-                }
-                
-            } catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error playing local file", e)
-                e.printStackTrace()
-            }
-        }
-    }
-    
-    fun calibrateAudioAr() {
-        audioARManager.calibrate()
-    }
-
-    /**
-     * Extract filename from a content URI.
-     */
-    private fun getFileNameFromUri(context: Context, uri: android.net.Uri): String? {
-        var fileName: String? = null
-        
-        if (uri.scheme == "content") {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (displayNameIndex != -1) {
-                        fileName = cursor.getString(displayNameIndex)
-                    }
-                }
-            }
-        }
-        
-        if (fileName == null) {
-            fileName = uri.lastPathSegment
-        }
-        
-        // Remove file extension
-        return fileName?.substringBeforeLast(".")
-    }
-    
     fun downloadCurrentSong() {
         val song = playerState.value.currentSong ?: return
-        if (downloadRepository.isDownloaded(song.id) || downloadRepository.isDownloading(song.id)) return
-        
-        musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
-        
-        // Start foreground service for background download with notification
-        DownloadService.startDownload(context, song)
-    }
-
-    fun deleteDownload(songId: String) {
-        viewModelScope.launch {
-            try {
-                downloadRepository.deleteDownload(songId)
-                // Update state immediately if it's current song
-                val currentSong = playerState.value.currentSong
-                if (currentSong != null && currentSong.id == songId) {
-                    musicPlayer.updateDownloadState(DownloadState.NOT_DOWNLOADED)
-                }
-            } catch (e: com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException) {
-                _pendingIntent.value = e.pendingIntent
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-    
-    /**
-     * Download current song with progressive playback.
-     * Starts playing after first ~30 seconds download, continues downloading in background.
-     * Use this for "Download & Play" feature.
-     */
-    fun downloadAndPlayCurrentSong() {
-        val song = playerState.value.currentSong ?: return
+        if (downloadRepository.isDownloaded(song.id)) return
         if (downloadRepository.isDownloading(song.id)) return
-        
-        // If already downloaded, just play from local
-        if (downloadRepository.isDownloaded(song.id)) {
+
+        // If streaming, we can start a progressive download
+        if (playerState.value.isPlaying) {
             // Already playing or can seek to start
             return
         }
-        
+
         musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
         viewModelScope.launch {
             val success = downloadRepository.downloadSongProgressive(song) { tempUri ->
@@ -947,7 +463,7 @@ class PlayerViewModel @Inject constructor(
                 // The song is already playing (streaming), we just continue
                 // The file will be saved when download completes
             }
-            
+
             if (success) {
                 musicPlayer.updateDownloadState(DownloadState.DOWNLOADED)
             } else {
@@ -955,14 +471,14 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Download and immediately start playing a song (not current).
      * Perfect for clicking download on a song and having it play while downloading.
      */
     fun downloadAndPlay(song: Song) {
         if (downloadRepository.isDownloading(song.id)) return
-        
+
         // If already downloaded, play from local
         if (downloadRepository.isDownloaded(song.id)) {
             val downloadedSong = downloadRepository.downloadedSongs.value.find { it.id == song.id }
@@ -971,7 +487,7 @@ class PlayerViewModel @Inject constructor(
             }
             return
         }
-        
+
         viewModelScope.launch {
             downloadRepository.downloadSongProgressive(song) { tempUri ->
                 // First chunk ready - start playback from temp file
@@ -982,14 +498,14 @@ class PlayerViewModel @Inject constructor(
                 playSong(tempSong)
             }
         }
-    }    
+    }
 
-    
+
     private fun fetchLyrics(videoId: String, provider: LyricsProviderType = LyricsProviderType.AUTO) {
         viewModelScope.launch {
             _isFetchingLyrics.value = true
             _lyricsState.value = null
-            
+
             val currentSong = playerState.value.currentSong
             if (currentSong != null && currentSong.id == videoId) {
                 try {
@@ -1002,306 +518,196 @@ class PlayerViewModel @Inject constructor(
                     Log.e("PlayerViewModel", "Error fetching lyrics", e)
                 }
             }
-            
+
             _isFetchingLyrics.value = false
         }
     }
-    
+
     fun switchLyricsProvider(provider: LyricsProviderType) {
         _selectedLyricsProvider.value = provider
         val currentSong = playerState.value.currentSong ?: return
         fetchLyrics(currentSong.id, provider)
     }
-    
+
     private fun fetchComments(videoId: String) {
         viewModelScope.launch {
             _isFetchingComments.value = true
             _commentsState.value = null
-            
+
             // Only fetch for YouTube/Downloaded source which have valid video IDs
             val currentSong = playerState.value.currentSong
             if (currentSong != null && (currentSong.source == SongSource.YOUTUBE || currentSong.source == SongSource.DOWNLOADED)) {
                  val comments = youTubeRepository.getComments(videoId)
                  _commentsState.value = comments
             }
-            
+
             _isFetchingComments.value = false
         }
     }
-    
+
+    private fun fetchArtistCredits(artistString: String, source: com.suvojeet.suvmusic.core.model.SongSource = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
+        viewModelScope.launch {
+            val artistNames = parseArtistNames(artistString)
+            
+            // Show placeholders immediately
+            _artistCredits.value = artistNames.map { name ->
+                com.suvojeet.suvmusic.ui.components.ArtistCreditInfo(
+                    name = name,
+                    role = "Vocals",
+                    thumbnailUrl = null,
+                    artistId = null
+                )
+            }
+            
+            // Fetch thumbnails
+            val updatedCredits = artistNames.map { name ->
+                try {
+                    val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
+                        jioSaavnRepository.searchArtists(name)
+                    } else {
+                        youTubeRepository.searchArtists(name)
+                    }
+                    
+                    val matchingArtist = searchResults.firstOrNull { 
+                        it.name.contains(name, ignoreCase = true) || 
+                        name.contains(it.name, ignoreCase = true)
+                    } ?: searchResults.firstOrNull()
+                    
+                    com.suvojeet.suvmusic.ui.components.ArtistCreditInfo(
+                        name = name,
+                        role = "Vocals",
+                        thumbnailUrl = matchingArtist?.thumbnailUrl,
+                        artistId = matchingArtist?.id
+                    )
+                } catch (e: Exception) {
+                    com.suvojeet.suvmusic.ui.components.ArtistCreditInfo(
+                        name = name,
+                        role = "Vocals",
+                        thumbnailUrl = null,
+                        artistId = null
+                    )
+                }
+            }
+            _artistCredits.value = updatedCredits
+        }
+    }
+
+    private fun parseArtistNames(artistString: String): List<String> {
+        if (artistString.isBlank()) return emptyList()
+        val separatorRegex = Regex("[,&]|\\b(feat\\.?|ft\\.?|with|x)\\b", RegexOption.IGNORE_CASE)
+        return artistString.split(separatorRegex)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+    }
+
+    fun toggleMultipleArtistsDialog(show: Boolean) {
+        _showMultipleArtistsDialog.value = show
+    }
+
     fun loadMoreComments() {
         if (_isLoadingMoreComments.value || _isFetchingComments.value) return
         val currentSong = playerState.value.currentSong ?: return
-        
+
         viewModelScope.launch {
             _isLoadingMoreComments.value = true
             val moreComments = youTubeRepository.getMoreComments(currentSong.id)
-            if (moreComments.isNotEmpty()) {
-                val currentComments = _commentsState.value ?: emptyList()
-                _commentsState.value = currentComments + moreComments
+            if (moreComments != null) {
+                _commentsState.update { current ->
+                    if (current == null) moreComments else current + moreComments
+                }
             }
             _isLoadingMoreComments.value = false
         }
     }
 
-    /**
-     * Post a comment on the current song's video.
-     */
     fun postComment(commentText: String) {
-        val song = playerState.value.currentSong ?: return
-        if (commentText.isBlank()) return
-        
+        if (_isPostingComment.value) return
+        val currentSong = playerState.value.currentSong ?: return
+
         viewModelScope.launch {
             _isPostingComment.value = true
-            _commentPostSuccess.value = null
-            
-            val success = youTubeRepository.postComment(song.id, commentText)
-            _commentPostSuccess.value = success
-            
+            val success = youTubeRepository.postComment(currentSong.id, commentText)
             if (success) {
-                // Optimistically add comment
-                val userAvatar = sessionManager.getUserAvatar()
-                
-                val newComment = Comment(
-                    id = "temp_${System.currentTimeMillis()}",
-                    authorName = "You", 
-                    authorThumbnailUrl = userAvatar,
-                    text = commentText,
-                    timestamp = "Just now",
-                    likeCount = "0",
-                    replyCount = 0
-                )
-                
-                val currentComments = _commentsState.value ?: emptyList()
-                _commentsState.value = listOf(newComment) + currentComments
+                // Refresh comments to show the new one
+                fetchComments(currentSong.id)
             }
-            
             _isPostingComment.value = false
-            
-            // Clear the success state after a delay
-            delay(2000)
-            _commentPostSuccess.value = null
         }
     }
-    
-    fun likeCurrentSong() {
-        val song = playerState.value.currentSong ?: return
-        likeSong(song)
-    }
 
-    fun likeSong(song: Song) {
-        val isCurrent = song.id == playerState.value.currentSong?.id
-        val currentLikeState = if (isCurrent) playerState.value.isLiked else false // We don't track like state for all queue items in PlayerState
+    private fun checkAndSyncHistory() {
+        if (!isHistorySyncEnabled) return
+        val currentSong = playerState.value.currentSong ?: return
+        if (currentSong.id == lastSyncedVideoId) return
         
-        viewModelScope.launch {
-            val rating = if (!currentLikeState) "LIKE" else "INDIFFERENT"
-            val success = youTubeRepository.rateSong(song.id, rating)
-            if (success) {
-                if (isCurrent) {
-                    musicPlayer.updateLikeStatus(!currentLikeState)
-                }
-                
-                // Notify recommendation engine of like change
-                recommendationEngine.onSongLikeChanged(song, rating == "LIKE")
-                
-                // Persist like status in local listening history for taste profile
-                listeningHistoryRepository.markAsLiked(song.id, rating == "LIKE")
-                
-                if (rating == "LIKE") {
-                    if (youTubeRepository.isOnline()) {
-                        youTubeRepository.getLikedMusic(fetchAll = false)
-                    }
-                } else {
-                    youTubeRepository.removeFromLikedCache(song.id)
+        if (currentSongPlayTime >= HISTORY_SYNC_THRESHOLD_MS) {
+            viewModelScope.launch {
+                val success = youTubeRepository.syncPlaybackHistory(currentSong.id)
+                if (success) {
+                    lastSyncedVideoId = currentSong.id
                 }
             }
         }
     }
 
-    fun isDownloaded(songId: String): Boolean {
-        return downloadRepository.isDownloaded(songId)
-    }
+    fun getPlayer() = musicPlayer.getPlayer()
 
-    fun dislikeCurrentSong() {
-        val song = playerState.value.currentSong ?: return
-        val currentDislikeState = playerState.value.isDisliked
-        
-        // Optimistic update
-        musicPlayer.updateDislikeStatus(!currentDislikeState)
-        
-        // Notify recommendation engine — disliked songs are excluded from future recommendations
-        recommendationEngine.onSongDisliked(song, !currentDislikeState)
-        
+    fun setAudioQuality(quality: com.suvojeet.suvmusic.data.model.AudioQuality) {
         viewModelScope.launch {
-            val rating = if (!currentDislikeState) "DISLIKE" else "INDIFFERENT"
-            val success = youTubeRepository.rateSong(song.id, rating)
-            if (!success) {
-                // Revert on failure
-                musicPlayer.updateDislikeStatus(currentDislikeState)
-                recommendationEngine.onSongDisliked(song, currentDislikeState)
-            } else if (!currentDislikeState) {
-                // On successful dislike: auto-skip to next (like YT Music behavior)
-                // This gives instant feedback that the dislike was registered
-                val isRadio = _isRadioMode.value
-                val isAutoplay = playerState.value.isAutoplayEnabled
-                if (isRadio || isAutoplay) {
-                    musicPlayer.seekToNext()
-                }
+            sessionManager.setAudioQuality(quality)
+            // Re-apply current song to pick up new quality if needed
+            playerState.value.currentSong?.let { song ->
+                // If playing from YouTube, we might need to re-fetch the stream URL
+                // This is simplified; real implementation depends on how player handles quality changes
             }
         }
     }
-    
-    /**
-     * Restore last playback state if available.
-     */
-    suspend fun restoreLastPlayback() {
-        // Skip restore if MusicPlayer already has a song loaded
-        // (prevents interrupting active playback when activity is recreated)
-        if (musicPlayer.playerState.value.currentSong != null) return
 
-        val lastState = sessionManager.getLastPlaybackState() ?: return
+    fun getAudioCodec(): String? = musicPlayer.getAudioCodec()
+    fun getAudioBitrate(): Int? = musicPlayer.getAudioBitrate()
+
+    fun updateDiscordPresence() {
+        val song = playerState.value.currentSong
+        val isPlaying = playerState.value.isPlaying
+        val position = playerState.value.currentPosition
+        val duration = playerState.value.duration
         
+        if (song != null) {
+            discordManager.updatePresence(song, isPlaying, position, duration)
+        } else {
+            discordManager.clearPresence()
+        }
+    }
+
+    fun calibrateAudioAr() {
+        audioARManager.recenter()
+    }
+
+    fun setPlaybackParameters(speed: Float, pitch: Float) {
+        musicPlayer.setPlaybackParameters(speed, pitch)
+    }
+
+    fun shareBugReport(file: java.io.File) {
         try {
-            val (queue, index) = withContext(Dispatchers.Default) {
-                val jsonArray = JSONArray(lastState.queueJson)
-                val queueList = mutableListOf<Song>()
-                
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    queueList.add(
-                        Song(
-                            id = obj.getString("id"),
-                            title = obj.getString("title"),
-                            artist = obj.getString("artist"),
-                            album = obj.optString("album", ""),
-                            thumbnailUrl = if (obj.isNull("thumbnailUrl")) null else obj.optString("thumbnailUrl", null as String?),
-                            duration = obj.getLong("duration"),
-                            source = try { 
-                                SongSource.valueOf(obj.getString("source")) 
-                            } catch (e: Exception) { 
-                                SongSource.YOUTUBE 
-                            }
-                        )
-                    )
-                }
-                Pair(queueList, lastState.index)
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            
-            if (queue.isNotEmpty() && index in queue.indices) {
-                val song = queue[index]
-                // Load song without auto-playing (user can resume manually)
-                musicPlayer.playSong(song, queue, index, autoPlay = false)
-                
-                // Seek to saved position after a delay (allow media to load)
-                delay(1000)
-                musicPlayer.seekTo(lastState.position)
-            }
+            context.startActivity(Intent.createChooser(intent, "Send Bug Report via…").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("PlayerViewModel", "Error sharing bug report", e)
         }
     }
-    
-    fun updateDominantColor(color: Int) {
-        musicPlayer.updateDominantColor(color)
-    }
-    
-    fun setEqEnabled(enabled: Boolean) {
-        // Immediate audio update
-        spatialAudioProcessor.setEqEnabled(enabled)
-        viewModelScope.launch {
-            sessionManager.setEqEnabled(enabled)
-        }
-    }
-    
-    private var eqBandsUpdateJob: kotlinx.coroutines.Job? = null
-    fun setEqBandGain(bandIndex: Int, gainDb: Float) {
-        // Immediate audio update
-        spatialAudioProcessor.setEqBand(bandIndex, gainDb)
-        
-        // Debounced persistence
-        eqBandsUpdateJob?.cancel()
-        eqBandsUpdateJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(500)
-            sessionManager.setEqBand(bandIndex, gainDb)
-        }
-    }
+}
 
-    fun setEqBands(bands: FloatArray) {
-        // Immediate audio update
-        bands.forEachIndexed { index, gain ->
-            spatialAudioProcessor.setEqBand(index, gain)
-        }
-        
-        // Debounced persistence
-        eqBandsUpdateJob?.cancel()
-        eqBandsUpdateJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(500)
-            sessionManager.setEqBands(bands)
-        }
-    }
-
-    fun resetEqBands() {
-        // Immediate audio update
-        spatialAudioProcessor.resetEqBands()
-        spatialAudioProcessor.setEqPreamp(0f)
-        spatialAudioProcessor.setBassBoost(0f)
-        spatialAudioProcessor.setVirtualizer(0f)
-        
-        viewModelScope.launch {
-            sessionManager.resetEqBands()
-            sessionManager.setEqPreamp(0f)
-            sessionManager.setBassBoost(0f)
-            sessionManager.setVirtualizer(0f)
-        }
-    }
-
-    private var eqPreampUpdateJob: kotlinx.coroutines.Job? = null
-    fun setEqPreamp(gainDb: Float) {
-        // Immediate audio update
-        spatialAudioProcessor.setEqPreamp(gainDb)
-        
-        // Debounced persistence
-        eqPreampUpdateJob?.cancel()
-        eqPreampUpdateJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(500)
-            sessionManager.setEqPreamp(gainDb)
-        }
-    }
-
-    private var bassBoostUpdateJob: kotlinx.coroutines.Job? = null
-    fun setBassBoost(strength: Float) {
-        // Immediate audio update
-        spatialAudioProcessor.setBassBoost(strength)
-        
-        // Debounced persistence
-        bassBoostUpdateJob?.cancel()
-        bassBoostUpdateJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(500)
-            sessionManager.setBassBoost(strength)
-        }
-    }
-
-    private var virtualizerUpdateJob: kotlinx.coroutines.Job? = null
-    fun setVirtualizer(strength: Float) {
-        // Immediate audio update
-        spatialAudioProcessor.setVirtualizer(strength)
-        
-        // Debounced persistence
-        virtualizerUpdateJob?.cancel()
-        virtualizerUpdateJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(500)
-            sessionManager.setVirtualizer(strength)
-        }
-    }
-
-    fun getEqEnabled(): Flow<Boolean> = sessionManager.eqEnabledFlow
-    fun getEqBands(): Flow<FloatArray> = sessionManager.eqBandsFlow
-    fun getEqPreamp(): Flow<Float> = sessionManager.eqPreampFlow
-    fun getBassBoost(): Flow<Float> = sessionManager.bassBoostFlow
-    fun getVirtualizer(): Flow<Float> = sessionManager.virtualizerFlow
-
-    override fun onCleared() {
-        super.onCleared()
-        // Don't release player here - it's shared
-    }
+private fun <T> MutableStateFlow<T>.update(function: (T) -> T) {
+    value = function(value)
 }
