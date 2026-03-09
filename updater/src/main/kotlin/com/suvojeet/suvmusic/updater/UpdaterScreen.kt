@@ -48,18 +48,8 @@ fun UpdaterScreen(
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     val changelog by viewModel.changelog.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val lastUpdated by viewModel.lastUpdated.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
-    
-    val infiniteTransition = rememberInfiniteTransition(label = "refresh")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
 
     Scaffold(
         topBar = {
@@ -68,15 +58,6 @@ fun UpdaterScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.loadChangelog() }) {
-                        Icon(
-                            Icons.Default.Refresh, 
-                            contentDescription = "Refresh Changelog",
-                            modifier = if (isRefreshing) Modifier.rotate(rotation) else Modifier
-                        )
                     }
                 }
             )
@@ -94,6 +75,7 @@ fun UpdaterScreen(
                 StatusCard(
                     currentVersionName = currentVersionName,
                     updateState = updateState,
+                    lastUpdated = lastUpdated,
                     onCheckUpdate = { viewModel.checkForUpdate(currentVersionCode) },
                     onDownloadUpdate = { info -> uriHandler.openUri(info.downloadUrl) },
                     onDismiss = { viewModel.resetUpdateState() }
@@ -138,6 +120,7 @@ fun UpdaterScreen(
 fun StatusCard(
     currentVersionName: String,
     updateState: UpdateState,
+    lastUpdated: Long?,
     onCheckUpdate: () -> Unit,
     onDownloadUpdate: (UpdateInfo) -> Unit,
     onDismiss: () -> Unit
@@ -172,6 +155,16 @@ fun StatusCard(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+
+            if (lastUpdated != null) {
+                val timeFormat = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                Text(
+                    text = "Last checked: ${timeFormat.format(java.util.Date(lastUpdated))}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
