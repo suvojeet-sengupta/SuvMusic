@@ -152,7 +152,8 @@ fun YTMusicMiniPlayer(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.clickable {
-                                song.artistId?.let { onArtistClick(it) }
+                                val target = song.artistId ?: song.artist
+                                onArtistClick(target)
                             }
                         )
                     }
