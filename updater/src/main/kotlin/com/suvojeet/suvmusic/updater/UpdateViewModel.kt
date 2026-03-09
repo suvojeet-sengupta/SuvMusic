@@ -48,13 +48,13 @@ class UpdateViewModel @Inject constructor(
         }
     }
 
-    fun checkForUpdate(currentVersionCode: Int, silent: Boolean = false) {
+    fun checkForUpdate(currentVersionCode: Int, silent: Boolean = false, isNightly: Boolean = false) {
         viewModelScope.launch {
             if (!silent) _updateState.value = UpdateState.Checking
             
             // Fetch both update info and changelog to ensure everything is fresh
             val updateJob = launch {
-                val updateInfo = checker.checkForUpdate()
+                val updateInfo = checker.checkForUpdate(isNightly)
                 if (updateInfo != null) {
                     _lastUpdated.value = System.currentTimeMillis()
                     if (updateInfo.versionCode > currentVersionCode) {
