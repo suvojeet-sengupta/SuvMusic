@@ -4,7 +4,7 @@
       "versionName": "2.0.1.0",
       "versionCode": 15,
       "date": "March 10, 2026",
-      "description": "• Stability fixes\n• Minor UI refinements\n• Code optimization",
+      "description": "• Modernized Update Mechanism: Migrated to a standalone :updater module with structured JSON changelog support and a dedicated rich-UI Updater screen.\n• Stability fixes\n• Minor UI refinements\n• Code optimization",
       "isMajorUpdate": false
     },
     {
