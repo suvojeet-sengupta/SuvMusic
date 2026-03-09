@@ -51,9 +51,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -68,6 +65,10 @@ import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import kotlinx.coroutines.launch
+
+import com.suvojeet.suvmusic.ui.components.player.miniplayer.PillMiniPlayer
+import com.suvojeet.suvmusic.ui.components.player.miniplayer.StandardMiniPlayer
+import com.suvojeet.suvmusic.ui.components.player.miniplayer.YTMusicMiniPlayer
 
 /**
  * YouTube Music-style expandable player sheet.
@@ -329,364 +330,49 @@ private fun CollapsedMiniPlayer(
     style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
     modifier: Modifier = Modifier
 ) {
-    if (style == MiniPlayerStyle.FLOATING_PILL) {
-        PillMiniPlayer(
-            song = song,
-            playerState = playerState,
-            dominantColors = dominantColors,
-            progress = progress,
-            onPlayPause = onPlayPause,
-            onNext = onNext,
-            onClose = onClose,
-            onTap = onTap,
-            userAlpha = userAlpha,
-            modifier = modifier
-        )
-    } else {
-        StandardMiniPlayer(
-            song = song,
-            playerState = playerState,
-            dominantColors = dominantColors,
-            progress = progress,
-            onPlayPause = onPlayPause,
-            onNext = onNext,
-            onClose = onClose,
-            onTap = onTap,
-            userAlpha = userAlpha,
-            modifier = modifier
-        )
-    }
-}
-
-@Composable
-private fun StandardMiniPlayer(
-    song: com.suvojeet.suvmusic.core.model.Song,
-    playerState: PlayerState,
-    dominantColors: DominantColors,
-    progress: Float,
-    onPlayPause: () -> Unit,
-    onNext: () -> Unit,
-    onClose: () -> Unit,
-    onTap: () -> Unit,
-    userAlpha: Float = 0f,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onTap),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(14.dp),
-        tonalElevation = 4.dp,
-        shadowElevation = 8.dp
-    ) {
-        // userAlpha 0f means 0% transparency (fully opaque, alpha 1f)
-        // userAlpha 0.85f means 85% transparency (alpha 0.15f)
-        val effectiveAlpha = 1f - userAlpha
-        Box(
-            modifier = Modifier
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            dominantColors.primary.copy(alpha = effectiveAlpha),
-                            dominantColors.secondary.copy(alpha = effectiveAlpha)
-                        )
-                    )
-                )
-        ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Album Art
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (song.thumbnailUrl != null) {
-                        AsyncImage(
-                            model = song.thumbnailUrl,
-                            contentDescription = song.title,
-                            modifier = Modifier.size(42.dp),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(10.dp))
-
-                // Song Info
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = dominantColors.onBackground,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
-                    )
-                    Text(
-                        text = song.artist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = dominantColors.onBackground.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Controls
-                IconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                IconButton(
-                    onClick = onNext,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                if (!playerState.isPlaying) {
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = dominantColors.onBackground,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-
-            // Progress bar at bottom
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp),
-                trackColor = dominantColors.onBackground.copy(alpha = 0.2f),
-                color = dominantColors.accent,
-                strokeCap = StrokeCap.Round
+    when (style) {
+        MiniPlayerStyle.FLOATING_PILL -> {
+            PillMiniPlayer(
+                song = song,
+                playerState = playerState,
+                dominantColors = dominantColors,
+                progress = progress,
+                onPlayPause = onPlayPause,
+                onNext = onNext,
+                onClose = onClose,
+                onTap = onTap,
+                userAlpha = userAlpha,
+                modifier = modifier
             )
         }
+        MiniPlayerStyle.YT_MUSIC -> {
+            YTMusicMiniPlayer(
+                song = song,
+                playerState = playerState,
+                dominantColors = dominantColors,
+                progress = progress,
+                onPlayPause = onPlayPause,
+                onNext = onNext,
+                onClose = onClose,
+                onTap = onTap,
+                userAlpha = userAlpha,
+                modifier = modifier
+            )
+        }
+        else -> {
+            StandardMiniPlayer(
+                song = song,
+                playerState = playerState,
+                dominantColors = dominantColors,
+                progress = progress,
+                onPlayPause = onPlayPause,
+                onNext = onNext,
+                onClose = onClose,
+                onTap = onTap,
+                userAlpha = userAlpha,
+                modifier = modifier
+            )
         }
     }
 }
 
-@Composable
-private fun PillMiniPlayer(
-    song: com.suvojeet.suvmusic.core.model.Song,
-    playerState: PlayerState,
-    dominantColors: DominantColors,
-    progress: Float,
-    onPlayPause: () -> Unit,
-    onNext: () -> Unit,
-    onClose: () -> Unit,
-    onTap: () -> Unit,
-    userAlpha: Float = 0f,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(32.dp))
-            .clickable(onClick = onTap),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(32.dp),
-        tonalElevation = 4.dp,
-        shadowElevation = 6.dp
-    ) {
-        // userAlpha 0f (0%) -> effectiveAlpha 1f (Opaque)
-        // userAlpha 0.85f (85%) -> effectiveAlpha 0.15f
-        val effectiveAlpha = 1f - userAlpha
-        Box(
-            modifier = Modifier
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            dominantColors.primary.copy(alpha = effectiveAlpha),
-                            dominantColors.secondary.copy(alpha = effectiveAlpha)
-                        )
-                    )
-                )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Album Art with Custom Dotted Circular Progress (Seekbar Pattern)
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .padding(2.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val activeColor = dominantColors.accent
-                    val trackColor = dominantColors.onBackground.copy(alpha = 0.2f)
-                    
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val strokeWidth = 2.dp.toPx()
-                        val dashSize = 2.dp.toPx()
-                        val gapSize = 3.dp.toPx()
-                        
-                        // Track (Background Dots)
-                        drawArc(
-                            color = trackColor,
-                            startAngle = -90f,
-                            sweepAngle = 360f,
-                            useCenter = false,
-                            style = Stroke(
-                                width = strokeWidth,
-                                cap = StrokeCap.Round,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashSize, gapSize), 0f)
-                            )
-                        )
-                        
-                        // Progress (Active Dots)
-                        drawArc(
-                            color = activeColor,
-                            startAngle = -90f,
-                            sweepAngle = progress * 360f,
-                            useCenter = false,
-                            style = Stroke(
-                                width = strokeWidth,
-                                cap = StrokeCap.Round,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashSize, gapSize), 0f)
-                            )
-                        )
-                    }
-                    
-                    // Album Art
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (song.thumbnailUrl != null) {
-                            AsyncImage(
-                                model = song.thumbnailUrl,
-                                contentDescription = song.title,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Song Info
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = dominantColors.onBackground,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
-                    )
-                    Text(
-                        text = song.artist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = dominantColors.onBackground.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                // Controls
-                IconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = onNext,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                if (!playerState.isPlaying) {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = dominantColors.onBackground,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(4.dp))
-            }
-        }
-    }
-}
