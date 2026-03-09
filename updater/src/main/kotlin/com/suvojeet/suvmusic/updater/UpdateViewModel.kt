@@ -31,6 +31,9 @@ class UpdateViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _lastUpdated = MutableStateFlow<Long?>(null)
+    val lastUpdated: StateFlow<Long?> = _lastUpdated.asStateFlow()
+
     init {
         loadChangelog()
     }
@@ -40,6 +43,7 @@ class UpdateViewModel @Inject constructor(
             _isRefreshing.value = true
             val info = checker.fetchChangelog()
             _changelog.value = info
+            _lastUpdated.value = System.currentTimeMillis()
             _isRefreshing.value = false
         }
     }
@@ -52,6 +56,7 @@ class UpdateViewModel @Inject constructor(
             val updateJob = launch {
                 val updateInfo = checker.checkForUpdate()
                 if (updateInfo != null) {
+                    _lastUpdated.value = System.currentTimeMillis()
                     if (updateInfo.versionCode > currentVersionCode) {
                         _updateState.value = UpdateState.UpdateAvailable(updateInfo)
                     } else {
