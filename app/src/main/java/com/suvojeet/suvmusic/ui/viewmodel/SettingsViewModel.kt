@@ -18,6 +18,7 @@ import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.data.model.ThemeMode
+import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
@@ -123,7 +124,7 @@ data class SettingsUiState(
     val isBugReportingSessionActive: Boolean = false,
     // Updater
     val currentVersion: String = "",
-    val updateChannel: String = "Stable"
+    val updateChannel: UpdateChannel = UpdateChannel.STABLE
 )
 
 @HiltViewModel
@@ -1334,6 +1335,13 @@ class SettingsViewModel @Inject constructor(
             null
         }
     }
+    fun setUpdateChannel(channel: UpdateChannel) {
+        viewModelScope.launch {
+            sessionManager.setUpdateChannel(channel)
+            _uiState.update { it.copy(updateChannel = channel) }
+        }
+    }
+
     fun shareBugReport(file: File) {
         try {
             val uri = FileProvider.getUriForFile(

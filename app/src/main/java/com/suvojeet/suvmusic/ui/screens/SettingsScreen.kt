@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.updater.UpdateViewModel
 import kotlinx.coroutines.launch
 
@@ -112,6 +113,7 @@ fun SettingsScreen(
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showAccountsSheet by remember { mutableStateOf(false) }
     var showBugDescriptionDialog by remember { mutableStateOf(false) }
+    var showUpdateChannelSheet by remember { mutableStateOf(false) }
     var bugDescription by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
     
@@ -571,6 +573,15 @@ fun SettingsScreen(
 
                         SettingsNavigationItem(
                             icon = Icons.Default.SystemUpdate,
+                            title = "Update Channel",
+                            subtitle = uiState.updateChannel.label,
+                            onClick = { showUpdateChannelSheet = true }
+                        )
+
+                        HorizontalDivider()
+
+                        SettingsNavigationItem(
+                            icon = Icons.Default.SystemUpdate,
                             title = "Check for Updates",
                             subtitle = "Check for app updates and changelogs",
                             onClick = onUpdaterClick
@@ -821,6 +832,49 @@ fun SettingsScreen(
             },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
+    }
+
+    // Update Channel Bottom Sheet
+    if (showUpdateChannelSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showUpdateChannelSheet = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Update Channel",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+
+                UpdateChannel.entries.forEach { channel ->
+                    val isSelected = uiState.updateChannel == channel
+                    ListItem(
+                        headlineContent = { Text(channel.label) },
+                        leadingContent = {
+                            androidx.compose.material3.RadioButton(
+                                selected = isSelected,
+                                onClick = { 
+                                    viewModel.setUpdateChannel(channel)
+                                    showUpdateChannelSheet = false
+                                }
+                            )
+                        },
+                        modifier = Modifier.clickable { 
+                            viewModel.setUpdateChannel(channel)
+                            showUpdateChannelSheet = false
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+            }
+        }
     }
 }
 

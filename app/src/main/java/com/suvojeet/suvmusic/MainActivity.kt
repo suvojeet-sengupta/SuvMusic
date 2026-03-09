@@ -141,7 +141,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         enableMaxRefreshRate()
         
-        updateViewModel.checkForUpdate(com.suvojeet.suvmusic.BuildConfig.VERSION_CODE)
+        lifecycleScope.launch {
+            val channel = sessionManager.getUpdateChannel()
+            updateViewModel.checkForUpdate(
+                com.suvojeet.suvmusic.BuildConfig.VERSION_CODE,
+                isNightly = channel == com.suvojeet.suvmusic.data.model.UpdateChannel.NIGHTLY
+            )
+        }
         
         // Initialize audio manager for volume control
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
