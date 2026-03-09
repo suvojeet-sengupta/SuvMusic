@@ -9,8 +9,7 @@ import okhttp3.Request
 
 class UpdateChecker(private val client: OkHttpClient) {
     private val json = Json { ignoreUnknownKeys = true }
-    // Statically.io is a specialized CDN for GitHub, more robust than jsDelivr for frequently updated files.
-    private val baseUrl = "https://cdn.statically.io/gh/suvojeet-sengupta/SuvMusic/main/updater"
+    private val baseUrl = "https://raw.githubusercontent.com/suvojeet-sengupta/SuvMusic/main/updater"
 
     private suspend fun <T> fetchJson(fileName: String, serializer: kotlinx.serialization.KSerializer<T>): T? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
