@@ -9,11 +9,14 @@ import okhttp3.Request
 
 class UpdateChecker(private val client: OkHttpClient) {
     private val json = Json { ignoreUnknownKeys = true }
-    private val baseUrl = "https://cdn.jsdelivr.net/gh/suvojeet-sengupta/SuvMusic@main/updater"
+    // Statically.io is a specialized CDN for GitHub, more robust than jsDelivr for frequently updated files.
+    private val baseUrl = "https://cdn.statically.io/gh/suvojeet-sengupta/SuvMusic/main/updater"
 
-    suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
+    private suspend fun <T> fetchJson(fileName: String, serializer: kotlinx.serialization.KSerializer<T>): T? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
-            .url("$baseUrl/update.json?t=${System.currentTimeMillis()}")
+            .url("$baseUrl/$fileName?t=${System.currentTimeMillis()}")
+            .header("User-Agent", "SuvMusic-Updater")
+            .header("Accept", "application/json")
             .cacheControl(CacheControl.FORCE_NETWORK)
             .build()
 
@@ -21,27 +24,14 @@ class UpdateChecker(private val client: OkHttpClient) {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
                 val body = response.body?.string() ?: return@withContext null
-                json.decodeFromString<UpdateInfo>(body)
+                json.decodeFromString(serializer, body)
             }
         } catch (e: Exception) {
             null
         }
     }
 
-    suspend fun fetchChangelog(): ChangelogInfo? = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url("$baseUrl/changelog.json?t=${System.currentTimeMillis()}")
-            .cacheControl(CacheControl.FORCE_NETWORK)
-            .build()
+    suspend fun checkForUpdate(): UpdateInfo? = fetchJson("update.json", UpdateInfo.serializer())
 
-        try {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val body = response.body?.string() ?: return@withContext null
-                json.decodeFromString<ChangelogInfo>(body)
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
+    suspend fun fetchChangelog(): ChangelogInfo? = fetchJson("changelog.json", ChangelogInfo.serializer())
 }
