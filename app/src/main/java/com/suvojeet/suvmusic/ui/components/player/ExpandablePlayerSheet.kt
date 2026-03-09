@@ -157,6 +157,13 @@ fun ExpandablePlayerSheet(
         // Visible when expansion < ~0.4, fades out as expansion increases
         val miniPlayerAlpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
         if (miniPlayerAlpha > 0f) {
+            val bottomPaddingDp = with(density) { bottomPadding.toDp() }
+            val currentMiniPlayerHeight = if (style == MiniPlayerStyle.YT_MUSIC) {
+                MiniPlayerHeight + bottomPaddingDp
+            } else {
+                MiniPlayerHeight
+            }
+
             CollapsedMiniPlayer(
                 song = song,
                 playerState = playerState,
@@ -181,9 +188,9 @@ fun ExpandablePlayerSheet(
                 },
                 modifier = Modifier
                      .fillMaxWidth()
-                     .height(MiniPlayerHeight)
+                     .height(currentMiniPlayerHeight)
                      .alpha(miniPlayerAlpha)
-                     .align(Alignment.TopCenter) // Align to top, leaving bottom padding area empty
+                     .align(Alignment.TopCenter)
                      .graphicsLayer {
                          // Visual feedback for swipe down to dismiss
                          if (expansion.value < 0f && swipeDownToDismissEnabled) {
