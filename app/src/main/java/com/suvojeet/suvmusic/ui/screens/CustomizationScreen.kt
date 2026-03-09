@@ -128,13 +128,13 @@ fun CustomizationScreen(
     }
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
-    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 0.9f)
+    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
     val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val dynamicColor by sessionManager.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true)
     val pureBlack by sessionManager.pureBlackEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val appTheme by sessionManager.appThemeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.AppTheme.DEFAULT)
     val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.ThemeMode.SYSTEM)
-    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.FLOATING_PILL)
+    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.YT_MUSIC)
 
     val scope = rememberCoroutineScope()
     

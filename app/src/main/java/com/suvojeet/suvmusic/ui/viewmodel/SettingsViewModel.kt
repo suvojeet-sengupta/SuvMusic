@@ -117,7 +117,7 @@ data class SettingsUiState(
     val eqEnabled: Boolean = false,
     val eqBands: FloatArray = FloatArray(10) { 0f },
     val forceMaxRefreshRateEnabled: Boolean = true,
-    val navBarAlpha: Float = 0.9f,
+    val navBarAlpha: Float = 1.0f,
     val downloadLocation: String? = null,
     val loggingEnabled: Boolean = false,
     val isBugReportingSessionActive: Boolean = false,
