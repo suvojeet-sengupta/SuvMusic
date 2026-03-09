@@ -10,6 +10,7 @@ import okhttp3.Request
 class UpdateChecker(private val client: OkHttpClient) {
     private val json = Json { ignoreUnknownKeys = true }
     private val url = "https://cdn.jsdelivr.net/gh/suvojeet-sengupta/SuvMusic@main/updater/update.json"
+    private val changelogUrl = "https://cdn.jsdelivr.net/gh/suvojeet-sengupta/SuvMusic@main/updater/changelog.json"
 
     suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
@@ -22,6 +23,23 @@ class UpdateChecker(private val client: OkHttpClient) {
                 if (!response.isSuccessful) return@withContext null
                 val body = response.body?.string() ?: return@withContext null
                 json.decodeFromString<UpdateInfo>(body)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun fetchChangelog(): ChangelogInfo? = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(changelogUrl)
+            .cacheControl(CacheControl.FORCE_NETWORK)
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                json.decodeFromString<ChangelogInfo>(body)
             }
         } catch (e: Exception) {
             null

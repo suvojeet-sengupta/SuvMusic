@@ -11,8 +11,10 @@ import javax.inject.Inject
 
 sealed class UpdateState {
     data object Idle : UpdateState()
+    data object Checking : UpdateState()
     data class UpdateAvailable(val info: UpdateInfo) : UpdateState()
-    data object NoUpdate : UpdateState()
+    data class NoUpdate(val info: UpdateInfo) : UpdateState()
+    data class Error(val message: String) : UpdateState()
 }
 
 @HiltViewModel
@@ -23,18 +25,46 @@ class UpdateViewModel @Inject constructor(
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
-    fun checkForUpdate(currentVersionCode: Int) {
+    private val _changelog = MutableStateFlow<ChangelogInfo?>(null)
+    val changelog: StateFlow<ChangelogInfo?> = _changelog.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    init {
+        loadChangelog()
+    }
+
+    fun loadChangelog() {
         viewModelScope.launch {
+            _isRefreshing.value = true
+            val info = checker.fetchChangelog()
+            _changelog.value = info
+            _isRefreshing.value = false
+        }
+    }
+
+    fun checkForUpdate(currentVersionCode: Int, silent: Boolean = false) {
+        viewModelScope.launch {
+            if (!silent) _updateState.value = UpdateState.Checking
             val updateInfo = checker.checkForUpdate()
-            if (updateInfo != null && updateInfo.versionCode > currentVersionCode) {
-                _updateState.value = UpdateState.UpdateAvailable(updateInfo)
-            } else if (updateInfo != null) {
-                _updateState.value = UpdateState.NoUpdate
+            if (updateInfo != null) {
+                if (updateInfo.versionCode > currentVersionCode) {
+                    _updateState.value = UpdateState.UpdateAvailable(updateInfo)
+                } else {
+                    _updateState.value = UpdateState.NoUpdate(updateInfo)
+                }
+            } else {
+                if (!silent) _updateState.value = UpdateState.Error("Could not check for updates")
             }
         }
     }
 
     fun dismissDialog() {
+        _updateState.value = UpdateState.Idle
+    }
+    
+    fun resetUpdateState() {
         _updateState.value = UpdateState.Idle
     }
 }

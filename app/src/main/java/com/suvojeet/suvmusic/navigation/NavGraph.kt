@@ -363,7 +363,17 @@ fun NavGraph(
                 onCreditsClick = { navController.navigate(Destination.Credits.route) },
                 onLastFmClick = { navController.navigate(Destination.LastFmLogin.route) },
                 onSponsorBlockClick = { navController.navigate(Destination.SponsorBlockSettings.route) },
-                onDiscordClick = { navController.navigate(Destination.DiscordSettings.route) }
+                onDiscordClick = { navController.navigate(Destination.DiscordSettings.route) },
+                onUpdaterClick = { navController.navigate(Destination.Updater.route) }
+            )
+        }
+
+        composable(Destination.Updater.route) {
+            com.suvojeet.suvmusic.updater.UpdaterScreen(
+                currentVersionCode = com.suvojeet.suvmusic.BuildConfig.VERSION_CODE,
+                currentVersionName = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME,
+                viewModel = hiltViewModel(),
+                onBackClick = { navController.popBackStack() }
             )
         }
 
