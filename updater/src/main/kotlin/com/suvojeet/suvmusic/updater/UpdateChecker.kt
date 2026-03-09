@@ -30,7 +30,10 @@ class UpdateChecker(private val client: OkHttpClient) {
         }
     }
 
-    suspend fun checkForUpdate(): UpdateInfo? = fetchJson("update.json", UpdateInfo.serializer())
+    suspend fun checkForUpdate(isNightly: Boolean = false): UpdateInfo? {
+        val fileName = if (isNightly) "nightly.json" else "update.json"
+        return fetchJson(fileName, UpdateInfo.serializer())
+    }
 
     suspend fun fetchChangelog(): ChangelogInfo? = fetchJson("changelog.json", ChangelogInfo.serializer())
 }

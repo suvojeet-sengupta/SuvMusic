@@ -34,6 +34,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.data.model.SponsorCategory
 import com.suvojeet.suvmusic.data.model.ThemeMode
+import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
@@ -140,6 +141,7 @@ class SessionManager @Inject constructor(
         private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
+        private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val SWIPE_DOWN_TO_DISMISS_ENABLED_KEY = booleanPreferencesKey("swipe_down_to_dismiss_enabled")
         private val PLAYER_ANIMATED_BACKGROUND_KEY = booleanPreferencesKey("player_animated_background")
         private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
@@ -197,21 +199,6 @@ class SessionManager @Inject constructor(
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
-    }
-
-    // --- Update Channel ---
-
-    suspend fun getUpdateChannel(): String =
-        context.dataStore.data.first()[UPDATE_CHANNEL_KEY] ?: "Stable"
-
-    val updateChannelFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[UPDATE_CHANNEL_KEY] ?: "Stable"
-    }
-
-    suspend fun setUpdateChannel(channel: String) {
-        context.dataStore.edit { preferences ->
-            preferences[UPDATE_CHANNEL_KEY] = channel
-        }
     }
 
     // --- Home Screen Preferences ---
@@ -564,6 +551,25 @@ class SessionManager @Inject constructor(
     suspend fun setMiniPlayerStyle(style: MiniPlayerStyle) {
         context.dataStore.edit { preferences ->
             preferences[MINI_PLAYER_STYLE_KEY] = style.name
+        }
+    }
+
+    suspend fun getUpdateChannel(): UpdateChannel {
+        val channelName = context.dataStore.data.first()[UPDATE_CHANNEL_KEY]
+        return channelName?.let {
+            try { UpdateChannel.valueOf(it) } catch (e: Exception) { UpdateChannel.STABLE }
+        } ?: UpdateChannel.STABLE
+    }
+
+    val updateChannelFlow: Flow<UpdateChannel> = context.dataStore.data.map { preferences ->
+        preferences[UPDATE_CHANNEL_KEY]?.let {
+            try { UpdateChannel.valueOf(it) } catch (e: Exception) { UpdateChannel.STABLE }
+        } ?: UpdateChannel.STABLE
+    }
+
+    suspend fun setUpdateChannel(channel: UpdateChannel) {
+        context.dataStore.edit { preferences ->
+            preferences[UPDATE_CHANNEL_KEY] = channel.name
         }
     }
     
