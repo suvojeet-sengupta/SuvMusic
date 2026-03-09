@@ -130,8 +130,13 @@ fun ExpandablePlayerSheet(
     val miniPlayerHeightPx = with(density) { MiniPlayerHeight.toPx() }
 
     // Total drag range from (MiniPlayer + Nav Bar) to Full Screen
-    val collapsedHeightPx = miniPlayerHeightPx + bottomPadding
-    val dragRange = (screenHeightPx - collapsedHeightPx).coerceAtLeast(1f)
+    // For YT_MUSIC, we reduce the visual gap (approx 12dp) 
+    // to sit flush against the navbar content.
+    val stylePaddingOffset = if (style == MiniPlayerStyle.YT_MUSIC) with(density) { 12.dp.toPx() } else 0f
+    val adjustedBottomPadding = (bottomPadding - stylePaddingOffset).coerceAtLeast(0f)
+
+    val collapsedHeightPx = miniPlayerHeightPx + adjustedBottomPadding
+    val dragRange = (screenHeightPx - (miniPlayerHeightPx + bottomPadding)).coerceAtLeast(1f)
 
     // Back Handler to collapse on system back gesture
     BackHandler(enabled = isExpanded) {
@@ -141,9 +146,8 @@ fun ExpandablePlayerSheet(
         }
     }
 
-    // Panel height: lerp from mini player to full screen
     // Panel height: lerp from mini player (+ padding) to full screen
-    val panelHeightPx = collapsedHeightPx + (dragRange * expansion.value)
+    val panelHeightPx = (miniPlayerHeightPx + bottomPadding) + (dragRange * expansion.value)
     val panelHeightDp = with(density) { panelHeightPx.toDp() }
 
     // The entire expandable panel
@@ -157,6 +161,9 @@ fun ExpandablePlayerSheet(
         // Visible when expansion < ~0.4, fades out as expansion increases
         val miniPlayerAlpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
         if (miniPlayerAlpha > 0f) {
+            // When collapsed (expansion=0), offset the mini player down to close the gap
+            val collapsedOffsetPx = (bottomPadding - adjustedBottomPadding) * (1f - expansion.value)
+            
             CollapsedMiniPlayer(
                 song = song,
                 playerState = playerState,
@@ -184,6 +191,7 @@ fun ExpandablePlayerSheet(
                      .height(MiniPlayerHeight)
                      .alpha(miniPlayerAlpha)
                      .align(Alignment.TopCenter)
+                     .offset(y = with(density) { collapsedOffsetPx.toDp() })
                      .graphicsLayer {
                          // Visual feedback for swipe down to dismiss
                          if (expansion.value < 0f && swipeDownToDismissEnabled) {
