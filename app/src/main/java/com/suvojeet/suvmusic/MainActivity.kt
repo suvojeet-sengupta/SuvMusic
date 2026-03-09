@@ -397,6 +397,9 @@ fun SuvMusicApp(
     val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle(initialValue = null)
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
     val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO)
+
+    val artistCredits by playerViewModel.artistCredits.collectAsStateWithLifecycle(initialValue = emptyList())
+    val showMultipleArtistsDialog by playerViewModel.showMultipleArtistsDialog.collectAsStateWithLifecycle(initialValue = false)
     
     val comments by playerViewModel.commentsState.collectAsStateWithLifecycle(initialValue = null)
     val isFetchingComments by playerViewModel.isFetchingComments.collectAsStateWithLifecycle(initialValue = false)
@@ -844,9 +847,13 @@ fun SuvMusicApp(
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
             },
-            onArtistClick = { artistId ->
-                playerViewModel.collapsePlayer()
-                navController.navigate(Destination.Artist(artistId).route)
+            onArtistClick = { artistIdOrName ->
+                if (artistCredits.size > 1) {
+                    playerViewModel.toggleMultipleArtistsDialog(true)
+                } else {
+                    playerViewModel.collapsePlayer()
+                    navController.navigate(Destination.Artist(artistIdOrName).route)
+                }
             },
             modifier = Modifier.align(Alignment.BottomCenter),
 
@@ -924,6 +931,20 @@ fun SuvMusicApp(
                 )
              }
         )
+
+        // Multiple Artists Selection Dialog
+        if (showMultipleArtistsDialog) {
+            com.suvojeet.suvmusic.ui.components.player.MultipleArtistsDialog(
+                artists = artistCredits,
+                onArtistClick = { artistId ->
+                    playerViewModel.toggleMultipleArtistsDialog(false)
+                    playerViewModel.collapsePlayer()
+                    navController.navigate(Destination.Artist(artistId).route)
+                },
+                onDismiss = { playerViewModel.toggleMultipleArtistsDialog(false) },
+                dominantColors = defaultDominantColors
+            )
+        }
     }    
         // Global Volume Indicator (shows on all screens except PlayerScreen when song is playing)
         if (showGlobalVolumeIndicator && volumeSliderEnabled) {
