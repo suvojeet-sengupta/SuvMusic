@@ -47,16 +47,27 @@ class UpdateViewModel @Inject constructor(
     fun checkForUpdate(currentVersionCode: Int, silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) _updateState.value = UpdateState.Checking
-            val updateInfo = checker.checkForUpdate()
-            if (updateInfo != null) {
-                if (updateInfo.versionCode > currentVersionCode) {
-                    _updateState.value = UpdateState.UpdateAvailable(updateInfo)
+            
+            // Fetch both update info and changelog to ensure everything is fresh
+            val updateJob = launch {
+                val updateInfo = checker.checkForUpdate()
+                if (updateInfo != null) {
+                    if (updateInfo.versionCode > currentVersionCode) {
+                        _updateState.value = UpdateState.UpdateAvailable(updateInfo)
+                    } else {
+                        _updateState.value = UpdateState.NoUpdate(updateInfo)
+                    }
                 } else {
-                    _updateState.value = UpdateState.NoUpdate(updateInfo)
+                    if (!silent) _updateState.value = UpdateState.Error("Could not check for updates")
                 }
-            } else {
-                if (!silent) _updateState.value = UpdateState.Error("Could not check for updates")
             }
+            
+            val changelogJob = launch {
+                loadChangelog()
+            }
+            
+            updateJob.join()
+            changelogJob.join()
         }
     }
 
