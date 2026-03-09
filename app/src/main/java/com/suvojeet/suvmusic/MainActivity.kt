@@ -844,7 +844,12 @@ fun SuvMusicApp(
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
             },
+            onArtistClick = { artistId ->
+                playerViewModel.collapsePlayer()
+                navController.navigate(Destination.Artist(artistId).route)
+            },
             modifier = Modifier.align(Alignment.BottomCenter),
+
             expandedContent = { onCollapse ->
                 val playerScreenState = com.suvojeet.suvmusic.ui.screens.player.PlayerScreenState(
                     playbackInfo = playbackInfo,
