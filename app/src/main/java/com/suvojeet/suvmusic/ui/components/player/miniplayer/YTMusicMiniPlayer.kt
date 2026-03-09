@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -91,17 +90,18 @@ fun YTMusicMiniPlayer(
                     strokeCap = StrokeCap.Butt
                 )
 
+                // Fixed height container for controls (64dp - 2dp progress bar approx)
                 Row(
                     modifier = Modifier
-                        .weight(1f)
+                        .height(62.dp)
+                        .fillMaxWidth()
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Album Art - square and slightly larger
                     Box(
                         modifier = Modifier
-                            .size(52.dp)
-                            .padding(vertical = 4.dp)
+                            .size(48.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
