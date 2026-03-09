@@ -192,6 +192,12 @@ fun YTMusicMiniPlayer(
                         }
                     }
                 }
+                
+                // Bottom Divider for navbar separation
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = dominantColors.onBackground.copy(alpha = 0.15f)
+                )
             }
         }
     }

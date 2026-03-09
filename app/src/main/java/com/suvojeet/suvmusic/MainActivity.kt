@@ -60,6 +60,8 @@ import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
 import com.suvojeet.suvmusic.ui.components.player.ExpandablePlayerSheet
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import com.suvojeet.suvmusic.ui.screens.player.components.VolumeIndicator
 import com.suvojeet.suvmusic.ui.screens.player.components.SystemVolumeObserver
@@ -689,6 +691,13 @@ fun SuvMusicApp(
                             val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
                             val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
                             
+                            val isDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
+                            val navBarColor = if (miniPlayerStyle == MiniPlayerStyle.YT_MUSIC && isDarkTheme) {
+                                lerp(defaultDominantColors.primary, Color.Black, 0.45f)
+                            } else {
+                                defaultDominantColors.primary
+                            }
+
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,
                                 onDestinationChange = { destination ->
@@ -702,7 +711,7 @@ fun SuvMusicApp(
                                 },
                                 alpha = navBarAlpha,
                                 iosLiquidGlassEnabled = iosLiquidGlassEnabled,
-                                backgroundColor = defaultDominantColors.primary
+                                backgroundColor = navBarColor
                             )
                         }
                     }
