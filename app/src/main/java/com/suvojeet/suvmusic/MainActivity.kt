@@ -856,7 +856,6 @@ fun SuvMusicApp(
                 }
             },
             modifier = Modifier.align(Alignment.BottomCenter),
-
             expandedContent = { onCollapse ->
                 val playerScreenState = com.suvojeet.suvmusic.ui.screens.player.PlayerScreenState(
                     playbackInfo = playbackInfo,
@@ -903,9 +902,13 @@ fun SuvMusicApp(
                     },
                     onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
                     onRefreshDevices = { playerViewModel.refreshDevices() },
-                    onArtistClick = { artistId ->
-                        onCollapse()
-                        navController.navigate(Destination.Artist(artistId).route)
+                    onArtistClick = { artistIdOrName ->
+                        if (artistCredits.size > 1) {
+                            playerViewModel.toggleMultipleArtistsDialog(true)
+                        } else {
+                            onCollapse()
+                            navController.navigate(Destination.Artist(artistIdOrName).route)
+                        }
                     },
                     onAlbumClick = { albumId ->
                         onCollapse()

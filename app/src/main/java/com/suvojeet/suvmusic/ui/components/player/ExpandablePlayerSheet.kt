@@ -326,6 +326,7 @@ fun ExpandablePlayerSheet(
  * The collapsed mini player row — a compact horizontal bar showing
  * artwork, song title/artist, and play/next controls.
  */
+@Composable
 private fun CollapsedMiniPlayer(
     song: com.suvojeet.suvmusic.core.model.Song,
     playerState: PlayerState,
