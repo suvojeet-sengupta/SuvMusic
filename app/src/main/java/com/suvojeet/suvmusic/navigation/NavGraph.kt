@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import androidx.media3.common.Player
 import com.suvojeet.suvmusic.ui.screens.SponsorBlockSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 
 /**
  * Main navigation graph for the app.
