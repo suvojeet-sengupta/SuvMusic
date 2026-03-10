@@ -53,7 +53,6 @@ fun PillMiniPlayer(
     onNext: () -> Unit,
     onClose: () -> Unit,
     onTap: () -> Unit,
-    onArtistClick: (String) -> Unit,
     userAlpha: Float = 0f,
     modifier: Modifier = Modifier
 ) {
@@ -168,11 +167,7 @@ fun PillMiniPlayer(
                         style = MaterialTheme.typography.bodySmall,
                         color = dominantColors.onBackground.copy(alpha = 0.7f),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.clickable {
-                            val target = song.artistId ?: song.artist
-                            onArtistClick(target)
-                        }
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
