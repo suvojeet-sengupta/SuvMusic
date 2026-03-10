@@ -735,17 +735,25 @@ class MusicPlayerService : MediaLibraryService() {
     
     private fun getCustomLayout(): List<CommandButton> {
         val player = mediaLibrarySession?.player
+        val isShuffleOn = player?.shuffleModeEnabled == true
         val likeIcon = if (isCurrentSongLiked) com.suvojeet.suvmusic.R.drawable.ic_heart else com.suvojeet.suvmusic.R.drawable.ic_heart_outline
+        
+        val shuffleIcon = if (isShuffleOn) {
+            com.suvojeet.suvmusic.R.drawable.ic_shuffle_on
+        } else {
+            com.suvojeet.suvmusic.R.drawable.ic_shuffle
+        }
+
         val repeatIcon = when (player?.repeatMode) {
-            Player.REPEAT_MODE_ALL -> com.suvojeet.suvmusic.R.drawable.ic_repeat
-            Player.REPEAT_MODE_ONE -> com.suvojeet.suvmusic.R.drawable.ic_repeat_one
+            Player.REPEAT_MODE_ALL -> com.suvojeet.suvmusic.R.drawable.ic_repeat_all_on
+            Player.REPEAT_MODE_ONE -> com.suvojeet.suvmusic.R.drawable.ic_repeat_one_on
             else -> com.suvojeet.suvmusic.R.drawable.ic_repeat 
         }
         return listOf(
             CommandButton.Builder()
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_shuffle))
                 .setSessionCommand(SessionCommand(COMMAND_SHUFFLE, android.os.Bundle.EMPTY))
-                .setIconResId(com.suvojeet.suvmusic.R.drawable.ic_shuffle)
+                .setIconResId(shuffleIcon)
                 .build(),
             CommandButton.Builder()
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_like))
