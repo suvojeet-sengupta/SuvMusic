@@ -98,7 +98,6 @@ fun ExpandablePlayerSheet(
     bottomPadding: Float,
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
-    onArtistClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     userAlpha: Float = 0f,
     swipeDownToDismissEnabled: Boolean = true,
@@ -173,7 +172,6 @@ fun ExpandablePlayerSheet(
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onClose = onClose,
-                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 style = style,
                 onTap = {
@@ -253,7 +251,7 @@ fun ExpandablePlayerSheet(
         }
 
         // ── Expanded Full Player ──
-        // Visible when expansion > ~0.3, fades in as expansion increases
+        // Visible when expansion > ~0.3, fades out as expansion increases
         val fullPlayerAlpha = ((expansion.value - 0.3f) / 0.7f).coerceIn(0f, 1f)
         if (fullPlayerAlpha > 0f) {
             Box(
@@ -336,7 +334,6 @@ private fun CollapsedMiniPlayer(
     onNext: () -> Unit,
     onClose: () -> Unit,
     onTap: () -> Unit,
-    onArtistClick: (String) -> Unit,
     userAlpha: Float = 0f,
     style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
     modifier: Modifier = Modifier
@@ -352,7 +349,6 @@ private fun CollapsedMiniPlayer(
                 onNext = onNext,
                 onClose = onClose,
                 onTap = onTap,
-                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 modifier = modifier
             )
@@ -367,7 +363,6 @@ private fun CollapsedMiniPlayer(
                 onNext = onNext,
                 onClose = onClose,
                 onTap = onTap,
-                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 modifier = modifier
             )
@@ -382,7 +377,6 @@ private fun CollapsedMiniPlayer(
                 onNext = onNext,
                 onClose = onClose,
                 onTap = onTap,
-                onArtistClick = onArtistClick,
                 userAlpha = userAlpha,
                 modifier = modifier
             )
