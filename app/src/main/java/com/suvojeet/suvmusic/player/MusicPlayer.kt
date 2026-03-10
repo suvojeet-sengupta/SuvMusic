@@ -411,6 +411,20 @@ class MusicPlayer @Inject constructor(
             // Update audio format when tracks change
             updateAudioFormatInfo()
         }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            val mode = when (repeatMode) {
+                Player.REPEAT_MODE_OFF -> com.suvojeet.suvmusic.data.model.RepeatMode.OFF
+                Player.REPEAT_MODE_ALL -> com.suvojeet.suvmusic.data.model.RepeatMode.ALL
+                Player.REPEAT_MODE_ONE -> com.suvojeet.suvmusic.data.model.RepeatMode.ONE
+                else -> com.suvojeet.suvmusic.data.model.RepeatMode.OFF
+            }
+            _playerState.update { it.copy(repeatMode = mode) }
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            _playerState.update { it.copy(shuffleEnabled = shuffleModeEnabled) }
+        }
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             mediaItem?.let { item ->
