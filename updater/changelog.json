@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.0.2.0",
+      "versionCode": 17,
+      "date": "March 10, 2026",
+      "description": "• YouTube Music Style Mini Player: Refined the YT Music mini player with a top-aligned progress bar and classic control layout.\n• Mini Player Refinement: Removed artist name click action to prevent accidental navigation while controlling playback.\n• Enhanced Media Controls: Improved notification sync for shuffle and repeat states with better visual feedback.\n• Stability: Fixed mini player swipe-down dismissal logic and optimized transitions.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.0.1.0",
       "versionCode": 15,
       "date": "March 10, 2026",
