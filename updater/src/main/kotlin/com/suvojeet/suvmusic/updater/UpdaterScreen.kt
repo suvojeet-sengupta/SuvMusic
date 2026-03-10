@@ -77,7 +77,7 @@ fun UpdaterScreen(
                     updateState = updateState,
                     lastUpdated = lastUpdated,
                     onCheckUpdate = { viewModel.checkForUpdate(currentVersionCode) },
-                    onDownloadUpdate = { info -> uriHandler.openUri(info.downloadUrl) },
+                    onDownloadUpdate = { info -> viewModel.downloadAndInstallUpdate(info) },
                     onDismiss = { viewModel.resetUpdateState() }
                 )
             }
