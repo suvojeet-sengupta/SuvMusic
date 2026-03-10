@@ -898,8 +898,9 @@ fun SuvMusicApp(
                         if (artistCredits.size > 1) {
                             playerViewModel.toggleMultipleArtistsDialog(true)
                         } else {
+                            val finalId = artistCredits.firstOrNull()?.artistId ?: artistIdOrName
                             onCollapse()
-                            navController.navigate(Destination.Artist(artistIdOrName).route)
+                            navController.navigate(Destination.Artist(finalId).route)
                         }
                     },
                     onAlbumClick = { albumId ->
