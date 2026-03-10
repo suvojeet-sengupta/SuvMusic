@@ -1,9 +1,6 @@
 name: Production Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -55,12 +52,50 @@ jobs:
         LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
         LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
 
-    - name: Extract Metadata
-      id: metadata
+    - name: Generate Release Notes
+      id: release_notes
       run: |
-        VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        VERSION=$(jq -r '.releases[0].versionName' updater/changelog.json)
+        DATE=$(jq -r '.releases[0].date' updater/changelog.json)
+        DESCRIPTION=$(jq -r '.releases[0].description' updater/changelog.json)
         
+        # Format the description: convert bullet points to markdown lists
+        FORMATTED_DESC=$(echo "$DESCRIPTION" | sed 's/^• / - /g')
+        
+        # Create the release body file
+        cat > release_body.md << EOF
+        # 🚀 SuvMusic v$VERSION
+
+        📅 **Release Date:** $DATE
+
+        ---
+
+        ### ✨ What's New
+        $FORMATTED_DESC
+
+        ---
+
+        ### 🛠️ Developer
+        **Suvojeet Sengupta**
+
+        ---
+
+        ### 💖 Support the Project
+        If you love using SuvMusic and want to support its development, consider donating:
+
+        - ☕ **Buy Me a Coffee:** [Support here](https://buymeacoffee.com/suvojeet_sengupta)
+        - 💳 **UPI ID:** \`suvojitsengupta21-3@okicici\`
+        
+        ---
+        *Thank you for being part of the SuvMusic community!*
+        EOF
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Extract Build Artifacts
+      id: extract_builds
+      run: |
+        VERSION="${{ steps.release_notes.outputs.version }}"
         APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
         AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
         
@@ -74,14 +109,14 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.ref_name }}
-        name: SuvMusic v${{ steps.metadata.outputs.version }}
-        generate_release_notes: true
+        name: SuvMusic v${{ steps.release_notes.outputs.version }}
+        body_path: release_body.md
         draft: false
         prerelease: false
         make_latest: true
         fail_on_unmatched_files: true
         files: |
-          ${{ steps.metadata.outputs.apk_path }}
-          ${{ steps.metadata.outputs.aab_path }}
+          ${{ steps.extract_builds.outputs.apk_path }}
+          ${{ steps.extract_builds.outputs.aab_path }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
