@@ -148,7 +148,7 @@ fun ExpandablePlayerSheet(
     }
 
     // Panel height: lerp from mini player (+ padding) to full screen
-    val panelHeightPx = (miniPlayerHeightPx + bottomPadding) + (dragRange * expansion.value)
+    val panelHeightPx = (miniPlayerHeightPx + bottomPadding) + (dragRange * expansion.value.coerceAtLeast(0f))
     val panelHeightDp = with(density) { panelHeightPx.toDp() }
 
     // The entire expandable panel
@@ -163,7 +163,7 @@ fun ExpandablePlayerSheet(
         val miniPlayerAlpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
         if (miniPlayerAlpha > 0f) {
             // When collapsed (expansion=0), offset the mini player down to close the gap
-            val collapsedOffsetPx = (bottomPadding - adjustedBottomPadding) * (1f - expansion.value)
+            val collapsedOffsetPx = (bottomPadding - adjustedBottomPadding) * (1f - expansion.value.coerceAtLeast(0f))
             
             CollapsedMiniPlayer(
                 song = song,
@@ -206,7 +206,7 @@ fun ExpandablePlayerSheet(
                         detectVerticalDragGestures(
                             onDragEnd = {
                                 coroutineScope.launch {
-                                    if (expansion.value < -0.15f && swipeDownToDismissEnabled) {
+                                    if (expansion.value < -0.1f && swipeDownToDismissEnabled) {
                                         // Swipe down to dismiss/stop
                                         onClose()
                                         // Reset expansion for next time it's shown
