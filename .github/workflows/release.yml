@@ -108,7 +108,7 @@ jobs:
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.ref_name }}
+        tag_name: v${{ steps.release_notes.outputs.version }}
         name: SuvMusic v${{ steps.release_notes.outputs.version }}
         body_path: release_body.md
         draft: false
