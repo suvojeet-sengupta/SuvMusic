@@ -19,7 +19,8 @@ sealed class UpdateState {
 
 @HiltViewModel
 class UpdateViewModel @Inject constructor(
-    private val checker: UpdateChecker
+    private val checker: UpdateChecker,
+    private val downloader: UpdateDownloader
 ) : ViewModel() {
 
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
@@ -74,6 +75,10 @@ class UpdateViewModel @Inject constructor(
             updateJob.join()
             changelogJob.join()
         }
+    }
+
+    fun downloadAndInstallUpdate(info: UpdateInfo) {
+        downloader.downloadAndInstall(info.downloadUrl, info.versionName)
     }
 
     fun dismissDialog() {

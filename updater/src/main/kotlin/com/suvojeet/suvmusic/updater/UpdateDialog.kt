@@ -10,10 +10,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 @Composable
 fun UpdateDialog(
     updateInfo: UpdateInfo,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onUpdate: (UpdateInfo) -> Unit
 ) {
-    val uriHandler = LocalUriHandler.current
-
     AlertDialog(
         onDismissRequest = { if (!updateInfo.forceUpdate) onDismiss() },
         title = { Text(text = "New Update Available: ${updateInfo.versionName}") },
@@ -26,7 +25,8 @@ fun UpdateDialog(
         },
         confirmButton = {
             Button(onClick = {
-                uriHandler.openUri(updateInfo.downloadUrl)
+                onUpdate(updateInfo)
+                onDismiss()
             }) {
                 Text("Update Now")
             }

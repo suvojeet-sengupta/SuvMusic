@@ -963,12 +963,13 @@ fun SuvMusicApp(
             )
         }
 
-        // Global Playlist Dialogs
         val updateState by updateViewModel.updateState.collectAsStateWithLifecycle()
         if (updateState is UpdateState.UpdateAvailable) {
+            val info = (updateState as UpdateState.UpdateAvailable).info
             UpdateDialog(
-                updateInfo = (updateState as UpdateState.UpdateAvailable).info,
-                onDismiss = { updateViewModel.dismissDialog() }
+                updateInfo = info,
+                onDismiss = { updateViewModel.dismissDialog() },
+                onUpdate = { updateViewModel.downloadAndInstallUpdate(info) }
             )
         }
         
