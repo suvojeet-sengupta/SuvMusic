@@ -35,11 +35,49 @@ Builds:
         sed -i 
         's/languageVersion.set(JavaLanguageVersion.of(11))/languageVersion.set(JavaLanguageVersion.of(21))/g;s/JavaLanguageVersion.of(11)/JavaLanguageVersion.of(21)/g'
 
+  - versionName: 2.0.1.0
+    versionCode: 15
+    commit: v2.0.1.0
+    subdir: app
+    gradle:
+      - yes
+    srclibs:
+      - NewPipeExtractor@v0.26.0
+    prebuild:
+      - sed -i 's|maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+        }|mavenCentral()|g' ../settings.gradle.kts
+      - sed -i '/^dependencyResolutionManagement/i\includeBuild("$$NewPipeExtractor$$")
+        { dependencySubstitution { 
+        substitute(module("com.github.TeamNewPipe:NewPipeExtractor")).using(project(":extractor"))
+        } }' ../settings.gradle.kts
+      - find $$NewPipeExtractor$$ -name '*.gradle' -o -name '*.gradle.kts' | xargs
+        sed -i 
+        's/languageVersion.set(JavaLanguageVersion.of(11))/languageVersion.set(JavaLanguageVersion.of(21))/g;s/JavaLanguageVersion.of(11)/JavaLanguageVersion.of(21)/g'
+
+  - versionName: 2.0.2.0
+    versionCode: 17
+    commit: v2.0.2.0
+    subdir: app
+    gradle:
+      - yes
+    srclibs:
+      - NewPipeExtractor@v0.26.0
+    prebuild:
+      - sed -i 's|maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+        }|mavenCentral()|g' ../settings.gradle.kts
+      - sed -i '/^dependencyResolutionManagement/i\includeBuild("$$NewPipeExtractor$$")
+        { dependencySubstitution { 
+        substitute(module("com.github.TeamNewPipe:NewPipeExtractor")).using(project(":extractor"))
+        } }' ../settings.gradle.kts
+      - find $$NewPipeExtractor$$ -name '*.gradle' -o -name '*.gradle.kts' | xargs
+        sed -i 
+        's/languageVersion.set(JavaLanguageVersion.of(11))/languageVersion.set(JavaLanguageVersion.of(21))/g;s/JavaLanguageVersion.of(11)/JavaLanguageVersion.of(21)/g'
+
 MaintainerNotes: The app requires NonFreeNet due to interaction with third-party,
   non-free network services (YouTube, KuGou, LrcLib). The tracking AntiFeature is
   due to the usage of ACRA for automated crash reporting.
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 2.0.1.0
-CurrentVersionCode: 15
+CurrentVersion: 2.0.2.0
+CurrentVersionCode: 17
