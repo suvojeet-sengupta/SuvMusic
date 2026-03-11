@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.0.2.0] - 2026-03-10
+
+### Added
+- **High-Quality Thumbnails**: Enforced 544px high-resolution artwork across all UI components for a more premium visual experience.
+- **YouTube Music Style Mini Player**: Refined the YT Music mini player with a top-aligned progress bar and classic control layout.
+
+### Changed
+- **Memory Optimization**: Optimized ImageLoader configuration with 30% heap usage and hardware acceleration to resolve decoding jank.
+- **Resource Management**: Replaced all manual ImageLoader instances with singleton context.imageLoader to prevent potential memory leaks.
+- **Mini Player Refinement**: Removed artist name click action to prevent accidental navigation while controlling playback.
+- **Recommendations**: Significantly improved the recommendation engine for better track discovery.
+- **Enhanced Media Controls**: Improved notification sync for shuffle and repeat states with better visual feedback.
+
+### Fixed
+- **Stability**: Fixed mini player swipe-down dismissal logic and optimized transitions.
+
+## [2.0.1.0] - 2026-03-10
+
+### Added
+- **Modernized Update Mechanism**: Migrated to a standalone `:updater` module with structured JSON changelog support and a dedicated rich-UI Updater screen.
+
+### Changed
+- **Stability Fixes**: Minor UI refinements and code optimization.
+
+## [2.0.0.0] - 2026-03-08
+
+### Added
+- **Spotify Pro Import**: Enhanced Spotify integration supporting albums, artists, and individual tracks with real-time fetching progress.
+- **Next-Gen Personalization**: High-performance Recommendation Engine with JNI-based native scoring and deep YouTube Music integration.
+- **Persistent Logging & Diagnostics**: Integrated a robust file-based logging system with 'Share App Logs' feature.
+- **Cinematic Player Transitions**: Completely refactored Video Mode using AnimatedContent for seamless transitions.
+- **Infinite Play (Radio Mode)**: New toggle in the Queue screen that automatically extends sessions with similar songs.
+- **Listen Together 2.0**: Redesigned with Material 3 Expressive UI and ultra-low latency Protobuf-based transport.
+- **Ringtone Engine**: Fully restored 'Set as Ringtone' feature with integrated audio trimmer.
+
+### Changed
+- **Performance Optimization**: Implemented explicit keys in all major lists to reduce UI re-composition.
+- **App Health**: Optimized ACRA integration for Android 15/16 with more detailed system context.
+- **Interactive Queue**: Added full context menus to every item in the queue for better management.
+- **Adaptive Recommendations**: 'Made for You' banners now have a 7-day persistence logic.
+
 ## [1.3.1.2] - 2026-03-01
 
 ### Added
