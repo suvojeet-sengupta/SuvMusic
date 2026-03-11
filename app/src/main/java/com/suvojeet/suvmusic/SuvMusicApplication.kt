@@ -99,7 +99,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSize(512 * 1024 * 1024) // 512MB dedicated disk cache
+                    .maxSizeBytes(512 * 1024 * 1024) // 512MB dedicated disk cache
                     .build()
             }
             // Aggressive caching for offline support and smoothness

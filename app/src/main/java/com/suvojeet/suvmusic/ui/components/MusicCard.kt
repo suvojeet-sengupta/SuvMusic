@@ -49,6 +49,7 @@ import com.suvojeet.suvmusic.ui.theme.AlbumArtShape
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import com.suvojeet.suvmusic.ui.theme.MusicCardShape
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
+import com.suvojeet.suvmusic.util.ImageUtils
 
 /**
  * Beautiful music card with glassmorphism effect.
