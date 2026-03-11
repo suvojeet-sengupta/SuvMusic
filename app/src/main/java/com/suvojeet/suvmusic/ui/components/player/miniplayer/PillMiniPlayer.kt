@@ -56,6 +56,11 @@ fun PillMiniPlayer(
     userAlpha: Float = 0f,
     modifier: Modifier = Modifier
 ) {
+    val effectiveAlpha = 1f - userAlpha
+    val highResThumbnail = androidx.compose.runtime.remember(song.thumbnailUrl) {
+        com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
+    }
+
     Surface(
         modifier = modifier
             .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -66,7 +71,6 @@ fun PillMiniPlayer(
         tonalElevation = 4.dp,
         shadowElevation = 6.dp
     ) {
-        val effectiveAlpha = 1f - userAlpha
         Box(
             modifier = Modifier
                 .background(
@@ -131,9 +135,9 @@ fun PillMiniPlayer(
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (song.thumbnailUrl != null) {
+                        if (highResThumbnail != null) {
                             AsyncImage(
-                                model = song.thumbnailUrl,
+                                model = highResThumbnail,
                                 contentDescription = song.title,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop

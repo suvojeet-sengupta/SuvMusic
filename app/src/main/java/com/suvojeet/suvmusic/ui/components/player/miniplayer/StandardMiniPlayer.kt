@@ -54,6 +54,11 @@ fun StandardMiniPlayer(
     userAlpha: Float = 0f,
     modifier: Modifier = Modifier
 ) {
+    val effectiveAlpha = 1f - userAlpha
+    val highResThumbnail = androidx.compose.runtime.remember(song.thumbnailUrl) {
+        com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
+    }
+
     Surface(
         modifier = modifier
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -64,7 +69,6 @@ fun StandardMiniPlayer(
         tonalElevation = 4.dp,
         shadowElevation = 8.dp
     ) {
-        val effectiveAlpha = 1f - userAlpha
         Box(
             modifier = Modifier
                 .background(
@@ -90,9 +94,9 @@ fun StandardMiniPlayer(
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (song.thumbnailUrl != null) {
+                        if (highResThumbnail != null) {
                             AsyncImage(
-                                model = song.thumbnailUrl,
+                                model = highResThumbnail,
                                 contentDescription = song.title,
                                 modifier = Modifier.size(42.dp),
                                 contentScale = ContentScale.Crop
