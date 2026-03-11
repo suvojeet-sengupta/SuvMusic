@@ -51,32 +51,6 @@ import com.suvojeet.suvmusic.ui.theme.MusicCardShape
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 
 /**
- * Get high-resolution thumbnail URL.
- * Handles both remote URLs and local file paths.
- */
-private fun getHighResThumbnail(url: String?): Any? {
-    if (url == null) return null
-    
-    // Handle local file paths (for downloaded songs)
-    if (url.startsWith("/") || url.startsWith("file://")) {
-        // Return as File object for Coil to load from disk
-        val path = url.removePrefix("file://")
-        val file = java.io.File(path)
-        return if (file.exists()) file else null
-    }
-    
-    // Handle remote URLs
-    return when {
-        url.contains("ytimg.com") -> url
-            .replace(Regex("w\\d+-h\\d+"), "w226-h226")
-        url.contains("lh3.googleusercontent.com") -> 
-            url.replace(Regex("=w\\d+-h\\d+"), "=w226-h226")
-              .replace(Regex("=s\\d+"), "=s226")
-        else -> url
-    }
-}
-
-/**
  * Beautiful music card with glassmorphism effect.
  * Used for displaying songs in lists and grids.
  */
@@ -108,7 +82,19 @@ fun MusicCard(
 
     val cardBackgroundColor = backgroundColor ?: defaultBackgroundColor
     
-    val highResThumbnail = getHighResThumbnail(song.thumbnailUrl)
+    val highResThumbnail = remember(song.thumbnailUrl) {
+        val url = song.thumbnailUrl ?: return@remember null
+        
+        // Handle local file paths (for downloaded songs)
+        if (url.startsWith("/") || url.startsWith("file://")) {
+            val path = url.removePrefix("file://")
+            val file = java.io.File(path)
+            if (file.exists()) file else null
+        } else {
+            // Use high quality as requested
+            ImageUtils.getHighResThumbnailUrl(url, size = 544)
+        }
+    }
     
     Surface(
         modifier = modifier
@@ -250,7 +236,19 @@ fun CompactMusicCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val highResThumbnail = getHighResThumbnail(song.thumbnailUrl)
+    val highResThumbnail = remember(song.thumbnailUrl) {
+        val url = song.thumbnailUrl ?: return@remember null
+        
+        // Handle local file paths (for downloaded songs)
+        if (url.startsWith("/") || url.startsWith("file://")) {
+            val path = url.removePrefix("file://")
+            val file = java.io.File(path)
+            if (file.exists()) file else null
+        } else {
+            // Use high quality as requested
+            ImageUtils.getHighResThumbnailUrl(url, size = 544)
+        }
+    }
     
     Surface(
         modifier = modifier
