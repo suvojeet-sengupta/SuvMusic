@@ -782,8 +782,12 @@ fun NewReleaseCard(
     containerColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
     val context = LocalContext.current
+    val highResThumbnail = remember(imageUrl) {
+        ImageUtils.getHighResThumbnailUrl(imageUrl, size = 544)
+    }
+    
     val imageRequest = ImageRequest.Builder(context)
-        .data(imageUrl)
+        .data(highResThumbnail)
         .crossfade(true)
         .build()
 

@@ -8,7 +8,7 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
-import coil.ImageLoader
+import coil.imageLoader
 import coil.request.ImageRequest
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 @UnstableApi
 class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
-    private val imageLoader = ImageLoader(context)
+    private val imageLoader = context.imageLoader
     private val scope = CoroutineScope(Dispatchers.IO)
 
     // Define standard size for Bitmap to avoid Palette crash and system scaling issues.

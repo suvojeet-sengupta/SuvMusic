@@ -12,7 +12,7 @@ import android.text.TextPaint
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
-import coil.ImageLoader
+import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +80,7 @@ object LyricsImageGenerator {
 
         if (artworkUrl != null) {
             try {
-                val loader = ImageLoader(context)
+                val loader = context.imageLoader
                 val request = ImageRequest.Builder(context)
                     .data(artworkUrl)
                     .allowHardware(false) // Software bitmap needed for Canvas

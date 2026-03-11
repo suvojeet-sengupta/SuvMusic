@@ -622,7 +622,9 @@ fun QuickAccessCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
+    val highResThumbnail = remember(song.thumbnailUrl) {
+        ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
+    }
     
     // Darker surface for contrast
     Surface(
