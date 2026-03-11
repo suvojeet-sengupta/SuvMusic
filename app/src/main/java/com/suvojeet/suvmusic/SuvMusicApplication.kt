@@ -93,19 +93,20 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
         return ImageLoader.Builder(this)
             .memoryCache {
                 MemoryCache.Builder(this)
-                    .maxSizePercent(0.25) // Use 25% of available memory
+                    .maxSizePercent(0.30) // Use 30% of available heap for images (was 25%)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizePercent(0.02) // Use 2% of disk space (approx 1GB on 50GB phone)
+                    .maxSize(512 * 1024 * 1024) // 512MB dedicated disk cache
                     .build()
             }
-            // Aggressive caching for offline support
+            // Aggressive caching for offline support and smoothness
             .networkCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
             .memoryCachePolicy(CachePolicy.ENABLED)
+            .allowHardware(true) // Ensure hardware bitmaps are used for efficiency
             .crossfade(true)
             .apply { if (BuildConfig.DEBUG) logger(DebugLogger()) }
             .build()
