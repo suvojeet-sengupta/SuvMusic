@@ -626,9 +626,11 @@ fun LandscapePlayerContent(
     player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit,
     isSwitchingMode: Boolean = false
 ) {
+    val combinedLoading = playerState.isLoading || isSwitchingMode
+
     // Controls dimming when loading
     val controlsAlpha by animateFloatAsState(
-        targetValue = if (playerState.isLoading) 0.45f else 1f,
+        targetValue = if (combinedLoading) 0.45f else 1f,
         animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
         label = "controlsDimOnLoadLandscape"
     )
