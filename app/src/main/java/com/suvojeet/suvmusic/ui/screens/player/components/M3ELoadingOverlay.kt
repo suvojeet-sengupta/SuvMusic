@@ -2,12 +2,10 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,18 +35,11 @@ fun M3ELoadingOverlay(
     AnimatedVisibility(
         visible = isLoading,
         enter = fadeIn(
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + scaleIn(
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium
-            ),
-            initialScale = 0.7f
+            animationSpec = tween(300, easing = FastOutSlowInEasing)  // smooth fade in, no bounce
         ),
-        exit = fadeOut() + scaleOut(targetScale = 0.7f),
+        exit = fadeOut(
+            animationSpec = tween(200)
+        ),
         modifier = modifier
     ) {
         Box(
