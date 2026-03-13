@@ -155,6 +155,10 @@ class PlayerViewModel @Inject constructor(
     private val _isMiniPlayerDismissed = MutableStateFlow(false)
     val isMiniPlayerDismissed: StateFlow<Boolean> = _isMiniPlayerDismissed.asStateFlow()
 
+    // Mode Switching State (Audio <-> Video)
+    private val _isSwitchingMode = MutableStateFlow(false)
+    val isSwitchingMode: StateFlow<Boolean> = _isSwitchingMode.asStateFlow()
+
     // Fullscreen State (Video)
     private val _isFullScreen = MutableStateFlow(false)
     val isFullScreen: StateFlow<Boolean> = _isFullScreen.asStateFlow()
@@ -585,7 +589,14 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun toggleVideoMode() {
+        _isSwitchingMode.value = true
         musicPlayer.toggleVideoMode()
+        viewModelScope.launch {
+            // Keep the loading state visible during the transition period
+            // to allow the player to re-buffer if necessary.
+            delay(1200) 
+            _isSwitchingMode.value = false
+        }
     }
 
     fun setVideoQuality(quality: VideoQuality) {

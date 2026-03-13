@@ -198,6 +198,7 @@ fun PlayerScreen(
     val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
     val sponsorSegments by playerViewModel.sponsorSegments.collectAsStateWithLifecycle(initialValue = emptyList())
     val isFullScreen by playerViewModel.isFullScreen.collectAsStateWithLifecycle()
+    val isSwitchingMode by playerViewModel.isSwitchingMode.collectAsStateWithLifecycle()
     
     // Queue Selection & Sections
     val historySongs by playerViewModel.historySongs.collectAsStateWithLifecycle()
@@ -385,7 +386,8 @@ fun PlayerScreen(
                             onRecenterAr = { playerViewModel.calibrateAudioAr() },
                             player = player,
                             isFullScreen = isFullScreen,
-                            onSetFullScreen = { playerViewModel.setFullScreen(it) }
+                            onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                            isSwitchingMode = isSwitchingMode
                         )
                     } else {
                         val isCompactHeight = maxHeight < 600.dp
@@ -406,7 +408,8 @@ fun PlayerScreen(
                             onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
                             onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
                             onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                            onSetFullScreen = { playerViewModel.setFullScreen(it) }
+                            onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                            isSwitchingMode = isSwitchingMode
                         )
                     }
                 }
@@ -473,11 +476,14 @@ fun PortraitPlayerContent(
     onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit,
     onRecenterAr: () -> Unit,
-    onSetFullScreen: (Boolean) -> Unit
+    onSetFullScreen: (Boolean) -> Unit,
+    isSwitchingMode: Boolean = false
 ) {
+    val combinedLoading = playerState.isLoading || isSwitchingMode
+
     // Controls dimming when loading
     val controlsAlpha by animateFloatAsState(
-        targetValue = if (playerState.isLoading) 0.45f else 1f,
+        targetValue = if (combinedLoading) 0.45f else 1f,
         animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
         label = "controlsDimOnLoad"
     )
@@ -546,7 +552,7 @@ fun PortraitPlayerContent(
 
                             // M3E Expressive loading overlay for video buffering
                             com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay(
-                                isLoading = playerState.isLoading,
+                                isLoading = combinedLoading,
                                 dominantColors = dominantColors,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -554,7 +560,7 @@ fun PortraitPlayerContent(
                     }
                 } else {
                     AlbumArtwork(
-                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = playerState.isLoading,
+                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
                         onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                         onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
                     )
@@ -567,12 +573,12 @@ fun PortraitPlayerContent(
         SongInfoSection(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
-            dominantColors = dominantColors, isLoading = playerState.isLoading, compact = isCompactHeight
+            dominantColors = dominantColors, isLoading = combinedLoading, compact = isCompactHeight
         )
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
-        if (playerState.isLoading) {
+        if (combinedLoading) {
             M3ESeekbarShimmer(
                 isVisible = true,
                 dominantColors = dominantColors,
@@ -617,7 +623,8 @@ fun LandscapePlayerContent(
     onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit,
     isVideoMode: Boolean, onToggleVideoMode: () -> Unit, handleDoubleTapSeek: (Boolean) -> Unit, onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
-    player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit
+    player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit,
+    isSwitchingMode: Boolean = false
 ) {
     // Controls dimming when loading
     val controlsAlpha by animateFloatAsState(
@@ -674,7 +681,7 @@ fun LandscapePlayerContent(
 
                             // M3E Expressive loading overlay for video buffering
                             com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay(
-                                isLoading = playerState.isLoading,
+                                isLoading = combinedLoading,
                                 dominantColors = dominantColors,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -682,7 +689,7 @@ fun LandscapePlayerContent(
                     }
                 } else {
                     AlbumArtwork(
-                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = playerState.isLoading,
+                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
                         onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                         onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
                     )
@@ -692,10 +699,10 @@ fun LandscapePlayerContent(
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
             Spacer(modifier = Modifier.height(8.dp))
-            SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, dominantColors = dominantColors, isLoading = playerState.isLoading)
+            SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, dominantColors = dominantColors, isLoading = combinedLoading)
             Spacer(modifier = Modifier.height(16.dp))
             
-            if (playerState.isLoading) {
+            if (combinedLoading) {
                 M3ESeekbarShimmer(
                     isVisible = true,
                     dominantColors = dominantColors,
