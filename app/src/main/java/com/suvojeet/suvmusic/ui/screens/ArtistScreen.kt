@@ -1,10 +1,12 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,6 +28,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -48,6 +51,7 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.components.NewReleaseCard
+import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
 import kotlin.math.min
@@ -66,6 +70,9 @@ fun ArtistScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
+    
+    var showSongMenu by remember { mutableStateOf(false) }
+    var selectedSong: Song? by remember { mutableStateOf(null) }
 
     // Calculate scroll offset for sticky header fading
     val headerAlpha by remember {
@@ -161,7 +168,7 @@ fun ArtistScreen(
                             TopSongRow(
                                 index = index + 1,
                                 song = song,
-                                onClick = { onSongClick(uiState.topSongs, index) },
+                                onClick = { onSongClick(artist.songs, index) },
                                 onMoreClick = {
                                     selectedSong = song
                                     showSongMenu = true
@@ -361,6 +368,21 @@ fun ArtistScreen(
                     }
                 }
             }
+        }
+        
+        selectedSong?.let { song ->
+            SongMenuBottomSheet(
+                isVisible = showSongMenu,
+                onDismiss = { showSongMenu = false },
+                song = song,
+                onPlayNext = { viewModel.playNext(song); showSongMenu = false },
+                onAddToQueue = { viewModel.addToQueue(song); showSongMenu = false },
+                onAddToPlaylist = { viewModel.addToPlaylist(song); showSongMenu = false },
+                onDownload = { viewModel.downloadSong(song); showSongMenu = false },
+                onShare = { /* handle share */ },
+                onViewArtist = null, // Already on artist screen
+                onViewAlbum = null
+            )
         }
     }
 }
