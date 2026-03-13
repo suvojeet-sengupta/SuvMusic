@@ -1,23 +1,16 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -57,97 +50,51 @@ fun MoodChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    // Animate scale for a "pop" effect when selected
+    // Selection scale effect
     val selectionScale by animateFloatAsState(
         targetValue = if (isSelected) 1.08f else 1f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
         ),
-        label = "selectionScale"
+        label = "moodChipScale"
     )
 
-    val backgroundColor = if (isSelected) 
-        MaterialTheme.colorScheme.primary 
-    else 
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.3f) 
-
-    val textColor = if (isSelected) 
-        MaterialTheme.colorScheme.onPrimary 
-    else 
-        MaterialTheme.colorScheme.onSurface
-
-    Box(
-        modifier = Modifier
-            .graphicsLayer {
-                scaleX = selectionScale
-                scaleY = selectionScale
-            }
-            .bounceClick(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        // Subtle Glow behind the selected chip
-        if (isSelected) {
-            androidx.compose.foundation.Canvas(
-                modifier = Modifier
-                    .matchParentSize()
-            ) {
-                drawRoundRect(
-                    color = backgroundColor,
-                    size = size.copy(width = size.width + 12.dp.toPx(), height = size.height + 6.dp.toPx()),
-                    topLeft = androidx.compose.ui.geometry.Offset(-6.dp.toPx(), -3.dp.toPx()),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx()),
-                    alpha = 0.4f
-                )
-            }
-        }
-
-        Surface(
-            modifier = Modifier.height(38.dp),
-            shape = androidx.compose.foundation.shape.CircleShape,
-            color = backgroundColor,
-            border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            ) {
-                Text(
-                    text = mood,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                    color = textColor
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun Modifier.bounceClick(
-    scaleDown: Float = 0.95f,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(8.dp),
-    onClick: () -> Unit
-): Modifier {
+    // Press scale effect
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy, 
-            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.93f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
-        label = "bounce"
+        label = "moodChipPress"
     )
 
-    return this
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
-        .clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = onClick
-        )
+    ElevatedFilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        label = {
+            Text(
+                text = mood,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
+            )
+        },
+        modifier = Modifier.scale(selectionScale * pressScale),
+        interactionSource = interactionSource,
+        elevation = FilterChipDefaults.elevatedFilterChipElevation(
+            elevation = if (isSelected) 6.dp else 2.dp,
+            pressedElevation = 1.dp
+        ),
+        colors = FilterChipDefaults.elevatedFilterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
+        border = null
+    )
 }
