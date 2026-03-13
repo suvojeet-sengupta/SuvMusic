@@ -156,22 +156,6 @@ fun HomeScreen(
                             }
                         }
 
-                        if (uiState.recommendations.isNotEmpty()) {
-                            item {
-                                QuickPicksSection(
-                                    section = HomeSection(
-                                        title = "Quick picks",
-                                        items = uiState.recommendations.map { HomeItem.SongItem(it) },
-                                        type = HomeSectionType.QuickPicks
-                                    ),
-                                    onSongClick = onSongClick,
-                                    onPlaylistClick = onPlaylistClick,
-                                    onAlbumClick = onAlbumClick,
-                                    onSongMoreClick = onSongMoreClickHandler
-                                )
-                            }
-                        }
-
                         itemsIndexed(uiState.filteredSections) { _, section ->
                             RenderHomeSectionM3E(
                                 section = section,

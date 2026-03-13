@@ -161,7 +161,11 @@ fun ArtistScreen(
                             TopSongRow(
                                 index = index + 1,
                                 song = song,
-                                onClick = { onSongClick(artist.songs, index) }
+                                onClick = { onSongClick(uiState.topSongs, index) },
+                                onMoreClick = {
+                                    selectedSong = song
+                                    showSongMenu = true
+                                }
                             )
                         }
                     }
@@ -575,23 +579,34 @@ fun LatestReleaseSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TopSongRow(
     index: Int,
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onMoreClick: () -> Unit = {}
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+        label = "song_row_scale"
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable(interactionSource, indication = null) { onClick() }
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Index
         Text(
             text = index.toString(),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(28.dp),
             textAlign = TextAlign.Center
@@ -605,8 +620,8 @@ fun TopSongRow(
                 .build(),
             contentDescription = null,
             modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(6.dp)),
+                .size(52.dp)
+                .clip(MaterialTheme.shapes.small),
             contentScale = ContentScale.Crop
         )
         
@@ -616,7 +631,7 @@ fun TopSongRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLargeEmphasized,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -629,13 +644,14 @@ fun TopSongRow(
             )
         }
         
-        // Options like duration or menu could go here
-        Icon(
-            imageVector = Icons.Default.MoreVert,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
-        )
+        IconButton(onClick = onMoreClick) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "More",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

@@ -228,7 +228,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         homeSections = cachedSections, 
-                        filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
+                        filteredSections = cachedSections,
                         isLoading = false,
                         isRefreshing = false, // Not explicitly refreshing unless we decide to fetch
                         error = null
@@ -277,7 +277,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { 
                         it.copy(
                             homeSections = sections,
-                            filteredSections = sections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
+                            filteredSections = sections,
                             isLoading = false,
                             isRefreshing = false,
                             error = null

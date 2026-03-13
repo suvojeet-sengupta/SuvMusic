@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import android.widget.Toast
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -12,9 +13,12 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +44,7 @@ import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.core.ui.components.M3ENavigationItem
 import com.suvojeet.suvmusic.core.ui.components.M3EPageHeader
 import com.suvojeet.suvmusic.core.ui.components.M3ESettingsGroupHeader
+import com.suvojeet.suvmusic.core.ui.components.M3ESettingsItem
 import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
@@ -55,6 +60,7 @@ fun AboutScreen(
     val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
     val uriHandler = LocalUriHandler.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    var showPasswordDialog by remember { mutableStateOf(false) }
 
     val dominantColors = DominantColors(
         primary = MaterialTheme.colorScheme.primaryContainer,
@@ -144,9 +150,25 @@ fun AboutScreen(
                     }
                 }
 
+                item {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Text(
+                                text = "SuvMusic is a cutting-edge, open-source music player developed in India. Our focus is to deliver a premium, interruption-free music experience by leveraging the vast library of YouTube Music.",
+                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
                 // What's Inside - Feature Cards
                 item {
-                    M3ESettingsGroupHeader("WHAT'S INSIDE")
+                    M3ESettingsGroupHeader("FEATURES")
                     FlowRow(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -154,12 +176,12 @@ fun AboutScreen(
                         maxItemsInEachRow = 2
                     ) {
                         val features = listOf(
-                            Triple(Icons.Default.MusicNote, "YouTube Music", "Millions of songs"),
-                            Triple(Icons.Default.OfflinePin, "Offline Play", "Download & listen"),
-                            Triple(Icons.Default.Lyrics, "Synced Lyrics", "Multiple providers"),
-                            Triple(Icons.Default.GraphicEq, "Equalizer", "10-band EQ"),
-                            Triple(Icons.Default.Group, "Listen Together", "Real-time sync"),
-                            Triple(Icons.Default.AutoAwesome, "AI Queue", "Smart recommendations")
+                            Triple(Icons.Outlined.Palette, "Premium Design", "Modern, clean interface"),
+                            Triple(Icons.Outlined.Block, "100% Ad-Free", "No interruptions, ever"),
+                            Triple(Icons.Default.CloudDownload, "Offline Play", "Download & listen anywhere"),
+                            Triple(Icons.Default.HighQuality, "High Quality", "Up to 256 kbps audio"),
+                            Triple(Icons.Default.Language, "Spatial Audio", "Audio AR support"),
+                            Triple(Icons.Default.History, "Synced Lyrics", "Multiple providers")
                         )
                         features.forEach { (icon, title, desc) ->
                             M3EFeatureCard(
@@ -171,6 +193,24 @@ fun AboutScreen(
                         }
                     }
                     Spacer(Modifier.height(24.dp))
+                }
+
+                item {
+                    M3ESettingsGroupHeader("WHY OPUS AUDIO?")
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text(
+                                text = "SuvMusic streams audio using the Opus codec, widely regarded as a superior modern format.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            QualityPointM3E("Better than 320kbps MP3", "Opus 160kbps offers quality indistinguishable from or better than 320kbps MP3 while saving data.")
+                            QualityPointM3E("Superior to AAC", "Opus supports a wider frequency range, delivering deeper bass and crisper highs.")
+                        }
+                    }
                 }
 
                 // LINKS Section
@@ -194,12 +234,6 @@ fun AboutScreen(
                             title = "How It Works",
                             onClick = onHowItWorksClick
                         )
-                        M3ENavigationItem(
-                            icon = Icons.Default.Favorite,
-                            title = "Support the Project",
-                            subtitle = "Donate to keep us alive",
-                            onClick = { /* Support link */ }
-                        )
                     }
                 }
 
@@ -214,6 +248,19 @@ fun AboutScreen(
                             onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") }
                         )
                     }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        SocialButtonM3E(Icons.Default.Group, "Instagram", Modifier.weight(1f)) {
+                            uriHandler.openUri("https://www.instagram.com/suvojeet__sengupta")
+                        }
+                        SocialButtonM3E(Icons.Default.Send, "Telegram", Modifier.weight(1f)) {
+                            uriHandler.openUri("https://t.me/suvojeet_sengupta")
+                        }
+                    }
+
                     M3ENavigationItem(
                         icon = Icons.Default.People,
                         title = "All Contributors",
@@ -222,18 +269,43 @@ fun AboutScreen(
                     )
                 }
 
-                // LEGAL Section
                 item {
-                    M3ESettingsGroupHeader("LEGAL")
-                    M3ENavigationItem(
-                        icon = Icons.Default.Gavel,
-                        title = "Open Source Licenses",
-                        onClick = { /* Show licenses */ }
-                    )
-                    M3ENavigationItem(
-                        icon = Icons.Default.Security,
-                        title = "Privacy Policy",
-                        onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/blob/main/PRIVACY.md") }
+                    M3ESettingsGroupHeader("BUILT WITH")
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                    ) {
+                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                            TechRowM3E("Language", "Kotlin")
+                            TechRowM3E("UI Framework", "Jetpack Compose")
+                            TechRowM3E("Audio Engine", "Media3 ExoPlayer")
+                            TechRowM3E("Data Source", "YouTube Music")
+                        }
+                    }
+                }
+
+                // ADVANCED Section
+                item {
+                    M3ESettingsGroupHeader("ADVANCED")
+                    M3ESettingsItem(
+                        icon = if (isDeveloperMode) Icons.Default.LockOpen else Icons.Default.Security,
+                        title = "Developer Mode",
+                        subtitle = if (isDeveloperMode) "HQ Audio & Extra options enabled" else "Tap to unlock experimental features",
+                        iconTint = if (isDeveloperMode) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+                        onClick = {
+                            if (!isDeveloperMode) {
+                                showPasswordDialog = true
+                            } else {
+                                viewModel.disableDeveloperMode()
+                                Toast.makeText(context, "Developer Mode Disabled", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        trailingContent = {
+                            if (isDeveloperMode) {
+                                Switch(checked = true, onCheckedChange = { viewModel.disableDeveloperMode() })
+                            }
+                        }
                     )
                 }
 
@@ -256,6 +328,73 @@ fun AboutScreen(
                     Spacer(Modifier.height(32.dp))
                 }
             }
+        }
+    }
+
+    if (showPasswordDialog) {
+        com.suvojeet.suvmusic.ui.components.DeveloperAccessDialog(
+            onDismiss = { showPasswordDialog = false },
+            onUnlock = { password ->
+                if (viewModel.tryUnlockDeveloperMode(password)) {
+                    showPasswordDialog = false
+                    Toast.makeText(context, "Developer Mode Enabled", Toast.LENGTH_SHORT).show()
+                    true
+                } else {
+                    false
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun QualityPointM3E(title: String, desc: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+            Text(title, style = MaterialTheme.typography.titleSmallEmphasized)
+        }
+        Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun TechRowM3E(label: String, value: String) {
+    ListItem(
+        headlineContent = { Text(label, style = MaterialTheme.typography.bodyMedium) },
+        trailingContent = { Text(value, style = MaterialTheme.typography.labelLargeEmphasized, color = MaterialTheme.colorScheme.primary) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SocialButtonM3E(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+        label = "social_scale"
+    )
+    
+    Surface(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(icon, null, modifier = Modifier.size(24.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
