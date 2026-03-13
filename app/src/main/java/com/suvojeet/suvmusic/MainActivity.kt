@@ -695,10 +695,14 @@ fun SuvMusicApp(
                             val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
                             
                             val isDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
-                            val navBarColor = if (miniPlayerStyle == MiniPlayerStyle.YT_MUSIC && isDarkTheme) {
-                                lerp(defaultDominantColors.primary, Color.Black, 0.45f)
+                            val navBarColor = if (showMiniPlayer) {
+                                if (miniPlayerStyle == MiniPlayerStyle.YT_MUSIC && isDarkTheme) {
+                                    lerp(defaultDominantColors.primary, Color.Black, 0.45f)
+                                } else {
+                                    defaultDominantColors.primary
+                                }
                             } else {
-                                defaultDominantColors.primary
+                                androidx.compose.material3.MaterialTheme.colorScheme.surface
                             }
 
                             ExpressiveBottomNav(
