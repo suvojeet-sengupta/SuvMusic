@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -109,8 +110,7 @@ private fun AppleMusicButton(
             )
             .clip(CircleShape)
             // Manual click handling to remove ripple (indication = null)
-            // Use Modifier.clickable as normal but NOT for ButtonGroupScope items
-            .androidx.compose.foundation.clickable(
+            .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
@@ -172,9 +172,9 @@ fun PlaybackControls(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
         ) {
             // Previous - Apple Music style with weight
-            clickable(
+            IconButton(
                 onClick = onPrevious,
-                weight = 1f
+                modifier = Modifier.weight(1f)
             ) {
                 Icon(
                     imageVector = SkipPrevious,
@@ -185,9 +185,9 @@ fun PlaybackControls(
             }
 
             // Play/Pause - Large button with expansion weight
-            clickable(
+            IconButton(
                 onClick = onPlayPause,
-                weight = 2f
+                modifier = Modifier.weight(2f)
             ) {
                 AnimatedContent(
                     targetState = isPlaying,
@@ -209,9 +209,9 @@ fun PlaybackControls(
             }
 
             // Next - Apple Music style with weight
-            clickable(
+            IconButton(
                 onClick = onNext,
-                weight = 1f
+                modifier = Modifier.weight(1f)
             ) {
                 Icon(
                     imageVector = SkipNext,
