@@ -427,6 +427,14 @@ fun LibraryScreen(
 
 // --- Sub-Composables ---
 
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+
 @Composable
 fun LibraryTopBar(
     onHistoryClick: () -> Unit,
@@ -451,10 +459,26 @@ fun LibraryTopBar(
                 Icon(Icons.Default.History, contentDescription = "History", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = onSyncClick) {
-                if (isSyncing) {
-                   androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Default.Cached, contentDescription = "Sync", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                AnimatedContent(
+                    targetState = isSyncing,
+                    transitionSpec = {
+                        (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith
+                        (scaleOut() + fadeOut())
+                    },
+                    label = "syncIndicator"
+                ) { syncing ->
+                    if (syncing) {
+                        LoadingIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Cached,
+                            contentDescription = "Sync",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
