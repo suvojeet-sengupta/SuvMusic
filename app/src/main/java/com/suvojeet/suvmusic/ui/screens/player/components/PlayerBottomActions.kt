@@ -69,105 +69,90 @@ fun BottomActions(
             horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
         ) {
             // Lyrics button
-            val lyricsInteractionSource = remember { MutableInteractionSource() }
-            clickable(onClick = onLyricsClick, weight = 1f, interactionSource = lyricsInteractionSource) {
-                IconButton(onClick = onLyricsClick, interactionSource = lyricsInteractionSource) {
-                    Icon(
-                        imageVector = Icons.Default.Lyrics,
-                        contentDescription = "Lyrics",
-                        tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                        modifier = Modifier.size(iconSize)
-                    )
-                }
+            clickable(onClick = onLyricsClick, weight = 1f) {
+                Icon(
+                    imageVector = Icons.Default.Lyrics,
+                    contentDescription = "Lyrics",
+                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(iconSize)
+                )
             }
 
             // Download Button
-            val downloadInteractionSource = remember { MutableInteractionSource() }
-            clickable(onClick = onDownloadClick, weight = 1f, interactionSource = downloadInteractionSource) {
-                IconButton(onClick = onDownloadClick, interactionSource = downloadInteractionSource) {
-                    when(downloadState) {
-                        com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADING -> {
-                            LoadingIndicator(
-                                modifier = Modifier.size(iconSize),
-                                color = dominantColors.accent
-                            )
-                        }
-                        com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED -> {
-                            Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = "Downloaded",
-                                tint = dominantColors.accent,
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
-                        com.suvojeet.suvmusic.data.model.DownloadState.FAILED -> {
-                            Icon(
-                                imageVector = Icons.Filled.Error,
-                                contentDescription = "Retry Download",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
-                        else -> {
-                            Icon(
-                                imageVector = Icons.Filled.Download,
-                                contentDescription = "Download",
-                                tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
+            clickable(onClick = onDownloadClick, weight = 1f) {
+                when(downloadState) {
+                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADING -> {
+                        LoadingIndicator(
+                            modifier = Modifier.size(iconSize),
+                            color = dominantColors.accent
+                        )
+                    }
+                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED -> {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Downloaded",
+                            tint = dominantColors.accent,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+                    com.suvojeet.suvmusic.data.model.DownloadState.FAILED -> {
+                        Icon(
+                            imageVector = Icons.Filled.Error,
+                            contentDescription = "Retry Download",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Filled.Download,
+                            contentDescription = "Download",
+                            tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(iconSize)
+                        )
                     }
                 }
             }
 
             // Video mode toggle
             if (isYouTubeSong) {
-                val videoInteractionSource = remember { MutableInteractionSource() }
-                clickable(onClick = onVideoToggle, weight = 1f, interactionSource = videoInteractionSource) {
-                    IconButton(onClick = onVideoToggle, interactionSource = videoInteractionSource) {
-                        AnimatedContent(
-                            targetState = isVideoMode,
-                            transitionSpec = {
-                                scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn() togetherWith
-                                scaleOut() + fadeOut()
-                            },
-                            label = "videoModeToggle"
-                        ) { videoMode ->
-                            Icon(
-                                imageVector = if (videoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                                contentDescription = if (videoMode) "Audio Mode" else "Video Mode",
-                                tint = if (videoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
+                clickable(onClick = onVideoToggle, weight = 1f) {
+                    AnimatedContent(
+                        targetState = isVideoMode,
+                        transitionSpec = {
+                            scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn() togetherWith
+                            scaleOut() + fadeOut()
+                        },
+                        label = "videoModeToggle"
+                    ) { videoMode ->
+                        Icon(
+                            imageVector = if (videoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                            contentDescription = if (videoMode) "Audio Mode" else "Video Mode",
+                            tint = if (videoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(iconSize)
+                        )
                     }
                 }
             }
 
             // Cast button
-            val castInteractionSource = remember { MutableInteractionSource() }
-            clickable(onClick = onCastClick, weight = 1f, interactionSource = castInteractionSource) {
-                IconButton(onClick = onCastClick, interactionSource = castInteractionSource) {
-                    Icon(
-                        imageVector = Icons.Default.Devices,
-                        contentDescription = "Output Device",
-                        tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                        modifier = Modifier.size(iconSize)
-                    )
-                }
+            clickable(onClick = onCastClick, weight = 1f) {
+                Icon(
+                    imageVector = Icons.Default.Devices,
+                    contentDescription = "Output Device",
+                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(iconSize)
+                )
             }
 
             // Queue button
-            val queueInteractionSource = remember { MutableInteractionSource() }
-            clickable(onClick = onQueueClick, weight = 1f, interactionSource = queueInteractionSource) {
-                IconButton(onClick = onQueueClick, interactionSource = queueInteractionSource) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = "Queue",
-                        tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                        modifier = Modifier.size(iconSize)
-                    )
-                }
+            clickable(onClick = onQueueClick, weight = 1f) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                    contentDescription = "Queue",
+                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(iconSize)
+                )
             }
         }
     }
