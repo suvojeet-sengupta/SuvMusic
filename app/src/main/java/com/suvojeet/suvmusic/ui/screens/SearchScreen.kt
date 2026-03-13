@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Mic
@@ -399,9 +400,9 @@ fun SearchScreen(
                     }
                 } else if (uiState.selectedTab == SearchTab.YOUR_LIBRARY) {
                     // Local Search results
-                    if (uiState.localResults.isNotEmpty()) {
-                        itemsIndexed(uiState.localResults, key = { index, song -> "local_${song.id}_$index" }) { index, song ->
-                            SearchResultItem(song = song, onClick = { onSongClick(uiState.localResults, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
+                    if (uiState.results.isNotEmpty()) {
+                        itemsIndexed(uiState.results, key = { index: Int, song: Song -> "local_${song.id}_$index" }) { index: Int, song: Song ->
+                            SearchResultItem(song = song, onClick = { onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
                         }
                     } else if (uiState.query.isNotBlank() && !uiState.isLoading) {
                         item { Text("No local results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
