@@ -1,5 +1,7 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,9 +20,9 @@ fun NowPlayingAnimation(
     color: Color = Color.White,
     isPlaying: Boolean = true,
     barCount: Int = 3,
-    barWidth: Dp = 4.dp,
-    maxBarHeight: Dp = 18.dp,
-    minBarHeight: Dp = 4.dp
+    barWidth: Dp = 5.dp,
+    maxBarHeight: Dp = 20.dp,
+    minBarHeight: Dp = 3.dp
 ) {
     Row(
         modifier = modifier.height(maxBarHeight),
@@ -43,8 +45,12 @@ fun NowPlayingAnimation(
                     targetValue = maxBarHeight,
                     typeConverter = Dp.VectorConverter,
                     animationSpec = infiniteRepeatable(
-                        animation = tween(duration, easing = LinearOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
+                        animation = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        ),
+                        repeatMode = RepeatMode.Reverse,
+                        initialStartOffset = StartOffset(index * 80)
                     ),
                     label = "bar_height_$index"
                 )
@@ -60,7 +66,7 @@ fun NowPlayingAnimation(
                 modifier = Modifier
                     .width(barWidth)
                     .height(height)
-                    .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 1.dp, bottomEnd = 1.dp))
                     .background(color)
             )
         }

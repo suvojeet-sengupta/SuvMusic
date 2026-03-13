@@ -49,8 +49,15 @@ fun MoodAndGenresScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+import androidx.compose.material3.LoadingIndicator
+
             if (uiState.isLoadingCategories) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                LoadingIndicator(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.primary
+                )
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -113,7 +120,12 @@ fun MoodAndGenresDetailScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoadingContent) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                LoadingIndicator(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.primary
+                )
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(bottom = 100.dp), // Space for player

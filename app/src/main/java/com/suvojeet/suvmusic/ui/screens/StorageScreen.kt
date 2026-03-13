@@ -103,6 +103,8 @@ fun StorageScreen(
             )
         }
     ) { paddingValues ->
+import androidx.compose.material3.LoadingIndicator
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -115,7 +117,10 @@ fun StorageScreen(
                     modifier = Modifier.fillMaxSize().height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    LoadingIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             } else {
                 storageInfo?.let { info ->
