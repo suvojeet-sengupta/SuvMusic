@@ -34,7 +34,7 @@ import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -378,7 +378,7 @@ fun ModernQueueView(
                 if (isLoadingMore) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = dominantColors.accent, modifier = Modifier.size(32.dp))
+                            LoadingIndicator(color = dominantColors.accent, modifier = Modifier.size(32.dp))
                         }
                     }
                 }

@@ -157,7 +157,7 @@ fun CommentsSheet(
                             if (isLoadingMore) {
                                 item {
                                     Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = accentColor, strokeWidth = 2.dp)
+                                        LoadingIndicator(modifier = Modifier.size(24.dp), color = accentColor)
                                     }
                                 }
                             }
@@ -260,10 +260,9 @@ private fun CommentInputSection(
                     enabled = commentText.isNotBlank() && !isPosting
                 ) {
                     if (isPosting) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = accentColor,
-                            strokeWidth = 2.dp
+                            color = accentColor
                         )
                     } else {
                         Icon(
