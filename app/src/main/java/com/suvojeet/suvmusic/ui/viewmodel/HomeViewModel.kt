@@ -46,6 +46,7 @@ data class HomeUiState(
     val recommendedArtists: List<RecommendedArtist> = emptyList(),
     val recommendedTracks: List<RecommendedTrack> = emptyList(),
     val userAvatarUrl: String? = null,
+    val userName: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     /** True when loading additional sections at the bottom */
@@ -116,8 +117,10 @@ class HomeViewModel @Inject constructor(
     private fun observeSession() {
         viewModelScope.launch {
             sessionManager.userAvatarFlow.collect { avatarUrl ->
+                val userName = sessionManager.getStoredAccounts().firstOrNull()?.name
                 _uiState.update { it.copy(
                     userAvatarUrl = avatarUrl,
+                    userName = userName,
                     isLoggedIn = sessionManager.isLoggedIn()
                 ) }
             }

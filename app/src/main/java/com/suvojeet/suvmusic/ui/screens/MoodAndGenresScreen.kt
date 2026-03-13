@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.CategoryCard
-import com.suvojeet.suvmusic.ui.components.MusicCard
+import com.suvojeet.suvmusic.ui.components.SpringMusicCard
 import com.suvojeet.suvmusic.ui.viewmodel.MoodAndGenresViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

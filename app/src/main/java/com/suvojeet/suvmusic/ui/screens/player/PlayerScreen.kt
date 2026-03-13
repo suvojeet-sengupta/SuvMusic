@@ -445,7 +445,14 @@ fun PortraitPlayerContent(
         modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = if (isCompactHeight) 16.dp else 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
+        PlayerTopBar(
+            onDismiss = actions.onBack,
+            onQueueClick = onShowQueue,
+            onMoreClick = onShowActions,
+            dominantColors = dominantColors,
+            audioArEnabled = audioArEnabled,
+            onRecenter = onRecenterAr
+        )
 
         Spacer(modifier = Modifier.weight(1f))
         
@@ -618,7 +625,14 @@ fun LandscapePlayerContent(
             }
         }
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
+            PlayerTopBar(
+            onDismiss = actions.onBack,
+            onQueueClick = onShowQueue,
+            onMoreClick = onShowActions,
+            dominantColors = dominantColors,
+            audioArEnabled = audioArEnabled,
+            onRecenter = onRecenterAr
+        )
             Spacer(modifier = Modifier.height(8.dp))
             SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, dominantColors = dominantColors)
             Spacer(modifier = Modifier.height(16.dp))

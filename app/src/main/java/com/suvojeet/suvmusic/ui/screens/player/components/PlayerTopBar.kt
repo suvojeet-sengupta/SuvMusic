@@ -19,6 +19,8 @@ fun PlayerTopBar(
     onQueueClick: () -> Unit,
     onMoreClick: () -> Unit,
     dominantColors: DominantColors,
+    audioArEnabled: Boolean = false,
+    onRecenter: () -> Unit = {},
     title: String = "Now Playing",
 ) {
     CenterAlignedTopAppBar(
@@ -37,6 +39,11 @@ fun PlayerTopBar(
             }
         },
         actions = {
+            if (audioArEnabled) {
+                IconButton(onClick = onRecenter) {
+                    Icon(Icons.Filled.MyLocation, "Recenter AR", tint = dominantColors.onBackground)
+                }
+            }
             IconButton(onClick = onQueueClick) {
                 Icon(Icons.Filled.QueueMusic, "Queue", tint = dominantColors.onBackground)
             }

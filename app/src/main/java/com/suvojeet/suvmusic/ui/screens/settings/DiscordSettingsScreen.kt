@@ -288,6 +288,7 @@ fun DiscordSettingsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DiscordPreviewCardM3E(useDetails: Boolean, enabled: Boolean) {
     val backgroundColor = Color(0xFF5865F2) // Discord Blurple

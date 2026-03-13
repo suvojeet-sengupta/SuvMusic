@@ -91,7 +91,7 @@ private fun M3EChangelogCard(entry: ChangelogEntry) {
                         colors = SuggestionChipDefaults.suggestionChipColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             labelColor = MaterialTheme.colorScheme.onPrimary,
-                            iconColor = MaterialTheme.colorScheme.onPrimary
+                            iconContentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = MaterialTheme.shapes.medium
                     )
