@@ -33,8 +33,8 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Mic
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
-import com.suvojeet.suvmusic.ui.components.M3EEmptyState
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3EEmptyState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton

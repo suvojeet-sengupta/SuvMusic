@@ -36,9 +36,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.R
-import com.suvojeet.suvmusic.ui.components.M3ENavigationItem
-import com.suvojeet.suvmusic.ui.components.M3EPageHeader
-import com.suvojeet.suvmusic.ui.components.M3ESettingsGroupHeader
+import com.suvojeet.suvmusic.core.ui.components.M3ENavigationItem
+import com.suvojeet.suvmusic.core.ui.components.M3EPageHeader
+import com.suvojeet.suvmusic.core.ui.components.M3ESettingsGroupHeader
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)

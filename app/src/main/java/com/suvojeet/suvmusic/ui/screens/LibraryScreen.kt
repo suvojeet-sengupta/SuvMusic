@@ -57,8 +57,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
-import com.suvojeet.suvmusic.ui.components.M3EEmptyState
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3EEmptyState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold

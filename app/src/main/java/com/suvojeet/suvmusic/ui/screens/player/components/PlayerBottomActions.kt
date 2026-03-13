@@ -10,7 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.data.model.DownloadState
 

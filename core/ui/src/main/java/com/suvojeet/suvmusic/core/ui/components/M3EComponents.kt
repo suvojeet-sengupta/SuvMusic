@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.ui.components
+package com.suvojeet.suvmusic.core.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState

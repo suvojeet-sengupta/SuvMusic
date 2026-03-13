@@ -44,7 +44,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator

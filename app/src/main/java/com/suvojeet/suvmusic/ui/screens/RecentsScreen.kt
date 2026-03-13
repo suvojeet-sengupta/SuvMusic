@@ -54,8 +54,8 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
-import com.suvojeet.suvmusic.ui.components.M3EEmptyState
-import com.suvojeet.suvmusic.ui.components.M3EPageHeader
+import com.suvojeet.suvmusic.core.ui.components.M3EEmptyState
+import com.suvojeet.suvmusic.core.ui.components.M3EPageHeader
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

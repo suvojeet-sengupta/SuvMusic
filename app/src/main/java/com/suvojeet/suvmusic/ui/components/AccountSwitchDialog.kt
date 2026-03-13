@@ -15,7 +15,7 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
 import kotlinx.coroutines.launch
 
 @Composable

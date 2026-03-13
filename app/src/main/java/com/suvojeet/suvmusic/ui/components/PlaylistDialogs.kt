@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon

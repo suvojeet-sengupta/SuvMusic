@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.MusicSource
 import com.suvojeet.suvmusic.data.model.*
 import com.suvojeet.suvmusic.ui.components.*
+import com.suvojeet.suvmusic.core.ui.components.*
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 

@@ -15,6 +15,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.ui.components.*
+import com.suvojeet.suvmusic.core.ui.components.*
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

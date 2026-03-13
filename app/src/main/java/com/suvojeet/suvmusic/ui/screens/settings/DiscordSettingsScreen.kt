@@ -39,6 +39,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.ui.components.*
+import com.suvojeet.suvmusic.core.ui.components.*
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)

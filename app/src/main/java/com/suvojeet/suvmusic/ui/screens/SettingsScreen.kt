@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.ui.components.*
+import com.suvojeet.suvmusic.core.ui.components.*
 import com.suvojeet.suvmusic.updater.UpdateViewModel
 import kotlinx.coroutines.launch
 

@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier

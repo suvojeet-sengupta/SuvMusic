@@ -54,8 +54,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
-import com.suvojeet.suvmusic.ui.components.M3EEmptyState
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3EEmptyState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf

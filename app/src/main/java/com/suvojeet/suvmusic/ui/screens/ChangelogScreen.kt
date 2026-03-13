@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.ChangelogData
 import com.suvojeet.suvmusic.data.model.ChangelogEntry
 import com.suvojeet.suvmusic.ui.components.*
+import com.suvojeet.suvmusic.core.ui.components.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable

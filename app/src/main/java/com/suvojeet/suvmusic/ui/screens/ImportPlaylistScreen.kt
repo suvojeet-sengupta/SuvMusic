@@ -14,7 +14,7 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch

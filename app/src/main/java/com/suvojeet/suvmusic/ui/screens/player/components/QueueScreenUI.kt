@@ -34,7 +34,7 @@ import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SelectAll
-import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.core.ui.components.M3ELoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
