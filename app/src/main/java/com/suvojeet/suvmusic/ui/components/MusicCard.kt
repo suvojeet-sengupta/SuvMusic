@@ -48,6 +48,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.theme.AlbumArtShape
 import com.suvojeet.suvmusic.ui.theme.GlassPurple
 import com.suvojeet.suvmusic.ui.theme.MusicCardShape
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import com.suvojeet.suvmusic.util.ImageUtils
 
@@ -122,7 +123,7 @@ fun MusicCard(
             Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .clip(AlbumArtShape)
+                    .clip(SquircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
@@ -256,7 +257,7 @@ fun CompactMusicCard(
             .width(140.dp)
             .clickable(onClick = onClick),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(16.dp)
+        shape = MusicCardShape
     ) {
         Column {
             // Album Art
@@ -265,7 +266,7 @@ fun CompactMusicCard(
             Box(
                 modifier = Modifier
                     .size(140.dp)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .clip(MusicCardShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
