@@ -997,8 +997,6 @@ private fun ErrorState(
     }
 }
 
-import androidx.compose.material3.LoadingIndicator
-
 @Composable
 private fun LoadingMoreIndicator(modifier: Modifier = Modifier) {
     Box(

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -81,8 +82,6 @@ fun ArtistDiscographyScreen(
             )
         }
     ) { paddingValues ->
-import androidx.compose.material3.LoadingIndicator
-
         Box(
             modifier = Modifier
                 .fillMaxSize()

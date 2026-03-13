@@ -79,6 +79,8 @@ fun SleepTimerSheet(
             },
             accentColor = accentColor
         )
+    }
+    
     if (isVisible) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
@@ -259,7 +261,7 @@ fun SleepTimerSheet(
 }
 
 @Composable
-private fun TimerChip(
+fun TimerChip(
     label: String,
     isSelected: Boolean,
     accentColor: Color,
@@ -336,7 +338,7 @@ private fun TimerChip(
 }
 
 @Composable
-private fun CustomTimerDialog(
+fun CustomTimerDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit,
     accentColor: Color

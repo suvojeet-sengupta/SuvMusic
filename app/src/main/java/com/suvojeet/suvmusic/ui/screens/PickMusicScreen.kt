@@ -160,8 +160,6 @@ fun PickMusicScreen(
                          }
                     }
                 ) { paddingValues ->
-import androidx.compose.material3.LoadingIndicator
-
                     Box(modifier = Modifier.padding(paddingValues)) {
                         if (isLoading && searchResults.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
