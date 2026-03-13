@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.core.ui.components
+package com.suvojeet.suvmusic.ui.components
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.ui.components.MusicCard
 
 /**
  * A wrapper around [MusicCard] that adds a bouncy spring-based scale animation on press.

@@ -28,7 +28,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.suvojeet.suvmusic.core.ui.components.SpringMusicCard
 import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.data.model.HomeItem
