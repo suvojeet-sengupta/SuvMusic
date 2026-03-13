@@ -158,7 +158,6 @@ fun HomeScreen(
 
                         if (uiState.recommendations.isNotEmpty()) {
                             item {
-                                HomeSectionHeader(title = "Quick picks")
                                 QuickPicksSection(
                                     section = HomeSection(
                                         title = "Quick picks",
@@ -363,7 +362,6 @@ private fun RenderHomeSectionM3E(
     onSongMoreClick: (Song) -> Unit,
 ) {
     Column {
-        HomeSectionHeader(title = section.title)
         when (section.type) {
             HomeSectionType.QuickPicks -> QuickPicksSection(section, onSongClick, onPlaylistClick, onAlbumClick, onSongMoreClick)
             HomeSectionType.Grid -> GridSection(section, onSongClick, onPlaylistClick, onAlbumClick, onSongMoreClick)

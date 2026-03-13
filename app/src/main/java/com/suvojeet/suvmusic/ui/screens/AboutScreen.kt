@@ -40,6 +40,8 @@ import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.core.ui.components.M3ENavigationItem
 import com.suvojeet.suvmusic.core.ui.components.M3EPageHeader
 import com.suvojeet.suvmusic.core.ui.components.M3ESettingsGroupHeader
+import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
+import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -54,6 +56,13 @@ fun AboutScreen(
     val uriHandler = LocalUriHandler.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
+    val dominantColors = DominantColors(
+        primary = MaterialTheme.colorScheme.primaryContainer,
+        secondary = MaterialTheme.colorScheme.tertiaryContainer,
+        accent = MaterialTheme.colorScheme.primary,
+        onBackground = MaterialTheme.colorScheme.onSurface
+    )
+
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -64,164 +73,188 @@ fun AboutScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding(),
-                bottom = paddingValues.calculateBottomPadding() + 80.dp
-            )
-        ) {
-            // Hero Block
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    val scale by animateFloatAsState(
-                        targetValue = 1f,
-                        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow),
-                        label = "logo_scale"
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .graphicsLayer { scaleX = scale; scaleY = scale }
-                            .clip(MaterialTheme.shapes.extraLarge)
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.tertiaryContainer
-                                    )
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
+        Box(modifier = Modifier.fillMaxSize()) {
+            MeshGradientBackground(dominantColors = dominantColors)
+            
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding() + 80.dp
+                )
+            ) {
+                // Hero Block
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.logo),
-                            contentDescription = "App Logo",
-                            modifier = Modifier.size(80.dp).clip(MaterialTheme.shapes.large)
+                        val scale by animateFloatAsState(
+                            targetValue = 1f,
+                            animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow),
+                            label = "logo_scale"
                         )
+                        Box(
+                            modifier = Modifier
+                                .size(140.dp)
+                                .graphicsLayer { scaleX = scale; scaleY = scale }
+                                .clip(MaterialTheme.shapes.extraLarge)
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f))
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = MaterialTheme.shapes.extraLarge,
+                                color = MaterialTheme.colorScheme.surface,
+                                shadowElevation = 12.dp,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.logo),
+                                    contentDescription = "App Logo",
+                                    modifier = Modifier.padding(20.dp).fillMaxSize()
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(24.dp))
+                        Text(
+                            text = "SuvMusic",
+                            style = MaterialTheme.typography.displaySmallEmphasized,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Unlimited Music. Ad-Free. Pure Bliss.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        SuggestionChip(
+                            onClick = { 
+                                Toast.makeText(context, "You are on the latest version", Toast.LENGTH_SHORT).show()
+                            },
+                            label = { Text("v${com.suvojeet.suvmusic.BuildConfig.VERSION_NAME}") },
+                            icon = { Icon(Icons.Default.NewReleases, null, modifier = Modifier.size(18.dp)) },
+                            shape = MaterialTheme.shapes.medium,
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                }
+
+                // What's Inside - Feature Cards
+                item {
+                    M3ESettingsGroupHeader("WHAT'S INSIDE")
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        maxItemsInEachRow = 2
+                    ) {
+                        val features = listOf(
+                            Triple(Icons.Default.MusicNote, "YouTube Music", "Millions of songs"),
+                            Triple(Icons.Default.OfflinePin, "Offline Play", "Download & listen"),
+                            Triple(Icons.Default.Lyrics, "Synced Lyrics", "Multiple providers"),
+                            Triple(Icons.Default.GraphicEq, "Equalizer", "10-band EQ"),
+                            Triple(Icons.Default.Group, "Listen Together", "Real-time sync"),
+                            Triple(Icons.Default.AutoAwesome, "AI Queue", "Smart recommendations")
+                        )
+                        features.forEach { (icon, title, desc) ->
+                            M3EFeatureCard(
+                                icon = icon,
+                                title = title,
+                                desc = desc,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                     Spacer(Modifier.height(24.dp))
-                    Text(
-                        text = "SuvMusic",
-                        style = MaterialTheme.typography.displaySmallEmphasized,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Unlimited Music. Ad-Free. Pure Bliss.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    SuggestionChip(
-                        onClick = { /* Check for updates? */ },
-                        label = { Text("v${com.suvojeet.suvmusic.BuildConfig.VERSION_NAME}") },
-                        icon = { Icon(Icons.Default.NewReleases, null, modifier = Modifier.size(18.dp)) },
-                        shape = MaterialTheme.shapes.medium
-                    )
                 }
-            }
 
-            // What's Inside - Feature Cards
-            item {
-                M3ESettingsGroupHeader("WHAT'S INSIDE")
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    maxItemsInEachRow = 2
-                ) {
-                    val features = listOf(
-                        Triple(Icons.Default.MusicNote, "YouTube Music", "Millions of songs"),
-                        Triple(Icons.Default.OfflinePin, "Offline Play", "Download & listen"),
-                        Triple(Icons.Default.Lyrics, "Synced Lyrics", "Multiple providers"),
-                        Triple(Icons.Default.GraphicEq, "Equalizer", "10-band EQ"),
-                        Triple(Icons.Default.Group, "Listen Together", "Real-time sync"),
-                        Triple(Icons.Default.AutoAwesome, "AI Queue", "Smart recommendations")
-                    )
-                    features.forEach { (icon, title, desc) ->
-                        M3EFeatureCard(
-                            icon = icon,
-                            title = title,
-                            desc = desc,
-                            modifier = Modifier.weight(1f)
+                // LINKS Section
+                item {
+                    M3ESettingsGroupHeader("PROJECT")
+                    Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                        M3ENavigationItem(
+                            icon = Icons.Default.Code,
+                            title = "Source Code",
+                            subtitle = "github.com/suvojeet-sengupta/SuvMusic",
+                            onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic") }
+                        )
+                        M3ENavigationItem(
+                            icon = Icons.Default.BugReport,
+                            title = "Report a Bug",
+                            subtitle = "Help us improve",
+                            onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/issues") }
+                        )
+                        M3ENavigationItem(
+                            icon = Icons.Default.Lightbulb,
+                            title = "How It Works",
+                            onClick = onHowItWorksClick
+                        )
+                        M3ENavigationItem(
+                            icon = Icons.Default.Favorite,
+                            title = "Support the Project",
+                            subtitle = "Donate to keep us alive",
+                            onClick = { /* Support link */ }
                         )
                     }
                 }
-                Spacer(Modifier.height(24.dp))
-            }
 
-            // LINKS Section
-            item {
-                M3ESettingsGroupHeader("LINKS")
-                M3ENavigationItem(
-                    icon = Icons.Default.Code,
-                    title = "Source Code",
-                    subtitle = "github.com/suvojeet-sengupta/SuvMusic",
-                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic") }
-                )
-                M3ENavigationItem(
-                    icon = Icons.Default.BugReport,
-                    title = "Report a Bug",
-                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/issues") }
-                )
-                M3ENavigationItem(
-                    icon = Icons.Default.Lightbulb,
-                    title = "How It Works",
-                    onClick = onHowItWorksClick
-                )
-                M3ENavigationItem(
-                    icon = Icons.Default.Favorite,
-                    title = "Support the Project",
-                    onClick = { /* Support link */ }
-                )
-            }
+                // TEAM Section
+                item {
+                    M3ESettingsGroupHeader("DEVELOPMENT TEAM")
+                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        M3EDeveloperCard(
+                            name = "Suvojeet Sengupta",
+                            role = "Lead Developer",
+                            github = "suvojeet-sengupta",
+                            onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") }
+                        )
+                    }
+                    M3ENavigationItem(
+                        icon = Icons.Default.People,
+                        title = "All Contributors",
+                        subtitle = "Amazing people who helped",
+                        onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/graphs/contributors") }
+                    )
+                }
 
-            // LEGAL Section
-            item {
-                M3ESettingsGroupHeader("LEGAL")
-                M3ENavigationItem(
-                    icon = Icons.Default.Gavel,
-                    title = "Open Source Licenses",
-                    onClick = { /* Show licenses */ }
-                )
-                M3ENavigationItem(
-                    icon = Icons.Default.Security,
-                    title = "Privacy Policy",
-                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/blob/main/PRIVACY.md") }
-                )
-            }
+                // LEGAL Section
+                item {
+                    M3ESettingsGroupHeader("LEGAL")
+                    M3ENavigationItem(
+                        icon = Icons.Default.Gavel,
+                        title = "Open Source Licenses",
+                        onClick = { /* Show licenses */ }
+                    )
+                    M3ENavigationItem(
+                        icon = Icons.Default.Security,
+                        title = "Privacy Policy",
+                        onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/blob/main/PRIVACY.md") }
+                    )
+                }
 
-            // TEAM Section
-            item {
-                M3ESettingsGroupHeader("TEAM")
-                M3EDeveloperCard(
-                    name = "Suvojeet Sengupta",
-                    role = "Developer",
-                    github = "suvojeet-sengupta",
-                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") }
-                )
-                M3ENavigationItem(
-                    icon = Icons.Default.People,
-                    title = "All Contributors",
-                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/graphs/contributors") }
-                )
-            }
-
-            item {
-                Spacer(Modifier.height(32.dp))
-                Text(
-                    text = "© 2026 SuvMusic. Made with ❤️ in India.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(32.dp))
+                item {
+                    Spacer(Modifier.height(48.dp))
+                    Text(
+                        text = "Made with ❤️ in India",
+                        style = MaterialTheme.typography.labelLargeEmphasized,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "© 2026 SuvMusic. All rights reserved.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(32.dp))
+                }
             }
         }
     }
@@ -236,11 +269,21 @@ private fun M3EFeatureCard(
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.primary,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+        label = "feature_card_scale"
+    )
+
     ElevatedCard(
-        modifier = modifier,
+        modifier = modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable(interactionSource, indication = null) { },
         shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.7f))
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
@@ -274,11 +317,10 @@ private fun M3EDeveloperCard(
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clickable(interactionSource, indication = null) { onClick() },
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.7f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
