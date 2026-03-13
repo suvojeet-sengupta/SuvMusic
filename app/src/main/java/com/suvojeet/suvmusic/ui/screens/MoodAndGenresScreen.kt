@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,8 +50,6 @@ fun MoodAndGenresScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-import androidx.compose.material3.LoadingIndicator
-
             if (uiState.isLoadingCategories) {
                 LoadingIndicator(
                     modifier = Modifier
