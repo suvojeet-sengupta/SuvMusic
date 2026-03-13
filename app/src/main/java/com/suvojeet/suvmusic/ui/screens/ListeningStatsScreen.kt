@@ -93,8 +93,6 @@ fun ListeningStatsScreen(
             )
         }
     ) { padding ->
-import androidx.compose.material3.LoadingIndicator
-
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier
