@@ -148,23 +148,6 @@ fun AlbumArtwork(
     // Ensure corner radius is never negative
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
     
-    // Artwork loading breathing animation
-    val artworkLoadingPulse by animateFloatAsState(
-        targetValue = if (isLoading) 0.95f else 1f,
-        animationSpec = if (isLoading) {
-            infiniteRepeatable(
-                animation = tween(800, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            )
-        } else {
-            spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        },
-        label = "artworkLoadingPulse"
-    )
-    
     // Track horizontal drag offset
     var offsetX by remember { mutableStateOf(0f) }
     // Lower threshold for easier, YT Music-like swipes
@@ -246,7 +229,7 @@ fun AlbumArtwork(
                     .fillMaxSize()
                     .graphicsLayer {
                         translationX = animatedOffsetX
-                        val dynamicScale = (artworkSize.fraction / maxFraction) * scale * artworkLoadingPulse
+                        val dynamicScale = (artworkSize.fraction / maxFraction) * scale
                         scaleX = dynamicScale
                         scaleY = dynamicScale
                         rotationZ = rotation + if (currentShape == ArtworkShape.VINYL) animatedVinylRotation else 0f

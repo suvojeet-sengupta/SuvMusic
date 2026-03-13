@@ -28,9 +28,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
@@ -149,14 +149,14 @@ fun PlaybackControls(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Shuffle - M3E ToggleButton
-        ToggleButton(
+        // Shuffle - M3E IconToggleButton
+        IconToggleButton(
             checked = shuffleEnabled,
             onCheckedChange = { onShuffleToggle() },
             modifier = Modifier.size(secondarySize),
-            colors = ToggleButtonDefaults.toggleButtonColors(
+            colors = IconButtonDefaults.iconToggleButtonColors(
                 containerColor = Color.Transparent,
-                contentColor = dominantColors.onBackground.copy(alpha = 0.7f),
+                contentColor = dominantColors.onBackground.copy(alpha = 0.6f),
                 checkedContainerColor = dominantColors.accent.copy(alpha = 0.18f),
                 checkedContentColor = dominantColors.accent
             )
@@ -168,69 +168,54 @@ fun PlaybackControls(
             )
         }
 
-        ButtonGroup(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-        ) {
-            // Previous - Apple Music style with weight
-            IconButton(
-                onClick = onPrevious,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = SkipPrevious,
-                    contentDescription = "Previous",
-                    tint = dominantColors.onBackground,
-                    modifier = Modifier.size(skipIconSize)
-                )
-            }
+        // Previous
+        AppleMusicButton(onClick = onPrevious, size = skipSize) { _ ->
+            Icon(
+                imageVector = SkipPrevious,
+                contentDescription = "Previous",
+                tint = dominantColors.onBackground,
+                modifier = Modifier.size(skipIconSize)
+            )
+        }
 
-            // Play/Pause - Large button with expansion weight
-            IconButton(
-                onClick = onPlayPause,
-                modifier = Modifier.weight(2f)
-            ) {
-                AnimatedContent(
-                    targetState = isPlaying,
-                    transitionSpec = {
-                        (scaleIn(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
-                            + fadeIn()) togetherWith
-                        (scaleOut(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
-                            + fadeOut())
-                    },
-                    label = "playPauseIconSwap"
-                ) { playing ->
-                    Icon(
-                        imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playing) "Pause" else "Play",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(playIconSize)
-                    )
-                }
-            }
-
-            // Next - Apple Music style with weight
-            IconButton(
-                onClick = onNext,
-                modifier = Modifier.weight(1f)
-            ) {
+        // Play/Pause - Large button with bounce animation
+        AppleMusicButton(onClick = onPlayPause, size = playSize, isLarge = true) { _ ->
+            AnimatedContent(
+                targetState = isPlaying,
+                transitionSpec = {
+                    (scaleIn(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
+                        + fadeIn()) togetherWith
+                    (scaleOut() + fadeOut())
+                },
+                label = "playPauseSwap"
+            ) { playing ->
                 Icon(
-                    imageVector = SkipNext,
-                    contentDescription = "Next",
+                    imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (playing) "Pause" else "Play",
                     tint = dominantColors.onBackground,
-                    modifier = Modifier.size(skipIconSize)
+                    modifier = Modifier.size(playIconSize)
                 )
             }
         }
 
-        // Repeat - M3E ToggleButton
-        ToggleButton(
+        // Next
+        AppleMusicButton(onClick = onNext, size = skipSize) { _ ->
+            Icon(
+                imageVector = SkipNext,
+                contentDescription = "Next",
+                tint = dominantColors.onBackground,
+                modifier = Modifier.size(skipIconSize)
+            )
+        }
+
+        // Repeat - M3E IconToggleButton
+        IconToggleButton(
             checked = repeatMode != RepeatMode.OFF,
             onCheckedChange = { onRepeatToggle() },
             modifier = Modifier.size(secondarySize),
-            colors = ToggleButtonDefaults.toggleButtonColors(
+            colors = IconButtonDefaults.iconToggleButtonColors(
                 containerColor = Color.Transparent,
-                contentColor = dominantColors.onBackground.copy(alpha = 0.7f),
+                contentColor = dominantColors.onBackground.copy(alpha = 0.6f),
                 checkedContainerColor = dominantColors.accent.copy(alpha = 0.18f),
                 checkedContentColor = dominantColors.accent
             )
@@ -241,7 +226,7 @@ fun PlaybackControls(
                     scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn() togetherWith
                     scaleOut() + fadeOut()
                 },
-                label = "repeatModeIcon"
+                label = "repeatIcon"
             ) { mode ->
                 Icon(
                     imageVector = when (mode) {
