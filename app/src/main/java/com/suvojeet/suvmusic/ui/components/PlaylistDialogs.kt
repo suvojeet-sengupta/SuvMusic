@@ -32,7 +32,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,15 +97,7 @@ fun AddToPlaylistSheet(
             containerColor = DarkBackground,
             contentColor = TextPrimary,
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) },
-            dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 12.dp)
-                        .size(width = 36.dp, height = 5.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(TextSecondary.copy(alpha = 0.3f))
-                )
-            }
+            dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
             Column(
                 modifier = Modifier
@@ -215,7 +208,10 @@ fun AddToPlaylistSheet(
                             .height(200.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = AccentRed, strokeWidth = 3.dp)
+                        LoadingIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = AccentRed
+                        )
                     }
                 } else if (playlists.isEmpty()) {
                     Column(
@@ -415,10 +411,9 @@ fun CreatePlaylistDialog(
                             )
                         ) {
                             if (isCreating) {
-                                CircularProgressIndicator(
+                                LoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = primaryColor,
-                                    strokeWidth = 2.dp
+                                    color = primaryColor
                                 )
                             } else {
                                 Text("Create", fontWeight = FontWeight.Bold)
@@ -644,10 +639,9 @@ fun RenamePlaylistDialog(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             if (isRenaming) {
-                                CircularProgressIndicator(
+                                LoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = TextPrimary,
-                                    strokeWidth = 2.dp
+                                    color = TextPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
@@ -744,10 +738,9 @@ fun DeletePlaylistDialog(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             if (isDeleting) {
-                                CircularProgressIndicator(
+                                LoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = TextPrimary,
-                                    strokeWidth = 2.dp
+                                    color = TextPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }

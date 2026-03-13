@@ -28,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -220,16 +221,7 @@ fun EqualizerSheet(
             sheetState = sheetState,
             containerColor = surfaceColor,
             contentColor = onSurfaceColor,
-            dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 12.dp)
-                        .width(40.dp)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(onSurfaceVariantColor.copy(alpha = 0.4f))
-                )
-            },
+            dragHandle = { BottomSheetDefaults.DragHandle() },
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
         ) {
         Column(

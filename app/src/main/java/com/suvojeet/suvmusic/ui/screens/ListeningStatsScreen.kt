@@ -93,6 +93,8 @@ fun ListeningStatsScreen(
             )
         }
     ) { padding ->
+import androidx.compose.material3.LoadingIndicator
+
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier
@@ -100,7 +102,10 @@ fun ListeningStatsScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                LoadingIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         } else if (uiState.totalSongsPlayed == 0) {
             EmptyStatsState(padding)

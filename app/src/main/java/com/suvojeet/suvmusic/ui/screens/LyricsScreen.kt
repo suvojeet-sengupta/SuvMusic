@@ -13,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.*
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -276,9 +278,9 @@ fun LyricsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(32.dp)
                     ) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             color = textColor.copy(alpha = 0.7f),
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(
@@ -445,13 +447,8 @@ fun LyricsScreen(
                 containerColor = Color.Black.copy(alpha = 0.85f), // Semi-transparent black for immersion
                 contentColor = Color.White,
                 dragHandle = { 
-                    Box(
-                        modifier = Modifier
-                            .padding(vertical = 12.dp)
-                            .width(40.dp)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(Color.White.copy(alpha = 0.2f))
+                    BottomSheetDefaults.DragHandle(
+                        color = Color.White.copy(alpha = 0.3f)   // subtle on dark bg
                     )
                 },
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
@@ -1184,10 +1181,9 @@ fun LyricsList(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isSharing) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
