@@ -54,7 +54,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.CircularProgressIndicator
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.ui.components.M3EEmptyState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -105,6 +106,7 @@ fun DownloadsScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
+    onBrowseClick: () -> Unit = {},
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -115,12 +117,10 @@ fun DownloadsScreen(
     val selectedSongIds by viewModel.selectedSongIds.collectAsStateWithLifecycle()
     val pendingIntent by viewModel.pendingIntent.collectAsStateWithLifecycle()
     
-    // Launcher for Scoped Storage permission requests (Android 10+)
     val intentSenderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            // Permission granted, refresh or retry delete
             viewModel.refreshDownloads()
         }
         viewModel.consumePendingIntent()
@@ -140,13 +140,9 @@ fun DownloadsScreen(
     }
     
     var showMenu by remember { mutableStateOf(false) }
-    // 0 = Songs, 1 = Videos
     var selectedTab by remember { mutableStateOf(0) }
-
-    // Navigation state for collections
     var openedCollection by remember { mutableStateOf<DownloadItem.CollectionItem?>(null) }
     
-    // Predictive Back states
     var predictiveBackScale by remember { mutableFloatStateOf(1f) }
     var predictiveBackAlpha by remember { mutableFloatStateOf(1f) }
 
@@ -165,30 +161,24 @@ fun DownloadsScreen(
         }
     }
 
-    // Theme detection - match PlayerScreen approach
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val backgroundColor = if (isDarkTheme) Color.Black else Color.White
 
-    // Extract dominant colors from first song's artwork
     val firstSongThumbnail = downloadedSongs.firstOrNull()?.thumbnailUrl
     val dominantColors = rememberDominantColors(
         imageUrl = firstSongThumbnail,
         isDarkTheme = isDarkTheme
     )
 
-    // Delete confirmation dialog state
     var showDeleteDialog by remember { mutableStateOf(false) }
     var pendingDeleteSong by remember { mutableStateOf<Song?>(null) }
     
-    // Logic to handle deleting from main list
     fun deleteSong(song: Song) {
          pendingDeleteSong = song
          showDeleteDialog = true
     }
 
-    // If a collection is opened, show detail view
     if (openedCollection != null) {
-        // Find the most recent version of this collection from the flow to show live progress
         val currentCollection = downloadItems.filterIsInstance<DownloadItem.CollectionItem>()
             .find { it.id == openedCollection!!.id } ?: openedCollection!!
 
@@ -217,13 +207,11 @@ fun DownloadsScreen(
         return
     }
 
-    // Main Screen Content
     val listState = rememberLazyListState()
     val isScrolled by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100 }
     }
 
-    // Calculate total duration
     val totalDuration = downloadedSongs.sumOf { it.duration }
     val durationText = formatDuration(totalDuration)
 
@@ -232,7 +220,6 @@ fun DownloadsScreen(
             .fillMaxSize()
             .background(backgroundColor)
     ) {
-        // Dynamic gradient background - like PlayerScreen
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -254,14 +241,12 @@ fun DownloadsScreen(
             contentPadding = PaddingValues(bottom = 140.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header section (Same as before)
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
                 ) {
-                    // Top bar
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -352,32 +337,27 @@ fun DownloadsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Collage or single artwork
                     Box(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
                         if (downloadedSongs.size >= 4) {
-                            // 2x2 Collage Grid
                             CollageArtwork(
                                 songs = downloadedSongs.take(4),
                                 dominantColors = dominantColors
                             )
                         } else if (downloadedSongs.isNotEmpty()) {
-                            // Single artwork
                             SingleArtwork(
                                 song = downloadedSongs.first(),
                                 dominantColors = dominantColors
                             )
                         } else {
-                            // Empty state icon
                             EmptyArtworkPlaceholder(dominantColors = dominantColors)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Title
                     Text(
                         text = "Downloaded",
                         style = MaterialTheme.typography.headlineLarge.copy(
@@ -390,7 +370,6 @@ fun DownloadsScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Song count and duration
                     Text(
                         text = "${downloadedSongs.size} song${if (downloadedSongs.size != 1) "s" else ""} • $durationText",
                         style = MaterialTheme.typography.bodyMedium,
@@ -401,7 +380,6 @@ fun DownloadsScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Play and Shuffle buttons
                     if (downloadedSongs.isNotEmpty()) {
                         Row(
                             modifier = Modifier
@@ -458,7 +436,6 @@ fun DownloadsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Songs / Videos tab strip
                     TabRow(
                         selectedTabIndex = selectedTab,
                         containerColor = Color.Transparent,
@@ -507,89 +484,79 @@ fun DownloadsScreen(
                 }
             }
 
-            // Songs tab content
             if (selectedTab == 0) {
-                // List of Download Items (Collections + Singles)
-                itemsIndexed(downloadItems.filter { item ->
-                    when (item) {
-                        is DownloadItem.SongItem -> !item.song.isVideo
-                        is DownloadItem.CollectionItem -> true
+                if (downloadItems.filter { when(it) { is DownloadItem.SongItem -> !it.song.isVideo; is DownloadItem.CollectionItem -> true } }.isEmpty()) {
+                    item {
+                        M3EEmptyState(
+                            icon = Icons.Default.DownloadDone,
+                            title = "No downloaded songs",
+                            description = "Your downloaded music will appear here for offline playback.",
+                            actionLabel = "Browse Music",
+                            onAction = onBrowseClick,
+                            modifier = Modifier.padding(top = 48.dp)
+                        )
                     }
-                }, key = { _, item ->
-                    when (item) {
-                        is DownloadItem.SongItem -> "song_${item.song.id}"
-                        is DownloadItem.CollectionItem -> "col_${item.id}"
-                    }
-                }) { index, item ->
-                    when (item) {
-                        is DownloadItem.CollectionItem -> {
-                            DownloadedCollectionCard(
-                                collection = item,
-                                onClick = { openedCollection = item },
-                                dominantColors = dominantColors,
-                                isDarkTheme = isDarkTheme
-                            )
+                } else {
+                    itemsIndexed(downloadItems.filter { item ->
+                        when (item) {
+                            is DownloadItem.SongItem -> !item.song.isVideo
+                            is DownloadItem.CollectionItem -> true
                         }
-                        is DownloadItem.SongItem -> {
-                            DownloadedSongCard(
-                                song = item.song,
-                                index = index + 1,
-                                isDownloading = item.isDownloading,
-                                progress = item.progress,
-                                onClick = {
-                                    if (isSelectionMode) {
-                                        viewModel.toggleSelection(item.song.id)
-                                    } else {
-                                        val audioSongs = downloadedSongs.filter { !it.isVideo }
-                                        val realIndex = audioSongs.indexOfFirst { it.id == item.song.id }
-                                        if (realIndex != -1) {
-                                            onSongClick(audioSongs, realIndex)
+                    }, key = { _, item ->
+                        when (item) {
+                            is DownloadItem.SongItem -> "song_${item.song.id}"
+                            is DownloadItem.CollectionItem -> "col_${item.id}"
+                        }
+                    }) { index, item ->
+                        when (item) {
+                            is DownloadItem.CollectionItem -> {
+                                DownloadedCollectionCard(
+                                    collection = item,
+                                    onClick = { openedCollection = item },
+                                    dominantColors = dominantColors,
+                                    isDarkTheme = isDarkTheme
+                                )
+                            }
+                            is DownloadItem.SongItem -> {
+                                DownloadedSongCard(
+                                    song = item.song,
+                                    index = index + 1,
+                                    isDownloading = item.isDownloading,
+                                    progress = item.progress,
+                                    onClick = {
+                                        if (isSelectionMode) {
+                                            viewModel.toggleSelection(item.song.id)
+                                        } else {
+                                            val audioSongs = downloadedSongs.filter { !it.isVideo }
+                                            val realIndex = audioSongs.indexOfFirst { it.id == item.song.id }
+                                            if (realIndex != -1) {
+                                                onSongClick(audioSongs, realIndex)
+                                            }
                                         }
-                                    }
-                                },
-                                onLongClick = { viewModel.toggleSelection(item.song.id) },
-                                onDeleteClick = { deleteSong(item.song) },
-                                isSelectionMode = isSelectionMode,
-                                isSelected = selectedSongIds.contains(item.song.id),
-                                onSelectionChange = { viewModel.toggleSelection(item.song.id) },
-                                dominantColors = dominantColors,
-                                isDarkTheme = isDarkTheme
-                            )
+                                    },
+                                    onLongClick = { viewModel.toggleSelection(item.song.id) },
+                                    onDeleteClick = { deleteSong(item.song) },
+                                    isSelectionMode = isSelectionMode,
+                                    isSelected = selectedSongIds.contains(item.song.id),
+                                    onSelectionChange = { viewModel.toggleSelection(item.song.id) },
+                                    dominantColors = dominantColors,
+                                    isDarkTheme = isDarkTheme
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // Videos tab content
             if (selectedTab == 1) {
                 if (downloadedVideos.isEmpty()) {
                     item {
-                        Column(
-                            modifier = androidx.compose.ui.Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.VideoLibrary,
-                                contentDescription = null,
-                                tint = dominantColors.onBackground.copy(alpha = 0.3f),
-                                modifier = androidx.compose.ui.Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
-                            Text(
-                                text = "No downloaded videos yet",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = dominantColors.onBackground.copy(alpha = 0.6f)
-                            )
-                            Text(
-                                text = "Download a video from the fullscreen player",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = dominantColors.onBackground.copy(alpha = 0.4f),
-                                textAlign = TextAlign.Center,
-                                modifier = androidx.compose.ui.Modifier.padding(top = 6.dp)
-                            )
-                        }
+                        M3EEmptyState(
+                            icon = Icons.Default.VideoLibrary,
+                            title = "No downloaded videos",
+                            description = "Download videos from the player to watch them offline.",
+                            modifier = Modifier.padding(top = 48.dp)
+                        )
                     }
                 } else {
                     itemsIndexed(downloadedVideos, key = { _, video -> video.id }) { index, video ->
@@ -605,7 +572,6 @@ fun DownloadsScreen(
                                         }
                                         context.startActivity(intent)
                                     } catch (e: Exception) {
-                                        // No app to play video - ignore
                                     }
                                 }
                             },
@@ -616,28 +582,8 @@ fun DownloadsScreen(
                     }
                 }
             }
-
-
-            // Empty state handling
-            if (downloadItems.isEmpty()) {
-                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "No downloaded songs yet",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = dominantColors.onBackground.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
         }
 
-        // Collapsing header bar
         AnimatedVisibility(
             visible = isScrolled,
             enter = fadeIn() + slideInVertically { -it },
@@ -682,7 +628,6 @@ fun DownloadsScreen(
         }
     }
 
-    // Delete confirmation dialog
     if (showDeleteDialog && pendingDeleteSong != null) {
         AlertDialog(
             onDismissRequest = {
@@ -922,7 +867,6 @@ private fun DownloadedSongCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             } else {
-                // Index number with accent styling
                 Box(
                     modifier = Modifier
                         .size(28.dp)
@@ -940,7 +884,6 @@ private fun DownloadedSongCard(
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
-            // Thumbnail with shadow
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -984,11 +927,9 @@ private fun DownloadedSongCard(
                             .background(Color.Black.copy(alpha = 0.4f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            progress = { progress },
+                        M3ELoadingIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp,
+                            color = Color.White
                         )
                     }
                 }
@@ -996,7 +937,6 @@ private fun DownloadedSongCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Song info
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -1038,7 +978,6 @@ private fun DownloadedSongCard(
                 }
             }
 
-            // Delete button
             if (!isSelectionMode && !isDownloading) {
                 IconButton(onClick = onDeleteClick) {
                     Icon(
@@ -1079,7 +1018,6 @@ private fun DownloadedCollectionCard(
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Folder Icon / Thumbnail
         Box(
             modifier = Modifier
                 .size(52.dp)
@@ -1158,7 +1096,6 @@ private fun DownloadedCollectionDetail(
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100 }
     }
     
-    // Calculate duration
     val totalDuration = collection.songs.sumOf { it.song.duration }
     val durationText = formatDuration(totalDuration)
 
@@ -1168,7 +1105,6 @@ private fun DownloadedCollectionDetail(
             contentPadding = PaddingValues(top = 80.dp, bottom = 120.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header
             item {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -1263,7 +1199,6 @@ private fun DownloadedCollectionDetail(
             }
         }
         
-        // Sticky Top Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1337,7 +1272,6 @@ private fun VideoDownloadCard(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Thumbnail with video badge overlay
         Box(modifier = Modifier.size(56.dp)) {
             AsyncImage(
                 model = video.thumbnailUrl,
@@ -1347,7 +1281,6 @@ private fun VideoDownloadCard(
                     .size(56.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
-            // Video badge
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -1385,7 +1318,6 @@ private fun VideoDownloadCard(
             )
         }
 
-        // Play indicator
         Icon(
             imageVector = Icons.Default.PlayArrow,
             contentDescription = "Play Video",

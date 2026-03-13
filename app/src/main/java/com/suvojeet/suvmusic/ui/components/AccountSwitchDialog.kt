@@ -15,6 +15,7 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import kotlinx.coroutines.launch
 
 @Composable
@@ -30,7 +31,7 @@ fun AccountSwitchDialog(
         text = {
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    M3ELoadingIndicator()
                 }
             } else if (accounts.isEmpty()) {
                 Text("No other accounts found.")

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -157,7 +158,7 @@ fun CommentsSheet(
                             if (isLoadingMore) {
                                 item {
                                     Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = accentColor, strokeWidth = 2.dp)
+                                        M3ELoadingIndicator(modifier = Modifier.size(24.dp), color = accentColor)
                                     }
                                 }
                             }
@@ -260,10 +261,9 @@ private fun CommentInputSection(
                     enabled = commentText.isNotBlank() && !isPosting
                 ) {
                     if (isPosting) {
-                        CircularProgressIndicator(
+                        M3ELoadingIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = accentColor,
-                            strokeWidth = 2.dp
+                            color = accentColor
                         )
                     } else {
                         Icon(

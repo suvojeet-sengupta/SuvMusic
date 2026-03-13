@@ -1,40 +1,31 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import android.widget.Toast
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -43,14 +34,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.R
+import com.suvojeet.suvmusic.ui.components.M3ENavigationItem
+import com.suvojeet.suvmusic.ui.components.M3EPageHeader
+import com.suvojeet.suvmusic.ui.components.M3ESettingsGroupHeader
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
 
-/**
- * Premium Polished About Screen with Dynamic Colors
- * Clean, organized, and professional design
- */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AboutScreen(
     onBack: () -> Unit,
@@ -59,791 +50,253 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
-    var showPasswordDialog by remember { mutableStateOf(false) }
-    
-    // Dynamic colors
-    val colorScheme = MaterialTheme.colorScheme
-    val primaryColor = colorScheme.primary
-    val surfaceColor = colorScheme.surface
-    val surfaceContainerColor = colorScheme.surfaceContainer
-    val onSurfaceColor = colorScheme.onSurface
-    val onSurfaceVariant = colorScheme.onSurfaceVariant
+    val uriHandler = LocalUriHandler.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+            M3EPageHeader(
+                title = "About SuvMusic",
+                onBack = onBack,
+                scrollBehavior = scrollBehavior
             )
-        },
-        containerColor = surfaceColor
+        }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding() + 80.dp
+            )
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // === HERO SECTION ===
-            // App Logo with subtle glow
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(130.dp)
-            ) {
-                // Glow effect
-                Box(
-                    modifier = Modifier
-                        .size(130.dp)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    primaryColor.copy(alpha = 0.2f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = CircleShape
-                        )
-                )
-                // Logo
-                Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = "SuvMusic Logo",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            // App Name
-            Text(
-                text = "SuvMusic",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold
-                ),
-                color = onSurfaceColor
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            // Version
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = primaryColor.copy(alpha = 0.1f)
-            ) {
-                val versionName = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME
-                Text(
-                    text = if (isDeveloperMode) "v$versionName • Dev Mode" else "Version $versionName",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = primaryColor,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            // Tagline
-            Text(
-                text = "Proudly Made in India 🇮🇳\nUnlimited Music. Ad-Free. Pure Bliss.",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    lineHeight = 22.sp
-                ),
-                color = onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 40.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // === APP DESCRIPTION SECTION ===
-            SectionTitle("About SuvMusic", primaryColor)
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
+            // Hero Block
+            item {
                 Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "SuvMusic is a cutting-edge, open-source music player developed in India. Our focus is to deliver a premium, interruption-free music experience by leveraging the vast library of YouTube Music.",
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
-                        color = onSurfaceColor
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "With support for high-fidelity streaming and advanced audio normalization, SuvMusic ensures a superior auditory journey tailored for audiophiles.",
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
-                        color = onSurfaceVariant
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // === FEATURES SECTION ===
-            SectionTitle("Features", primaryColor)
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                Column {
-                    FeatureRow(
-                        icon = Icons.Outlined.Palette,
-                        title = "Premium Design",
-                        subtitle = "Modern, clean interface",
-                        accentColor = primaryColor
-                    )
-                    FeatureRow(
-                        icon = Icons.Outlined.Block,
-                        title = "100% Ad-Free",
-                        subtitle = "No interruptions, ever",
-                        accentColor = primaryColor
-                    )
-                    FeatureRow(
-                        icon = Icons.Default.CloudDownload,
-                        title = "Offline Mode",
-                        subtitle = "Download for offline listening",
-                        accentColor = primaryColor
-                    )
-                    FeatureRow(
-                        icon = Icons.Default.HighQuality,
-                        title = "High Quality",
-                        subtitle = "Up to 256 kbps audio",
-                        accentColor = primaryColor
-                    )
-                    FeatureRow(
-                        icon = Icons.Default.Language,
-                        title = "Spatial Audio",
-                        subtitle = "Audio AR support for headphones",
-                        accentColor = primaryColor,
-                    )
-                    FeatureRow(
-                        icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub, // Placeholder or specific icon
-                        title = "Discord Rich Presence",
-                        subtitle = "Show what you're listening to",
-                        accentColor = primaryColor
-                    )
-                    FeatureRow(
-                        icon = Icons.Default.History,
-                        title = "Last.fm Scrobbling",
-                        subtitle = "Track your listening habits",
-                        accentColor = primaryColor,
-                        showDivider = false
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // === AUDIO QUALITY SECTION ===
-            SectionTitle("Why Opus Audio?", primaryColor)
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "SuvMusic streams audio using the Opus codec from YouTube Music, widely regarded as a superior modern format.",
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
-                        color = onSurfaceColor
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    QualityPoint(
-                        title = "Better than 320kbps MP3",
-                        description = "Opus is extremely efficient. 160kbps Opus offers audio quality that is often indistinguishable from or better than 320kbps MP3, preserving more detail with less data.",
-                        primaryColor = primaryColor,
-                        onSurfaceVariant = onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    QualityPoint(
-                        title = "Superior to AAC",
-                        description = "Compared to AAC, Opus supports a wider frequency range (Fullband), delivering deeper bass, crisper highs, and lower latency.",
-                        primaryColor = primaryColor,
-                        onSurfaceVariant = onSurfaceVariant
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(28.dp))
-            
-            // === DEVELOPER SECTION ===
-            SectionTitle("Developer", primaryColor)
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val uriHandler = LocalUriHandler.current
-                    
-                    // Developer Photo
+                    val scale by animateFloatAsState(
+                        targetValue = 1f,
+                        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow),
+                        label = "logo_scale"
+                    )
                     Box(
                         modifier = Modifier
-                            .size(88.dp)
-                            .clip(CircleShape)
+                            .size(120.dp)
+                            .graphicsLayer { scaleX = scale; scaleY = scale }
+                            .clip(MaterialTheme.shapes.extraLarge)
                             .background(
                                 brush = Brush.linearGradient(
-                                    colors = listOf(primaryColor, primaryColor.copy(alpha = 0.6f))
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.tertiaryContainer
+                                    )
                                 )
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        coil.compose.AsyncImage(
-                            model = "https://avatars.githubusercontent.com/u/suvojeet-sengupta",
-                            contentDescription = "Suvojeet Sengupta",
-                            modifier = Modifier
-                                .size(84.dp)
-                                .clip(CircleShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                            error = coil.compose.rememberAsyncImagePainter(
-                                model = coil.request.ImageRequest.Builder(LocalContext.current)
-                                    .data(R.drawable.logo)
-                                    .build()
-                            )
+                        Image(
+                            painter = painterResource(id = R.drawable.logo),
+                            contentDescription = "App Logo",
+                            modifier = Modifier.size(80.dp).clip(MaterialTheme.shapes.large)
                         )
                     }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
+                    Spacer(Modifier.height(24.dp))
                     Text(
-                        text = "Suvojeet Sengupta",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = onSurfaceColor
+                        text = "SuvMusic",
+                        style = MaterialTheme.typography.displaySmallEmphasized,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Android Developer",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = onSurfaceVariant
-                    )
-                    
-                    Spacer(modifier = Modifier.height(20.dp))
-                    
-                    // Social Links
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        SocialButton(
-                            icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub,
-                            label = "GitHub",
-                            color = primaryColor,
-                            onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") }
-                        )
-                        SocialButton(
-                            icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Instagram,
-                            label = "Instagram",
-                            color = primaryColor,
-                            onClick = { uriHandler.openUri("https://www.instagram.com/suvojeet__sengupta?igsh=MWhyMXE4YzhxaDVvNg==") }
-                        )
-                        SocialButton(
-                            icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram,
-                            label = "Telegram",
-                            color = primaryColor,
-                            onClick = { uriHandler.openUri("https://t.me/suvojeet_sengupta") }
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(20.dp))
-                    
-                    Text(
-                        text = "Crafted with passion for music lovers who deserve a premium experience.",
-                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
-                        color = onSurfaceVariant.copy(alpha = 0.8f),
+                        text = "Unlimited Music. Ad-Free. Pure Bliss.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(28.dp))
-            
-            // === TECH STACK SECTION ===
-            SectionTitle("Built With", primaryColor)
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                Column {
-                    InfoRow("Language", "Kotlin")
-                    InfoRow("UI Framework", "Jetpack Compose")
-                    InfoRow("Audio Engine", "Media3 ExoPlayer")
-                    InfoRow("Data Source", "YouTube Music", showDivider = false)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // === SOURCE SECTION ===
-            SectionTitle("Source", primaryColor)
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                val uriHandler = LocalUriHandler.current
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic") }
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(primaryColor.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub,
-                            contentDescription = null,
-                            tint = primaryColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column {
-                        Text(
-                            text = "GitHub Repository",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = onSurfaceColor
-                        )
-                        Text(
-                            text = "View source code & report issues",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-            
-            // === HOW IT WORKS SECTION ===
-            SectionTitle("Learn More", primaryColor)
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onHowItWorksClick() }
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(primaryColor.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = null,
-                            tint = primaryColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "How It Works",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = onSurfaceColor
-                        )
-                        Text(
-                            text = "Learn how SuvMusic works with YouTube Music",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = onSurfaceVariant
-                        )
-                    }
-                    
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = onSurfaceVariant
+                    Spacer(Modifier.height(16.dp))
+                    SuggestionChip(
+                        onClick = { /* Check for updates? */ },
+                        label = { Text("v${com.suvojeet.suvmusic.BuildConfig.VERSION_NAME}") },
+                        icon = { Icon(Icons.Default.NewReleases, null, modifier = Modifier.size(18.dp)) },
+                        shape = MaterialTheme.shapes.medium
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-            
-            // === ADVANCED SECTION ===
-            SectionTitle("Advanced", primaryColor)
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = surfaceContainerColor)
-            ) {
-                DeveloperModeRow(
-                    isDeveloperMode = isDeveloperMode,
-                    primaryColor = primaryColor,
-                    onSurfaceColor = onSurfaceColor,
-                    onSurfaceVariant = onSurfaceVariant,
-                    onClick = {
-                        if (!isDeveloperMode) {
-                            showPasswordDialog = true
-                        } else {
-                            viewModel.disableDeveloperMode()
-                            Toast.makeText(context, "Developer Mode Disabled", Toast.LENGTH_SHORT).show()
-                        }
+            // What's Inside - Feature Cards
+            item {
+                M3ESettingsGroupHeader("WHAT'S INSIDE")
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    maxItemsInEachRow = 2
+                ) {
+                    val features = listOf(
+                        Triple(Icons.Default.MusicNote, "YouTube Music", "Millions of songs"),
+                        Triple(Icons.Default.OfflinePin, "Offline Play", "Download & listen"),
+                        Triple(Icons.Default.Lyrics, "Synced Lyrics", "Multiple providers"),
+                        Triple(Icons.Default.GraphicEq, "Equalizer", "10-band EQ"),
+                        Triple(Icons.Default.Group, "Listen Together", "Real-time sync"),
+                        Triple(Icons.Default.AutoAwesome, "AI Queue", "Smart recommendations")
+                    )
+                    features.forEach { (icon, title, desc) ->
+                        M3EFeatureCard(
+                            icon = icon,
+                            title = title,
+                            desc = desc,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
+
+            // LINKS Section
+            item {
+                M3ESettingsGroupHeader("LINKS")
+                M3ENavigationItem(
+                    icon = Icons.Default.Code,
+                    title = "Source Code",
+                    subtitle = "github.com/suvojeet-sengupta/SuvMusic",
+                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic") }
+                )
+                M3ENavigationItem(
+                    icon = Icons.Default.BugReport,
+                    title = "Report a Bug",
+                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/issues") }
+                )
+                M3ENavigationItem(
+                    icon = Icons.Default.Lightbulb,
+                    title = "How It Works",
+                    onClick = onHowItWorksClick
+                )
+                M3ENavigationItem(
+                    icon = Icons.Default.Favorite,
+                    title = "Support the Project",
+                    onClick = { /* Support link */ }
                 )
             }
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            // === FOOTER ===
-            Text(
-                text = "Made with ❤️ in India",
-                style = MaterialTheme.typography.bodySmall,
-                color = onSurfaceVariant.copy(alpha = 0.6f)
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Text(
-                text = "© 2026 Suvojeet Sengupta",
-                style = MaterialTheme.typography.labelSmall,
-                color = onSurfaceVariant.copy(alpha = 0.4f)
-            )
-            
-            Spacer(modifier = Modifier.height(120.dp))
+
+            // LEGAL Section
+            item {
+                M3ESettingsGroupHeader("LEGAL")
+                M3ENavigationItem(
+                    icon = Icons.Default.Gavel,
+                    title = "Open Source Licenses",
+                    onClick = { /* Show licenses */ }
+                )
+                M3ENavigationItem(
+                    icon = Icons.Default.Security,
+                    title = "Privacy Policy",
+                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/blob/main/PRIVACY.md") }
+                )
+            }
+
+            // TEAM Section
+            item {
+                M3ESettingsGroupHeader("TEAM")
+                M3EDeveloperCard(
+                    name = "Suvojeet Sengupta",
+                    role = "Developer",
+                    github = "suvojeet-sengupta",
+                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") }
+                )
+                M3ENavigationItem(
+                    icon = Icons.Default.People,
+                    title = "All Contributors",
+                    onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta/SuvMusic/graphs/contributors") }
+                )
+            }
+
+            item {
+                Spacer(Modifier.height(32.dp))
+                Text(
+                    text = "© 2026 SuvMusic. Made with ❤️ in India.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(32.dp))
+            }
         }
     }
-    
-    // Password Dialog
-    if (showPasswordDialog) {
-        com.suvojeet.suvmusic.ui.components.DeveloperAccessDialog(
-            onDismiss = { showPasswordDialog = false },
-            onUnlock = { password ->
-                if (viewModel.tryUnlockDeveloperMode(password)) {
-                    showPasswordDialog = false
-                    Toast.makeText(context, "Developer Mode Enabled", Toast.LENGTH_SHORT).show()
-                    true
-                } else {
-                    false
-                }
-            }
-        )
-    }
 }
 
-// === COMPOSABLE COMPONENTS ===
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SectionTitle(title: String, accentColor: Color) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(4.dp, 16.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(accentColor)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
-private fun FeatureRow(
+private fun M3EFeatureCard(
     icon: ImageVector,
     title: String,
-    subtitle: String,
-    accentColor: Color,
-    showDivider: Boolean = true
+    desc: String,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.primary,
 ) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    ElevatedCard(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(accentColor.copy(alpha = 0.1f)),
+                modifier = Modifier.size(44.dp).background(tint.copy(alpha = 0.12f), MaterialTheme.shapes.medium),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(22.dp)
-                )
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
             }
-            
-            Spacer(modifier = Modifier.width(14.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        if (showDivider) {
-            HorizontalDivider(
-                modifier = Modifier.padding(start = 70.dp, end = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
+            Text(title, style = MaterialTheme.typography.titleSmallEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun InfoRow(
-    label: String,
-    value: String,
-    showDivider: Boolean = true
-) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (showDivider) {
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SocialButton(
-    icon: ImageVector,
-    label: String,
-    color: Color,
+private fun M3EDeveloperCard(
+    name: String,
+    role: String,
+    github: String,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1f,
-        animationSpec = tween(100),
-        label = "scale"
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+        label = "dev_card_scale"
     )
-    
-    Surface(
-        modifier = Modifier
-            .scale(scale)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            ),
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.1f)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = color
-            )
-        }
-    }
-}
 
-@Composable
-private fun DeveloperModeRow(
-    isDeveloperMode: Boolean,
-    primaryColor: Color,
-    onSurfaceColor: Color,
-    onSurfaceVariant: Color,
-    onClick: () -> Unit
-) {
-    val icon = if (isDeveloperMode) Icons.Default.LockOpen else Icons.Default.Security
-    val iconColor by animateColorAsState(
-        targetValue = if (isDeveloperMode) Color(0xFF4CAF50) else primaryColor,
-        label = "iconColor"
-    )
-    
-    Row(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable(interactionSource, indication = null) { onClick() },
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconColor.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(22.dp)
+            AsyncImage(
+                model = "https://avatars.githubusercontent.com/u/$github",
+                contentDescription = name,
+                modifier = Modifier.size(56.dp).clip(CircleShape),
+                contentScale = ContentScale.Crop
             )
-        }
-        
-        Spacer(modifier = Modifier.width(14.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Developer Mode",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.Medium
-                ),
-                color = onSurfaceColor
-            )
-            Text(
-                text = if (isDeveloperMode) "HQ Audio enabled" else "Tap to unlock",
-                style = MaterialTheme.typography.bodySmall,
-                color = onSurfaceVariant
-            )
-        }
-        
-        if (isDeveloperMode) {
-            Switch(
-                checked = true,
-                onCheckedChange = { onClick() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(0xFF4CAF50)
-                )
-            )
+            Column(Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.titleMediumEmphasized)
+                Text(role, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = onClick) {
+                Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(20.dp))
+            }
         }
     }
 }
-
-@Composable
-private fun QualityPoint(
-    title: String,
-    description: String,
-    primaryColor: Color,
-    onSurfaceVariant: Color
-) {
-    Column {
-        Text(
-            text = "• $title",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = primaryColor
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp),
-            color = onSurfaceVariant,
-            modifier = Modifier.padding(start = 12.dp)
-        )
-    }
-}
-

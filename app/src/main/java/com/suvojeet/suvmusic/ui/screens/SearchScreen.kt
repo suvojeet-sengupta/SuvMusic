@@ -33,7 +33,8 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material3.CircularProgressIndicator
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.ui.components.M3EEmptyState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +46,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -84,14 +86,12 @@ import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.suvojeet.suvmusic.util.dpadFocusable
 
-/**
- * Apple Music-inspired search screen with recent searches, suggestions, and inline results.
- */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SearchScreen(
     onSongClick: (List<Song>, Int) -> Unit,
-    onArtistClick: (String) -> Unit = {}, // Artist browse ID
-    onPlaylistClick: (String) -> Unit = {}, // Playlist ID
+    onArtistClick: (String) -> Unit = {},
+    onPlaylistClick: (String) -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
     viewModel: SearchViewModel = hiltViewModel(),
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
@@ -101,24 +101,19 @@ fun SearchScreen(
     val context = LocalContext.current
     var isSearchFocused by remember { mutableStateOf(false) }
 
-    // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
-    var showAddToPlaylistSheet by remember { mutableStateOf(false) }
     
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     
-    // Hide keyboard on scroll
     androidx.compose.runtime.LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress) {
             focusManager.clearFocus()
         }
     }
     
-    // Accent color for the app (works in both light/dark)
     val accentColor = MaterialTheme.colorScheme.primary
     
-    // Handle SearchEvents
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -138,14 +133,12 @@ fun SearchScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Search Header with Back Button and Search Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back button (visible when search is active or has results)
                 AnimatedVisibility(
                     visible = uiState.isSearchActive || uiState.query.isNotBlank()
                 ) {
@@ -163,7 +156,6 @@ fun SearchScreen(
                     }
                 }
                 
-                // Search Bar
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -173,9 +165,8 @@ fun SearchScreen(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    // Voice Search Launcher
                     val voiceSearchLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+                        contract = androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()
                     ) { result ->
                         if (result.resultCode == android.app.Activity.RESULT_OK) {
                             val data = result.data
@@ -237,7 +228,6 @@ fun SearchScreen(
                             }
                         )
                         
-                        // Clear button (Visible when query is not empty)
                         AnimatedVisibility(visible = uiState.query.isNotEmpty()) {
                             IconButton(
                                 onClick = { viewModel.onQueryChange("") },
@@ -252,7 +242,6 @@ fun SearchScreen(
                             }
                         }
 
-                        // Voice Search Button (Visible when query is empty)
                         AnimatedVisibility(visible = uiState.query.isEmpty()) {
                             IconButton(
                                 onClick = {
@@ -261,7 +250,8 @@ fun SearchScreen(
                                         putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak to search")
                                     }
                                     try {
-                                        voiceSearchLauncher.launch(intent)
+                                        val pendingIntent = android.app.PendingIntent.getActivity(context, 0, intent, android.app.PendingIntent.FLAG_IMMUTABLE)
+                                        voiceSearchLauncher.launch(androidx.activity.result.IntentSenderRequest.Builder(pendingIntent).build())
                                     } catch (e: Exception) {
                                         android.widget.Toast.makeText(context, "Voice search not supported", android.widget.Toast.LENGTH_SHORT).show()
                                     }
@@ -269,7 +259,7 @@ fun SearchScreen(
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Mic,
+                                    imageVector = Icons.Default.Mic,
                                     contentDescription = "Voice Search",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
@@ -280,7 +270,6 @@ fun SearchScreen(
                 }
             }
             
-            // Category Chips (Only for YouTube Music tab)
             AnimatedVisibility(
                 visible = uiState.query.isNotBlank(),
                 enter = fadeIn() + expandVertically(),
@@ -319,13 +308,11 @@ fun SearchScreen(
                 }
             }
             
-            // Content Area
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 140.dp)
             ) {
-                // Show suggestions when typing
                 if (uiState.showSuggestions && uiState.query.isNotBlank() && uiState.suggestions.isNotEmpty()) {
                     items(uiState.suggestions.take(3)) { suggestion ->
                         SuggestionItem(
@@ -343,7 +330,6 @@ fun SearchScreen(
                     }
                 }
                 
-                // Loading indicator
                 if (uiState.isLoading) {
                     item {
                         Box(
@@ -352,12 +338,11 @@ fun SearchScreen(
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = accentColor)
+                            M3ELoadingIndicator(color = accentColor)
                         }
                     }
                 }
                 
-                // Filtered Views
                 if (uiState.resultFilter != ResultFilter.ALL && !uiState.isLoading) {
                     when (uiState.resultFilter) {
                         ResultFilter.SONGS, ResultFilter.VIDEOS -> {
@@ -425,7 +410,6 @@ fun SearchScreen(
                         else -> {}
                     }
                 } else if (uiState.resultFilter == ResultFilter.ALL) {
-                    // Artist Results (show at top)
                     if (uiState.query.isNotBlank() && uiState.artistResults.isNotEmpty()) {
                         item {
                             Column {
@@ -463,7 +447,6 @@ fun SearchScreen(
                         }
                     }
                     
-                    // Playlist Results (show after artists)
                     if (uiState.query.isNotBlank() && uiState.playlistResults.isNotEmpty()) {
                         item {
                             Column {
@@ -504,7 +487,6 @@ fun SearchScreen(
                         }
                     }
     
-                    // Album Results
                     if (uiState.query.isNotBlank() && uiState.albumResults.isNotEmpty()) {
                         item {
                             Column {
@@ -545,7 +527,6 @@ fun SearchScreen(
                         }
                     }
                     
-                    // Search Results
                     if (uiState.query.isNotBlank() && uiState.results.isNotEmpty()) {
                         item {
                             Text(
@@ -579,19 +560,19 @@ fun SearchScreen(
                     }
                 }
                 
-                // No results message
                 if (uiState.query.isNotBlank() && uiState.results.isEmpty() && !uiState.isLoading) {
                     item {
-                        Text(
-                            text = "No results found for \"${uiState.query}\"",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 32.dp)
+                        M3EEmptyState(
+                            icon = Icons.Default.Search,
+                            title = "No results found",
+                            description = "We couldn't find anything for \"${uiState.query}\". Try a different search.",
+                            actionLabel = "Clear Search",
+                            onAction = { viewModel.onQueryChange("") },
+                            modifier = Modifier.padding(top = 48.dp)
                         )
                     }
                 }
                 
-                // Recent Searches (when not searching)
                 if (uiState.query.isBlank() && uiState.recentSearches.isNotEmpty()) {
                     item {
                         Row(
@@ -662,7 +643,6 @@ fun SearchScreen(
                     }
                 }
                 
-                // Empty state with Trending Searches
                 if (uiState.query.isBlank() && uiState.recentSearches.isEmpty()) {
                     item {
                         Column(
@@ -707,7 +687,6 @@ fun SearchScreen(
             }
         }
         
-        // Song Menu Sheet
         if (showSongMenu && selectedSong != null) {
             val song = selectedSong!!
             SongMenuBottomSheet(
@@ -730,11 +709,10 @@ fun SearchScreen(
                 onViewArtist = song.artistId?.let { id ->
                     { onArtistClick(id) } 
                 },
-                onViewAlbum = null // Album navigation via ID not supported yet as Song doesn't have albumId
+                onViewAlbum = null
             )
         }
         
-        // Observe Playlist Management state for Add to Playlist Sheet
         val playlistMgmtState by playlistViewModel.uiState.collectAsState()
         
         if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
@@ -754,7 +732,6 @@ fun SearchScreen(
             )
         }
         
-        // Create Playlist Dialog
         if (playlistMgmtState.showCreatePlaylistDialog) {
              com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog(
                 isVisible = playlistMgmtState.showCreatePlaylistDialog,
@@ -945,7 +922,6 @@ private fun SearchResultItem(
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Thumbnail
         AsyncImage(
             model = song.thumbnailUrl,
             contentDescription = null,
@@ -958,7 +934,6 @@ private fun SearchResultItem(
         
         Spacer(modifier = Modifier.width(12.dp))
         
-        // Title and Artist
         Column(
             modifier = Modifier.weight(1f)
         ) {
@@ -997,7 +972,6 @@ private fun SearchResultItem(
             }
         }
         
-        // Menu button
         Box(
             modifier = Modifier
                 .dpadFocusable(onClick = onMoreClick, shape = CircleShape)
@@ -1029,7 +1003,6 @@ private fun ArtistSearchCard(
                 shape = RoundedCornerShape(8.dp)
             )
     ) {
-        // Circular artist image
         Box(
             modifier = Modifier
                 .size(80.dp)
@@ -1061,7 +1034,6 @@ private fun ArtistSearchCard(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Artist name
         Text(
             text = artist.name,
             style = MaterialTheme.typography.bodyMedium,
@@ -1071,7 +1043,6 @@ private fun ArtistSearchCard(
             overflow = TextOverflow.Ellipsis
         )
         
-        // Subscriber count
         val subscribers = artist.subscribers
         if (subscribers != null) {
             Text(
@@ -1105,7 +1076,6 @@ private fun PlaylistSearchCard(
                 shape = RoundedCornerShape(8.dp)
             )
     ) {
-        // Playlist thumbnail
         Box(
             modifier = Modifier
                 .size(140.dp)
@@ -1135,7 +1105,6 @@ private fun PlaylistSearchCard(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Playlist title
         Text(
             text = playlist.title,
             style = MaterialTheme.typography.bodyMedium,
@@ -1145,7 +1114,6 @@ private fun PlaylistSearchCard(
             overflow = TextOverflow.Ellipsis
         )
         
-        // Author
         if (playlist.author.isNotBlank()) {
             Text(
                 text = playlist.author,
@@ -1173,7 +1141,6 @@ private fun AlbumSearchCard(
                 shape = RoundedCornerShape(8.dp)
             )
     ) {
-        // Album thumbnail
         Box(
             modifier = Modifier
                 .size(140.dp)
@@ -1203,7 +1170,6 @@ private fun AlbumSearchCard(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Album title
         Text(
             text = album.title,
             style = MaterialTheme.typography.bodyMedium,
@@ -1213,7 +1179,6 @@ private fun AlbumSearchCard(
             overflow = TextOverflow.Ellipsis
         )
         
-        // Artist/Year
         val artistText = if (album.artist.isNotBlank()) album.artist else ""
         val yearText = if (album.year != null) " • ${album.year}" else ""
         val subtitle = artistText + yearText

@@ -1,120 +1,56 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOne
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
-import com.suvojeet.suvmusic.util.dpadFocusable
 
-/**
- * Custom skip previous icon (double left triangles) like Apple Music
- */
-private val SkipPrevious: ImageVector
-    get() = Icons.Default.FastRewind
-
-/**
- * Custom skip next icon (double right triangles) like Apple Music
- */
-private val SkipNext: ImageVector
-    get() = Icons.Default.FastForward
-
-/**
- * Animated button with Apple Music style pressed effect.
- * Shows a dark shadow/glow on press with smooth animation.
- */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun AppleMusicButton(
+private fun M3EControlButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
-    iconSize: Dp = 36.dp,
-    isLarge: Boolean = false,
-    content: @Composable (isPressed: Boolean) -> Unit
+    content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    
-    // Animate the background alpha for smooth fade in/out
-    val backgroundAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.2f else 0f,
-        animationSpec = tween(durationMillis = if (isPressed) 50 else 200),
-        label = "pressedAlpha"
-    )
-    
-    // "Jump" / Scale effect
-    // Apple Music style: noticeable scale down with a bit of bounce (spring)
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.8f else 1f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-        ),
-        label = "pressedScale"
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+        label = "control_scale"
     )
-    
+
     Box(
         modifier = modifier
             .size(size)
-            .scale(scale)
-            // Use dpadFocusable for focus handling only, NOT click handling
-            // This avoids dpadFocusable adding its own clickable with defaults
-            .dpadFocusable(
-                onClick = null, 
-                shape = CircleShape,
-                focusedScale = 1.1f,
-                borderColor = Color.White
-            )
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(CircleShape)
-            // Manual click handling to remove ripple (indication = null)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .background(androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = backgroundAlpha)),
+            .clickable(interactionSource, indication = null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        content(isPressed)
+        content()
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PlaybackControls(
     isPlaying: Boolean,
@@ -128,88 +64,78 @@ fun PlaybackControls(
     dominantColors: DominantColors,
     compact: Boolean = false
 ) {
-    // Adaptive sizing for compact (16:9) vs standard screens
-    val playSize = if (compact) 56.dp else 80.dp
-    val playIconSize = if (compact) 40.dp else 56.dp
-    val skipSize = if (compact) 40.dp else 56.dp
-    val skipIconSize = if (compact) 28.dp else 40.dp
-    val secondarySize = if (compact) 36.dp else 48.dp
-    val secondaryIconSize = if (compact) 22.dp else 28.dp
+    val playSize = if (compact) 64.dp else 80.dp
+    val skipSize = if (compact) 48.dp else 56.dp
+    val secondarySize = if (compact) 40.dp else 48.dp
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Shuffle - Apple Music style
-        AppleMusicButton(
-            onClick = onShuffleToggle,
-            size = secondarySize,
-            modifier = Modifier.background(
-                if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                CircleShape
-            )
-        ) { _ ->
+        // Shuffle
+        M3EControlButton(onClick = onShuffleToggle, size = secondarySize) {
             Icon(
-                imageVector = Icons.Default.Shuffle,
+                imageVector = if (shuffleEnabled) Icons.Default.ShuffleOn else Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
                 tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(secondaryIconSize)
+                modifier = Modifier.size(24.dp)
             )
         }
 
-        // Previous - Apple Music style with press animation
-        AppleMusicButton(
-            onClick = onPrevious,
-            size = skipSize,
-            iconSize = skipIconSize
-        ) { _ ->
+        // Previous
+        M3EControlButton(onClick = onPrevious, size = skipSize) {
             Icon(
-                imageVector = SkipPrevious,
+                imageVector = Icons.Default.SkipPrevious,
                 contentDescription = "Previous",
                 tint = dominantColors.onBackground,
-                modifier = Modifier.size(skipIconSize)
+                modifier = Modifier.size(32.dp)
             )
         }
 
-        // Play/Pause - Large button with press animation
-        AppleMusicButton(
+        // Play/Pause
+        val playScale by animateFloatAsState(
+            targetValue = 1f,
+            animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+            label = "play_scale"
+        )
+        
+        FilledIconButton(
             onClick = onPlayPause,
-            size = playSize,
-            iconSize = playIconSize,
-            isLarge = true
-        ) { _ ->
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(playIconSize)
+            modifier = Modifier.size(playSize).graphicsLayer { scaleX = playScale; scaleY = playScale },
+            shape = CircleShape,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = dominantColors.onBackground,
+                contentColor = dominantColors.background
             )
+        ) {
+            AnimatedContent(
+                targetState = isPlaying,
+                transitionSpec = {
+                    (scaleIn(spring(Spring.DampingRatioMediumBouncy))).togetherWith(scaleOut(tween(100)))
+                },
+                label = "play_pause_icon"
+            ) { playing ->
+                Icon(
+                    imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (playing) "Pause" else "Play",
+                    modifier = Modifier.size(if (compact) 32.dp else 44.dp)
+                )
+            }
         }
 
-        // Next - Apple Music style with press animation
-        AppleMusicButton(
-            onClick = onNext,
-            size = skipSize,
-            iconSize = skipIconSize
-        ) { _ ->
+        // Next
+        M3EControlButton(onClick = onNext, size = skipSize) {
             Icon(
-                imageVector = SkipNext,
+                imageVector = Icons.Default.SkipNext,
                 contentDescription = "Next",
                 tint = dominantColors.onBackground,
-                modifier = Modifier.size(skipIconSize)
+                modifier = Modifier.size(32.dp)
             )
         }
 
-        // Repeat - Apple Music style
-        AppleMusicButton(
-            onClick = onRepeatToggle,
-            size = secondarySize,
-            modifier = Modifier.background(
-                if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                CircleShape
-            )
-        ) { _ ->
+        // Repeat
+        M3EControlButton(onClick = onRepeatToggle, size = secondarySize) {
             Icon(
                 imageVector = when (repeatMode) {
                     RepeatMode.ONE -> Icons.Default.RepeatOne
@@ -217,7 +143,7 @@ fun PlaybackControls(
                 },
                 contentDescription = "Repeat",
                 tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(secondaryIconSize)
+                modifier = Modifier.size(24.dp)
             )
         }
     }

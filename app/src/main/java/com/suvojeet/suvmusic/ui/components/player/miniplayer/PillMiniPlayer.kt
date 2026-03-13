@@ -1,32 +1,21 @@
 package com.suvojeet.suvmusic.ui.components.player.miniplayer
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +33,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PillMiniPlayer(
     song: Song,
@@ -57,17 +48,26 @@ fun PillMiniPlayer(
     modifier: Modifier = Modifier
 ) {
     val effectiveAlpha = 1f - userAlpha
-    val highResThumbnail = androidx.compose.runtime.remember(song.thumbnailUrl) {
+    val highResThumbnail = remember(song.thumbnailUrl) {
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
     }
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+        label = "pill_mini_player_scale"
+    )
 
     Surface(
         modifier = modifier
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(32.dp))
-            .clickable(onClick = onTap),
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(CircleShape)
+            .clickable(interactionSource, indication = null) { onTap() },
         color = Color.Transparent,
-        shape = RoundedCornerShape(32.dp),
+        shape = CircleShape,
         tonalElevation = 4.dp,
         shadowElevation = 6.dp
     ) {
@@ -135,21 +135,12 @@ fun PillMiniPlayer(
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (highResThumbnail != null) {
-                            AsyncImage(
-                                model = highResThumbnail,
-                                contentDescription = song.title,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        AsyncImage(
+                            model = highResThumbnail,
+                            contentDescription = song.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
                     }
                 }
 
@@ -175,42 +166,16 @@ fun PillMiniPlayer(
                     )
                 }
 
-                IconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(36.dp)
-                ) {
+                IconButton(onClick = onPlayPause) {
                     Icon(
                         imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(24.dp)
+                        contentDescription = null,
+                        tint = dominantColors.onBackground
                     )
                 }
 
-                IconButton(
-                    onClick = onNext,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                if (!playerState.isPlaying) {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = dominantColors.onBackground,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                IconButton(onClick = onNext) {
+                    Icon(Icons.Default.SkipNext, null, tint = dominantColors.onBackground)
                 }
                 
                 Spacer(modifier = Modifier.width(4.dp))

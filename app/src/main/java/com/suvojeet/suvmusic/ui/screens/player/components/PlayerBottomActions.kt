@@ -1,139 +1,125 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.Lyrics
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.data.model.DownloadState
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BottomActions(
     onLyricsClick: () -> Unit,
     onCastClick: () -> Unit,
     onQueueClick: () -> Unit,
     onDownloadClick: () -> Unit,
-    downloadState: com.suvojeet.suvmusic.data.model.DownloadState,
+    downloadState: DownloadState,
     dominantColors: DominantColors,
     isYouTubeSong: Boolean = false,
     isVideoMode: Boolean = false,
     onVideoToggle: () -> Unit = {},
     compact: Boolean = false
 ) {
-    val iconSize = if (compact) 20.dp else 22.dp
-    val containerPadding = if (compact) 4.dp else 6.dp
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.Center,
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(24.dp))
-                .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                .padding(horizontal = containerPadding),
-            horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Lyrics
+        M3EBottomActionItem(
+            icon = Icons.Default.Lyrics,
+            label = "Lyrics",
+            onClick = onLyricsClick,
+            dominantColors = dominantColors
+        )
+
+        // Download
+        M3EBottomActionItem(
+            icon = when(downloadState) {
+                DownloadState.DOWNLOADED -> Icons.Filled.CheckCircle
+                DownloadState.FAILED -> Icons.Filled.Error
+                else -> Icons.Filled.Download
+            },
+            label = "Download",
+            onClick = onDownloadClick,
+            dominantColors = dominantColors,
+            isLoading = downloadState == DownloadState.DOWNLOADING,
+            tint = if (downloadState == DownloadState.DOWNLOADED) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f)
+        )
+
+        // Video Toggle
+        M3EBottomActionItem(
+            icon = if (isVideoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
+            label = if (isVideoMode) "Video" else "Audio",
+            onClick = onVideoToggle,
+            dominantColors = dominantColors,
+            tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f)
+        )
+
+        // Cast/Devices
+        M3EBottomActionItem(
+            icon = Icons.Default.Devices,
+            label = "Devices",
+            onClick = onCastClick,
+            dominantColors = dominantColors
+        )
+
+        // Queue
+        M3EBottomActionItem(
+            icon = Icons.AutoMirrored.Filled.QueueMusic,
+            label = "Queue",
+            onClick = onQueueClick,
+            dominantColors = dominantColors
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun M3EBottomActionItem(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    dominantColors: DominantColors,
+    isLoading: Boolean = false,
+    tint: androidx.compose.ui.graphics.Color = dominantColors.onBackground.copy(alpha = 0.7f)
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        FilledTonalIconButton(
+            onClick = onClick,
+            modifier = Modifier.size(44.dp),
+            shape = MaterialTheme.shapes.medium,
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = dominantColors.onBackground.copy(alpha = 0.1f),
+                contentColor = tint
+            )
         ) {
-            IconButton(onClick = onLyricsClick, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Lyrics,
-                    contentDescription = "Lyrics",
-                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                    modifier = Modifier.size(iconSize)
+            if (isLoading) {
+                M3ELoadingIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = tint
                 )
-            }
-
-            // Download Button
-            IconButton(
-                onClick = onDownloadClick,
-                modifier = Modifier.size(if (compact) 36.dp else 44.dp)
-            ) {
-                when(downloadState) {
-                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADING -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(iconSize),
-                            color = dominantColors.accent,
-                            strokeWidth = 2.dp
-                        )
-                    }
-                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED -> {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Downloaded",
-                            tint = dominantColors.accent,
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                    com.suvojeet.suvmusic.data.model.DownloadState.FAILED -> {
-                        Icon(
-                            imageVector = Icons.Filled.Error,
-                            contentDescription = "Retry Download",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                    else -> {
-                        Icon(
-                            imageVector = Icons.Filled.Download,
-                            contentDescription = "Download",
-                            tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                }
-            }
-
-            // Video mode toggle
-            IconButton(onClick = onVideoToggle, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
-                Icon(
-                    imageVector = if (isVideoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                    contentDescription = if (isVideoMode) "Audio Mode" else "Video Mode",
-                    tint = if (isVideoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                    modifier = Modifier.size(iconSize)
-                )
-            }
-
-            IconButton(onClick = onCastClick, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Devices,
-                    contentDescription = "Output Device",
-                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                    modifier = Modifier.size(iconSize)
-                )
-            }
-
-            IconButton(onClick = onQueueClick, modifier = Modifier.size(if (compact) 36.dp else 44.dp)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                    contentDescription = "Queue",
-                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                    modifier = Modifier.size(iconSize)
-                )
+            } else {
+                Icon(icon, label, modifier = Modifier.size(20.dp))
             }
         }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = dominantColors.onBackground.copy(alpha = 0.6f)
+        )
     }
 }

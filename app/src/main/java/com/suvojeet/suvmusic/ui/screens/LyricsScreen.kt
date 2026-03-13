@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -276,7 +277,7 @@ fun LyricsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(32.dp)
                     ) {
-                        CircularProgressIndicator(
+                        M3ELoadingIndicator(
                             color = textColor.copy(alpha = 0.7f),
                             modifier = Modifier.size(32.dp)
                         )
@@ -1184,10 +1185,9 @@ fun LyricsList(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isSharing) {
-                        CircularProgressIndicator(
+                        M3ELoadingIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(

@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -215,7 +215,7 @@ fun AddToPlaylistSheet(
                             .height(200.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = AccentRed, strokeWidth = 3.dp)
+                        M3ELoadingIndicator(color = AccentRed)
                     }
                 } else if (playlists.isEmpty()) {
                     Column(
@@ -415,10 +415,9 @@ fun CreatePlaylistDialog(
                             )
                         ) {
                             if (isCreating) {
-                                CircularProgressIndicator(
+                                M3ELoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = primaryColor,
-                                    strokeWidth = 2.dp
+                                    color = primaryColor
                                 )
                             } else {
                                 Text("Create", fontWeight = FontWeight.Bold)
@@ -644,10 +643,9 @@ fun RenamePlaylistDialog(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             if (isRenaming) {
-                                CircularProgressIndicator(
+                                M3ELoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = TextPrimary,
-                                    strokeWidth = 2.dp
+                                    color = TextPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
@@ -744,10 +742,9 @@ fun DeletePlaylistDialog(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             if (isDeleting) {
-                                CircularProgressIndicator(
+                                M3ELoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = TextPrimary,
-                                    strokeWidth = 2.dp
+                                    color = TextPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }

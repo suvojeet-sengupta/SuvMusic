@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -321,10 +322,9 @@ fun ConnectToServerContent(
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
                     if (connectionState == ConnectionState.CONNECTING) {
-                        CircularProgressIndicator(
+                        M3ELoadingIndicator(
                             modifier = Modifier.size(24.dp), 
-                            color = MaterialTheme.colorScheme.onPrimary, 
-                            strokeWidth = 2.5.dp
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
                         Text(

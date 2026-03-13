@@ -1,35 +1,24 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cached
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.ui.components.*
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PlayerCacheScreen(
     onBackClick: () -> Unit,
@@ -38,14 +27,13 @@ fun PlayerCacheScreen(
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     var storageInfo by remember { mutableStateOf<DownloadRepository.StorageInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var isClearing by remember { mutableStateOf(false) }
     
-    // Load storage info
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             storageInfo = downloadRepository.getStorageInfo()
@@ -53,7 +41,6 @@ fun PlayerCacheScreen(
         }
     }
     
-    // Refresh info when cache is cleared
     fun refreshStorageInfo() {
         scope.launch {
             withContext(Dispatchers.IO) {
@@ -63,253 +50,104 @@ fun PlayerCacheScreen(
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = { Text("Player Cache") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
+            M3EPageHeader(
+                title = "Player Cache",
+                onBack = onBackClick,
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-        ) {
-            // Usage Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cached,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    val usedBytes = storageInfo?.progressiveCacheBytes ?: 0L
-                    val limitBytes = uiState.playerCacheLimit
-                    val isUnlimited = limitBytes == -1L
-                    
-                    Text(
-                        text = if (isUnlimited) "Unlimited Cache" else "Cache Usage",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = formatSize(usedBytes) + if (isUnlimited) "" else " / " + formatSize(limitBytes),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    
-                    if (!isUnlimited && limitBytes > 0) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        val progress = (usedBytes.toFloat() / limitBytes).coerceIn(0f, 1f)
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
-                        )
-                    }
-                }
-            }
-
-            // Info Section
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Player cache stores songs you stream so they don't need to be re-downloaded. This allows for instant playback and offline access to recently played songs.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Text(
-                text = "SETTINGS",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 8.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding() + 80.dp
             )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Limit Settings
-            // Unlimited Toggle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { 
-                        if (uiState.playerCacheLimit == -1L) {
-                            settingsViewModel.setPlayerCacheLimit(500L * 1024 * 1024) // Revert to default
-                        } else {
-                            settingsViewModel.setPlayerCacheLimit(-1L)
-                        }
+        ) {
+            if (isLoading) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        M3ELoadingIndicator()
                     }
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Unlimited Cache",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Allow cache to grow without limit",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
-                Switch(
-                    checked = uiState.playerCacheLimit == -1L,
-                    onCheckedChange = { checked ->
-                        if (checked) {
-                            settingsViewModel.setPlayerCacheLimit(-1L)
-                        } else {
-                            settingsViewModel.setPlayerCacheLimit(500L * 1024 * 1024)
+            } else {
+                storageInfo?.let { info ->
+                    item {
+                        M3ECacheOverviewCard(info, uiState.playerCacheLimit)
+                    }
+
+                    item { M3ESettingsGroupHeader("CACHE SIZE") }
+                    item {
+                        M3ESwitchItem(
+                            icon = Icons.Default.AllInclusive,
+                            title = "Unlimited Cache",
+                            subtitle = "Allow cache to grow without limit",
+                            checked = uiState.playerCacheLimit == -1L,
+                            onCheckedChange = { checked ->
+                                settingsViewModel.setPlayerCacheLimit(if (checked) -1L else 500L * 1024 * 1024)
+                            }
+                        )
+                    }
+
+                    if (uiState.playerCacheLimit != -1L) {
+                        item {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Text(
+                                    "Maximum Cache Size",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                                )
+                                val options = listOf(
+                                    250L * 1024 * 1024 to "250 MB",
+                                    500L * 1024 * 1024 to "500 MB",
+                                    1024L * 1024 * 1024 to "1 GB",
+                                    2L * 1024 * 1024 * 1024 to "2 GB",
+                                    5L * 1024 * 1024 * 1024 to "5 GB"
+                                )
+                                M3EButtonGroup(
+                                    options = options,
+                                    selected = options.find { it.first == uiState.playerCacheLimit } ?: options[1],
+                                    onSelect = { settingsViewModel.setPlayerCacheLimit(it.first) },
+                                    label = { it.second }
+                                )
+                            }
                         }
                     }
-                )
-            }
-            
-            // Fixed Limit Options (only if not unlimited)
-            if (uiState.playerCacheLimit != -1L) {
-                val currentLimit = uiState.playerCacheLimit
-                val options = listOf(
-                    250L * 1024 * 1024 to "250 MB",
-                    500L * 1024 * 1024 to "500 MB",
-                    1024L * 1024 * 1024 to "1 GB",
-                    2L * 1024 * 1024 * 1024 to "2 GB",
-                    5L * 1024 * 1024 * 1024 to "5 GB",
-                    10L * 1024 * 1024 * 1024 to "10 GB"
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "Maximum Cache Size",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                options.forEach { (size, label) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { settingsViewModel.setPlayerCacheLimit(size) }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = currentLimit == size,
-                            onClick = { settingsViewModel.setPlayerCacheLimit(size) }
+
+                    item { M3ESettingsGroupHeader("CACHE STATISTICS") }
+                    item {
+                        M3ESettingsItem(
+                            icon = Icons.Default.Info,
+                            title = "Cache Usage",
+                            subtitle = "${info.formatSize(info.progressiveCacheBytes)} used",
+                            onClick = null
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyLarge
+                    }
+
+                    item { M3ESettingsGroupHeader("ACTIONS") }
+                    item {
+                        M3ESettingsItem(
+                            icon = Icons.Default.DeleteSweep,
+                            title = "Clear Player Cache",
+                            subtitle = "Remove all cached streams",
+                            iconTint = MaterialTheme.colorScheme.error,
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                            onClick = { if (info.progressiveCacheBytes > 0) showClearCacheDialog = true }
                         )
                     }
                 }
-                
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                   Text(
-                       text = "Note: Changes to cache limit may require an app restart to take full effect.",
-                       style = MaterialTheme.typography.bodySmall,
-                       color = MaterialTheme.colorScheme.onSurfaceVariant,
-                       modifier = Modifier.padding(12.dp)
-                   ) 
-                }
             }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Actions
-            OutlinedButton(
-                onClick = { showClearCacheDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isClearing && (storageInfo?.progressiveCacheBytes ?: 0L) > 0,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Clear Player Cache")
-            }
-            
-            Spacer(modifier = Modifier.height(50.dp))
         }
     }
-    
-    // Clear Cache Dialog
+
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
-            title = { Text("Clear Player Cache?") },
-            text = { 
-                Text("This will remove all cached songs. Downloaded songs will NOT be affected.") 
-            },
+            title = { Text("Clear Player Cache?", style = MaterialTheme.typography.titleLargeEmphasized) },
+            text = { Text("This will remove all cached songs. Downloaded songs will NOT be affected.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -318,27 +156,50 @@ fun PlayerCacheScreen(
                         scope.launch {
                             withContext(Dispatchers.IO) {
                                 downloadRepository.clearProgressiveCache()
-                                storageInfo = downloadRepository.getStorageInfo()
+                                refreshStorageInfo()
                             }
                             isClearing = false
                         }
                     }
-                ) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
-                }
+                ) { Text("Clear", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
-                TextButton(onClick = { showClearCacheDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissButton = { TextButton(onClick = { showClearCacheDialog = false }) { Text("Cancel") } }
         )
     }
 }
 
-private fun formatSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt()
-    return String.format("%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun M3ECacheOverviewCard(info: DownloadRepository.StorageInfo, limitBytes: Long) {
+    val usedBytes = info.progressiveCacheBytes
+    val isUnlimited = limitBytes == -1L
+    
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.Cached, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+            Spacer(Modifier.height(16.dp))
+            Text(if (isUnlimited) "Unlimited Cache" else "Cache Usage", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
+            Text(
+                text = info.formatSize(usedBytes) + if (isUnlimited) "" else " / ${info.formatSize(limitBytes)}",
+                style = MaterialTheme.typography.displaySmallEmphasized,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            
+            if (!isUnlimited && limitBytes > 0) {
+                Spacer(modifier = Modifier.height(16.dp))
+                val progress = (usedBytes.toFloat() / limitBytes).coerceIn(0f, 1f)
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(12.dp).clip(MaterialTheme.shapes.small),
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    trackColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f),
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            }
+        }
+    }
 }

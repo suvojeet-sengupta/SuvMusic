@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -114,7 +115,7 @@ fun RingtoneTrimmerDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(
+                        M3ELoadingIndicator(
                             modifier = Modifier.size(48.dp),
                             color = MaterialTheme.colorScheme.primary
                         )

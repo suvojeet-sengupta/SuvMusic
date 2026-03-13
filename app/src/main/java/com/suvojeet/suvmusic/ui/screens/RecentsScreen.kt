@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -53,26 +54,25 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
-import kotlinx.coroutines.launch
+import com.suvojeet.suvmusic.ui.components.M3EEmptyState
+import com.suvojeet.suvmusic.ui.components.M3EPageHeader
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-/**
- * Recents screen showing listening history with Apple Music-inspired UI.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RecentsScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onBack: () -> Unit,
+    onBrowseClick: () -> Unit = {},
     viewModel: RecentsViewModel = hiltViewModel()
 ) {
     val recentlyPlayed by viewModel.recentSongs.collectAsState()
     var showClearConfirmDialog by remember { mutableStateOf(false) }
     
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     if (showClearConfirmDialog) {
         AlertDialog(
@@ -80,8 +80,7 @@ fun RecentsScreen(
             title = {
                 Text(
                     text = "Clear history?",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleLargeEmphasized
                 )
             },
             text = {
@@ -100,7 +99,7 @@ fun RecentsScreen(
                     Text(
                         text = "Clear All",
                         color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.labelLargeEmphasized
                     )
                 }
             },
@@ -109,7 +108,7 @@ fun RecentsScreen(
                     Text("Cancel")
                 }
             },
-            shape = RoundedCornerShape(28.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = MaterialTheme.colorScheme.onSurface,
             textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -119,86 +118,30 @@ fun RecentsScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Recents",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
+            M3EPageHeader(
+                title = "Recents",
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
                 actions = {
                     if (recentlyPlayed.isNotEmpty()) {
-                        TextButton(
-                            onClick = { showClearConfirmDialog = true }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription = "Clear",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Clear")
+                        IconButton(onClick = { showClearConfirmDialog = true }) {
+                            Icon(Icons.Default.DeleteOutline, "Clear history")
                         }
                     }
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         }
     ) { paddingValues ->
         if (recentlyPlayed.isEmpty()) {
-            // Empty state
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                    Text(
-                        text = "No listening history yet",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Songs you play will appear here",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                }
-            }
+            M3EEmptyState(
+                icon = Icons.Default.History,
+                title = "No listening history yet",
+                description = "Songs you play will appear here for quick access.",
+                actionLabel = "Browse Music",
+                onAction = onBrowseClick,
+                modifier = Modifier.padding(paddingValues)
+            )
         } else {
-            // Group by Month Year
             val groupedByDate = recentlyPlayed.groupBy { recent ->
                 getDateLabel(recent.playedAt)
             }
@@ -211,18 +154,15 @@ fun RecentsScreen(
                 )
             ) {
                 groupedByDate.forEach { (dateLabel, items) ->
-                    // Date header
                     item {
                         Text(
                             text = dateLabel,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLargeEmphasized,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
                         )
                     }
                     
-                    // Songs for that date
                     items(items) { recent ->
                         val allSongs = recentlyPlayed.map { it.song }
                         val index = allSongs.indexOf(recent.song)
@@ -251,11 +191,10 @@ private fun RecentSongItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Album art
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
@@ -275,7 +214,6 @@ private fun RecentSongItem(
             }
         }
         
-        // Song info
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -297,10 +235,9 @@ private fun RecentSongItem(
             )
         }
         
-        // Time played
         Text(
             text = getTimeLabel(recent.playedAt),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -311,6 +248,5 @@ private fun getDateLabel(timestamp: Long): String {
 }
 
 private fun getTimeLabel(timestamp: Long): String {
-    // Show Date and Time since we are grouping by Month
     return SimpleDateFormat("d MMM, h:mm a", Locale.getDefault()).format(Date(timestamp))
 }

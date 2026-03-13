@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -525,9 +526,8 @@ fun ImmersiveArtistHeader(
                      modifier = Modifier.height(48.dp)
                  ) {
                      if (isSubscribing) {
-                         CircularProgressIndicator(
+                         M3ELoadingIndicator(
                              modifier = Modifier.size(16.dp),
-                             strokeWidth = 2.dp,
                              color = MaterialTheme.colorScheme.onBackground
                          )
                      } else {

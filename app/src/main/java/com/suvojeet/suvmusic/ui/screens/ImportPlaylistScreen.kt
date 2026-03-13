@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -457,7 +458,7 @@ private fun LoadingView(onCancel: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(24.dp)
     ) {
-        CircularProgressIndicator(
+        M3ELoadingIndicator(
             modifier = Modifier.size(48.dp),
             color = MaterialTheme.colorScheme.primary
         )

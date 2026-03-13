@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -163,7 +164,7 @@ fun PickMusicScreen(
                     Box(modifier = Modifier.padding(paddingValues)) {
                         if (isLoading && searchResults.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+                                M3ELoadingIndicator()
                             }
                         } else {
                             LazyVerticalGrid(
@@ -195,9 +196,8 @@ fun PickMusicScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(60.dp),
-                            strokeWidth = 5.dp
+                        M3ELoadingIndicator(
+                            modifier = Modifier.size(60.dp)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(

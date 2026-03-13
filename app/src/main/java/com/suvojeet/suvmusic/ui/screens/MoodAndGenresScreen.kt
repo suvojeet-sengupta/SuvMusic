@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,7 +51,7 @@ fun MoodAndGenresScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoadingCategories) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                M3ELoadingIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -113,7 +114,7 @@ fun MoodAndGenresDetailScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoadingContent) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                M3ELoadingIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(bottom = 100.dp), // Space for player

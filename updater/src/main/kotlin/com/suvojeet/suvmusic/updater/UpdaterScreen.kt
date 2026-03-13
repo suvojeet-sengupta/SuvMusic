@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,7 +101,7 @@ fun UpdaterScreen(
             } else if (isRefreshing) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        M3ELoadingIndicator()
                     }
                 }
             } else {
@@ -185,7 +186,7 @@ fun StatusCard(
                     }
                 }
                 is UpdateState.Checking -> {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    M3ELoadingIndicator(modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Checking for updates...")
                 }

@@ -47,14 +47,18 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import com.suvojeet.suvmusic.ui.components.M3ELoadingIndicator
+import com.suvojeet.suvmusic.ui.components.M3EEmptyState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -95,7 +99,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.LibrarySortOption
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewMode
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LibraryScreen(
     onSongClick: (List<Song>, Int) -> Unit,
@@ -104,21 +108,19 @@ fun LibraryScreen(
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
     onDownloadsClick: () -> Unit = {},
+    onBrowseClick: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     
-    // Dialog States
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var isCreatingPlaylist by remember { mutableStateOf(false) }
-    var showImportSpotifyDialog by remember { mutableStateOf(false) } // Keep logic but might hide UI entry for now
+    var showImportSpotifyDialog by remember { mutableStateOf(false) }
     
-    // Playlist Menu State
     var showPlaylistMenu by remember { mutableStateOf(false) }
     var selectedPlaylist: PlaylistDisplayItem? by remember { mutableStateOf(null) }
 
-    // Add Menu State
     var showAddMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -144,16 +146,14 @@ fun LibraryScreen(
                 onRefresh = { viewModel.refresh() },
                 modifier = Modifier.fillMaxSize()
             ) {
-                // 4. Content Area
                 if (uiState.selectedFilter == LibraryFilter.PLAYLISTS) {
                     if (uiState.viewMode == LibraryViewMode.GRID) {
                         PlaylistsGrid(
-                            uiState = uiState, // Pass full state for smart playlists
+                            uiState = uiState,
                             onPlaylistClick = onPlaylistClick,
                             onSmartPlaylistClick = { type ->
                                 when (type) {
                                     SmartPlaylistType.LIKED -> {
-                                        // Trigger sync if empty (first time)
                                         if (uiState.likedSongsCount == 0) {
                                             viewModel.syncLikedSongs()
                                         }
@@ -179,7 +179,6 @@ fun LibraryScreen(
                                 selectedPlaylist = playlist
                                 showPlaylistMenu = true
                             },
-                            // Pass Headers
                             topBar = {
                                 LibraryTopBar(
                                     onHistoryClick = onHistoryClick,
@@ -260,11 +259,11 @@ fun LibraryScreen(
                         )
                     }
                 } else {
-                    // Other filters
                      OtherContentList(
                         filter = uiState.selectedFilter,
                         uiState = uiState,
                         onSongClick = onSongClick,
+                        onBrowseClick = onBrowseClick,
                          topBar = {
                              LibraryTopBar(
                                  onHistoryClick = onHistoryClick,
@@ -284,7 +283,6 @@ fun LibraryScreen(
         }
     }
     
-    // Components (Dialogs, Bottom Sheets)
      CreatePlaylistDialog(
         isVisible = showCreatePlaylistDialog,
         isCreating = isCreatingPlaylist,
@@ -299,7 +297,6 @@ fun LibraryScreen(
         isLoggedIn = uiState.isLoggedIn
     )
     
-     // Import Spotify Dialog
     if (showImportSpotifyDialog) {
         ImportPlaylistScreen(
             isVisible = showImportSpotifyDialog,
@@ -320,7 +317,6 @@ fun LibraryScreen(
         )
     }
 
-    // Playlist Menu Bottom Sheet
     if (showPlaylistMenu && selectedPlaylist != null) {
         val playlist = selectedPlaylist!!
         MediaMenuBottomSheet(
@@ -331,7 +327,7 @@ fun LibraryScreen(
             thumbnailUrl = playlist.thumbnailUrl,
             isUserPlaylist = playlist.id.startsWith("PL") || playlist.id.startsWith("VL"),
             onShuffle = { viewModel.shufflePlay(playlist.id) },
-            onStartRadio = { viewModel.shufflePlay(playlist.id) }, // You might want a real radio here
+            onStartRadio = { viewModel.shufflePlay(playlist.id) },
             onPlayNext = { viewModel.playNext(playlist.id) },
             onAddToQueue = { viewModel.addToQueue(playlist.id) },
             onAddToPlaylist = { },
@@ -350,7 +346,6 @@ fun LibraryScreen(
         )
     }
 
-    // Add Menu Bottom Sheet
     if (showAddMenu) {
         ModalBottomSheet(
             onDismissRequest = { showAddMenu = false },
@@ -369,7 +364,6 @@ fun LibraryScreen(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
                 )
 
-                // Create Playlist Item
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -393,7 +387,6 @@ fun LibraryScreen(
                     Text("Create playlist", style = MaterialTheme.typography.titleMedium)
                 }
 
-                // Import Spotify Item
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -408,10 +401,9 @@ fun LibraryScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF1DB954)), // Spotify Green
+                            .background(Color(0xFF1DB954)),
                         contentAlignment = Alignment.Center
                     ) {
-                         // Use generic icon or download generic one, for now Add is fine or specific import
                          Icon(Icons.Outlined.FileDownload, null, tint = Color.White)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -427,6 +419,7 @@ fun LibraryScreen(
 
 // --- Sub-Composables ---
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LibraryTopBar(
     onHistoryClick: () -> Unit,
@@ -436,13 +429,13 @@ fun LibraryTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp, top = 16.dp), // Added top padding as it's now in scroll
+            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp, top = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "Library",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), // Smaller than displaySmall
+            style = MaterialTheme.typography.headlineMediumEmphasized,
             color = MaterialTheme.colorScheme.onBackground
         )
         
@@ -452,7 +445,7 @@ fun LibraryTopBar(
             }
             IconButton(onClick = onSyncClick) {
                 if (isSyncing) {
-                   androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                   M3ELoadingIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Icon(Icons.Default.Cached, contentDescription = "Sync", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -509,7 +502,7 @@ fun LibraryControlBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Date added", // Dynamic based on sortOption
+                text = "Date added",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -563,7 +556,6 @@ fun PlaylistsGrid(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Headers as Full Span Items
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { topBar() }
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { 
              Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() }
@@ -572,7 +564,6 @@ fun PlaylistsGrid(
              Box(modifier = Modifier.padding(bottom = 8.dp)) { controlBar() }
         }
 
-        // 1. Smart Playlists (Fixed)
         item {
             SmartPlaylistCard(
                 title = "Liked",
@@ -622,7 +613,6 @@ fun PlaylistsGrid(
             )
         }
         
-        // 2. User Playlists
         items(uiState.playlists, key = { it.id }) { playlist ->
             GridPlaylistCard(
                 playlist = playlist,
@@ -672,7 +662,7 @@ fun SmartPlaylistListItem(
 fun SmartPlaylistCard(
     title: String,
     icon: ImageVector,
-    count: String, // e.g. "Auto playlist" or "343 songs"
+    count: String,
     onClick: () -> Unit
 ) {
     Surface(
@@ -694,12 +684,11 @@ fun SmartPlaylistCard(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) // Premium tint
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
-            // Text at bottom start
              Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -772,7 +761,7 @@ fun GridPlaylistCard(
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "Playlist • ${playlist.uploaderName}", // Placeholder logic
+            text = "Playlist • ${playlist.uploaderName}",
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -798,7 +787,6 @@ fun PlaylistsList(
          item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
          item { Box(modifier = Modifier.padding(bottom = 8.dp)) { controlBar() } }
          
-         // Smart Playlists
          item {
              SmartPlaylistListItem(
                  title = "Liked",
@@ -849,7 +837,6 @@ fun PlaylistsList(
          }
 
          items(uiState.playlists, key = { it.id }) { playlist ->
-            // Re-use existing list item style or create simplified one
              Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -886,38 +873,51 @@ fun OtherContentList(
     filter: LibraryFilter,
     uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState,
     onSongClick: (List<Song>, Int) -> Unit,
+    onBrowseClick: () -> Unit,
     topBar: @Composable () -> Unit,
     filterChips: @Composable () -> Unit
 ) {
-    // Placeholder for other tabs
-    // If Filter is SONGS -> Show all songs (mixed? or just liked? user needs to clarify, 
-    // but typically "Songs" in library means Liked songs or All local)
-    // For now we'll show Liked + Local.
-    
     val songs = if (filter == LibraryFilter.SONGS) uiState.likedSongs + uiState.localSongs else emptyList()
     
     if (filter == LibraryFilter.SONGS) {
-        LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
-             item { topBar() }
-             item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
+        if (songs.isEmpty()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                topBar()
+                Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() }
+                M3EEmptyState(
+                    icon = Icons.Default.LibraryMusic,
+                    title = "Your library is empty",
+                    description = "Liked songs and device files will appear here.",
+                    actionLabel = "Browse Music",
+                    onAction = onBrowseClick
+                )
+            }
+        } else {
+            LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
+                 item { topBar() }
+                 item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
 
-             items(songs.size) { index ->
-                val song = songs[index]
-                 MusicCard(song = song, onClick = { onSongClick(songs, index) })
+                 items(songs.size) { index ->
+                    val song = songs[index]
+                     MusicCard(song = song, onClick = { onSongClick(songs, index) })
+                }
             }
         }
     } else {
          Column(modifier = Modifier.fillMaxSize()) {
             topBar()
             Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() }
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Text("Coming Soon", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            M3EEmptyState(
+                icon = Icons.Default.LibraryMusic,
+                title = "${filter.title} coming soon",
+                description = "We're working on bringing ${filter.title.lowercase()} to your library.",
+                actionLabel = "Go Home",
+                onAction = onBrowseClick
+            )
          }
     }
 }
 
-// Logic Helper
 fun getCountForFilter(uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState): String {
     return when(uiState.selectedFilter) {
         LibraryFilter.PLAYLISTS -> "${uiState.playlists.size} playlists"

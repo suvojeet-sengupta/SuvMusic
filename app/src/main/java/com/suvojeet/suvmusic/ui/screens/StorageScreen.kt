@@ -3,41 +3,24 @@ package com.suvojeet.suvmusic.ui.screens
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Cached
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.ui.components.*
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * Storage management screen showing storage usage breakdown and cleanup options.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun StorageScreen(
     downloadRepository: DownloadRepository,
@@ -48,6 +31,7 @@ fun StorageScreen(
     val scope = rememberCoroutineScope()
     val uiState by settingsViewModel.uiState.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     var storageInfo by remember { mutableStateOf<DownloadRepository.StorageInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -56,12 +40,10 @@ fun StorageScreen(
     var showClearImageCacheDialog by remember { mutableStateOf(false) }
     var isClearing by remember { mutableStateOf(false) }
     
-    // Folder picker launcher
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         uri?.let {
-            // Persist permission
             context.contentResolver.takePersistableUriPermission(
                 it,
                 android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or 
@@ -71,7 +53,6 @@ fun StorageScreen(
         }
     }
 
-    // Load storage info
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             storageInfo = downloadRepository.getStorageInfo()
@@ -79,7 +60,6 @@ fun StorageScreen(
         }
     }
     
-    // Refresh info helper
     fun refreshInfo() {
         scope.launch {
             withContext(Dispatchers.IO) {
@@ -89,189 +69,92 @@ fun StorageScreen(
     }
     
     Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = { Text("Storage Manager") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
+            M3EPageHeader(
+                title = "Storage",
+                onBack = onBackClick,
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding() + 80.dp
+            )
         ) {
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize().height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        M3ELoadingIndicator()
+                    }
                 }
             } else {
                 storageInfo?.let { info ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Overview Card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SdStorage,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Total Used Space",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = info.formatSize(info.totalBytes),
-                                style = MaterialTheme.typography.displaySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
+                    item {
+                        M3EStorageOverviewCard(info)
                     }
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    // Storage Breakdown Section
-                    Text(
-                        text = "DETAILS",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Downloads Item
-                    StorageItem(
-                        icon = Icons.Default.AudioFile,
-                        title = "Downloads",
-                        subtitle = "${info.downloadedSongsCount} songs offline",
-                        size = info.formatSize(info.downloadedSongsBytes),
-                        color = MaterialTheme.colorScheme.primary,
-                        onClick = null // No specific detail screen for downloads here, currently managed in Library
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // Download Location Item
-                    StorageItem(
-                        icon = Icons.Default.Folder,
-                        title = "Download Location",
-                        subtitle = if (uiState.downloadLocation == null) "Default (Music/SuvMusic)" else "Custom folder set",
-                        size = if (uiState.downloadLocation == null) "" else "Custom",
-                        color = MaterialTheme.colorScheme.secondary,
-                        onClick = { folderPickerLauncher.launch(null) },
-                        showChevron = true
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Player Cache Item (Clickable to go to detail screen)
-                    StorageItem(
-                        icon = Icons.Default.Cached,
-                        title = "Player Cache",
-                        subtitle = "Streamed songs",
-                        size = info.formatSize(info.progressiveCacheBytes),
-                        color = MaterialTheme.colorScheme.tertiary,
-                        onClick = onPlayerCacheClick,
-                        showChevron = true
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Image Cache Item
-                    StorageItem(
-                        icon = Icons.Default.Image,
-                        title = "Image Cache",
-                        subtitle = "Temporary app images",
-                        size = info.formatSize(info.imageCacheBytes),
-                        color = MaterialTheme.colorScheme.primary,
-                        onClick = { showClearImageCacheDialog = true }
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Thumbnails Item
-                    StorageItem(
-                        icon = Icons.Default.Image,
-                        title = "Thumbnails",
-                        subtitle = "Album artwork images",
-                        size = info.formatSize(info.thumbnailsBytes),
-                        color = MaterialTheme.colorScheme.secondary,
-                        onClick = { showClearThumbnailsDialog = true }
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    // Actions Section
-                    Text(
-                        text = "ACTIONS",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Delete All Downloads Button
-                    Button(
-                        onClick = { showDeleteAllDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        enabled = !isClearing && info.downloadedSongsCount > 0
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                    item { M3ESettingsGroupHeader("DOWNLOAD LOCATION") }
+                    item {
+                        M3ENavigationItem(
+                            icon = Icons.Default.Folder,
+                            title = "Download Location",
+                            subtitle = if (uiState.downloadLocation == null) "Default (Music/SuvMusic)" else "Custom folder",
+                            onClick = { folderPickerLauncher.launch(null) }
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete All Downloads")
                     }
-                    
-                    Spacer(modifier = Modifier.height(100.dp))
+
+                    item { M3ESettingsGroupHeader("CACHE") }
+                    item {
+                        M3ENavigationItem(
+                            icon = Icons.Default.Cached,
+                            title = "Player Cache",
+                            subtitle = info.formatSize(info.progressiveCacheBytes),
+                            onClick = onPlayerCacheClick
+                        )
+                    }
+                    item {
+                        M3ENavigationItem(
+                            icon = Icons.Default.Image,
+                            title = "Image Cache",
+                            subtitle = info.formatSize(info.imageCacheBytes),
+                            onClick = { showClearImageCacheDialog = true }
+                        )
+                    }
+                    item {
+                        M3ENavigationItem(
+                            icon = Icons.Default.PhotoLibrary,
+                            title = "Thumbnails",
+                            subtitle = info.formatSize(info.thumbnailsBytes),
+                            onClick = { showClearThumbnailsDialog = true }
+                        )
+                    }
+
+                    item { M3ESettingsGroupHeader("CLEANUP ACTIONS") }
+                    item {
+                        M3ESettingsItem(
+                            icon = Icons.Default.DeleteForever,
+                            title = "Delete All Downloads",
+                            subtitle = "${info.downloadedSongsCount} songs offline",
+                            iconTint = MaterialTheme.colorScheme.error,
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                            onClick = { if (info.downloadedSongsCount > 0) showDeleteAllDialog = true }
+                        )
+                    }
                 }
             }
         }
     }
-    
-    // Delete All Downloads Dialog
+
+    // Dialogs
     if (showDeleteAllDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text("Delete All Downloads?") },
-            text = { 
-                Text("This will permanently delete all downloaded songs. This action cannot be undone.") 
-            },
+            title = { Text("Delete All Downloads?", style = MaterialTheme.typography.titleLargeEmphasized) },
+            text = { Text("This will permanently delete all downloaded songs.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -285,12 +168,9 @@ fun StorageScreen(
                             isClearing = false
                         }
                     }
-                ) {
-                    Text("Delete All", color = MaterialTheme.colorScheme.error)
-                }
+                ) { Text("Delete All", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
-            }
+            dismissButton = { TextButton(onClick = { showDeleteAllDialog = false }) { Text("Cancel") } }
         )
     }
 
@@ -298,32 +178,22 @@ fun StorageScreen(
     if (showClearImageCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearImageCacheDialog = false },
-            title = { Text("Clear Image Cache?") },
-            text = { 
-                Text("This will remove all temporary images cached by the app. They will be re-downloaded when needed.") 
-            },
+            title = { Text("Clear Image Cache?", style = MaterialTheme.typography.titleLargeEmphasized) },
+            text = { Text("This will remove all temporary images cached by the app.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showClearImageCacheDialog = false
-                        isClearing = true
                         scope.launch {
                             withContext(Dispatchers.IO) {
                                 downloadRepository.clearImageCache()
                                 refreshInfo()
                             }
-                            isClearing = false
                         }
                     }
-                ) {
-                    Text("Clear", color = MaterialTheme.colorScheme.primary)
-                }
+                ) { Text("Clear") }
             },
-            dismissButton = {
-                TextButton(onClick = { showClearImageCacheDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissButton = { TextButton(onClick = { showClearImageCacheDialog = false }) { Text("Cancel") } }
         )
     }
 
@@ -331,108 +201,39 @@ fun StorageScreen(
     if (showClearThumbnailsDialog) {
         AlertDialog(
             onDismissRequest = { showClearThumbnailsDialog = false },
-            title = { Text("Clear Thumbnails?") },
-            text = { 
-                Text("This will remove all downloaded album artworks. They will be re-downloaded when needed.") 
-            },
+            title = { Text("Clear Thumbnails?", style = MaterialTheme.typography.titleLargeEmphasized) },
+            text = { Text("This will remove all downloaded album artworks.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showClearThumbnailsDialog = false
-                        isClearing = true
                         scope.launch {
                             withContext(Dispatchers.IO) {
                                 downloadRepository.clearThumbnails()
                                 refreshInfo()
                             }
-                            isClearing = false
                         }
                     }
-                ) {
-                    Text("Clear", color = MaterialTheme.colorScheme.primary)
-                }
+                ) { Text("Clear") }
             },
-            dismissButton = {
-                TextButton(onClick = { showClearThumbnailsDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissButton = { TextButton(onClick = { showClearThumbnailsDialog = false }) { Text("Cancel") } }
         )
     }
 }
 
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun StorageItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    size: String,
-    color: Color,
-    onClick: (() -> Unit)? = null,
-    showChevron: Boolean = false
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer // More opaque container
-        )
+private fun M3EStorageOverviewCard(info: DownloadRepository.StorageInfo) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(color.copy(alpha = 0.1f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = size,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-            }
-            
-            if (showChevron) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.SdStorage, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Spacer(Modifier.height(16.dp))
+            Text("Total Used Space", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(info.formatSize(info.totalBytes), style = MaterialTheme.typography.displaySmallEmphasized, color = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }

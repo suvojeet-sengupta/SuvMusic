@@ -1,6 +1,8 @@
 package com.suvojeet.suvmusic.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
@@ -8,21 +10,13 @@ import androidx.compose.ui.unit.dp
  * Material 3 Expressive shapes.
  * Embraces tension by mixing corner types.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 val Shapes = Shapes(
-    // Extra Small - for small chips, elements
-    extraSmall = RoundedCornerShape(8.dp),
-    
-    // Small - for buttons, text fields
-    small = RoundedCornerShape(12.dp),
-    
-    // Medium - for cards
-    medium = RoundedCornerShape(16.dp),
-    
-    // Large - for dialogs, sheets
-    large = RoundedCornerShape(24.dp),
-    
-    // Extra Large - for full screen containers
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = ShapeDefaults.ExtraSmall,   // 4.dp rounded
+    small      = ShapeDefaults.Small,        // 8.dp rounded  
+    medium     = ShapeDefaults.Medium,       // 12.dp rounded
+    large      = ShapeDefaults.Large,        // 16.dp rounded
+    extraLarge = ShapeDefaults.ExtraLarge,   // 28.dp rounded
 )
 
 // Custom expressive shapes
