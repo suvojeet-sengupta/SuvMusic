@@ -543,6 +543,13 @@ fun PortraitPlayerContent(
                                     modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
                                 )
                             }
+
+                            // M3E Expressive loading overlay for video buffering
+                            com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay(
+                                isLoading = playerState.isLoading,
+                                dominantColors = dominantColors,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                 } else {
@@ -664,6 +671,13 @@ fun LandscapePlayerContent(
                                     modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
                                 )
                             }
+
+                            // M3E Expressive loading overlay for video buffering
+                            com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay(
+                                isLoading = playerState.isLoading,
+                                dominantColors = dominantColors,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                 } else {
