@@ -515,6 +515,8 @@ fun ImmersiveArtistHeader(
                 }
 
                 // Follow Button (Outlined)
+import androidx.compose.material3.LoadingIndicator
+
                  OutlinedButton(
                      onClick = onSubscribe,
                      shape = RoundedCornerShape(50),
@@ -525,9 +527,8 @@ fun ImmersiveArtistHeader(
                      modifier = Modifier.height(48.dp)
                  ) {
                      if (isSubscribing) {
-                         CircularProgressIndicator(
+                         LoadingIndicator(
                              modifier = Modifier.size(16.dp),
-                             strokeWidth = 2.dp,
                              color = MaterialTheme.colorScheme.onBackground
                          )
                      } else {
