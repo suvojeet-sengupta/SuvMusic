@@ -5,6 +5,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -85,6 +87,29 @@ fun SearchScreen(
     
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     
+    // Scroll tracking for hiding headers
+    var isHeaderVisible by remember { mutableStateOf(true) }
+    var lastScrollOffset by remember { mutableIntStateOf(0) }
+    
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemScrollOffset }.collect { currentOffset ->
+            val delta = currentOffset - lastScrollOffset
+            if (delta > 15 && isHeaderVisible && listState.firstVisibleItemIndex >= 0) {
+                isHeaderVisible = false
+            } else if (delta < -15 && !isHeaderVisible) {
+                isHeaderVisible = true
+            }
+            // Always show header at the very top
+            if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+                isHeaderVisible = true
+            }
+            lastScrollOffset = currentOffset
+        }
+    }
+    
+    // Always show headers when search is expanded/active
+    val effectiveHeaderVisibility = isHeaderVisible || isSearchActive
+    
     androidx.compose.runtime.LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress) {
             focusManager.clearFocus()
@@ -124,200 +149,210 @@ fun SearchScreen(
                 }
             }
 
-            SearchBar(
-                inputField = {
-                    SearchBarDefaults.InputField(
-                        query = uiState.query,
-                        onQueryChange = { viewModel.onQueryChange(it) },
-                        onSearch = {
-                            viewModel.search()
-                            isSearchActive = false
-                            focusManager.clearFocus()
+            AnimatedVisibility(
+                visible = effectiveHeaderVisibility,
+                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + 
+                        expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)),
+                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + 
+                       shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+            ) {
+                Column {
+                    SearchBar(
+                        inputField = {
+                            SearchBarDefaults.InputField(
+                                query = uiState.query,
+                                onQueryChange = { viewModel.onQueryChange(it) },
+                                onSearch = {
+                                    viewModel.search()
+                                    isSearchActive = false
+                                    focusManager.clearFocus()
+                                },
+                                expanded = isSearchActive,
+                                onExpandedChange = { isSearchActive = it },
+                                placeholder = {
+                                    Text(
+                                        "Artists, Songs, Lyrics and more",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                },
+                                leadingIcon = {
+                                    if (isSearchActive) {
+                                        IconButton(onClick = {
+                                            isSearchActive = false
+                                            viewModel.onBackPressed()
+                                            focusManager.clearFocus()
+                                        }) {
+                                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                                        }
+                                    } else {
+                                        Icon(Icons.Default.Search, "Search")
+                                    }
+                                },
+                                trailingIcon = {
+                                    if (uiState.query.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.onQueryChange("") }) {
+                                            Icon(Icons.Default.Clear, "Clear")
+                                        }
+                                    } else {
+                                        IconButton(onClick = {
+                                            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+                                            }
+                                            try { voiceSearchLauncher.launch(intent) }
+                                            catch (e: Exception) {
+                                                android.widget.Toast.makeText(context, "Voice search not supported", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }) {
+                                            Icon(Icons.Default.Mic, "Voice Search")
+                                        }
+                                    }
+                                }
+                            )
                         },
                         expanded = isSearchActive,
                         onExpandedChange = { isSearchActive = it },
-                        placeholder = {
-                            Text(
-                                "Artists, Songs, Lyrics and more",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        },
-                        leadingIcon = {
-                            if (isSearchActive) {
-                                IconButton(onClick = {
-                                    isSearchActive = false
-                                    viewModel.onBackPressed()
-                                    focusManager.clearFocus()
-                                }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                                }
-                            } else {
-                                Icon(Icons.Default.Search, "Search")
-                            }
-                        },
-                        trailingIcon = {
-                            if (uiState.query.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.onQueryChange("") }) {
-                                    Icon(Icons.Default.Clear, "Clear")
-                                }
-                            } else {
-                                IconButton(onClick = {
-                                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak to search")
-                                    }
-                                    try { voiceSearchLauncher.launch(intent) }
-                                    catch (e: Exception) {
-                                        android.widget.Toast.makeText(context, "Voice search not supported", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Mic, "Voice Search")
-                                }
-                            }
-                        }
-                    )
-                },
-                expanded = isSearchActive,
-                onExpandedChange = { isSearchActive = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = SearchBarDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                )
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    if (uiState.showSuggestions && uiState.query.isNotBlank() && uiState.suggestions.isNotEmpty()) {
-                        items(uiState.suggestions.take(5)) { suggestion ->
-                            SuggestionItem(
-                                suggestion = suggestion,
-                                accentColor = accentColor,
-                                onClick = {
-                                    viewModel.onSuggestionClick(suggestion)
-                                    isSearchActive = false
-                                }
-                            )
-                        }
-                    }
-                    
-                    if (uiState.query.isBlank() && uiState.recentSearches.isNotEmpty()) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Recently Searched",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                
-                                Text(
-                                    text = "Clear",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = accentColor,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.clickable { viewModel.clearRecentSearches() }
-                                )
-                            }
-                        }
-                        
-                        items(
-                            items = uiState.recentSearches,
-                            key = { it.id },
-                            contentType = { it.javaClass.simpleName }
-                        ) { item ->
-                            RecentSearchItemRow(
-                                item = item,
-                                onSongClick = onSongClick,
-                                onArtistClick = onArtistClick,
-                                onAlbumClick = onAlbumClick,
-                                onPlaylistClick = onPlaylistClick,
-                                onMoreClick = { song ->
-                                    selectedSong = song
-                                    showSongMenu = true
-                                },
-                                viewModel = viewModel
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Tab Selection (YouTube / Local)
-            TabRow(
-                selectedTabIndex = uiState.selectedTab.ordinal,
-                containerColor = Color.Transparent,
-                contentColor = accentColor,
-                divider = {},
-                indicator = { tabPositions ->
-                    if (uiState.selectedTab.ordinal < tabPositions.size) {
-                        TabRowDefaults.SecondaryIndicator(
-                            Modifier.tabIndicatorOffset(tabPositions[uiState.selectedTab.ordinal]),
-                            color = accentColor
-                        )
-                    }
-                },
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                Tab(
-                    selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
-                    onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
-                    text = { Text("YouTube Music", style = MaterialTheme.typography.titleSmall) }
-                )
-                Tab(
-                    selected = uiState.selectedTab == SearchTab.YOUR_LIBRARY,
-                    onClick = { viewModel.onTabChange(SearchTab.YOUR_LIBRARY) },
-                    text = { Text("Local Library", style = MaterialTheme.typography.titleSmall) }
-                )
-            }
-            
-            // Category Chips for YouTube Tab
-            if (uiState.selectedTab == SearchTab.YOUTUBE_MUSIC) {
-                AnimatedVisibility(
-                    visible = uiState.query.isNotBlank(),
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    val filters = listOf(
-                        ResultFilter.ALL to "All",
-                        ResultFilter.SONGS to "Songs",
-                        ResultFilter.VIDEOS to "Videos",
-                        ResultFilter.ALBUMS to "Albums",
-                        ResultFilter.ARTISTS to "Artists",
-                        ResultFilter.COMMUNITY_PLAYLISTS to "Community",
-                        ResultFilter.FEATURED_PLAYLISTS to "Featured"
-                    )
-                    
-                    SingleChoiceSegmentedButtonRow(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = SearchBarDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        )
                     ) {
-                        filters.forEachIndexed { index, (filter, label) ->
-                            SegmentedButton(
-                                selected = uiState.resultFilter == filter,
-                                onClick = { viewModel.setResultFilter(filter) },
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = filters.size),
-                                colors = SegmentedButtonDefaults.colors(
-                                    activeContainerColor = accentColor.copy(alpha = 0.15f),
-                                    activeContentColor = accentColor,
-                                    activeBorderColor = accentColor,
-                                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
-                                    inactiveBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                                ),
-                                icon = {}
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            if (uiState.showSuggestions && uiState.query.isNotBlank() && uiState.suggestions.isNotEmpty()) {
+                                items(uiState.suggestions.take(5)) { suggestion ->
+                                    SuggestionItem(
+                                        suggestion = suggestion,
+                                        accentColor = accentColor,
+                                        onClick = {
+                                            viewModel.onSuggestionClick(suggestion)
+                                            isSearchActive = false
+                                        }
+                                    )
+                                }
+                            }
+                            
+                            if (uiState.query.isBlank() && uiState.recentSearches.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Recently Searched",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        
+                                        Text(
+                                            text = "Clear",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = accentColor,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.clickable { viewModel.clearRecentSearches() }
+                                        )
+                                    }
+                                }
+                                
+                                items(
+                                    items = uiState.recentSearches,
+                                    key = { it.id },
+                                    contentType = { it.javaClass.simpleName }
+                                ) { item ->
+                                    RecentSearchItemRow(
+                                        item = item,
+                                        onSongClick = onSongClick,
+                                        onArtistClick = onArtistClick,
+                                        onAlbumClick = onAlbumClick,
+                                        onPlaylistClick = onPlaylistClick,
+                                        onMoreClick = { song ->
+                                            selectedSong = song
+                                            showSongMenu = true
+                                        },
+                                        viewModel = viewModel
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Tab Selection (YouTube / Local)
+                    TabRow(
+                        selectedTabIndex = uiState.selectedTab.ordinal,
+                        containerColor = Color.Transparent,
+                        contentColor = accentColor,
+                        divider = {},
+                        indicator = { tabPositions ->
+                            if (uiState.selectedTab.ordinal < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[uiState.selectedTab.ordinal]),
+                                    color = accentColor
+                                )
+                            }
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        Tab(
+                            selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
+                            onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
+                            text = { Text("YouTube Music", style = MaterialTheme.typography.titleSmall) }
+                        )
+                        Tab(
+                            selected = uiState.selectedTab == SearchTab.YOUR_LIBRARY,
+                            onClick = { viewModel.onTabChange(SearchTab.YOUR_LIBRARY) },
+                            text = { Text("Local Library", style = MaterialTheme.typography.titleSmall) }
+                        )
+                    }
+                    
+                    // Category Chips for YouTube Tab
+                    if (uiState.selectedTab == SearchTab.YOUTUBE_MUSIC) {
+                        AnimatedVisibility(
+                            visible = uiState.query.isNotBlank(),
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            val filters = listOf(
+                                ResultFilter.ALL to "All",
+                                ResultFilter.SONGS to "Songs",
+                                ResultFilter.VIDEOS to "Videos",
+                                ResultFilter.ALBUMS to "Albums",
+                                ResultFilter.ARTISTS to "Artists",
+                                ResultFilter.COMMUNITY_PLAYLISTS to "Community",
+                                ResultFilter.FEATURED_PLAYLISTS to "Featured"
+                            )
+                            
+                            SingleChoiceSegmentedButtonRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                                    .horizontalScroll(rememberScrollState())
                             ) {
-                                Text(text = label, style = MaterialTheme.typography.labelMedium)
+                                filters.forEachIndexed { index, (filter, label) ->
+                                    SegmentedButton(
+                                        selected = uiState.resultFilter == filter,
+                                        onClick = { viewModel.setResultFilter(filter) },
+                                        shape = SegmentedButtonDefaults.itemShape(index = index, count = filters.size),
+                                        colors = SegmentedButtonDefaults.colors(
+                                            activeContainerColor = accentColor.copy(alpha = 0.15f),
+                                            activeContentColor = accentColor,
+                                            activeBorderColor = accentColor,
+                                            inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            inactiveContentColor = MaterialTheme.colorScheme.onSurface,
+                                            inactiveBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                        ),
+                                        icon = {}
+                                    ) {
+                                        Text(text = label, style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
                             }
                         }
                     }
