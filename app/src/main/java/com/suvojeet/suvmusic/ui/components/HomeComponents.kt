@@ -30,6 +30,7 @@ import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
 
@@ -99,7 +100,7 @@ fun PlaylistDisplayCard(
         modifier = Modifier
             .width(170.dp)
             .height(220.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(SquircleShape)
             .bounceClick(onClick = onClick)
     ) {
         AsyncImage(
@@ -180,19 +181,25 @@ fun MediumSongCard(
                 contentDescription = song.title,
                 modifier = Modifier
                     .size(170.dp)
-                    .clip(RoundedCornerShape(14.dp)),
+                    .clip(RoundedCornerShape(20.dp)),
                 contentScale = ContentScale.Crop
             )
-            
-            // Members Only Badge
-            if (song.isMembersOnly) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 14.dp),
-                    modifier = Modifier.align(Alignment.TopEnd)
-                ) {
-                    Text(
-                        text = "Members Only",
+
+        // Members Only Badge
+        if (song.isMembersOnly) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(
+                    topStart = 0.dp,
+                    topEnd = 20.dp,
+                    bottomStart = 16.dp,
+                    bottomEnd = 0.dp
+                ),
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Text(
+                    text = "Members Only",
+        ...
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer
