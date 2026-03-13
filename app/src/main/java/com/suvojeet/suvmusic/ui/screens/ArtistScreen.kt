@@ -1,5 +1,8 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -56,6 +59,10 @@ import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
 import kotlin.math.min
 
+import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ArtistScreen(
     onBackClick: () -> Unit,
@@ -382,6 +389,30 @@ fun ArtistScreen(
                 onShare = { /* handle share */ },
                 onViewArtist = null, // Already on artist screen
                 onViewAlbum = null
+            )
+        }
+
+        if (uiState.showAddToPlaylistSheet && uiState.selectedSong != null) {
+            AddToPlaylistSheet(
+                song = uiState.selectedSong!!,
+                isVisible = uiState.showAddToPlaylistSheet,
+                playlists = uiState.userPlaylists,
+                isLoading = uiState.isLoadingPlaylists,
+                onDismiss = { viewModel.hideAddToPlaylistSheet() },
+                onAddToPlaylist = { playlistId -> viewModel.addSongToPlaylist(playlistId) },
+                onCreateNewPlaylist = { viewModel.showCreatePlaylistDialog() }
+            )
+        }
+
+        if (uiState.showCreatePlaylistDialog) {
+            com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog(
+                isVisible = uiState.showCreatePlaylistDialog,
+                isCreating = uiState.isCreatingPlaylist,
+                onDismiss = { viewModel.hideCreatePlaylistDialog() },
+                onCreate = { title, description, isPrivate, syncWithYt ->
+                    viewModel.createPlaylist(title, description, isPrivate, syncWithYt)
+                },
+                isLoggedIn = true // Assuming logged in for now or fetch from session
             )
         }
     }

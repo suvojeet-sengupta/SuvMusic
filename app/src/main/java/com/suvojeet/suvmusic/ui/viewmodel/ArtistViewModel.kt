@@ -5,8 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,12 +27,18 @@ enum class ArtistError {
     UNKNOWN
 }
 
-    data class ArtistUiState(
+data class ArtistUiState(
     val artist: Artist? = null,
     val isLoading: Boolean = false,
     val error: ArtistError? = null,
     val isSubscribing: Boolean = false,
-    val isStartingRadio: Boolean = false
+    val isStartingRadio: Boolean = false,
+    val showAddToPlaylistSheet: Boolean = false,
+    val showCreatePlaylistDialog: Boolean = false,
+    val isLoadingPlaylists: Boolean = false,
+    val isCreatingPlaylist: Boolean = false,
+    val userPlaylists: List<PlaylistDisplayItem> = emptyList(),
+    val selectedSong: Song? = null
 )
 
 @HiltViewModel
@@ -35,6 +46,9 @@ class ArtistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val sessionManager: SessionManager,
+    private val musicPlayer: MusicPlayer,
+    private val downloadRepository: DownloadRepository,
+    private val libraryRepository: LibraryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -135,6 +149,110 @@ class ArtistViewModel @Inject constructor(
             
             _uiState.update { it.copy(isStartingRadio = false) }
             onPlaylistReady(radioId)
+        }
+    }
+
+    fun playNext(song: Song) {
+        musicPlayer.playNext(listOf(song))
+    }
+
+    fun addToQueue(song: Song) {
+        musicPlayer.addToQueue(listOf(song))
+    }
+
+    fun downloadSong(song: Song) {
+        viewModelScope.launch {
+            downloadRepository.downloadSong(song)
+        }
+    }
+
+    fun addToPlaylist(song: Song) {
+        _uiState.update { 
+            it.copy(
+                showAddToPlaylistSheet = true,
+                selectedSong = song
+            )
+        }
+        loadUserPlaylists()
+    }
+
+    fun hideAddToPlaylistSheet() {
+        _uiState.update { 
+            it.copy(
+                showAddToPlaylistSheet = false,
+                selectedSong = null
+            )
+        }
+    }
+
+    fun showCreatePlaylistDialog() {
+        _uiState.update { it.copy(showCreatePlaylistDialog = true) }
+    }
+
+    fun hideCreatePlaylistDialog() {
+        _uiState.update { it.copy(showCreatePlaylistDialog = false) }
+    }
+
+    fun createPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCreatingPlaylist = true) }
+            try {
+                if (syncWithYt && sessionManager.isLoggedIn()) {
+                    val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
+                    youTubeRepository.createPlaylist(title, description, privacyStatus)
+                } else {
+                    // Create Local Playlist
+                    val id = "local_" + java.util.UUID.randomUUID().toString()
+                    val playlist = com.suvojeet.suvmusic.core.model.Playlist(
+                        id = id, 
+                        title = title, 
+                        author = "You", 
+                        thumbnailUrl = null, 
+                        songs = emptyList()
+                    )
+                    libraryRepository.savePlaylist(playlist)
+                }
+                loadUserPlaylists() // Refresh
+            } catch (e: Exception) {
+                // Log error
+            } finally {
+                _uiState.update { it.copy(isCreatingPlaylist = false) }
+                hideCreatePlaylistDialog()
+            }
+        }
+    }
+
+    private fun loadUserPlaylists() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingPlaylists = true) }
+            try {
+                val playlists = youTubeRepository.getUserEditablePlaylists()
+                _uiState.update { 
+                    it.copy(
+                        userPlaylists = playlists,
+                        isLoadingPlaylists = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadingPlaylists = false) }
+            }
+        }
+    }
+
+    fun addSongToPlaylist(targetPlaylistId: String) {
+        val song = _uiState.value.selectedSong ?: return
+        viewModelScope.launch {
+            val isLocal = targetPlaylistId.startsWith("local_") || targetPlaylistId == "LM"
+            if (isLocal) {
+                try {
+                    libraryRepository.addSongToPlaylist(targetPlaylistId, song)
+                } catch (e: Exception) {
+                    // Log error
+                }
+            } else {
+                youTubeRepository.addSongToPlaylist(targetPlaylistId, song.id)
+            }
+            hideAddToPlaylistSheet()
         }
     }
 }
