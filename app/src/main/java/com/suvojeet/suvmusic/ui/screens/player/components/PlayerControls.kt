@@ -102,7 +102,7 @@ fun PlaybackControls(
         
         FilledIconButton(
             onClick = onPlayPause,
-            modifier = Modifier.size(playSize).graphicsLayer { scaleX = playScale; scaleY = scale },
+            modifier = Modifier.size(playSize).graphicsLayer { scaleX = playScale; scaleY = playScale },
             shape = CircleShape,
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = dominantColors.onBackground,
