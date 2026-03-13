@@ -997,6 +997,8 @@ private fun ErrorState(
     }
 }
 
+import androidx.compose.material3.LoadingIndicator
+
 @Composable
 private fun LoadingMoreIndicator(modifier: Modifier = Modifier) {
     Box(
@@ -1007,9 +1009,8 @@ private fun LoadingMoreIndicator(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
+            LoadingIndicator(
+                modifier = Modifier.size(24.dp),
                 color = MaterialTheme.colorScheme.primary
             )
             Text(

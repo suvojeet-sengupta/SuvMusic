@@ -451,13 +451,15 @@ private fun SuccessView(
     }
 }
 
+import androidx.compose.material3.LoadingIndicator
+
 @Composable
 private fun LoadingView(onCancel: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(24.dp)
     ) {
-        CircularProgressIndicator(
+        LoadingIndicator(
             modifier = Modifier.size(48.dp),
             color = MaterialTheme.colorScheme.primary
         )

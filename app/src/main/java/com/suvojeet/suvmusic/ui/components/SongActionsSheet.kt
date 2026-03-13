@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -158,7 +159,8 @@ fun SongActionsSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = backgroundColor,
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
+            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) },
+            dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
             Column(
                 modifier = Modifier

@@ -160,10 +160,15 @@ fun PickMusicScreen(
                          }
                     }
                 ) { paddingValues ->
+import androidx.compose.material3.LoadingIndicator
+
                     Box(modifier = Modifier.padding(paddingValues)) {
                         if (isLoading && searchResults.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+                                LoadingIndicator(
+                                    modifier = Modifier.size(40.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         } else {
                             LazyVerticalGrid(
@@ -195,9 +200,9 @@ fun PickMusicScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.size(60.dp),
-                            strokeWidth = 5.dp
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(

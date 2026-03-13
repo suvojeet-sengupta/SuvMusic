@@ -81,6 +81,8 @@ fun ArtistDiscographyScreen(
             )
         }
     ) { paddingValues ->
+import androidx.compose.material3.LoadingIndicator
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -88,7 +90,10 @@ fun ArtistDiscographyScreen(
         ) {
             if (uiState.isLoading && items.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    LoadingIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             } else if (items.isEmpty() && !uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
