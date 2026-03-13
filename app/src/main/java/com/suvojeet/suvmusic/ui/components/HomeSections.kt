@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.components
 
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
+import com.suvojeet.suvmusic.ui.theme.NewReleaseCardShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -553,7 +554,7 @@ fun CommunityPlaylistCard(
                     contentDescription = null,
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(16.dp)),
                     contentScale = ContentScale.Crop
                 )
                 
@@ -794,11 +795,11 @@ fun NewReleaseCard(
     androidx.compose.material3.Card(
         modifier = modifier
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = NewReleaseCardShape,
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = containerColor
         ),
-        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxSize()

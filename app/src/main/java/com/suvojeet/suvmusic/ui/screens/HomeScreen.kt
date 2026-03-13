@@ -67,6 +67,9 @@ import com.suvojeet.suvmusic.ui.utils.animateEnter
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
 import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.util.dpadFocusable
+import com.suvojeet.suvmusic.ui.theme.QuickAccessShape
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.ui.theme.PillShape
 import androidx.compose.ui.graphics.Shape
 import java.util.Calendar
 import kotlinx.coroutines.delay
@@ -640,10 +643,10 @@ fun QuickAccessCard(
     // Darker surface for contrast
     Surface(
         modifier = modifier.bounceClick(
-            shape = RoundedCornerShape(4.dp),
+            shape = QuickAccessShape,
             onClick = onClick
         ),
-        shape = RoundedCornerShape(4.dp), // Slightly rounded like Spotify
+        shape = QuickAccessShape, 
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), 
         tonalElevation = 2.dp
     ) {
@@ -657,6 +660,7 @@ fun QuickAccessCard(
                 contentDescription = null,
                 modifier = Modifier
                     .size(56.dp) // Match height
+                    .clip(RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp))
                     .background(Color.DarkGray),
                 contentScale = ContentScale.Crop
             )
@@ -858,10 +862,10 @@ private fun EndOfFeedCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(64.dp)
                     .background(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        RoundedCornerShape(16.dp)
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        SquircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -869,7 +873,7 @@ private fun EndOfFeedCard(
                     imageVector = Icons.Default.Radio,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
 
@@ -896,10 +900,10 @@ private fun EndOfFeedCard(
 
             Surface(
                 modifier = Modifier.bounceClick(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = PillShape,
                     onClick = onStartRadio
                 ),
-                shape = RoundedCornerShape(20.dp),
+                shape = PillShape,
                 color = MaterialTheme.colorScheme.primary
             ) {
                 Row(

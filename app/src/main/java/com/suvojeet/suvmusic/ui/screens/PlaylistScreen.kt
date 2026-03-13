@@ -77,6 +77,8 @@ import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.ui.theme.PillShape
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
 @Composable
@@ -271,8 +273,8 @@ fun PlaylistScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .size(88.dp)
+                                    .clip(SquircleShape)
                                     .background(
                                         if (isDarkTheme) Color.White.copy(alpha = 0.1f)
                                         else Color.Black.copy(alpha = 0.05f)
@@ -283,7 +285,7 @@ fun PlaylistScreen(
                                     imageVector = Icons.Default.PlayArrow,
                                     contentDescription = null,
                                     tint = secondaryContentColor,
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(44.dp)
                                 )
                             }
                             
@@ -310,8 +312,8 @@ fun PlaylistScreen(
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
                                 ),
-                                shape = RoundedCornerShape(24.dp),
-                                modifier = Modifier.height(48.dp)
+                                shape = PillShape,
+                                modifier = Modifier.height(52.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
@@ -321,7 +323,7 @@ fun PlaylistScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Add Songs",
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
@@ -558,12 +560,13 @@ private fun PlaylistHeader(
         // Centered Artwork
         Box(
             modifier = Modifier
-                .size(200.dp)
+                .size(210.dp)
                 .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(8.dp)
+                    elevation = 24.dp,
+                    shape = SquircleShape,
+                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                 )
-                .clip(RoundedCornerShape(8.dp))
+                .clip(SquircleShape)
                 .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color.LightGray)
         ) {
             if (playlist.thumbnailUrl != null) {
@@ -627,7 +630,7 @@ private fun PlaylistHeader(
                 Spacer(modifier = Modifier.height(8.dp))
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { if (total > 0) current.toFloat() / total.toFloat() else 0f },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(PillShape),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -646,10 +649,10 @@ private fun PlaylistHeader(
             BounceButton(
                 onClick = onDownload,
                 size = 48.dp,
-                shape = CircleShape,
+                shape = SquircleShape,
                 modifier = Modifier.background(
                     color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = CircleShape
+                    shape = SquircleShape
                 )
             ) {
                 Icon(
@@ -664,10 +667,10 @@ private fun PlaylistHeader(
                 BounceButton(
                     onClick = onToggleSave,
                     size = 48.dp,
-                    shape = CircleShape,
+                    shape = SquircleShape,
                     modifier = Modifier.background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
+                        shape = SquircleShape
                     )
                 ) {
                     Icon(
@@ -700,10 +703,10 @@ private fun PlaylistHeader(
                 BounceButton(
                     onClick = onShare,
                     size = 48.dp,
-                    shape = CircleShape,
+                    shape = SquircleShape,
                     modifier = Modifier.background(
                         color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                        shape = CircleShape
+                        shape = SquircleShape
                     )
                 ) {
                     Icon(
@@ -718,10 +721,10 @@ private fun PlaylistHeader(
             BounceButton(
                 onClick = onMoreClick,
                 size = 48.dp,
-                shape = CircleShape,
+                shape = SquircleShape,
                 modifier = Modifier.background(
                     color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = CircleShape
+                    shape = SquircleShape
                 )
             ) {
                 Icon(
