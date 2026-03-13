@@ -90,9 +90,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.ui.components.SpringMusicCard
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
-import com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet
-import com.suvojeet.suvmusic.ui.components.MusicCard
 import com.suvojeet.suvmusic.ui.screens.ImportPlaylistScreen
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryFilter
 import com.suvojeet.suvmusic.ui.viewmodel.LibrarySortOption
@@ -899,7 +898,11 @@ fun OtherContentList(
 
                  items(songs.size) { index ->
                     val song = songs[index]
-                     MusicCard(song = song, onClick = { onSongClick(songs, index) })
+                     SpringMusicCard(
+                         song = song, 
+                         onClick = { onSongClick(songs, index) },
+                         onMoreClick = { /* Handle more click if needed, or pass from ViewModel */ }
+                     )
                 }
             }
         }

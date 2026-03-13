@@ -121,11 +121,12 @@ fun MoodAndGenresDetailScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(uiState.categorySongs) { song ->
-                        MusicCard(
+                        SpringMusicCard(
                             song = song,
                             onClick = {
                                 onSongClick(uiState.categorySongs, uiState.categorySongs.indexOf(song))
                             },
+                            onMoreClick = { },
                             backgroundColor = androidx.compose.ui.graphics.Color.Transparent
                         )
                     }

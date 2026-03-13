@@ -64,9 +64,9 @@ fun MusicCard(
     modifier: Modifier = Modifier,
     backgroundColor: Color? = null,
     textColor: Color? = null,
-    subTextColor: Color? = null
+    subTextColor: Color? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val context = LocalContext.current
     

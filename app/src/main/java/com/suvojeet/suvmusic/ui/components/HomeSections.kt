@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.suvojeet.suvmusic.core.ui.components.SpringMusicCard
 import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.data.model.HomeItem
@@ -148,7 +149,7 @@ fun VerticalListSection(
             displayItems.forEach { item ->
                 when (item) {
                     is HomeItem.SongItem -> {
-                         MusicCard(
+                         SpringMusicCard(
                             song = item.song,
                             onClick = {
                                 val index = songs.indexOf(item.song)
@@ -170,9 +171,10 @@ fun VerticalListSection(
                                 source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                             )
                         }
-                         MusicCard(
+                         SpringMusicCard(
                             song = tempSong,
                             onClick = { onPlaylistClick(item.playlist) },
+                            onMoreClick = { },
                             backgroundColor = Color.Transparent
                         )
                     }
@@ -188,9 +190,10 @@ fun VerticalListSection(
                                 source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                             )
                         }
-                        MusicCard(
+                        SpringMusicCard(
                             song = tempSong,
                             onClick = { onAlbumClick(item.album) },
+                            onMoreClick = { },
                             backgroundColor = Color.Transparent
                         )
                     }
@@ -254,7 +257,7 @@ fun LargeCardWithListSection(
                 otherItems.forEach { item ->
                     when (item) {
                         is HomeItem.SongItem -> {
-                            MusicCard(
+                            SpringMusicCard(
                                 song = item.song,
                                 onClick = {
                                     val songs = section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
@@ -267,17 +270,19 @@ fun LargeCardWithListSection(
                         }
                         is HomeItem.PlaylistItem -> {
                              // Simplified rendering for list items if not Song
-                             MusicCard(
+                             SpringMusicCard(
                                 song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
                                 onClick = { onPlaylistClick(item.playlist) },
+                                onMoreClick = { },
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)
                             )
                         }
                          is HomeItem.AlbumItem -> {
-                             MusicCard(
+                             SpringMusicCard(
                                 song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
                                 onClick = { onAlbumClick(item.album) },
+                                onMoreClick = { },
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)
                             )
@@ -407,7 +412,7 @@ fun QuickPicksSection(
                         columnItems.forEach { item ->
                             when (item) {
                                 is HomeItem.SongItem -> {
-                                    MusicCard(
+                                    SpringMusicCard(
                                         song = item.song,
                                         onClick = {
                                             val index = songs.indexOf(item.song)
@@ -421,9 +426,10 @@ fun QuickPicksSection(
                                     val tempSong = remember(item.playlist.id) {
                                         Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
                                     }
-                                    MusicCard(
+                                    SpringMusicCard(
                                         song = tempSong,
                                         onClick = { onPlaylistClick(item.playlist) },
+                                        onMoreClick = { },
                                         backgroundColor = Color.Transparent
                                     )
                                 }
@@ -431,9 +437,10 @@ fun QuickPicksSection(
                                     val tempSong = remember(item.album.id) {
                                         Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
                                     }
-                                    MusicCard(
+                                    SpringMusicCard(
                                         song = tempSong,
                                         onClick = { onAlbumClick(item.album) },
+                                        onMoreClick = { },
                                         backgroundColor = Color.Transparent
                                     )
                                 }

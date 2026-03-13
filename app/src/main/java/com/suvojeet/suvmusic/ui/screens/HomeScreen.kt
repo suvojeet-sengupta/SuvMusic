@@ -44,6 +44,7 @@ import com.suvojeet.suvmusic.data.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.ui.components.*
 import com.suvojeet.suvmusic.ui.components.*
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.HomeEvent
@@ -305,32 +306,6 @@ private fun HomeSectionHeader(
                 Text("See all", style = MaterialTheme.typography.labelMedium)
             }
         }
-    }
-}
-
-@Composable
-fun SpringMusicCard(
-    song: Song,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
-        label = "card_scale"
-    )
-    Box(
-        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
-    ) {
-        MusicCard(
-            song = song,
-            onClick = onClick,
-            onLongClick = onLongClick
-            // MusicCard should handle its own interactionSource if it supports it
-        )
     }
 }
 
