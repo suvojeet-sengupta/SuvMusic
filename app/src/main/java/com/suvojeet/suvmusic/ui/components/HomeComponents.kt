@@ -184,22 +184,21 @@ fun MediumSongCard(
                     .clip(RoundedCornerShape(20.dp)),
                 contentScale = ContentScale.Crop
             )
-
-        // Members Only Badge
-        if (song.isMembersOnly) {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RoundedCornerShape(
-                    topStart = 0.dp,
-                    topEnd = 20.dp,
-                    bottomStart = 16.dp,
-                    bottomEnd = 0.dp
-                ),
-                modifier = Modifier.align(Alignment.TopEnd)
-            ) {
-                Text(
-                    text = "Members Only",
-        ...
+            
+            // Members Only Badge
+            if (song.isMembersOnly) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(
+                        topStart = 0.dp,
+                        topEnd = 20.dp,
+                        bottomStart = 16.dp,
+                        bottomEnd = 0.dp
+                    ),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = "Members Only",
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer
