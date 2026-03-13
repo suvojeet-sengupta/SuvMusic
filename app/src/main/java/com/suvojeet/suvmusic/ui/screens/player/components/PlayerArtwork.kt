@@ -8,6 +8,10 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -68,7 +72,6 @@ import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.ui.components.DominantColors
-import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
 import com.suvojeet.suvmusic.ui.screens.player.getHighResThumbnail
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 
@@ -144,6 +147,23 @@ fun AlbumArtwork(
     
     // Ensure corner radius is never negative
     val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
+    
+    // Artwork loading breathing animation
+    val artworkLoadingPulse by animateFloatAsState(
+        targetValue = if (isLoading) 0.95f else 1f,
+        animationSpec = if (isLoading) {
+            infiniteRepeatable(
+                animation = tween(800, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            )
+        } else {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        },
+        label = "artworkLoadingPulse"
+    )
     
     // Track horizontal drag offset
     var offsetX by remember { mutableStateOf(0f) }
@@ -226,7 +246,7 @@ fun AlbumArtwork(
                     .fillMaxSize()
                     .graphicsLayer {
                         translationX = animatedOffsetX
-                        val dynamicScale = (artworkSize.fraction / maxFraction) * scale
+                        val dynamicScale = (artworkSize.fraction / maxFraction) * scale * artworkLoadingPulse
                         scaleX = dynamicScale
                         scaleY = dynamicScale
                         rotationZ = rotation + if (currentShape == ArtworkShape.VINYL) animatedVinylRotation else 0f
@@ -276,7 +296,11 @@ fun AlbumArtwork(
                 VinylCenterOverlay(dominantColors = dominantColors)
             }
 
-            LoadingArtworkOverlay(isVisible = isLoading)
+            M3ELoadingOverlay(
+                isLoading = isLoading,
+                dominantColors = dominantColors,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
     
