@@ -1,10 +1,16 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
@@ -23,20 +28,20 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.RepeatMode
@@ -66,27 +71,30 @@ private fun AppleMusicButton(
     size: Dp = 48.dp,
     iconSize: Dp = 36.dp,
     isLarge: Boolean = false,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable (isPressed: Boolean) -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
     // Animate the background alpha for smooth fade in/out
     val backgroundAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.2f else 0f,
-        animationSpec = tween(durationMillis = if (isPressed) 50 else 200),
-        label = "pressedAlpha"
+        targetValue = if (isPressed) 0.18f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "m3ePressedAlpha"
     )
     
     // "Jump" / Scale effect
     // Apple Music style: noticeable scale down with a bit of bounce (spring)
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.8f else 1f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        targetValue = if (isPressed) 0.82f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,   // M3E uses lower for more expressive bounce
+            stiffness = Spring.StiffnessLow                // smoother, more physical feel
         ),
-        label = "pressedScale"
+        label = "m3eButtonScale"
     )
     
     Box(
@@ -94,7 +102,6 @@ private fun AppleMusicButton(
             .size(size)
             .scale(scale)
             // Use dpadFocusable for focus handling only, NOT click handling
-            // This avoids dpadFocusable adding its own clickable with defaults
             .dpadFocusable(
                 onClick = null, 
                 shape = CircleShape,
@@ -108,7 +115,7 @@ private fun AppleMusicButton(
                 indication = null,
                 onClick = onClick
             )
-            .background(androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = backgroundAlpha)),
+            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = backgroundAlpha)),
         contentAlignment = Alignment.Center
     ) {
         content(isPressed)
@@ -141,84 +148,138 @@ fun PlaybackControls(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Shuffle - Apple Music style
-        AppleMusicButton(
-            onClick = onShuffleToggle,
-            size = secondarySize,
-            modifier = Modifier.background(
-                if (shuffleEnabled) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                CircleShape
+        // Shuffle - M3E ToggleButton
+        ToggleButton(
+            checked = shuffleEnabled,
+            onCheckedChange = { onShuffleToggle() },
+            modifier = Modifier.size(secondarySize),
+            colors = ToggleButtonDefaults.toggleButtonColors(
+                checkedContainerColor = dominantColors.accent.copy(alpha = 0.18f),
+                checkedContentColor = dominantColors.accent,
+                uncheckedContainerColor = Color.Transparent,
+                uncheckedContentColor = dominantColors.onBackground.copy(alpha = 0.7f)
             )
-        ) { _ ->
+        ) {
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
-                tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.size(secondaryIconSize)
             )
         }
 
-        // Previous - Apple Music style with press animation
-        AppleMusicButton(
-            onClick = onPrevious,
-            size = skipSize,
-            iconSize = skipIconSize
-        ) { _ ->
-            Icon(
-                imageVector = SkipPrevious,
-                contentDescription = "Previous",
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(skipIconSize)
-            )
+        ButtonGroup(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+        ) {
+            // Previous - Apple Music style with weight
+            val prevInteractionSource = remember { MutableInteractionSource() }
+            clickable(
+                onClick = onPrevious,
+                weight = 1f,
+                interactionSource = prevInteractionSource
+            ) {
+                AppleMusicButton(
+                    onClick = onPrevious,
+                    size = skipSize,
+                    iconSize = skipIconSize,
+                    interactionSource = prevInteractionSource
+                ) { _ ->
+                    Icon(
+                        imageVector = SkipPrevious,
+                        contentDescription = "Previous",
+                        tint = dominantColors.onBackground,
+                        modifier = Modifier.size(skipIconSize)
+                    )
+                }
+            }
+
+            // Play/Pause - Large button with expansion weight
+            val playInteractionSource = remember { MutableInteractionSource() }
+            clickable(
+                onClick = onPlayPause,
+                weight = 2f,
+                interactionSource = playInteractionSource
+            ) {
+                AppleMusicButton(
+                    onClick = onPlayPause,
+                    size = playSize,
+                    iconSize = playIconSize,
+                    isLarge = true,
+                    interactionSource = playInteractionSource
+                ) { _ ->
+                    AnimatedContent(
+                        targetState = isPlaying,
+                        transitionSpec = {
+                            (scaleIn(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
+                                + fadeIn()) togetherWith
+                            (scaleOut(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
+                                + fadeOut())
+                        },
+                        label = "playPauseIconSwap"
+                    ) { playing ->
+                        Icon(
+                            imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (playing) "Pause" else "Play",
+                            tint = dominantColors.onBackground,
+                            modifier = Modifier.size(playIconSize)
+                        )
+                    }
+                }
+            }
+
+            // Next - Apple Music style with weight
+            val nextInteractionSource = remember { MutableInteractionSource() }
+            clickable(
+                onClick = onNext,
+                weight = 1f,
+                interactionSource = nextInteractionSource
+            ) {
+                AppleMusicButton(
+                    onClick = onNext,
+                    size = skipSize,
+                    iconSize = skipIconSize,
+                    interactionSource = nextInteractionSource
+                ) { _ ->
+                    Icon(
+                        imageVector = SkipNext,
+                        contentDescription = "Next",
+                        tint = dominantColors.onBackground,
+                        modifier = Modifier.size(skipIconSize)
+                    )
+                }
+            }
         }
 
-        // Play/Pause - Large button with press animation
-        AppleMusicButton(
-            onClick = onPlayPause,
-            size = playSize,
-            iconSize = playIconSize,
-            isLarge = true
-        ) { _ ->
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(playIconSize)
+        // Repeat - M3E ToggleButton
+        ToggleButton(
+            checked = repeatMode != RepeatMode.OFF,
+            onCheckedChange = { onRepeatToggle() },
+            modifier = Modifier.size(secondarySize),
+            colors = ToggleButtonDefaults.toggleButtonColors(
+                checkedContainerColor = dominantColors.accent.copy(alpha = 0.18f),
+                checkedContentColor = dominantColors.accent,
+                uncheckedContainerColor = Color.Transparent,
+                uncheckedContentColor = dominantColors.onBackground.copy(alpha = 0.7f)
             )
-        }
-
-        // Next - Apple Music style with press animation
-        AppleMusicButton(
-            onClick = onNext,
-            size = skipSize,
-            iconSize = skipIconSize
-        ) { _ ->
-            Icon(
-                imageVector = SkipNext,
-                contentDescription = "Next",
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(skipIconSize)
-            )
-        }
-
-        // Repeat - Apple Music style
-        AppleMusicButton(
-            onClick = onRepeatToggle,
-            size = secondarySize,
-            modifier = Modifier.background(
-                if (repeatMode != RepeatMode.OFF) dominantColors.accent.copy(alpha = 0.1f) else Color.Transparent,
-                CircleShape
-            )
-        ) { _ ->
-            Icon(
-                imageVector = when (repeatMode) {
-                    RepeatMode.ONE -> Icons.Default.RepeatOne
-                    else -> Icons.Default.Repeat
+        ) {
+            AnimatedContent(
+                targetState = repeatMode,
+                transitionSpec = {
+                    scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn() togetherWith
+                    scaleOut() + fadeOut()
                 },
-                contentDescription = "Repeat",
-                tint = if (repeatMode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(secondaryIconSize)
-            )
+                label = "repeatModeIcon"
+            ) { mode ->
+                Icon(
+                    imageVector = when (mode) {
+                        RepeatMode.ONE -> Icons.Default.RepeatOne
+                        else -> Icons.Default.Repeat
+                    },
+                    contentDescription = "Repeat",
+                    modifier = Modifier.size(secondaryIconSize)
+                )
+            }
         }
     }
 }
+

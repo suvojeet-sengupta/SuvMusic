@@ -1,6 +1,13 @@
-package com.suvojeet.suvmusic.ui.screens.player.components
-
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,41 +17,39 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.screens.player.formatDuration
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable
+import androidx.compose.material3.LoadingIndicator
 
 @Composable
 fun SongInfoSection(
@@ -57,6 +62,7 @@ fun SongInfoSection(
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (String) -> Unit = {},
     dominantColors: DominantColors,
+    isLoading: Boolean = false,
     compact: Boolean = false
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
@@ -74,34 +80,61 @@ fun SongInfoSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song?.title ?: "No song playing",
-                style = if (compact) {
-                    MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                } else {
-                    MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+            AnimatedContent(
+                targetState = song?.id,
+                transitionSpec = {
+                    (slideInVertically(
+                        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)
+                    ) { it / 3 } + fadeIn()) togetherWith
+                    (slideOutVertically { -it / 3 } + fadeOut())
                 },
-                color = dominantColors.onBackground,
-                maxLines = if (compact) 1 else 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    // Album navigation disabled as Song model doesn't consistently have albumId
-                    // .clickable { onAlbumClick(song.albumId) }
-            )
+                label = "songInfoTransition"
+            ) { _ ->
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isLoading) {
+                            LoadingIndicator(
+                                modifier = Modifier.size(if (compact) 18.dp else 22.dp).padding(end = 8.dp),
+                                color = dominantColors.accent
+                            )
+                        }
+                        Text(
+                            text = song?.title ?: "No song playing",
+                            style = if (compact) {
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.2).sp
+                                )
+                            } else {
+                                MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.5).sp
+                                )
+                            },
+                            color = dominantColors.onBackground,
+                            maxLines = if (compact) 1 else 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
+                    Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
 
-            Text(
-                text = song?.artist ?: "",
-                style = MaterialTheme.typography.bodyLarge,
-                color = dominantColors.accent,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable {
-                    val target = song?.artistId ?: song?.artist
-                    target?.let { onArtistClick(it) }
+                    Text(
+                        text = song?.artist ?: "",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = 0.sp
+                        ),
+                        color = dominantColors.onBackground.copy(alpha = 0.65f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable {
+                            val target = song?.artistId ?: song?.artist
+                            target?.let { onArtistClick(it) }
+                        }
+                    )
                 }
-            )
+            }
 
             // Audio Quality Badge - Apple Music style
             if (song != null) {
@@ -148,40 +181,65 @@ fun SongInfoSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val iconButtonModifier = Modifier
-                .size(42.dp)
-                .background(
-                    color = dominantColors.onBackground.copy(alpha = 0.08f),
-                    shape = androidx.compose.foundation.shape.CircleShape
-                )
-
-            IconButton(
-                onClick = onDislikeClick,
-                modifier = iconButtonModifier
-            ) {
-                Icon(
-                    imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                    contentDescription = "Dislike",
-                    tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.9f),
-                    modifier = Modifier.size(22.dp)
-                )
+            // Dislike button
+            if (isDisliked) {
+                FilledIconButton(
+                    onClick = onDislikeClick,
+                    modifier = Modifier.size(42.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Filled.ThumbDown, "Undislike", modifier = Modifier.size(22.dp))
+                }
+            } else {
+                IconButton(
+                    onClick = onDislikeClick,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
+                ) {
+                    Icon(
+                        Icons.Outlined.ThumbDown, "Dislike",
+                        tint = dominantColors.onBackground.copy(alpha = 0.6f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
-            IconButton(
-                onClick = onFavoriteClick,
-                modifier = iconButtonModifier
-            ) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                    contentDescription = "Like",
-                    tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.9f),
-                    modifier = Modifier.size(22.dp)
-                )
+            // Like button
+            if (isFavorite) {
+                FilledIconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier.size(42.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = dominantColors.accent.copy(alpha = 0.2f),
+                        contentColor = dominantColors.accent
+                    )
+                ) {
+                    Icon(Icons.Filled.ThumbUp, "Unlike", modifier = Modifier.size(22.dp))
+                }
+            } else {
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
+                ) {
+                    Icon(
+                        Icons.Outlined.ThumbUp, "Like",
+                        tint = dominantColors.onBackground.copy(alpha = 0.6f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
             IconButton(
                 onClick = onMoreClick,
-                modifier = iconButtonModifier
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Filled.MoreVert,

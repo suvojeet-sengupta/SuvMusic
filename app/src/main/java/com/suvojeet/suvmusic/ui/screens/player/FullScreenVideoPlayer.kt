@@ -44,7 +44,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -465,7 +465,7 @@ fun FullScreenVideoPlayer(
                             
                             IconButton(onClick = { showDownloadSheet = true }) {
                                 when {
-                                    isVideoDownloading -> CircularProgressIndicator(color = dominantColors.primary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                    isVideoDownloading -> LoadingIndicator(color = dominantColors.primary, modifier = Modifier.size(18.dp))
                                     videoDownloaded -> Icon(Icons.Filled.CheckCircle, "Done", tint = dominantColors.accent, modifier = Modifier.size(20.dp))
                                     else -> Icon(Icons.Filled.SaveAlt, "Download", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
@@ -485,7 +485,7 @@ fun FullScreenVideoPlayer(
 
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp).background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))) {
                             if (playerState.isLoading) {
-                                CircularProgressIndicator(color = dominantColors.primary, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
+                        LoadingIndicator(color = dominantColors.primary, modifier = Modifier.size(48.dp))
                             } else {
                                 IconButton(onClick = { viewModel.togglePlayPause() }, modifier = Modifier.fillMaxSize()) {
                                     Icon(if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", tint = Color.White, modifier = Modifier.size(48.dp))

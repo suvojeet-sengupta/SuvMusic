@@ -3,9 +3,13 @@ package com.suvojeet.suvmusic.ui.screens.player
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -31,6 +35,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -94,6 +100,7 @@ import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
 import com.suvojeet.suvmusic.ui.components.VideoErrorDialog
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
 import com.suvojeet.suvmusic.ui.screens.player.components.VolumeControl
+import com.suvojeet.suvmusic.ui.screens.player.components.M3ESeekbarShimmer
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +112,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Fullscreen
@@ -251,13 +259,38 @@ fun PlayerScreen(
     val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     val extractedColors = rememberDominantColors(imageUrl = song?.thumbnailUrl, isDarkTheme = isAppInDarkTheme)
-    val animatedPrimary by animateColorAsState(extractedColors.primary, tween(800), label = "primary")
-    val animatedSecondary by animateColorAsState(extractedColors.secondary, tween(800), label = "secondary")
-    val animatedAccent by animateColorAsState(extractedColors.accent, tween(800), label = "accent")
-    val animatedOnBg by animateColorAsState(extractedColors.onBackground, tween(800), label = "onBg")
+    
+    // M3E Spring-based color transitions
+    val animatedPrimary by animateColorAsState(
+        targetValue = extractedColors.primary,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        label = "primary"
+    )
+    val animatedSecondary by animateColorAsState(
+        targetValue = extractedColors.secondary,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        label = "secondary"
+    )
+    val animatedAccent by animateColorAsState(
+        targetValue = extractedColors.accent,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        label = "accent"
+    )
+    val animatedOnBg by animateColorAsState(
+        targetValue = extractedColors.onBackground,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        label = "onBg"
+    )
 
     val dominantColors = DominantColors(primary = animatedPrimary, secondary = animatedSecondary, accent = animatedAccent, onBackground = animatedOnBg)
     
+    // Background loading pulse
+    val bgLoadingAlpha by animateFloatAsState(
+        targetValue = if (playerState.isLoading) 0.85f else 1f,
+        animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
+        label = "bgLoadingDim"
+    )
+
     DisposableEffect(Unit) {
         val window = (view.context as Activity).window
         val insetsController = WindowCompat.getInsetsController(window, view)
@@ -320,7 +353,7 @@ fun PlayerScreen(
     if (isInPip) {
         PiPPlayerContent(song = song, isVideoMode = playerState.isVideoMode, player = player)
     } else {
-        Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor)) {
+        Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
             // Background
             if (animatedBackgroundEnabled && !playerState.isVideoMode) {
                 MeshGradientBackground(dominantColors = dominantColors, backgroundColor = playerBackgroundColor)
@@ -395,6 +428,7 @@ fun PlayerScreen(
     }
 }
 
+
 @Composable
 fun PiPPlayerContent(song: com.suvojeet.suvmusic.core.model.Song?, isVideoMode: Boolean, player: Player?) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
@@ -441,6 +475,13 @@ fun PortraitPlayerContent(
     onRecenterAr: () -> Unit,
     onSetFullScreen: (Boolean) -> Unit
 ) {
+    // Controls dimming when loading
+    val controlsAlpha by animateFloatAsState(
+        targetValue = if (playerState.isLoading) 0.45f else 1f,
+        animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
+        label = "controlsDimOnLoad"
+    )
+
     Column(
         modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = if (isCompactHeight) 16.dp else 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -519,26 +560,36 @@ fun PortraitPlayerContent(
         SongInfoSection(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
-            dominantColors = dominantColors, compact = isCompactHeight
+            dominantColors = dominantColors, isLoading = playerState.isLoading, compact = isCompactHeight
         )
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
-        WaveformSeeker(
-            progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
-            modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent, inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-            initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange, duration = playerState.duration, sponsorSegments = sponsorSegments
-        )
+        if (playerState.isLoading) {
+            M3ESeekbarShimmer(
+                isVisible = true,
+                dominantColors = dominantColors,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).height(4.dp)
+            )
+        } else {
+            WaveformSeeker(
+                progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
+                modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent, inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange, duration = playerState.duration, sponsorSegments = sponsorSegments
+            )
+        }
 
         TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
-        PlaybackControls(
-            isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
-            onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle,
-            onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors, compact = isCompactHeight
-        )
+        Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
+            PlaybackControls(
+                isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
+                onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle,
+                onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors, compact = isCompactHeight
+            )
+        }
 
         Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 16.dp))
 
@@ -561,6 +612,13 @@ fun LandscapePlayerContent(
     onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
     player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit
 ) {
+    // Controls dimming when loading
+    val controlsAlpha by animateFloatAsState(
+        targetValue = if (playerState.isLoading) 0.45f else 1f,
+        animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
+        label = "controlsDimOnLoadLandscape"
+    )
+
     Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.weight(0.45f).fillMaxHeight().padding(end = 16.dp), contentAlignment = Alignment.Center) {
             AnimatedContent(
@@ -620,12 +678,26 @@ fun LandscapePlayerContent(
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
             Spacer(modifier = Modifier.height(8.dp))
-            SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, dominantColors = dominantColors)
+            SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, dominantColors = dominantColors, isLoading = playerState.isLoading)
             Spacer(modifier = Modifier.height(16.dp))
-            WaveformSeeker(progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) }, modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent, inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f), initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange, duration = playerState.duration, sponsorSegments = sponsorSegments)
+            
+            if (playerState.isLoading) {
+                M3ESeekbarShimmer(
+                    isVisible = true,
+                    dominantColors = dominantColors,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).height(4.dp)
+                )
+            } else {
+                WaveformSeeker(progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) }, modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent, inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f), initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange, duration = playerState.duration, sponsorSegments = sponsorSegments)
+            }
+            
             TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
             Spacer(modifier = Modifier.height(12.dp))
-            PlaybackControls(isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors)
+            
+            Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
+                PlaybackControls(isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors)
+            }
+            
             Spacer(modifier = Modifier.height(12.dp))
             BottomActions(onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onDownloadClick = actions.onDownload, downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE, isVideoMode = isVideoMode, onVideoToggle = onToggleVideoMode)
         }
