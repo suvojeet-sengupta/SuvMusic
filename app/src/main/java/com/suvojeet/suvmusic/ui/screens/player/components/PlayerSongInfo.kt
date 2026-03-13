@@ -1,3 +1,5 @@
+package com.suvojeet.suvmusic.ui.screens.player.components
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
