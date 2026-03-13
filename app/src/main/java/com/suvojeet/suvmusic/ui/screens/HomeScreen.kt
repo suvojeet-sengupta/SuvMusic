@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import android.content.Intent
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshotFlow
@@ -170,13 +172,22 @@ fun HomeScreen(
                         }
                 }
 
-                @OptIn(ExperimentalMaterial3Api::class)
+                val state = rememberPullToRefreshState()
+
                 PullToRefreshBox(
                     isRefreshing = uiState.isRefreshing,
                     onRefresh = { viewModel.refresh() },
+                    state = state,
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding()
+                        .statusBarsPadding(),
+                    indicator = {
+                        PullToRefreshDefaults.LoadingIndicator(
+                            state = state,
+                            isRefreshing = uiState.isRefreshing,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    }
                 ) {
                     LazyColumn(
                         state = lazyListState,
