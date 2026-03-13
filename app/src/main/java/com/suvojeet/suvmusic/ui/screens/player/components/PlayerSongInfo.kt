@@ -48,6 +48,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.screens.player.formatDuration
+import com.suvojeet.suvmusic.ui.screens.player.components.AudioQualityDialog
 
 import androidx.compose.material3.LoadingIndicator
 
