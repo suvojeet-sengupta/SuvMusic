@@ -21,27 +21,19 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.model.PlayerState
-import com.suvojeet.suvmusic.ui.components.DominantColors
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.unit.Dp
 
 @Composable
 fun PillMiniPlayer(
@@ -59,6 +51,48 @@ fun PillMiniPlayer(
     val effectiveAlpha = 1f - userAlpha
     val highResThumbnail = androidx.compose.runtime.remember(song.thumbnailUrl) {
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
+    }
+
+    @Composable
+    fun MiniPlayerButton(
+        onClick: () -> Unit,
+        size: Dp = 36.dp,
+        iconSize: Dp = 22.dp,
+        content: @Composable () -> Unit
+    ) {
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
+
+        val scale by animateFloatAsState(
+            targetValue = if (isPressed) 0.78f else 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMedium
+            ),
+            label = "miniPlayerBtnScale"
+        )
+
+        val bgAlpha by animateFloatAsState(
+            targetValue = if (isPressed) 0.15f else 0f,
+            animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium),
+            label = "miniPlayerBtnBg"
+        )
+
+        Box(
+            modifier = Modifier
+                .size(size)
+                .scale(scale)
+                .clip(CircleShape)
+                .background(dominantColors.onBackground.copy(alpha = bgAlpha))
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            content()
+        }
     }
 
     Surface(
@@ -175,22 +209,25 @@ fun PillMiniPlayer(
                     )
                 }
 
-                IconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(24.dp)
-                    )
+                MiniPlayerButton(onClick = onPlayPause) {
+                    AnimatedContent(
+                        targetState = playerState.isPlaying,
+                        transitionSpec = {
+                            (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith
+                            (scaleOut() + fadeOut())
+                        },
+                        label = "miniPlayPause"
+                    ) { playing ->
+                        Icon(
+                            imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (playing) "Pause" else "Play",
+                            tint = dominantColors.onBackground,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
-                IconButton(
-                    onClick = onNext,
-                    modifier = Modifier.size(36.dp)
-                ) {
+                MiniPlayerButton(onClick = onNext) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
@@ -200,10 +237,7 @@ fun PillMiniPlayer(
                 }
 
                 if (!playerState.isPlaying) {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.size(36.dp)
-                    ) {
+                    MiniPlayerButton(onClick = onClose) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
@@ -218,3 +252,4 @@ fun PillMiniPlayer(
         }
     }
 }
+
