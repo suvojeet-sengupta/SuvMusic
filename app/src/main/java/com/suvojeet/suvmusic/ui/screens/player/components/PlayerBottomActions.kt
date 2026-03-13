@@ -69,7 +69,10 @@ fun BottomActions(
             horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
         ) {
             // Lyrics button
-            clickable(onClick = onLyricsClick, weight = 1f) {
+            IconButton(
+                onClick = onLyricsClick,
+                modifier = Modifier.weight(1f)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Lyrics,
                     contentDescription = "Lyrics",
@@ -79,7 +82,10 @@ fun BottomActions(
             }
 
             // Download Button
-            clickable(onClick = onDownloadClick, weight = 1f) {
+            IconButton(
+                onClick = onDownloadClick,
+                modifier = Modifier.weight(1f)
+            ) {
                 when(downloadState) {
                     com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADING -> {
                         LoadingIndicator(
@@ -116,7 +122,10 @@ fun BottomActions(
 
             // Video mode toggle
             if (isYouTubeSong) {
-                clickable(onClick = onVideoToggle, weight = 1f) {
+                IconButton(
+                    onClick = onVideoToggle,
+                    modifier = Modifier.weight(1f)
+                ) {
                     AnimatedContent(
                         targetState = isVideoMode,
                         transitionSpec = {
@@ -136,7 +145,10 @@ fun BottomActions(
             }
 
             // Cast button
-            clickable(onClick = onCastClick, weight = 1f) {
+            IconButton(
+                onClick = onCastClick,
+                modifier = Modifier.weight(1f)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Devices,
                     contentDescription = "Output Device",
@@ -146,7 +158,10 @@ fun BottomActions(
             }
 
             // Queue button
-            clickable(onClick = onQueueClick, weight = 1f) {
+            IconButton(
+                onClick = onQueueClick,
+                modifier = Modifier.weight(1f)
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                     contentDescription = "Queue",
