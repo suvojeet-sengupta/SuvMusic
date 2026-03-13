@@ -10,7 +10,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -110,7 +109,8 @@ private fun AppleMusicButton(
             )
             .clip(CircleShape)
             // Manual click handling to remove ripple (indication = null)
-            .clickable(
+            // Use Modifier.clickable as normal but NOT for ButtonGroupScope items
+            .androidx.compose.foundation.clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
@@ -154,10 +154,10 @@ fun PlaybackControls(
             onCheckedChange = { onShuffleToggle() },
             modifier = Modifier.size(secondarySize),
             colors = ToggleButtonDefaults.toggleButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = dominantColors.onBackground.copy(alpha = 0.7f),
                 checkedContainerColor = dominantColors.accent.copy(alpha = 0.18f),
-                checkedContentColor = dominantColors.accent,
-                uncheckedContainerColor = Color.Transparent,
-                uncheckedContentColor = dominantColors.onBackground.copy(alpha = 0.7f)
+                checkedContentColor = dominantColors.accent
             )
         ) {
             Icon(
@@ -172,81 +172,53 @@ fun PlaybackControls(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
         ) {
             // Previous - Apple Music style with weight
-            val prevInteractionSource = remember { MutableInteractionSource() }
             clickable(
                 onClick = onPrevious,
-                weight = 1f,
-                interactionSource = prevInteractionSource
+                weight = 1f
             ) {
-                AppleMusicButton(
-                    onClick = onPrevious,
-                    size = skipSize,
-                    iconSize = skipIconSize,
-                    interactionSource = prevInteractionSource
-                ) { _ ->
-                    Icon(
-                        imageVector = SkipPrevious,
-                        contentDescription = "Previous",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(skipIconSize)
-                    )
-                }
+                Icon(
+                    imageVector = SkipPrevious,
+                    contentDescription = "Previous",
+                    tint = dominantColors.onBackground,
+                    modifier = Modifier.size(skipIconSize)
+                )
             }
 
             // Play/Pause - Large button with expansion weight
-            val playInteractionSource = remember { MutableInteractionSource() }
             clickable(
                 onClick = onPlayPause,
-                weight = 2f,
-                interactionSource = playInteractionSource
+                weight = 2f
             ) {
-                AppleMusicButton(
-                    onClick = onPlayPause,
-                    size = playSize,
-                    iconSize = playIconSize,
-                    isLarge = true,
-                    interactionSource = playInteractionSource
-                ) { _ ->
-                    AnimatedContent(
-                        targetState = isPlaying,
-                        transitionSpec = {
-                            (scaleIn(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
-                                + fadeIn()) togetherWith
-                            (scaleOut(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
-                                + fadeOut())
-                        },
-                        label = "playPauseIconSwap"
-                    ) { playing ->
-                        Icon(
-                            imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (playing) "Pause" else "Play",
-                            tint = dominantColors.onBackground,
-                            modifier = Modifier.size(playIconSize)
-                        )
-                    }
+                AnimatedContent(
+                    targetState = isPlaying,
+                    transitionSpec = {
+                        (scaleIn(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
+                            + fadeIn()) togetherWith
+                        (scaleOut(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
+                            + fadeOut())
+                    },
+                    label = "playPauseIconSwap"
+                ) { playing ->
+                    Icon(
+                        imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (playing) "Pause" else "Play",
+                        tint = dominantColors.onBackground,
+                        modifier = Modifier.size(playIconSize)
+                    )
                 }
             }
 
             // Next - Apple Music style with weight
-            val nextInteractionSource = remember { MutableInteractionSource() }
             clickable(
                 onClick = onNext,
-                weight = 1f,
-                interactionSource = nextInteractionSource
+                weight = 1f
             ) {
-                AppleMusicButton(
-                    onClick = onNext,
-                    size = skipSize,
-                    iconSize = skipIconSize,
-                    interactionSource = nextInteractionSource
-                ) { _ ->
-                    Icon(
-                        imageVector = SkipNext,
-                        contentDescription = "Next",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(skipIconSize)
-                    )
-                }
+                Icon(
+                    imageVector = SkipNext,
+                    contentDescription = "Next",
+                    tint = dominantColors.onBackground,
+                    modifier = Modifier.size(skipIconSize)
+                )
             }
         }
 
@@ -256,10 +228,10 @@ fun PlaybackControls(
             onCheckedChange = { onRepeatToggle() },
             modifier = Modifier.size(secondarySize),
             colors = ToggleButtonDefaults.toggleButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = dominantColors.onBackground.copy(alpha = 0.7f),
                 checkedContainerColor = dominantColors.accent.copy(alpha = 0.18f),
-                checkedContentColor = dominantColors.accent,
-                uncheckedContainerColor = Color.Transparent,
-                uncheckedContentColor = dominantColors.onBackground.copy(alpha = 0.7f)
+                checkedContentColor = dominantColors.accent
             )
         ) {
             AnimatedContent(
