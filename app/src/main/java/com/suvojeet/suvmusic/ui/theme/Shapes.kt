@@ -36,3 +36,19 @@ val PlayerCardShape = RoundedCornerShape(
 val AlbumArtShape = RoundedCornerShape(16.dp)
 val PillShape = RoundedCornerShape(50)
 val SquircleShape = RoundedCornerShape(28.dp)
+
+// Asymmetric — QuickAccess card (image left, text right)
+val QuickAccessShape = RoundedCornerShape(
+    topStart = 8.dp,
+    bottomStart = 8.dp,
+    topEnd = 20.dp,
+    bottomEnd = 20.dp
+)
+
+// Asymmetric — NewRelease card (text left, image right)
+val NewReleaseCardShape = RoundedCornerShape(
+    topStart = 20.dp,
+    bottomStart = 20.dp,
+    topEnd = 12.dp,
+    bottomEnd = 12.dp
+)
