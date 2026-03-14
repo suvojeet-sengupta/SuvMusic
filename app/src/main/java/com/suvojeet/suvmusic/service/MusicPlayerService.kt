@@ -450,6 +450,14 @@ class MusicPlayerService : MediaLibraryService() {
                     .add(Player.COMMAND_GET_TIMELINE)
                     .add(Player.COMMAND_GET_CURRENT_MEDIA_ITEM)
                     .add(Player.COMMAND_GET_METADATA)
+                    .add(Player.COMMAND_SET_MEDIA_ITEM)
+                    .add(Player.COMMAND_CHANGE_MEDIA_ITEMS)
+                    .add(Player.COMMAND_SET_SPEED_AND_PITCH)
+                    .add(Player.COMMAND_GET_AUDIO_ATTRIBUTES)
+                    .add(Player.COMMAND_SET_PLAYLIST_METADATA)
+                    .add(Player.COMMAND_ADJUST_DEVICE_VOLUME)
+                    .add(Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS)
+                    .add(Player.COMMAND_GET_DEVICE_VOLUME)
                     .build()
                 
                 return MediaSession.ConnectionResult.accept(
@@ -884,7 +892,7 @@ class MusicPlayerService : MediaLibraryService() {
 
     private fun createPlayableMediaItem(song: com.suvojeet.suvmusic.core.model.Song): MediaItem {
         val artworkUri = if (!song.thumbnailUrl.isNullOrEmpty()) Uri.parse(song.thumbnailUrl) else null
-        val contentUri = song.localUri ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else Uri.EMPTY
+        val contentUri = song.localUri ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else null
         val metadata = MediaMetadata.Builder()
             .setTitle(song.title)
             .setDisplayTitle(song.title)
@@ -895,8 +903,15 @@ class MusicPlayerService : MediaLibraryService() {
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+            .setDurationMs(if (song.duration > 0) song.duration else null)
             .build()
-        return MediaItem.Builder().setMediaId(song.id).setUri(contentUri).setMediaMetadata(metadata).build()
+        val builder = MediaItem.Builder()
+            .setMediaId(song.id)
+            .setMediaMetadata(metadata)
+        if (contentUri != null) {
+            builder.setUri(contentUri)
+        }
+        return builder.build()
     }
 
     private data class AudioEffectsState(
