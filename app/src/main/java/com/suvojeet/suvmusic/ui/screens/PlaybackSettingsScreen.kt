@@ -70,6 +70,11 @@ import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.data.MusicSource
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.util.MusicHapticsManager
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.ui.theme.PillShape
+import com.suvojeet.suvmusic.util.dpadFocusable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import kotlinx.coroutines.launch
 
 /**
@@ -245,654 +250,398 @@ fun PlaybackSettingsScreen(
     }
     Scaffold(
         topBar = {
-            LargeTopAppBar(
-                title = { Text("Playback") },
+            androidx.compose.material3.TopAppBar(
+                title = { Text("Playback", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Box(
+                        modifier = Modifier
+                            .dpadFocusable(
+                                onClick = onBack,
+                                shape = CircleShape,
+                            )
+                            .padding(8.dp)
+                    ) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             )
         },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             // Music Source
-            PlaybackSectionTitle("Music Source")
-            
-            ListItem(
-                headlineContent = { Text("Primary Source") },
-                supportingContent = { 
-                    Text(
-                        when (uiState.musicSource) {
+            item {
+                PlaybackSectionTitle("Music Source")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackNavigationItem(
+                        icon = Icons.Default.MusicNote,
+                        title = "Primary Source",
+                        subtitle = when (uiState.musicSource) {
                             MusicSource.YOUTUBE -> "YouTube Music (256 kbps)"
                             MusicSource.JIOSAAVN -> "HQ Audio (320 kbps)"
                             MusicSource.BOTH -> "Both"
-                        }
-                    ) 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null
+                        },
+                        onClick = { showMusicSourceSheet = true }
                     )
-                },
-                modifier = Modifier.clickable { showMusicSourceSheet = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             // Content Preferences
-            PlaybackSectionTitle("Content Preferences")
+            item {
+                PlaybackSectionTitle("Content Preferences")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackNavigationItem(
+                        icon = Icons.Default.Language,
+                        title = "Music Languages",
+                        subtitle = if (uiState.preferredLanguages.isEmpty()) "All languages"
+                                   else uiState.preferredLanguages.joinToString(", "),
+                        onClick = { showLanguageDialog = true }
+                    )
+                    
+                    HorizontalDivider()
 
-            ListItem(
-                headlineContent = { Text("Music Languages") },
-                supportingContent = {
-                    val languages = uiState.preferredLanguages
-                    Text(
-                        if (languages.isEmpty()) "All languages"
-                        else languages.joinToString(", ")
-                    )
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Language,
-                        contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable { showLanguageDialog = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            ListItem(
-                headlineContent = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Sync with YouTube History")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { showHistorySyncInfo = true },
-                            modifier = Modifier.height(24.dp).width(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                modifier = Modifier.height(16.dp).width(16.dp)
-                            )
-                        }
-                    }
-                },
-                supportingContent = { 
-                    Text("Add played songs to your YouTube watch history") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.History,
+                        title = "Sync with YouTube History",
+                        subtitle = "Add played songs to your YouTube watch history",
                         checked = uiState.youtubeHistorySyncEnabled,
                         onCheckedChange = { viewModel.setYouTubeHistorySyncEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
             
             // Audio Section
-            PlaybackSectionTitle("Audio")
-            
-            ListItem(
-                headlineContent = { Text("Streaming Quality") },
-                supportingContent = { 
-                    Text(getAudioQualityLabel(uiState.audioQuality, uiState.musicSource)) 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.HighQuality,
-                        contentDescription = null
+            item {
+                PlaybackSectionTitle("Audio")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackNavigationItem(
+                        icon = Icons.Default.HighQuality,
+                        title = "Streaming Quality",
+                        subtitle = getAudioQualityLabel(uiState.audioQuality, uiState.musicSource),
+                        onClick = { showAudioQualitySheet = true }
                     )
-                },
-                modifier = Modifier.clickable { showAudioQualitySheet = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
 
-            ListItem(
-                headlineContent = { Text("Video Quality") },
-                supportingContent = {
-                    Text(uiState.videoQuality.label)
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.HighQuality,
-                        contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable { showVideoQualitySheet = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            ListItem(
-                headlineContent = { Text("Download Quality") },
-                supportingContent = { 
-                    Text(getDownloadQualityLabel(uiState.downloadQuality, uiState.musicSource)) 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable { showDownloadQualitySheet = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                    HorizontalDivider()
 
-            ListItem(
-                headlineContent = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Headphone Crossfeed")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { showCrossfeedInfo = true },
-                            modifier = Modifier.height(24.dp).width(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                modifier = Modifier.height(16.dp).width(16.dp)
-                            )
-                        }
-                    }
-                },
-                supportingContent = { 
-                    Text("More natural stereo imaging for headphones") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null
+                    PlaybackNavigationItem(
+                        icon = Icons.Default.HighQuality,
+                        title = "Video Quality",
+                        subtitle = uiState.videoQuality.label,
+                        onClick = { showVideoQualitySheet = true }
                     )
-                },
-                trailingContent = {
-                    Switch(
+                    
+                    HorizontalDivider()
+
+                    PlaybackNavigationItem(
+                        icon = Icons.Default.Download,
+                        title = "Download Quality",
+                        subtitle = getDownloadQualityLabel(uiState.downloadQuality, uiState.musicSource),
+                        onClick = { showDownloadQualitySheet = true }
+                    )
+
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.MusicNote,
+                        title = "Headphone Crossfeed",
+                        subtitle = "More natural stereo imaging for headphones",
                         checked = uiState.crossfeedEnabled,
                         onCheckedChange = { viewModel.setCrossfeedEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
             
             // Track Transitions
-            PlaybackSectionTitle("Track transitions")
-            
-            ListItem(
-                headlineContent = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Gapless playback")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { showGaplessInfo = true },
-                            modifier = Modifier.height(24.dp).width(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                modifier = Modifier.height(16.dp).width(16.dp)
-                            )
-                        }
-                    }
-                },
-                supportingContent = { 
-                    Text("Seamlessly transitions between songs without any pause.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+            item {
+                PlaybackSectionTitle("Track Transitions")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.GraphicEq,
+                        title = "Gapless Playback",
+                        subtitle = "Seamlessly transitions between songs without any pause",
                         checked = uiState.gaplessPlaybackEnabled,
                         onCheckedChange = { viewModel.setGaplessPlayback(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            ListItem(
-                headlineContent = { Text("Preload next song") },
-                supportingContent = { 
-                    Text("Start loading the next song early for instant playback.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.FastForward,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+                    
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.FastForward,
+                        title = "Preload Next Song",
+                        subtitle = "Start loading the next song early for instant playback",
                         checked = uiState.nextSongPreloadingEnabled,
                         onCheckedChange = { viewModel.setNextSongPreloadingEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            if (uiState.nextSongPreloadingEnabled) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Start Preloading After",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "${uiState.nextSongPreloadDelay}s",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
+                    
+                    if (uiState.nextSongPreloadingEnabled) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Start Preloading After",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    text = "${uiState.nextSongPreloadDelay}s",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Slider(
+                                value = uiState.nextSongPreloadDelay.toFloat(),
+                                onValueChange = { viewModel.setNextSongPreloadDelay(it.toInt()) },
+                                valueRange = 0f..30f,
+                                steps = 29
+                            )
+                        }
                     }
                     
-                    Slider(
-                        value = uiState.nextSongPreloadDelay.toFloat(),
-                        onValueChange = { viewModel.setNextSongPreloadDelay(it.toInt()) },
-                        valueRange = 0f..30f,
-                        steps = 29
-                    )
-                    
-                    Text(
-                        text = "Set to 0s for immediate preload, or higher to save data when skipping.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-            
-            ListItem(
-                headlineContent = { Text("Automix") },
-                supportingContent = { 
-                    Text("Allows seamless transitions between songs on certain playlists.") 
-                },
-                trailingContent = {
-                    Switch(
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.Refresh,
+                        title = "Automix",
+                        subtitle = "Allows seamless transitions between songs on certain playlists",
                         checked = uiState.automixEnabled,
                         onCheckedChange = { viewModel.setAutomix(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
             
             // Volume Controls
-            PlaybackSectionTitle("Volume")
-            
-            ListItem(
-                headlineContent = { Text("In-app volume slider") },
-                supportingContent = { 
-                    Text("Show volume slider overlay when adjusting volume in the app.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.VolumeUp,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+            item {
+                PlaybackSectionTitle("Volume")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.VolumeUp,
+                        title = "In-App Volume Slider",
+                        subtitle = "Show volume slider overlay when adjusting volume",
                         checked = uiState.volumeSliderEnabled,
-                        onCheckedChange = { 
-                            viewModel.setVolumeSliderEnabled(it)
-                        }
+                        onCheckedChange = { viewModel.setVolumeSliderEnabled(it) }
                     )
-                },
 
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                    HorizontalDivider()
 
-            ListItem(
-                headlineContent = { Text("Volume Normalization") },
-                supportingContent = { 
-                    Text("Adjust volume to a standard level") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Equalizer,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.Equalizer,
+                        title = "Volume Normalization",
+                        subtitle = "Adjust volume to a standard level",
                         checked = uiState.volumeNormalizationEnabled,
-                        onCheckedChange = { 
-                            viewModel.setVolumeNormalizationEnabled(it)
-                        }
+                        onCheckedChange = { viewModel.setVolumeNormalizationEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
 
-            ListItem(
-                headlineContent = { Text("Play during calls") },
-                supportingContent = { 
-                    Text("Keep music playing during Google Meet or phone calls") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.MusicNote,
+                        title = "Play During Calls",
+                        subtitle = "Keep music playing during Google Meet or phone calls",
                         checked = uiState.ignoreAudioFocusDuringCalls,
-                        onCheckedChange = { 
-                            viewModel.setIgnoreAudioFocusDuringCalls(it)
-                        }
+                        onCheckedChange = { viewModel.setIgnoreAudioFocusDuringCalls(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
 
-            ListItem(
-                headlineContent = { Text("Volume Boost") },
-                supportingContent = { 
-                    Text("Boost volume beyond 100%. Use with caution.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.VolumeUp,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.VolumeUp,
+                        title = "Volume Boost",
+                        subtitle = "Boost volume beyond 100%. Use with caution.",
                         checked = uiState.volumeBoostEnabled,
-                        onCheckedChange = { 
-                            viewModel.setVolumeBoostEnabled(it)
-                        }
+                        onCheckedChange = { viewModel.setVolumeBoostEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
 
-            if (uiState.volumeBoostEnabled) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Boost Amount",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "+${(uiState.volumeBoostAmount * 0.15).toInt()} dB",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    
-                    Slider(
-                        value = uiState.volumeBoostAmount.toFloat(),
-                        onValueChange = { viewModel.setVolumeBoostAmount(it.toInt()) },
-                        valueRange = 0f..100f,
-                        steps = 19
-                    )
-                }
-            }
-
-            ListItem(
-                headlineContent = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Enable offload")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { showOffloadInfo = true },
-                            modifier = Modifier.height(24.dp).width(24.dp)
+                    if (uiState.volumeBoostEnabled) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                modifier = Modifier.height(16.dp).width(16.dp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Boost Amount",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    text = "+${(uiState.volumeBoostAmount * 0.15).toInt()} dB",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Slider(
+                                value = uiState.volumeBoostAmount.toFloat(),
+                                onValueChange = { viewModel.setVolumeBoostAmount(it.toInt()) },
+                                valueRange = 0f..100f,
+                                steps = 19
                             )
                         }
                     }
-                },
-                supportingContent = { 
-                    Text("Use the offload audio path for audio playback. Disabling this may increase power usage.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.HighQuality,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.HighQuality,
+                        title = "Audio Offload",
+                        subtitle = "Use specialized audio hardware for playback. Saves battery.",
                         checked = uiState.audioOffloadEnabled,
-                        onCheckedChange = { 
-                            viewModel.setAudioOffloadEnabled(it)
-                        }
+                        onCheckedChange = { viewModel.setAudioOffloadEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
 
-            ListItem(
-                headlineContent = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Audio AR (Spatial Audio)")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { showAudioArInfo = true },
-                            modifier = Modifier.height(24.dp).width(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                modifier = Modifier.height(16.dp).width(16.dp)
-                            )
-                        }
-                    }
-                },
-                supportingContent = { 
-                    Text("Rotate soundstage based on device rotation. Requires headphones.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Language,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.Language,
+                        title = "Spatial Audio (Audio AR)",
+                        subtitle = "Rotate soundstage based on device rotation. Needs headphones.",
                         checked = uiState.audioArEnabled,
                         onCheckedChange = { viewModel.setAudioArEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
 
-            if (uiState.audioArEnabled) {
-                ListItem(
-                    headlineContent = { Text("Auto-Calibration") },
-                    supportingContent = { Text("Automatically adjust center point if head is stable") },
-                    trailingContent = {
-                        Switch(
-                            checked = uiState.audioArAutoCalibrate,
-                            onCheckedChange = { viewModel.setAudioArAutoCalibrate(it) }
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
+                    if (uiState.audioArEnabled) {
+                        Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                            PlaybackSwitchItem(
+                                icon = Icons.Default.Refresh,
+                                title = "Auto-Calibration",
+                                subtitle = "Automatically adjust center point if head is stable",
+                                checked = uiState.audioArAutoCalibrate,
+                                onCheckedChange = { viewModel.setAudioArAutoCalibrate(it) }
+                            )
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Soundstage Depth (Sensitivity)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = String.format("%.1fx", uiState.audioArSensitivity),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Soundstage Depth (Sensitivity)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(
+                                        text = String.format("%.1fx", uiState.audioArSensitivity),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                
+                                Slider(
+                                    value = uiState.audioArSensitivity,
+                                    onValueChange = { viewModel.setAudioArSensitivity(it) },
+                                    valueRange = 0.5f..2.5f,
+                                    steps = 19
+                                )
+                            }
+
+                            PlaybackNavigationItem(
+                                icon = Icons.Default.Refresh,
+                                title = "Recenter Audio",
+                                subtitle = "Set current direction as front",
+                                onClick = { viewModel.calibrateAudioAr() }
+                            )
+                        }
                     }
-                    
-                    Slider(
-                        value = uiState.audioArSensitivity,
-                        onValueChange = { viewModel.setAudioArSensitivity(it) },
-                        valueRange = 0.5f..2.5f,
-                        steps = 19
-                    )
                 }
-
-                ListItem(
-                    headlineContent = { Text("Recenter Audio") },
-                    supportingContent = { Text("Set current direction as front") },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.calibrateAudioAr() },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
             // Gestures
-            PlaybackSectionTitle("Gestures")
-            
-            ListItem(
-                headlineContent = { Text("Swipe down to dismiss") },
-                supportingContent = { 
-                    Text("Swipe down on the mini player to stop music and close it.") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Gesture,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+            item {
+                PlaybackSectionTitle("Gestures")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.Gesture,
+                        title = "Swipe Down to Dismiss",
+                        subtitle = "Swipe down on mini player to stop and close",
                         checked = uiState.swipeDownToDismissEnabled,
                         onCheckedChange = { viewModel.setSwipeDownToDismissEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
 
-            ListItem(
-                headlineContent = { Text("Double tap to seek") },
-                supportingContent = { 
-                    Text("${uiState.doubleTapSeekSeconds} seconds") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Gesture,
-                        contentDescription = null
+                    HorizontalDivider()
+
+                    PlaybackNavigationItem(
+                        icon = Icons.Default.Gesture,
+                        title = "Double Tap to Seek",
+                        subtitle = "${uiState.doubleTapSeekSeconds} seconds",
+                        onClick = { showDoubleTapSeekSheet = true }
                     )
-                },
-                modifier = Modifier.clickable { showDoubleTapSeekSheet = true },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
             
             // Music Haptics Section
-            PlaybackSectionTitle("Music Haptics")
-            
-            ListItem(
-                headlineContent = { Text("Music Haptics") },
-                supportingContent = { 
-                    Text("Feel the music with taps & vibrations synced to the beat") 
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Vibration,
-                        contentDescription = null
-                    )
-                },
-                trailingContent = {
-                    Switch(
+            item {
+                PlaybackSectionTitle("Music Haptics")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackSwitchItem(
+                        icon = Icons.Default.Vibration,
+                        title = "Music Haptics",
+                        subtitle = "Feel the music with taps & vibrations synced to the beat",
                         checked = uiState.musicHapticsEnabled,
                         onCheckedChange = { viewModel.setMusicHapticsEnabled(it) }
                     )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
-            // Show mode and intensity options only when haptics is enabled
-            if (uiState.musicHapticsEnabled) {
-                ListItem(
-                    headlineContent = { Text("Haptics Mode") },
-                    supportingContent = { 
-                        Text(
-                            when (uiState.hapticsMode) {
-                                HapticsMode.OFF -> "Disabled"
-                                HapticsMode.BASIC -> "Basic (Strong beats only)"
-                                HapticsMode.ADVANCED -> "Advanced (Full analysis)"
-                                HapticsMode.CUSTOM -> "Custom"
-                            }
-                        )
-                    },
-                    modifier = Modifier.clickable { showHapticsModeSheet = true },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
-                
-                ListItem(
-                    headlineContent = { Text("Vibration Intensity") },
-                    supportingContent = { 
-                        Text(uiState.hapticsIntensity.displayName)
-                    },
-                    modifier = Modifier.clickable { showHapticsIntensitySheet = true },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
+                    
+                    if (uiState.musicHapticsEnabled) {
+                        Column {
+                            HorizontalDivider()
+                            PlaybackNavigationItem(
+                                icon = Icons.Default.Vibration,
+                                title = "Haptics Mode",
+                                subtitle = when (uiState.hapticsMode) {
+                                    HapticsMode.OFF -> "Disabled"
+                                    HapticsMode.BASIC -> "Basic (Strong beats only)"
+                                    HapticsMode.ADVANCED -> "Advanced (Full analysis)"
+                                    HapticsMode.CUSTOM -> "Custom"
+                                },
+                                onClick = { showHapticsModeSheet = true }
+                            )
+                            
+                            HorizontalDivider()
+                            PlaybackNavigationItem(
+                                icon = Icons.Default.Vibration,
+                                title = "Vibration Intensity",
+                                subtitle = uiState.hapticsIntensity.displayName,
+                                onClick = { showHapticsIntensitySheet = true }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
             }
-            
-            Spacer(modifier = Modifier.height(100.dp))
         }
     }
     
@@ -900,94 +649,90 @@ fun PlaybackSettingsScreen(
     if (showAudioQualitySheet) {
         ModalBottomSheet(
             onDismissRequest = { showAudioQualitySheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Audio Quality",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
                 
                 AudioQuality.entries.forEach { quality ->
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(getAudioQualityLabel(quality, uiState.musicSource)) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.audioQuality == quality,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.setAudioQuality(quality)
-                                scope.launch {
-                                    sheetState.hide()
-                                    showAudioQualitySheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.audioQuality == quality,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = getAudioQualityLabel(quality, uiState.musicSource))
-                    }
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setAudioQuality(quality)
+                                    scope.launch {
+                                        sheetState.hide()
+                                        showAudioQualitySheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
     
-    // Download Quality Bottom Sheet
+    // Video Quality Bottom Sheet
     if (showVideoQualitySheet) {
         ModalBottomSheet(
             onDismissRequest = { showVideoQualitySheet = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            tonalElevation = 0.dp
+            sheetState = videoSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp)
-            ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Video Quality",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
 
                 VideoQuality.entries.forEach { quality ->
-                    val isSelected = uiState.videoQuality == quality
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(quality.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.videoQuality == quality,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.setVideoQuality(quality)
-                                scope.launch { sheetState.hide() }.invokeOnCompletion {
-                                    showVideoQualitySheet = false
-                                }
-                            }
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = quality.label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setVideoQuality(quality)
+                                    scope.launch {
+                                        videoSheetState.hide()
+                                        showVideoQualitySheet = false
+                                    }
+                                },
+                                shape = SquircleShape
                             )
-                        }
-                    }
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                Spacer(modifier = Modifier.navigationBarsPadding())
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -995,45 +740,50 @@ fun PlaybackSettingsScreen(
     if (showDownloadQualitySheet) {
         ModalBottomSheet(
             onDismissRequest = { showDownloadQualitySheet = false },
-            sheetState = downloadSheetState
+            sheetState = downloadSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Download Quality",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
                 )
                 
                 Text(
                     text = "Lower quality = smaller file size",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
                 
                 DownloadQuality.entries.forEach { quality ->
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(getDownloadQualityLabel(quality, uiState.musicSource)) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.downloadQuality == quality,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.setDownloadQuality(quality)
-                                scope.launch {
-                                    downloadSheetState.hide()
-                                    showDownloadQualitySheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.downloadQuality == quality,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = getDownloadQualityLabel(quality, uiState.musicSource))
-                    }
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setDownloadQuality(quality)
+                                    scope.launch {
+                                        downloadSheetState.hide()
+                                        showDownloadQualitySheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -1045,23 +795,25 @@ fun PlaybackSettingsScreen(
         
         ModalBottomSheet(
             onDismissRequest = { showMusicSourceSheet = false },
-            sheetState = musicSourceSheetState
+            sheetState = musicSourceSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Primary Music Source",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
                 )
                 
                 Text(
                     text = if (isDeveloperMode) "HQ Audio offers higher quality (320 kbps) audio" else "Select your preferred music source",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
                 
-                // Build source list based on developer mode
                 val sourceOptions = buildList {
                     add(MusicSource.YOUTUBE to "YouTube Music (256 kbps max)")
                     if (isDeveloperMode) {
@@ -1070,72 +822,78 @@ fun PlaybackSettingsScreen(
                 }
                 
                 sourceOptions.forEach { (source, label) ->
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.musicSource == source,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.setMusicSource(source)
-                                scope.launch {
-                                    musicSourceSheetState.hide()
-                                    showMusicSourceSheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.musicSource == source,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = label)
-                    }
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setMusicSource(source)
+                                    scope.launch {
+                                        musicSourceSheetState.hide()
+                                        showMusicSourceSheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 
-    
     // Double Tap Seek Sheet
     if (showDoubleTapSeekSheet) {
         ModalBottomSheet(
             onDismissRequest = { showDoubleTapSeekSheet = false },
-            sheetState = doubleTapSeekSheetState
+            sheetState = doubleTapSeekSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Double Tap to Seek",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
                 
                 val options = listOf(5, 10, 15, 30)
                 
                 options.forEach { seconds ->
-                    Row(
+                    ListItem(
+                        headlineContent = { Text("$seconds seconds") },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.doubleTapSeekSeconds == seconds,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.setDoubleTapSeekSeconds(seconds)
-                                scope.launch {
-                                    doubleTapSeekSheetState.hide()
-                                    showDoubleTapSeekSheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.doubleTapSeekSeconds == seconds,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = "$seconds seconds")
-                    }
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setDoubleTapSeekSeconds(seconds)
+                                    scope.launch {
+                                        doubleTapSeekSheetState.hide()
+                                        showDoubleTapSeekSheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -1145,26 +903,23 @@ fun PlaybackSettingsScreen(
     if (showHapticsModeSheet) {
         ModalBottomSheet(
             onDismissRequest = { showHapticsModeSheet = false },
-            sheetState = hapticsModeSheetState
+            sheetState = hapticsModeSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Haptics Mode",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
                 )
                 
                 Text(
                     text = "Choose how sensitive the haptic feedback should be",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                val modeOptions = listOf(
-                    HapticsMode.BASIC to "Basic" to "Responds to strong beats only",
-                    HapticsMode.ADVANCED to "Advanced" to "Full audio spectrum analysis",
-                    HapticsMode.CUSTOM to "Custom" to "Fine-tuned for your preference"
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
                 
                 HapticsMode.entries.filter { it != HapticsMode.OFF }.forEach { mode ->
@@ -1175,35 +930,32 @@ fun PlaybackSettingsScreen(
                         else -> "" to ""
                     }
                     
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(label) },
+                        supportingContent = { Text(description) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.hapticsMode == mode,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.setHapticsMode(mode)
-                                scope.launch {
-                                    hapticsModeSheetState.hide()
-                                    showHapticsModeSheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.hapticsMode == mode,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(text = label)
-                            Text(
-                                text = description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setHapticsMode(mode)
+                                    scope.launch {
+                                        hapticsModeSheetState.hide()
+                                        showHapticsModeSheet = false
+                                    }
+                                },
+                                shape = SquircleShape
                             )
-                        }
-                    }
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -1212,45 +964,50 @@ fun PlaybackSettingsScreen(
     if (showHapticsIntensitySheet) {
         ModalBottomSheet(
             onDismissRequest = { showHapticsIntensitySheet = false },
-            sheetState = hapticsIntensitySheetState
+            sheetState = hapticsIntensitySheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = "Vibration Intensity",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
                 )
                 
                 Text(
                     text = "Adjust how strong the vibrations feel",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
                 
                 HapticsIntensity.entries.forEach { intensity ->
-                    Row(
+                    ListItem(
+                        headlineContent = { Text(intensity.displayName) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.hapticsIntensity == intensity,
+                                onClick = null
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.setHapticsIntensity(intensity)
-                                scope.launch {
-                                    hapticsIntensitySheetState.hide()
-                                    showHapticsIntensitySheet = false
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.hapticsIntensity == intensity,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = intensity.displayName)
-                    }
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setHapticsIntensity(intensity)
+                                    scope.launch {
+                                        hapticsIntensitySheetState.hide()
+                                        showHapticsIntensitySheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
-                
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -1272,10 +1029,127 @@ fun PlaybackSettingsScreen(
 private fun PlaybackSectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun SettingsCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = SquircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        ),
+        tonalElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun HorizontalDivider() {
+    M3HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+    )
+}
+
+@Composable
+private fun PlaybackNavigationItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String? = null,
+    onClick: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
+        leadingContent = {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .androidx.compose.foundation.layout.size(40.dp)
+                    .androidx.compose.ui.draw.clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.androidx.compose.foundation.layout.size(20.dp)
+                )
+            }
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = null,
+                modifier = Modifier.androidx.compose.foundation.layout.size(12.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        },
+        modifier = Modifier
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
+            .androidx.compose.ui.draw.clip(SquircleShape),
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@Composable
+private fun PlaybackSwitchItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
+        leadingContent = {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .androidx.compose.foundation.layout.size(40.dp)
+                    .androidx.compose.ui.draw.clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.androidx.compose.foundation.layout.size(20.dp)
+                )
+            }
+        },
+        trailingContent = {
+            androidx.compose.material3.Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = androidx.compose.material3.SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        },
+        modifier = Modifier
+            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
+            .androidx.compose.ui.draw.clip(SquircleShape),
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
 
