@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
@@ -416,6 +417,3 @@ private fun PulseLoadingIndicator(
         )
     }
 }
-
-// Add clickable import manually if needed, but it should be available via background/clickable
-import androidx.compose.foundation.clickable
