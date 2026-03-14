@@ -189,6 +189,7 @@ fun LibraryScreen(
                                 LibraryTopBar(
                                     onHistoryClick = onHistoryClick,
                                     onSyncClick = { viewModel.refresh() },
+                                    onRescanClick = { viewModel.loadData(forceRefresh = true) },
                                     isSyncing = uiState.isRefreshing
                                 )
                             },
@@ -244,6 +245,7 @@ fun LibraryScreen(
                                 LibraryTopBar(
                                     onHistoryClick = onHistoryClick,
                                     onSyncClick = { viewModel.refresh() },
+                                    onRescanClick = { viewModel.loadData(forceRefresh = true) },
                                     isSyncing = uiState.isRefreshing
                                 )
                             },
@@ -270,10 +272,13 @@ fun LibraryScreen(
                         filter = uiState.selectedFilter,
                         uiState = uiState,
                         onSongClick = onSongClick,
+                        onArtistClick = onArtistClick,
+                        onAlbumClick = onAlbumClick,
                          topBar = {
                              LibraryTopBar(
                                  onHistoryClick = onHistoryClick,
                                  onSyncClick = { viewModel.refresh() },
+                                 onRescanClick = { viewModel.loadData(forceRefresh = true) },
                                  isSyncing = uiState.isRefreshing
                              )
                          },
@@ -436,6 +441,7 @@ fun LibraryScreen(
 fun LibraryTopBar(
     onHistoryClick: () -> Unit,
     onSyncClick: () -> Unit,
+    onRescanClick: () -> Unit = {},
     isSyncing: Boolean
 ) {
     Row(
@@ -452,6 +458,9 @@ fun LibraryTopBar(
         )
         
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            IconButton(onClick = onRescanClick) {
+                Icon(Icons.Default.Refresh, contentDescription = "Rescan Media", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             IconButton(onClick = onHistoryClick) {
                 Icon(Icons.Default.History, contentDescription = "History", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -907,34 +916,114 @@ fun OtherContentList(
     filter: LibraryFilter,
     uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState,
     onSongClick: (List<Song>, Int) -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (Album) -> Unit = {},
     topBar: @Composable () -> Unit,
     filterChips: @Composable () -> Unit
 ) {
-    // Placeholder for other tabs
-    // If Filter is SONGS -> Show all songs (mixed? or just liked? user needs to clarify, 
-    // but typically "Songs" in library means Liked songs or All local)
-    // For now we'll show Liked + Local.
-    
     val songs = if (filter == LibraryFilter.SONGS) uiState.likedSongs + uiState.localSongs else emptyList()
+    val albums = if (filter == LibraryFilter.ALBUMS) (uiState.libraryAlbums + uiState.localAlbums).distinctBy { it.id } else emptyList()
+    val artists = if (filter == LibraryFilter.ARTISTS) (uiState.libraryArtists + uiState.localArtists).distinctBy { it.id } else emptyList()
     
-    if (filter == LibraryFilter.SONGS) {
-        LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
-             item { topBar() }
-             item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
+    LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
+        item { topBar() }
+        item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
 
-             items(songs.size) { index ->
-                val song = songs[index]
-                 MusicCard(song = song, onClick = { onSongClick(songs, index) })
+        when (filter) {
+            LibraryFilter.SONGS -> {
+                items(songs.size) { index ->
+                    val song = songs[index]
+                    MusicCard(song = song, onClick = { onSongClick(songs, index) })
+                }
             }
+            LibraryFilter.ALBUMS -> {
+                items(albums) { album ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onAlbumClick(album) }
+                            .padding(horizontal = 24.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            if (album.thumbnailUrl != null) {
+                                AsyncImage(model = album.thumbnailUrl, contentDescription = null, contentScale = ContentScale.Crop)
+                            } else {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null) }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(album.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                            Text(album.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+            LibraryFilter.ARTISTS -> {
+                items(artists) { artist ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onArtistClick(artist.id) }
+                            .padding(horizontal = 24.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            if (artist.thumbnailUrl != null) {
+                                AsyncImage(model = artist.thumbnailUrl, contentDescription = null, contentScale = ContentScale.Crop)
+                            } else {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null) }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(artist.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            LibraryFilter.FOLDERS -> {
+                items(uiState.localFolders.keys.toList()) { folderPath ->
+                    val folderName = folderPath.substringAfterLast("/")
+                    val songs = uiState.localFolders[folderPath] ?: emptyList()
+                    val songCount = songs.size
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { 
+                                if (songs.isNotEmpty()) {
+                                    onSongClick(songs, 0)
+                                }
+                            }
+                            .padding(horizontal = 24.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(folderName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                            Text("$songCount songs", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+            else -> {}
         }
-    } else {
-         Column(modifier = Modifier.fillMaxSize()) {
-            topBar()
-            Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() }
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Text("Coming Soon", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-         }
     }
 }
 
@@ -943,7 +1032,8 @@ fun getCountForFilter(uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState
     return when(uiState.selectedFilter) {
         LibraryFilter.PLAYLISTS -> "${uiState.playlists.size} playlists"
         LibraryFilter.SONGS -> "${uiState.likedSongsCount + uiState.localSongs.size} songs"
-        LibraryFilter.ALBUMS -> "${uiState.libraryAlbums.size} albums"
-        LibraryFilter.ARTISTS -> "${uiState.libraryArtists.size} artists"
+        LibraryFilter.ALBUMS -> "${uiState.libraryAlbums.size + uiState.localAlbums.size} albums"
+        LibraryFilter.ARTISTS -> "${uiState.libraryArtists.size + uiState.localArtists.size} artists"
+        LibraryFilter.FOLDERS -> "${uiState.localFolders.size} folders"
     }
 }
