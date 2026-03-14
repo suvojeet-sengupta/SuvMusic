@@ -264,10 +264,13 @@ private fun SponsorBlockCategoryItem(
             )
         },
         modifier = Modifier
-            .dpadFocusable(
-                onClick = { onCheckedChange(!isChecked) },
-                enabled = isEnabled,
-                shape = SquircleShape
+            .then(
+                if (isEnabled) {
+                    Modifier.dpadFocusable(
+                        onClick = { onCheckedChange(!isChecked) },
+                        shape = SquircleShape
+                    )
+                } else Modifier
             )
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)

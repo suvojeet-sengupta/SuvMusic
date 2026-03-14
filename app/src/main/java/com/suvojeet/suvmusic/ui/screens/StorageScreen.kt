@@ -3,10 +3,10 @@ package com.suvojeet.suvmusic.ui.screens
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -195,7 +195,7 @@ fun StorageScreen(
                                 onClick = null
                             )
                             
-                            M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                            HorizontalDivider()
 
                             // Download Location Item
                             StorageListItem(
@@ -208,7 +208,7 @@ fun StorageScreen(
                                 showChevron = true
                             )
 
-                            M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                            HorizontalDivider()
 
                             // Player Cache Item
                             StorageListItem(
@@ -221,7 +221,7 @@ fun StorageScreen(
                                 showChevron = true
                             )
                             
-                            M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                            HorizontalDivider()
 
                             // Image Cache Item
                             StorageListItem(
@@ -233,7 +233,7 @@ fun StorageScreen(
                                 onClick = { showClearImageCacheDialog = true }
                             )
                             
-                            M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                            HorizontalDivider()
                             
                             // Thumbnails Item
                             StorageListItem(
@@ -252,11 +252,12 @@ fun StorageScreen(
                     item {
                         SettingsSectionTitle("Actions")
                         SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            val canDelete = !isClearing && info.downloadedSongsCount > 0
                             ListItem(
                                 headlineContent = { 
                                     Text(
                                         "Delete All Downloads", 
-                                        color = MaterialTheme.colorScheme.error,
+                                        color = if (canDelete) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.38f),
                                         fontWeight = FontWeight.SemiBold
                                     ) 
                                 },
@@ -277,15 +278,17 @@ fun StorageScreen(
                                     }
                                 },
                                 modifier = Modifier
-                                    .dpadFocusable(
-                                        onClick = { showDeleteAllDialog = true },
-                                        enabled = !isClearing && info.downloadedSongsCount > 0,
-                                        shape = SquircleShape
+                                    .then(
+                                        if (canDelete) {
+                                            Modifier.dpadFocusable(
+                                                onClick = { showDeleteAllDialog = true },
+                                                shape = SquircleShape
+                                            )
+                                        } else Modifier
                                     )
                                     .clip(SquircleShape),
                                 colors = ListItemDefaults.colors(
-                                    containerColor = Color.Transparent,
-                                    disabledHeadlineContentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.38f)
+                                    containerColor = Color.Transparent
                                 )
                             )
                         }
@@ -394,7 +397,8 @@ private fun SettingsSectionTitle(title: String) {
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).fillMaxWidth(),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Start
     )
 }
 
@@ -420,6 +424,14 @@ private fun SettingsCard(
             content()
         }
     }
+}
+
+@Composable
+private fun HorizontalDivider(modifier: Modifier = Modifier, color: Color = Color.Transparent) {
+    androidx.compose.material3.HorizontalDivider(
+        modifier = modifier.padding(horizontal = 16.dp),
+        color = color.takeIf { it != Color.Transparent } ?: MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+    )
 }
 
 @Composable
