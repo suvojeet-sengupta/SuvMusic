@@ -90,21 +90,28 @@ fun SearchScreen(
     
     // Scroll tracking for hiding headers
     var isHeaderVisible by remember { mutableStateOf(true) }
-    var lastScrollOffset by remember { mutableIntStateOf(0) }
     
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemScrollOffset }.collect { currentOffset ->
-            val delta = currentOffset - lastScrollOffset
-            if (delta > 15 && isHeaderVisible && listState.firstVisibleItemIndex >= 0) {
-                isHeaderVisible = false
-            } else if (delta < -15 && !isHeaderVisible) {
-                isHeaderVisible = true
+    val nestedScrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                val delta = available.y
+                if (delta < -20 && isHeaderVisible) {
+                    isHeaderVisible = false
+                } else if (delta > 20 && !isHeaderVisible) {
+                    isHeaderVisible = true
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
             }
-            // Always show header at the very top
-            if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
-                isHeaderVisible = true
-            }
-            lastScrollOffset = currentOffset
+        }
+    }
+
+    // Always show header at the very top
+    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+            isHeaderVisible = true
         }
     }
     
@@ -364,7 +371,9 @@ fun SearchScreen(
             // Content Area
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .androidx.compose.ui.input.nestedscroll.nestedScroll(nestedScrollConnection),
                 contentPadding = PaddingValues(bottom = 140.dp)
             ) {
                 if (uiState.isLoading) {
