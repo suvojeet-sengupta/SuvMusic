@@ -4,7 +4,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.suvojeet.suvmusic.SuvMusicApplication
+import android.content.Context
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
@@ -89,6 +89,7 @@ sealed class ImportState {
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: Context,
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
     private val localAudioRepository: LocalAudioRepository,
@@ -331,7 +332,7 @@ class LibraryViewModel @Inject constructor(
 
 
     fun importSpotifyPlaylist(url: String) {
-        val context = SuvMusicApplication.instance
+        val context = appContext
         val intent = Intent(context, SpotifyImportService::class.java).apply {
             action = SpotifyImportService.ACTION_START
             putExtra(SpotifyImportService.EXTRA_URL, url)
@@ -344,7 +345,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun cancelImport() {
-        val context = SuvMusicApplication.instance
+        val context = appContext
         val intent = Intent(context, SpotifyImportService::class.java).apply {
             action = SpotifyImportService.ACTION_CANCEL
         }
