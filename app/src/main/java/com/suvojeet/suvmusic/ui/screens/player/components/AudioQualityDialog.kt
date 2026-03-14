@@ -20,6 +20,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+
 @Composable
 fun AudioQualityDialog(
     showDialog: Boolean,
@@ -44,7 +46,7 @@ fun AudioQualityDialog(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(28.dp)),
+                        .clip(SquircleShape),
                     color = dominantColors.primary, // Match player background
                     tonalElevation = 8.dp
                 ) {
@@ -62,7 +64,7 @@ fun AudioQualityDialog(
                         ) {
                             Text(
                                 text = "Audio Quality",
-                                style = MaterialTheme.typography.titleLarge.copy(
+                                style = MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Bold
                                 ),
                                 color = dominantColors.onBackground
@@ -71,17 +73,17 @@ fun AudioQualityDialog(
                             IconButton(
                                 onClick = onDismiss,
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(36.dp)
                                     .background(
                                         color = dominantColors.onBackground.copy(alpha = 0.1f),
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = SquircleShape
                                     )
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
                                     contentDescription = "Close",
                                     tint = dominantColors.onBackground,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -94,17 +96,17 @@ fun AudioQualityDialog(
                             modifier = Modifier
                                 .background(
                                     color = dominantColors.accent.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = SquircleShape
                                 )
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(18.dp),
                                 tint = dominantColors.accent
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "Opus • HQ Audio",
                                 style = MaterialTheme.typography.labelLarge.copy(
@@ -120,14 +122,14 @@ fun AudioQualityDialog(
                         // Description
                         Text(
                             text = "SuvMusic streams audio using the Opus codec, a superior modern format used by YouTube Music.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                lineHeight = 24.sp
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                lineHeight = 26.sp
                             ),
-                            color = dominantColors.onBackground.copy(alpha = 0.8f),
+                            color = dominantColors.onBackground.copy(alpha = 0.85f),
                             textAlign = TextAlign.Center
                         )
                         
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         
                         // Key Benefits
                         Column(
@@ -145,22 +147,21 @@ fun AudioQualityDialog(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
 
                         // Got it button
                         Button(
                             onClick = onDismiss,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = dominantColors.accent,
                                 contentColor = Color.White
                             ),
-                            shape = RoundedCornerShape(16.dp),
-                            contentPadding = PaddingValues(vertical = 12.dp)
+                            shape = SquircleShape
                         ) {
                             Text(
                                 text = "Got it",
-                                style = MaterialTheme.typography.labelLarge.copy(
+                                style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold
                                 )
                             )
