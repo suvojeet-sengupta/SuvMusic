@@ -6,6 +6,8 @@ import android.provider.MediaStore
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.tag.FieldKey
 import java.io.File
 import javax.inject.Inject
 
@@ -19,16 +21,32 @@ class LocalLyricsProvider @Inject constructor(
         val path = getAudioPath(song)
         
         if (path != null) {
-            // 2. Check for sidecar .lrc file
-            val lrcFile = File(path.substringBeforeLast(".") + ".lrc")
-            if (lrcFile.exists()) return lrcFile.readText()
+            val audioFile = File(path)
+            if (audioFile.exists()) {
+                // 2. Check for sidecar .lrc file (Priority 1)
+                val lrcFile = File(path.substringBeforeLast(".") + ".lrc")
+                if (lrcFile.exists()) return lrcFile.readText()
 
-            // 3. Check for sidecar .txt file
-            val txtFile = File(path.substringBeforeLast(".") + ".txt")
-            if (txtFile.exists()) return txtFile.readText()
+                // 3. Check for sidecar .txt file (Priority 2)
+                val txtFile = File(path.substringBeforeLast(".") + ".txt")
+                if (txtFile.exists()) return txtFile.readText()
+
+                // 4. Extract embedded lyrics (Priority 3)
+                try {
+                    val af = AudioFileIO.read(audioFile)
+                    val tag = af.tag
+                    if (tag != null) {
+                        // Try different lyric fields
+                        val lyrics = tag.getFirst(FieldKey.LYRICS)
+                        if (!lyrics.isNullOrBlank()) return lyrics
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
         
-        // 4. Fallback: Check internal app storage for manually added lyrics
+        // 5. Fallback: Check internal app storage for manually added lyrics
         // Path: /Android/data/com.package/files/lyrics/{songId}.lrc
         val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
         val internalDir = File(baseDir, "lyrics")
