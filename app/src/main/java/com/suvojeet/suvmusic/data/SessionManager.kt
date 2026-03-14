@@ -1297,13 +1297,32 @@ class SessionManager @Inject constructor(
         }
 
     private fun createEncryptedPrefs(): android.content.SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
-            "suvmusic_secure_session",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return try {
+            EncryptedSharedPreferences.create(
+                context,
+                "suvmusic_secure_session",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            // This happens after restoring backup on different device or OS reinstall
+            // where keystore keys are lost but preference file remains.
+            // We must clear the file to prevent continuous crashing.
+            try {
+                context.deleteSharedPreferences("suvmusic_secure_session")
+                EncryptedSharedPreferences.create(
+                    context,
+                    "suvmusic_secure_session",
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (e2: Exception) {
+                // Fallback to normal prefs if encryption is completely broken
+                context.getSharedPreferences("suvmusic_secure_session_fallback", Context.MODE_PRIVATE)
+            }
+        }
     }
 
     init {

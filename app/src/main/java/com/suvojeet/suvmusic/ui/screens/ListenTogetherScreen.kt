@@ -1,9 +1,10 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,25 +13,28 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.shareplay.*
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
@@ -38,12 +42,8 @@ import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.ui.draw.scale
-
-import kotlinx.coroutines.flow.map
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.util.dpadFocusable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,7 +186,7 @@ fun ListenTogetherHeader(onDismiss: () -> Unit, connectionState: ConnectionState
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
                 Box(
                     modifier = Modifier
-                        .size(6.dp)
+                        .size(8.dp)
                         .background(
                             color = when (connectionState) {
                                 ConnectionState.CONNECTED -> Color(0xFF4CAF50)
@@ -196,7 +196,7 @@ fun ListenTogetherHeader(onDismiss: () -> Unit, connectionState: ConnectionState
                             shape = CircleShape
                         )
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = when (connectionState) {
                         ConnectionState.CONNECTED -> "Online"
@@ -206,14 +206,21 @@ fun ListenTogetherHeader(onDismiss: () -> Unit, connectionState: ConnectionState
                         else -> "Offline"
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
         
-        IconButton(
-            onClick = onDismiss,
-            modifier = Modifier.size(40.dp)
+        Box(
+            modifier = Modifier
+                .dpadFocusable(
+                    onClick = onDismiss,
+                    shape = CircleShape,
+                )
+                .size(40.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Close, "Close", modifier = Modifier.size(20.dp))
         }
@@ -239,19 +246,19 @@ fun ConnectToServerContent(
         Spacer(modifier = Modifier.height(32.dp))
         
         Surface(
-            modifier = Modifier.size(96.dp),
-            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.size(100.dp),
+            shape = SquircleShape,
             color = if (connectionState == ConnectionState.ERROR) 
                 MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
             else 
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
-            shadowElevation = 8.dp
+            shadowElevation = 12.dp
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = if (connectionState == ConnectionState.ERROR) Icons.Default.WifiOff else Icons.Default.Public,
                     contentDescription = null,
-                    modifier = Modifier.size(42.dp),
+                    modifier = Modifier.size(48.dp),
                     tint = if (connectionState == ConnectionState.ERROR) 
                         MaterialTheme.colorScheme.error 
                     else 
@@ -266,7 +273,8 @@ fun ConnectToServerContent(
             text = "Listen Together",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            letterSpacing = (-0.5).sp
         )
         
         Text(
@@ -274,26 +282,27 @@ fun ConnectToServerContent(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, bottom = 40.dp)
+            modifier = Modifier.padding(top = 12.dp, bottom = 40.dp),
+            lineHeight = 24.sp
         )
 
-        ElevatedCard(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
+            shape = SquircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+            tonalElevation = 1.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
                     text = "SERVER CONFIGURATION",
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.2.sp
                 )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 OutlinedTextField(
                     value = serverUrl,
@@ -302,7 +311,7 @@ fun ConnectToServerContent(
                     leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(20.dp)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = SquircleShape,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
@@ -315,10 +324,11 @@ fun ConnectToServerContent(
                     onClick = onConnect,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
+                        .height(56.dp)
+                        .dpadFocusable(onClick = onConnect, shape = SquircleShape),
+                    shape = SquircleShape,
                     enabled = connectionState != ConnectionState.CONNECTING && serverUrl.isNotBlank(),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
                     if (connectionState == ConnectionState.CONNECTING) {
                         CircularProgressIndicator(
@@ -340,7 +350,8 @@ fun ConnectToServerContent(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 16.dp).fillMaxWidth()
+                        modifier = Modifier.padding(top = 16.dp).fillMaxWidth(),
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -352,9 +363,9 @@ fun ConnectToServerContent(
         Text(
             text = "HOW IT WORKS",
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            letterSpacing = 1.2.sp
+            letterSpacing = 1.5.sp
         )
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -395,22 +406,23 @@ fun FeatureItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: St
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface(
-            modifier = Modifier.size(48.dp),
-            shape = CircleShape,
+            modifier = Modifier.size(56.dp),
+            shape = SquircleShape,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(icon, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
+                Icon(icon, null, modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
             desc, 
             style = MaterialTheme.typography.bodySmall, 
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 4.dp),
+            lineHeight = 18.sp
         )
     }
 }
@@ -454,12 +466,12 @@ fun SetupContent(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Identity Card
-        ElevatedCard(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            )
+            shape = SquircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+            tonalElevation = 1.dp
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -468,8 +480,8 @@ fun SetupContent(
                 Text(
                     text = "WHO ARE YOU?",
                     style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.5.sp
                     ),
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -483,7 +495,7 @@ fun SetupContent(
                     leadingIcon = { Icon(Icons.Default.Person, null, modifier = Modifier.size(20.dp)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = SquircleShape,
                     textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -500,19 +512,26 @@ fun SetupContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(140.dp),
-                onClick = { if (username.isNotBlank()) onCreateRoom() },
+                    .height(150.dp)
+                    .dpadFocusable(onClick = { if (username.isNotBlank()) onCreateRoom() }, shape = SquircleShape),
                 enabled = username.isNotBlank(),
-                shape = RoundedCornerShape(24.dp),
+                shape = SquircleShape,
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shadowElevation = 6.dp
+                shadowElevation = 8.dp
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    modifier = Modifier.fillMaxSize().padding(20.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(Icons.Default.AddCircle, null, modifier = Modifier.size(32.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.AddCircle, null, modifier = Modifier.size(24.dp))
+                    }
                     Column {
                         Text(
                             "Host",
@@ -521,7 +540,8 @@ fun SetupContent(
                         Text(
                             "Start a room",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -531,11 +551,11 @@ fun SetupContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(140.dp),
-                shape = RoundedCornerShape(24.dp),
+                    .height(150.dp),
+                shape = SquircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                shadowElevation = 2.dp
+                tonalElevation = 2.dp
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -545,7 +565,7 @@ fun SetupContent(
                     BasicTextField(
                         value = roomCode,
                         onValueChange = { if (it.length <= 8) roomCode = it.uppercase() },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Black, 
@@ -571,8 +591,11 @@ fun SetupContent(
                     Button(
                         onClick = { onJoinRoom(roomCode) },
                         enabled = username.isNotBlank() && roomCode.length >= 4,
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .dpadFocusable(onClick = { onJoinRoom(roomCode) }, shape = SquircleShape),
+                        shape = SquircleShape,
                         contentPadding = PaddingValues(0.dp)
                     ) {
                         Text("JOIN ROOM", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
@@ -647,19 +670,23 @@ fun SettingsSection(
         ListItem(
             headlineContent = { Text("Connection Settings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
             trailingContent = { Icon(if (showSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null) },
-            modifier = Modifier.clickable { onToggleSettings() }.clip(RoundedCornerShape(12.dp)),
+            modifier = Modifier.dpadFocusable(onClick = onToggleSettings, shape = SquircleShape).clip(SquircleShape),
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
 
-        AnimatedVisibility(visible = showSettings) {
-            ElevatedCard(
+        AnimatedVisibility(
+            visible = showSettings,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
+                shape = SquircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                tonalElevation = 1.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SettingsToggleItem(
@@ -669,7 +696,7 @@ fun SettingsSection(
                         onCheckedChange = onAutoApprovalChange,
                         dominantColors = dominantColors
                     )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    M3HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                     SettingsToggleItem(
                         title = "Sync host volume",
                         subtitle = "Match volume with host",
@@ -677,7 +704,7 @@ fun SettingsSection(
                         onCheckedChange = onSyncVolumeChange,
                         dominantColors = dominantColors
                     )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    M3HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                     SettingsToggleItem(
                         title = "Mute host audio",
                         subtitle = "Useful for local syncing",
@@ -693,7 +720,7 @@ fun SettingsSection(
                         onValueChange = onServerUrlChange,
                         label = { Text("Server URL") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = SquircleShape,
                         textStyle = MaterialTheme.typography.bodySmall,
                         singleLine = true
                     )
@@ -704,8 +731,8 @@ fun SettingsSection(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilledTonalButton(
                                 onClick = onToggleLogs,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(12.dp)
+                                modifier = Modifier.weight(1f).height(48.dp).dpadFocusable(onClick = onToggleLogs, shape = SquircleShape),
+                                shape = SquircleShape
                             ) {
                                 Icon(Icons.Default.History, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -714,8 +741,8 @@ fun SettingsSection(
                             
                             FilledTonalButton(
                                 onClick = onToggleBlocked,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(12.dp)
+                                modifier = Modifier.weight(1f).height(48.dp).dpadFocusable(onClick = onToggleBlocked, shape = SquircleShape),
+                                shape = SquircleShape
                             ) {
                                 Icon(Icons.Default.Block, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -725,7 +752,7 @@ fun SettingsSection(
                         
                         TextButton(
                             onClick = onDisconnect,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onDisconnect, shape = SquircleShape),
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                         ) {
                             Icon(Icons.Default.LinkOff, null, modifier = Modifier.size(18.dp))
@@ -783,7 +810,7 @@ fun RoomContent(
             item {
                 Surface(
                     color = MaterialTheme.colorScheme.tertiaryContainer,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = SquircleShape,
                     modifier = Modifier.fillMaxWidth(),
                     shadowElevation = 4.dp
                 ) {
@@ -791,7 +818,7 @@ fun RoomContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(36.dp)
                                     .background(MaterialTheme.colorScheme.tertiary, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -799,14 +826,14 @@ fun RoomContent(
                                     Icons.Default.GroupAdd, 
                                     null, 
                                     tint = MaterialTheme.colorScheme.onTertiary, 
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "Join Requests (${pendingRequests.size})",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Black,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                         }
@@ -828,12 +855,12 @@ fun RoomContent(
 
         // Room Code & Host Info
         item {
-            ElevatedCard(
-                shape = RoundedCornerShape(28.dp),
+            Surface(
+                shape = SquircleShape,
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                )
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                tonalElevation = 2.dp
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -851,12 +878,12 @@ fun RoomContent(
                     
                     Surface(
                         onClick = { onCopyCode(room.roomCode) },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = SquircleShape,
                         color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier = Modifier.scale(1.1f)
+                        modifier = Modifier.scale(1.1f).dpadFocusable(onClick = { onCopyCode(room.roomCode) }, shape = SquircleShape)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
@@ -872,7 +899,7 @@ fun RoomContent(
                             Icon(
                                 Icons.Default.ContentCopy, 
                                 null, 
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -939,18 +966,19 @@ fun RoomContent(
                 Text(
                     "NOW SYNCING", 
                     style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
                     ),
                     modifier = Modifier.padding(start = 4.dp, bottom = 12.dp),
                     color = MaterialTheme.colorScheme.primary
                 )
                 
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
+                    shape = SquircleShape,
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    tonalElevation = 1.dp
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -962,13 +990,13 @@ fun RoomContent(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(64.dp)
-                                    .clip(RoundedCornerShape(14.dp)),
+                                    .clip(SquircleShape),
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
                             )
                         } else {
                             Surface(
                                 modifier = Modifier.size(64.dp),
-                                shape = RoundedCornerShape(14.dp),
+                                shape = SquircleShape,
                                 color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -983,7 +1011,7 @@ fun RoomContent(
                             Text(
                                 text = track?.title ?: "Nothing Synchronized", 
                                 style = MaterialTheme.typography.titleMedium, 
-                                fontWeight = FontWeight.ExtraBold, 
+                                fontWeight = FontWeight.Black, 
                                 maxLines = 1,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -993,7 +1021,8 @@ fun RoomContent(
                                 style = MaterialTheme.typography.bodyMedium, 
                                 maxLines = 1,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                         
@@ -1015,8 +1044,8 @@ fun RoomContent(
             Text(
                 "LISTENERS", 
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.2.sp
                 ),
                 modifier = Modifier.padding(start = 4.dp, top = 8.dp),
                 color = MaterialTheme.colorScheme.primary
@@ -1052,8 +1081,8 @@ fun RoomContent(
                             }
                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Session Code"))
                         },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = { /* share logic */ }, shape = SquircleShape),
+                        shape = SquircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1067,8 +1096,8 @@ fun RoomContent(
                     if (uiState.role != RoomRole.HOST) {
                         Button(
                             onClick = onSync,
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(18.dp),
+                            modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = onSync, shape = SquircleShape),
+                            shape = SquircleShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -1084,8 +1113,8 @@ fun RoomContent(
                 TextButton(
                     onClick = onLeaveRoom,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(18.dp)
+                    modifier = Modifier.fillMaxWidth().height(56.dp).dpadFocusable(onClick = onLeaveRoom, shape = SquircleShape),
+                    shape = SquircleShape
                 ) {
                     Icon(Icons.Default.Logout, null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
@@ -1111,20 +1140,21 @@ fun RoomContent(
 fun StatItem(label: String, value: String, modifier: Modifier = Modifier, highlight: Boolean = false, highlightColor: Color = Color.Unspecified) {
     Surface(
         modifier = modifier,
-        color = if (highlight) highlightColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(16.dp)
+        color = if (highlight) highlightColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
+        shape = SquircleShape,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
     ) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = label, 
-                style = MaterialTheme.typography.labelSmall, 
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black), 
                 color = if (highlight) highlightColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value, 
                 style = MaterialTheme.typography.titleMedium, 
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 color = if (highlight) highlightColor else MaterialTheme.colorScheme.onSurface
             )
         }
@@ -1155,8 +1185,8 @@ fun UserListItem(
             // Avatar
             Box(contentAlignment = Alignment.Center) {
                 Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.size(52.dp),
+                    shape = SquircleShape,
                     color = if (isHost) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
                     border = if (isHost) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null
                 ) {
@@ -1173,7 +1203,7 @@ fun UserListItem(
                 // Status Indicator
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(16.dp)
                         .align(Alignment.BottomEnd)
                         .offset(x = 2.dp, y = 2.dp)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
@@ -1220,7 +1250,8 @@ fun UserListItem(
                         isBuffering -> Color(0xFFFF9800)
                         user.isConnected -> MaterialTheme.colorScheme.onSurfaceVariant
                         else -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                    }
+                    },
+                    fontWeight = FontWeight.Medium
                 )
             }
             
@@ -1229,7 +1260,7 @@ fun UserListItem(
                     IconButton(
                         onClick = { showMenu = true }, 
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(40.dp)
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f), CircleShape)
                     ) {
                         Icon(Icons.Default.MoreHoriz, null, modifier = Modifier.size(20.dp))
@@ -1261,16 +1292,16 @@ fun UserListItem(
 @Composable
 fun SettingsToggleItem(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, dominantColors: DominantColors) {
     ListItem(
-        headlineContent = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold) },
+        headlineContent = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold) },
         supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
         trailingContent = {
             Switch(
                 checked = checked, 
                 onCheckedChange = onCheckedChange,
-                modifier = Modifier.scale(0.85f)
+                modifier = Modifier.scale(0.8f)
             )
         },
-        modifier = Modifier.clickable { onCheckedChange(!checked) },
+        modifier = Modifier.dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape).clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
@@ -1279,18 +1310,19 @@ fun SettingsToggleItem(title: String, subtitle: String, checked: Boolean, onChec
 fun RequestItem(request: JoinRequestPayload, onApprove: (String) -> Unit, onReject: (String) -> Unit, dominantColors: DominantColors) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.padding(vertical = 4.dp)
+        shape = SquircleShape,
+        modifier = Modifier.padding(vertical = 4.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp), 
+            modifier = Modifier.fillMaxWidth().padding(12.dp), 
             verticalAlignment = Alignment.CenterVertically, 
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Surface(modifier = Modifier.size(32.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                Surface(modifier = Modifier.size(36.dp), shape = SquircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(request.username.take(1).uppercase(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(request.username.take(1).uppercase(), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -1300,15 +1332,15 @@ fun RequestItem(request: JoinRequestPayload, onApprove: (String) -> Unit, onReje
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(
                     onClick = { onReject(request.userId) }, 
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f), CircleShape)
                 ) {
-                    Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Close, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
                 }
                 IconButton(
                     onClick = { onApprove(request.userId) }, 
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(40.dp).background(Color(0xFF4CAF50).copy(alpha = 0.15f), CircleShape)
                 ) {
-                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = Color(0xFF4CAF50))
+                    Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp), tint = Color(0xFF4CAF50))
                 }
             }
         }
@@ -1337,22 +1369,24 @@ fun LogViewSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         dragHandle = { BottomSheetDefaults.DragHandle() },
-        modifier = Modifier.fillMaxHeight(0.8f)
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        modifier = Modifier.fillMaxHeight(0.85f)
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Session Terminal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Real-time event tracking", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Session Terminal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                    Text("Real-time event tracking", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                 }
                 
                 FilterChip(
                     selected = isLogActive,
                     onClick = { onLogActiveChange(!isLogActive) },
-                    label = { Text(if (isLogActive) "Capturing" else "Paused") },
+                    label = { Text(if (isLogActive) "Capturing" else "Paused", fontWeight = FontWeight.Bold) },
                     leadingIcon = { 
-                        Box(modifier = Modifier.size(6.dp).background(if (isLogActive) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline, CircleShape)) 
-                    }
+                        Box(modifier = Modifier.size(8.dp).background(if (isLogActive) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline, CircleShape)) 
+                    },
+                    shape = SquircleShape
                 )
             }
             
@@ -1361,15 +1395,15 @@ fun LogViewSheet(
             Surface(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                shape = SquircleShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 if (logs.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Terminal, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.outline)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("No events logged", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyMedium)
+                            Icon(Icons.Default.Terminal, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("No events logged", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         }
                     }
                 } else {
@@ -1385,24 +1419,25 @@ fun LogViewSheet(
                 }
             }
             
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 TextButton(
                     onClick = onClear,
-                    modifier = Modifier.weight(1f).height(48.dp)
+                    modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = onClear, shape = SquircleShape),
+                    shape = SquircleShape
                 ) {
-                    Icon(Icons.Default.DeleteSweep, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear Logs")
+                    Icon(Icons.Default.DeleteSweep, null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Clear Logs", fontWeight = FontWeight.Bold)
                 }
                 
                 Button(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = onDismiss, shape = SquircleShape),
+                    shape = SquircleShape
                 ) {
-                    Text("Close")
+                    Text("Close", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1418,32 +1453,33 @@ fun LogItemRow(entry: LogEntry) {
         LogLevel.DEBUG -> MaterialTheme.colorScheme.primary
     }
     
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+    Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = entry.timestamp.split("T").lastOrNull()?.take(8) ?: entry.timestamp, 
-                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), 
                 style = MaterialTheme.typography.labelSmall,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Surface(
-                color = color.copy(alpha = 0.1f), 
-                shape = RoundedCornerShape(4.dp)
+                color = color.copy(alpha = 0.15f), 
+                shape = RoundedCornerShape(6.dp)
             ) {
                 Text(
                     text = entry.level.name, 
                     color = color, 
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 8.sp),
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = 9.sp),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = entry.message, 
             color = MaterialTheme.colorScheme.onSurface, 
-            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 14.sp),
+            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp),
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
         )
     }
@@ -1459,56 +1495,58 @@ fun BlockedUsersSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Text(
                 text = "Blocked Users", 
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black
             )
             Text(
                 text = "These users cannot join your rooms.", 
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
+                fontWeight = FontWeight.Medium
             )
             
             Surface(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                shape = SquircleShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 if (blockedUsers.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No blocked users", color = MaterialTheme.colorScheme.outline)
+                        Text("No blocked users", color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                         items(blockedUsers.toList()) { userId ->
                             ListItem(
-                                headlineContent = { Text(userId, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)) },
+                                headlineContent = { Text(userId, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), fontWeight = FontWeight.Bold) },
                                 trailingContent = {
-                                    TextButton(onClick = { onUnblock(userId) }) {
-                                        Text("Unblock")
+                                    TextButton(onClick = { onUnblock(userId) }, modifier = Modifier.dpadFocusable(onClick = { onUnblock(userId) }, shape = SquircleShape)) {
+                                        Text("Unblock", fontWeight = FontWeight.Bold)
                                     }
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                             )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                            M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                         }
                     }
                 }
             }
             
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth().height(48.dp).padding(bottom = 32.dp),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier.fillMaxWidth().height(56.dp).padding(bottom = 32.dp).dpadFocusable(onClick = onDismiss, shape = SquircleShape),
+                shape = SquircleShape
             ) {
-                Text("Close")
+                Text("Close", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1520,19 +1558,28 @@ fun NyxCredit(modifier: Modifier = Modifier, onClick: () -> Unit) {
         modifier = modifier
             .clip(CircleShape)
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         Text(
             text = "Integration by ",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            fontWeight = FontWeight.Medium
         )
         Text(
             text = "Nyx",
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
         )
     }
+}
+
+@Composable
+private fun M3HorizontalDivider(modifier: Modifier = Modifier, color: Color) {
+    androidx.compose.material3.HorizontalDivider(
+        modifier = modifier,
+        color = color
+    )
 }
