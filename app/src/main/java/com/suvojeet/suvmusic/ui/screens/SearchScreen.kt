@@ -447,12 +447,35 @@ fun SearchScreen(
                     }
                 } else if (uiState.selectedTab == SearchTab.YOUR_LIBRARY) {
                     // Local Search results
-                    if (uiState.results.isNotEmpty()) {
-                        itemsIndexed(uiState.results, key = { index: Int, song: Song -> "local_${song.id}_$index" }) { index: Int, song: Song ->
-                            SearchResultItem(song = song, onClick = { onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
+                    if (!uiState.isLoading && uiState.query.isNotBlank()) {
+                        if (uiState.artistResults.isNotEmpty()) {
+                            item {
+                                Text("Artists", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
+                                LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 12.dp)) {
+                                    items(uiState.artistResults, key = { it.id }) { artist -> ArtistSearchCard(artist = artist, onClick = { onArtistClick(artist.id) }) }
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                            }
                         }
-                    } else if (uiState.query.isNotBlank() && !uiState.isLoading) {
-                        item { Text("No local results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
+                        if (uiState.albumResults.isNotEmpty()) {
+                            item {
+                                Text("Albums", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
+                                LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 12.dp)) {
+                                    items(uiState.albumResults, key = { it.id }) { album -> AlbumSearchCard(album = album, onClick = { onAlbumClick(album) }) }
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                            }
+                        }
+                        if (uiState.results.isNotEmpty()) {
+                            item { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
+                            itemsIndexed(uiState.results, key = { index, song -> "local_${song.id}_$index" }) { index, song ->
+                                SearchResultItem(song = song, onClick = { onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
+                            }
+                        }
+                        
+                        if (uiState.results.isEmpty() && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty()) {
+                            item { Text("No local results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
+                        }
                     }
                 }
                 

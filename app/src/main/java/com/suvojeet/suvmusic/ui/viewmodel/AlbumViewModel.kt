@@ -26,6 +26,7 @@ data class AlbumUiState(
 @HiltViewModel
 class AlbumViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val localAudioRepository: com.suvojeet.suvmusic.data.repository.LocalAudioRepository,
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
     private val libraryRepository: LibraryRepository,
@@ -88,7 +89,20 @@ class AlbumViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val album = youTubeRepository.getAlbum(albumId)
+                // Check if it's a local album (numeric ID)
+                val isLocal = albumId.toLongOrNull() != null
+                
+                val album = if (isLocal) {
+                    val id = albumId.toLong()
+                    val localAlbums = localAudioRepository.getAllLocalAlbums()
+                    val albumBase = localAlbums.find { it.id == albumId }
+                    if (albumBase != null) {
+                        val songs = localAudioRepository.getSongsByAlbum(id)
+                        albumBase.copy(songs = songs)
+                    } else null
+                } else {
+                    youTubeRepository.getAlbum(albumId)
+                }
                 
                 // Merge with initial data if fetch failed partially or returns default
                 val finalAlbum = if (album != null) {
@@ -116,8 +130,8 @@ class AlbumViewModel @Inject constructor(
                         isLoading = false
                     )
                 }
+            }
         }
-    }
     }
 
     fun playNext(songs: List<Song>) {

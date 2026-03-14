@@ -415,13 +415,23 @@ class SearchViewModel @Inject constructor(
                         }
                     }
                     SearchTab.YOUR_LIBRARY -> {
-                        val results = localAudioRepository.searchLocalSongs(query)
-                        _uiState.update { 
-                            it.copy(
-                                results = results,
-                                artistResults = emptyList(),
-                                isLoading = false
-                            )
+                        coroutineScope {
+                            val resultsDeferred = async { localAudioRepository.searchLocalSongs(query) }
+                            val albumsDeferred = async { localAudioRepository.searchLocalAlbums(query) }
+                            val artistsDeferred = async { localAudioRepository.searchLocalArtists(query) }
+                            
+                            val results = resultsDeferred.await()
+                            val albums = albumsDeferred.await()
+                            val artists = artistsDeferred.await()
+                            
+                            _uiState.update { 
+                                it.copy(
+                                    results = results,
+                                    albumResults = albums,
+                                    artistResults = artists,
+                                    isLoading = false
+                                )
+                            }
                         }
                     }
                 }
