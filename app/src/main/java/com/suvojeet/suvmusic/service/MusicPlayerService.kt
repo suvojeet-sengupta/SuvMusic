@@ -651,7 +651,7 @@ class MusicPlayerService : MediaLibraryService() {
                                  val results = youTubeRepository.search(searchQuery)
                                  if (results.isNotEmpty()) {
                                      val song = results.first()
-                                     val streamUrl = youTubeRepository.getStreamUrl(song.id)
+                                     val streamUrl = resolveStreamUrlWithRetry(song.id)
                                      if (streamUrl != null) {
                                          createPlayableMediaItem(song).buildUpon()
                                              .setUri(Uri.parse(streamUrl))
@@ -667,12 +667,40 @@ class MusicPlayerService : MediaLibraryService() {
                                  null
                              }
                          } else if (item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
+                             // Item from Android Auto browse tree or search results — needs URI resolution.
                              val videoId = item.mediaId
-                             val streamUrl = youTubeRepository.getStreamUrl(videoId)
-                             if (streamUrl != null) {
-                                 item.buildUpon().setUri(Uri.parse(streamUrl)).build()
-                             } else {
-                                 item
+                             try {
+                                 // Try to find the full Song object from cached search results
+                                 val cachedSong = cachedSearchResults.find { it.id == videoId }
+
+                                 val streamUrl = resolveStreamUrlWithRetry(videoId)
+                                 if (streamUrl != null) {
+                                     if (cachedSong != null) {
+                                         // Rebuild with full metadata from cached Song object
+                                         createPlayableMediaItem(cachedSong).buildUpon()
+                                             .setUri(Uri.parse(streamUrl))
+                                             .build()
+                                     } else {
+                                         // Rebuild with metadata from the item itself + resolved URI
+                                         val metadata = item.mediaMetadata
+                                         MediaItem.Builder()
+                                             .setMediaId(videoId)
+                                             .setUri(Uri.parse(streamUrl))
+                                             .setMediaMetadata(
+                                                 metadata.buildUpon()
+                                                     .setIsPlayable(true)
+                                                     .setIsBrowsable(false)
+                                                     .build()
+                                             )
+                                             .build()
+                                     }
+                                 } else {
+                                     android.util.Log.e("MusicPlayerService", "Failed to resolve stream for: $videoId")
+                                     null
+                                 }
+                             } catch (e: Exception) {
+                                 android.util.Log.e("MusicPlayerService", "onAddMediaItems resolution failed for: $videoId", e)
+                                 null
                              }
                          } else {
                              item
@@ -874,6 +902,25 @@ class MusicPlayerService : MediaLibraryService() {
             mediaLibrarySession = null
         }
         super.onDestroy()
+    }
+
+    /**
+     * Resolve a stream URL with retry logic, matching the phone-side behavior.
+     * This ensures Android Auto playback is as reliable as phone-initiated playback.
+     */
+    private suspend fun resolveStreamUrlWithRetry(videoId: String): String? {
+        var streamUrl: String? = null
+        var attempts = 0
+        while (streamUrl == null && attempts < 2) {
+            streamUrl = kotlinx.coroutines.withTimeoutOrNull(15_000L) {
+                youTubeRepository.getStreamUrl(videoId)
+            }
+            if (streamUrl == null) {
+                attempts++
+                if (attempts < 2) delay(1000)
+            }
+        }
+        return streamUrl
     }
 
     private fun createBrowsableMediaItem(mediaId: String, title: String): MediaItem {
