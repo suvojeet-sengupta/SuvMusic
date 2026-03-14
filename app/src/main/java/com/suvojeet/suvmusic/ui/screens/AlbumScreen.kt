@@ -67,6 +67,9 @@ import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.ui.theme.PillShape
+import com.suvojeet.suvmusic.util.dpadFocusable
 
 @Composable
 fun AlbumScreen(
@@ -352,7 +355,14 @@ private fun AlbumTopBar(
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onBackClick) {
+        Box(
+            modifier = Modifier
+                .dpadFocusable(
+                    onClick = onBackClick,
+                    shape = CircleShape,
+                )
+                .padding(8.dp)
+        ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
@@ -408,12 +418,13 @@ private fun AlbumHeader(
         // Centered Artwork
         Box(
             modifier = Modifier
-                .size(200.dp)
+                .size(210.dp)
                 .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(8.dp)
+                    elevation = 24.dp,
+                    shape = SquircleShape,
+                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                 )
-                .clip(RoundedCornerShape(8.dp))
+                .clip(SquircleShape)
                 .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color.LightGray)
         ) {
             if (album.thumbnailUrl != null) {
@@ -492,7 +503,7 @@ private fun AlbumHeader(
                 Spacer(modifier = Modifier.height(8.dp))
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { if (total > 0) current.toFloat() / total.toFloat() else 0f },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(PillShape),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -511,10 +522,10 @@ private fun AlbumHeader(
             BounceButton(
                 onClick = onDownload,
                 size = 48.dp,
-                shape = CircleShape,
+                shape = SquircleShape,
                 modifier = Modifier.background(
                     color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = CircleShape
+                    shape = SquircleShape
                 )
             ) {
                 Icon(
@@ -528,10 +539,10 @@ private fun AlbumHeader(
             BounceButton(
                 onClick = onToggleSave,
                 size = 48.dp,
-                shape = CircleShape,
+                shape = SquircleShape,
                 modifier = Modifier.background(
                     color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = CircleShape
+                    shape = SquircleShape
                 )
             ) {
                 Icon(
@@ -545,10 +556,10 @@ private fun AlbumHeader(
             BounceButton(
                 onClick = onPlayAll,
                 size = 72.dp,
-                shape = androidx.compose.foundation.shape.CircleShape,
+                shape = CircleShape,
                 modifier = Modifier
-                    .shadow(elevation = 12.dp, shape = androidx.compose.foundation.shape.CircleShape, spotColor = MaterialTheme.colorScheme.primary)
-                    .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
+                    .shadow(elevation = 12.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
@@ -562,10 +573,10 @@ private fun AlbumHeader(
             BounceButton(
                 onClick = onShare,
                 size = 48.dp,
-                shape = CircleShape,
+                shape = SquircleShape,
                 modifier = Modifier.background(
                     color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = CircleShape
+                    shape = SquircleShape
                 )
             ) {
                 Icon(
@@ -579,10 +590,10 @@ private fun AlbumHeader(
             BounceButton(
                 onClick = onMoreClick,
                 size = 48.dp,
-                shape = CircleShape,
+                shape = SquircleShape,
                 modifier = Modifier.background(
                     color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = CircleShape
+                    shape = SquircleShape
                 )
             ) {
                 Icon(
@@ -593,7 +604,7 @@ private fun AlbumHeader(
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -609,7 +620,7 @@ private fun AlbumSongItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -617,7 +628,7 @@ private fun AlbumSongItem(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(SquircleShape)
                 .background(Color(0xFF2A2A2A))
         ) {
             if (song.thumbnailUrl != null) {
