@@ -514,7 +514,6 @@ fun SetupContent(
                     .weight(1f)
                     .height(150.dp)
                     .dpadFocusable(onClick = { if (username.isNotBlank()) onCreateRoom() }, shape = SquircleShape),
-                enabled = username.isNotBlank(),
                 shape = SquircleShape,
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -1081,7 +1080,7 @@ fun RoomContent(
                             }
                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Session Code"))
                         },
-                        modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = { /* share logic */ }, shape = SquircleShape),
+                        modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = { /* handled by onClick above */ }, shape = SquircleShape),
                         shape = SquircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
