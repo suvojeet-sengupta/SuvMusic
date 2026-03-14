@@ -42,7 +42,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -86,24 +90,24 @@ fun SearchScreen(
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
     
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState = rememberLazyListState()
     
     // Scroll tracking for hiding headers
     var isHeaderVisible by remember { mutableStateOf(true) }
     
     val nestedScrollConnection = remember {
-        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+        object : NestedScrollConnection {
             override fun onPreScroll(
-                available: androidx.compose.ui.geometry.Offset,
-                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
-            ): androidx.compose.ui.geometry.Offset {
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
                 val delta = available.y
                 if (delta < -20 && isHeaderVisible) {
                     isHeaderVisible = false
                 } else if (delta > 20 && !isHeaderVisible) {
                     isHeaderVisible = true
                 }
-                return androidx.compose.ui.geometry.Offset.Zero
+                return Offset.Zero
             }
         }
     }
@@ -373,7 +377,7 @@ fun SearchScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .androidx.compose.ui.input.nestedscroll.nestedScroll(nestedScrollConnection),
+                    .nestedScroll(nestedScrollConnection),
                 contentPadding = PaddingValues(bottom = 140.dp)
             ) {
                 if (uiState.isLoading) {
