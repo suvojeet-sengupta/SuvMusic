@@ -26,7 +26,7 @@ import com.suvojeet.suvmusic.core.data.local.entity.SongGenre
         SongGenre::class
     ],
     version = 7,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun listeningHistoryDao(): ListeningHistoryDao
