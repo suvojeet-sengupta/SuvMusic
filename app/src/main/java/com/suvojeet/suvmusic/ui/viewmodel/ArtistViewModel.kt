@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,7 @@ enum class ArtistError {
 class ArtistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,
+    private val localAudioRepository: LocalAudioRepository,
     private val sessionManager: SessionManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -53,9 +55,19 @@ class ArtistViewModel @Inject constructor(
             try {
                 // Heuristic to determine source
                 val isYouTubeId = artistId.startsWith("UC") || artistId.startsWith("FE") || artistId.startsWith("VL")
+                val isLocalId = artistId.toLongOrNull() != null
                 
                 val artist = if (isYouTubeId) {
                     youTubeRepository.getArtist(artistId)
+                } else if (isLocalId) {
+                    val id = artistId.toLong()
+                    val artists = localAudioRepository.getAllLocalArtists()
+                    val artistBase = artists.find { it.id == artistId }
+                    if (artistBase != null) {
+                        val songs = localAudioRepository.getSongsByArtist(id)
+                        val albums = localAudioRepository.getAlbumsByArtist(id)
+                        artistBase.copy(songs = songs, albums = albums)
+                    } else null
                 } else {
                     jioSaavnRepository.getArtist(artistId)
                 }
