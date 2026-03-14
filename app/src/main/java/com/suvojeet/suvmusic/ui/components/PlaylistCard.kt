@@ -25,15 +25,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientStart
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.util.dpadFocusable
 
 /**
- * Playlist card with image overlay and gradient.
+ * Playlist card with image overlay and gradient - M3E.
  */
 @Composable
 fun PlaylistCard(
@@ -44,16 +48,17 @@ fun PlaylistCard(
     Surface(
         modifier = modifier
             .width(160.dp)
-            .clickable(onClick = onClick),
+            .dpadFocusable(onClick = onClick, shape = SquircleShape),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(20.dp)
+        shape = SquircleShape,
+        tonalElevation = 1.dp
     ) {
         Column {
             // Playlist Image
             Box(
                 modifier = Modifier
                     .size(160.dp)
-                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .clip(SquircleShape)
                     .background(
                         Brush.linearGradient(
                             colors = listOf(GradientStart, GradientEnd)
@@ -99,6 +104,7 @@ fun PlaylistCard(
                 Text(
                     text = playlist.name,
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -116,7 +122,7 @@ fun PlaylistCard(
 }
 
 /**
- * Large feature playlist card for home screen.
+ * Large feature playlist card for home screen - M3E.
  */
 @Composable
 fun FeaturedPlaylistCard(
@@ -128,8 +134,9 @@ fun FeaturedPlaylistCard(
         modifier = modifier
             .fillMaxWidth()
             .height(180.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp)
+            .dpadFocusable(onClick = onClick, shape = SquircleShape),
+        shape = SquircleShape,
+        tonalElevation = 2.dp
     ) {
         Box {
             // Background Image
@@ -176,12 +183,15 @@ fun FeaturedPlaylistCard(
                 Text(
                     text = playlist.name,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    letterSpacing = (-0.5).sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = playlist.uploaderName,
                     style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
                     color = Color.White.copy(alpha = 0.8f)
                 )
             }
