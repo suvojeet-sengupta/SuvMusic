@@ -6,18 +6,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +32,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.material3.surfaceColorAtElevation
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.R
@@ -46,10 +40,13 @@ import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.ArtistPreview
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
+import com.suvojeet.suvmusic.ui.components.BounceButton
 import com.suvojeet.suvmusic.ui.components.NewReleaseCard
+import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
+import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlin.math.min
 
 @Composable
@@ -322,14 +319,18 @@ fun ArtistScreen(
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = onBackClick,
+                        Box(
                             modifier = Modifier
+                                .dpadFocusable(
+                                    onClick = onBackClick,
+                                    shape = CircleShape,
+                                )
                                 .size(40.dp)
                                 .background(
                                     color = if (headerAlpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent,
                                     shape = CircleShape
-                                )
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -468,30 +469,29 @@ fun ImmersiveArtistHeader(
             // Action Buttons
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp) // Spacing between buttons
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                  // Play Button (Prominent)
-                FloatingActionButton(
+                BounceButton(
                     onClick = onPlayAll,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    size = 56.dp,
                     shape = CircleShape,
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.background(MaterialTheme.colorScheme.primary, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = stringResource(R.string.action_play),
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(32.dp)
                     )
                 }
                 
                 // Shuffle Button
-                IconButton(
+                BounceButton(
                     onClick = onShuffle,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), CircleShape)
-                        .clip(CircleShape)
+                    size = 48.dp,
+                    shape = SquircleShape,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), SquircleShape)
                 ) {
                     Icon(
                          imageVector = Icons.Default.Shuffle,
@@ -501,12 +501,11 @@ fun ImmersiveArtistHeader(
                 }
 
                 // Radio Button
-                IconButton(
+                BounceButton(
                     onClick = onStartRadio,
-                       modifier = Modifier
-                        .size(48.dp)
-                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), CircleShape)
-                        .clip(CircleShape)
+                    size = 48.dp,
+                    shape = SquircleShape,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), SquircleShape)
                 ) {
                      Icon(
                          imageVector = Icons.Default.Radio,
@@ -515,24 +514,25 @@ fun ImmersiveArtistHeader(
                      )
                 }
 
-                // Follow Button (Outlined)
-                 OutlinedButton(
+                // Follow Button
+                 Button(
                      onClick = onSubscribe,
-                     shape = RoundedCornerShape(50),
-                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)),
-                     colors = ButtonDefaults.outlinedButtonColors(
-                         contentColor = MaterialTheme.colorScheme.onBackground
+                     shape = SquircleShape,
+                     colors = ButtonDefaults.buttonColors(
+                         containerColor = if (isSubscribed) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primary,
+                         contentColor = if (isSubscribed) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimary
                      ),
-                     modifier = Modifier.height(48.dp)
+                     modifier = Modifier.height(48.dp).dpadFocusable(onClick = onSubscribe, shape = SquircleShape)
                  ) {
                      if (isSubscribing) {
-                         LoadingIndicator(
+                         CircularProgressIndicator(
                              modifier = Modifier.size(16.dp),
-                             color = MaterialTheme.colorScheme.onBackground
+                             color = LocalContentColor.current,
+                             strokeWidth = 2.dp
                          )
                      } else {
                          Text(
-                             text = if (isSubscribed) stringResource(R.string.action_following).uppercase() else stringResource(R.string.action_follow).uppercase(),
+                             text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),
                              fontWeight = FontWeight.Bold,
                              fontSize = 12.sp,
                              letterSpacing = 1.sp
@@ -584,7 +584,7 @@ fun TopSongRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
             .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -606,7 +606,7 @@ fun TopSongRow(
             contentDescription = null,
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(6.dp)),
+                .clip(SquircleShape),
             contentScale = ContentScale.Crop
         )
         
@@ -619,7 +619,8 @@ fun TopSongRow(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Medium
             )
             Text(
                 text = formatDuration(song.duration),
@@ -646,12 +647,12 @@ fun ArtistContentCard(
     subtitle: String?,
     imageUrl: String?,
     onClick: () -> Unit,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp) // Updated corner radius
+    shape: androidx.compose.ui.graphics.Shape = SquircleShape
 ) {
     Column(
         modifier = Modifier
             .width(160.dp)
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = shape)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -661,7 +662,7 @@ fun ArtistContentCard(
             contentDescription = null,
             modifier = Modifier
                 .size(160.dp)
-                .clip(shape) // Square with rounded corners for albums/singles
+                .clip(shape) // Squircle for albums/singles
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
@@ -669,7 +670,7 @@ fun ArtistContentCard(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
@@ -681,7 +682,7 @@ fun ArtistContentCard(
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
     }
@@ -695,7 +696,7 @@ fun ArtistCircleCard(
     Column(
         modifier = Modifier
             .width(140.dp)
-            .clickable(onClick = onClick),
+            .dpadFocusable(onClick = onClick, shape = CircleShape),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
@@ -732,13 +733,13 @@ fun ArtistVideoCard(
     Column(
         modifier = Modifier
             .width(280.dp) // Wider for 16:9 video look
-            .clickable(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f/9f)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(SquircleShape)
                 .background(Color.Black)
         ) {
             AsyncImage(
@@ -772,7 +773,7 @@ fun ArtistVideoCard(
         Text(
             text = video.title,
             style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
@@ -781,7 +782,7 @@ fun ArtistVideoCard(
         Text(
             text = "Video", // or duration if available
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
     }
 }
@@ -796,8 +797,8 @@ fun AboutArtistCard(
              .fillMaxWidth()
              .padding(horizontal = 20.dp)
              .height(300.dp) // Fixed height for visual consistency
-             .clickable(onClick = onClick)
-             .clip(RoundedCornerShape(16.dp))
+             .dpadFocusable(onClick = onClick, shape = SquircleShape)
+             .clip(SquircleShape)
      ) {
          // Background Image (dimmed)
          val thumbnailUrl = artist.thumbnailUrl

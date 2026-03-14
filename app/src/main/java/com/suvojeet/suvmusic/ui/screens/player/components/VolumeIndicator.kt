@@ -117,9 +117,9 @@ fun VolumeIndicator(
             modifier = Modifier
                 .width(52.dp)
                 .height(200.dp)
-                .clip(RoundedCornerShape(26.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f)
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f)
                 )
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
@@ -157,7 +157,7 @@ fun VolumeIndicator(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .fillMaxHeight(animatedFill.coerceIn(0f, 1f))
-                    .clip(RoundedCornerShape(26.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
