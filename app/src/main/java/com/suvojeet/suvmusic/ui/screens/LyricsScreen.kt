@@ -930,22 +930,30 @@ fun LyricsList(
 
     LaunchedEffect(currentTime, lyrics) {
         if (lyrics.isSynced && !isSelectionMode) {
-            // Check if we should auto-scroll
-            val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
-            val shouldAutoScroll = timeSinceInteraction > 5000 // 5 seconds delay
-            
-            if (shouldAutoScroll) {
-                // Find the current line
-                // A line is active if currentTime >= startTime && currentTime < endTime (or next line start)
-                val index = lyrics.lines.indexOfLast { it.startTimeMs <= currentTime }
-                if (index != activeLineIndex && index >= 0) {
-                    activeLineIndex = index
-                    // Scroll to center
+            // Find the current line
+            val index = lyrics.lines.indexOfLast { it.startTimeMs <= currentTime }
+            if (index != activeLineIndex && index >= 0) {
+                activeLineIndex = index
+                
+                // Check if we should auto-scroll
+                val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
+                val shouldAutoScroll = timeSinceInteraction > 5000 // 5 seconds delay
+                
+                if (shouldAutoScroll) {
                     try {
-                         isAutoScrolling = true
-                         listState.animateScrollToItem(
+                        isAutoScrolling = true
+                        
+                        // Calculate offset to center the item
+                        val viewportHeight = listState.layoutInfo.viewportSize.height
+                        val itemHeight = if (listState.layoutInfo.visibleItemsInfo.isNotEmpty()) {
+                            listState.layoutInfo.visibleItemsInfo.first().size
+                        } else 0
+                        
+                        val centerOffset = (viewportHeight / 2) - (itemHeight / 2)
+                        
+                        listState.animateScrollToItem(
                             index = index,
-                            scrollOffset = -400 // Approximate offset to center
+                            scrollOffset = -centerOffset
                         )
                         isAutoScrolling = false
                     } catch (e: Exception) {
