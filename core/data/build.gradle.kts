@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "com.suvojeet.suvmusic.core.data"
     compileSdk = 36

@@ -34,10 +34,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
     @javax.inject.Inject
     lateinit var sessionManager: com.suvojeet.suvmusic.data.SessionManager
 
-    companion object {
-        lateinit var instance: SuvMusicApplication
-            private set
-    }
+
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -66,7 +63,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
+
         
         // Initialize logging early
         applicationScope.launch {
@@ -99,7 +96,7 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(512 * 1024 * 1024) // 512MB dedicated disk cache
+                    .maxSizeBytes(150 * 1024 * 1024) // 150MB disk cache — sensible for album art
                     .build()
             }
             // Aggressive caching for offline support and smoothness
