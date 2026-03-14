@@ -62,6 +62,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -84,10 +85,12 @@ import coil.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.updater.UpdateViewModel
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlinx.coroutines.launch
 
 /**
- * Settings screen with Material 3 design and organized categories.
+ * Settings screen with Material 3 Expressive design and organized categories.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,477 +121,463 @@ fun SettingsScreen(
     val sheetState = rememberModalBottomSheetState()
     
     // Floating Player
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val floatingPlayerEnabled by viewModel.dynamicIslandEnabled.collectAsState(initial = false)
     val offlineModeEnabled by viewModel.offlineModeEnabled.collectAsState(initial = false)
     val sponsorBlockEnabled by viewModel.sponsorBlockEnabled.collectAsState(initial = true)
 
-    // Background Gradient (Subtle Premium Feel)
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.surface,
-            MaterialTheme.colorScheme.surfaceContainer,
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    )
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.statusBars
     ) { paddingValues ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundBrush)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 80.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 80.dp)
-            ) {
-// ... (omitted for brevity, context is maintained by line numbers in tool but since I'm implementing replacing the whole function signature/start and the button logic, I need to be careful)
-// Actually the previous tool calls suggested I can use multi-replace or just replace chunks.
-// The chunk above is too large and risky.
+            item {
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 24.dp, bottom = 16.dp)
+                )
+            }
 
-// Let's do it in two chunks.
-// 1. Signature update
-// 2. Button update
-
-                item {
-                    Text(
-                        text = "Settings",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .padding(horizontal = 24.dp)
-                            .padding(top = 24.dp, bottom = 16.dp)
-                    )
-                }
-
-                // --- Account Section ---
-                item {
-                    SettingsSectionTitle("Account")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        if (uiState.isLoggedIn) {
-                            // User Info
-                            ListItem(
-                                headlineContent = {
+            // --- Account Section ---
+            item {
+                SettingsSectionTitle("Account")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    if (uiState.isLoggedIn) {
+                        // User Info
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = uiState.userName ?: "Signed In",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    letterSpacing = (-0.5).sp
+                                )
+                            },
+                            supportingContent = {
+                                val email = uiState.storedAccounts.firstOrNull()?.email
+                                if (email != null) {
                                     Text(
-                                        text = uiState.userName ?: "Signed In",
-                                        fontWeight = FontWeight.ExtraBold,
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        letterSpacing = (-0.5).sp
+                                        text = email,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
                                     )
-                                },
-                                supportingContent = {
-                                    val email = uiState.storedAccounts.firstOrNull()?.email
-                                    if (email != null) {
-                                        Text(
-                                            text = email,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
+                                } else {
+                                    Text(
+                                        text = "YouTube Music Connected",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            },
+                            leadingContent = {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.padding(end = 4.dp)
+                                ) {
+                                    if (uiState.userAvatarUrl != null) {
+                                        AsyncImage(
+                                            model = uiState.userAvatarUrl,
+                                            contentDescription = "Avatar",
+                                            modifier = Modifier
+                                                .size(56.dp)
+                                                .clip(SquircleShape)
+                                                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), SquircleShape)
                                         )
                                     } else {
-                                        Text(
-                                            text = "YouTube Music Connected",
-                                            color = MaterialTheme.colorScheme.primary,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                },
-                                leadingContent = {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    ) {
-                                        // Radiant Glow/Border for Avatar
                                         Surface(
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                            modifier = Modifier.size(68.dp),
-                                            border = androidx.compose.foundation.BorderStroke(
-                                                width = 1.dp,
-                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                            shape = SquircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            modifier = Modifier.size(56.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(14.dp)
                                             )
-                                        ) {}
-
-                                        if (uiState.userAvatarUrl != null) {
-                                            AsyncImage(
-                                                model = uiState.userAvatarUrl,
-                                                contentDescription = "Avatar",
-                                                modifier = Modifier
-                                                    .size(58.dp)
-                                                    .clip(CircleShape)
-                                                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                            )
-                                        } else {
-                                            Surface(
-                                                shape = CircleShape,
-                                                color = MaterialTheme.colorScheme.primaryContainer,
-                                                modifier = Modifier.size(58.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Person,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    modifier = Modifier.padding(12.dp)
-                                                )
-                                            }
                                         }
                                     }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            
-                            HorizontalDivider()
-
-                            // Account Actions
-                            SettingsActionItem(
-                                icon = Icons.Default.SwitchAccount,
-                                title = "Switch Account",
-                                onClick = { 
-                                    viewModel.fetchAvailableAccounts()
-                                    showAccountsSheet = true 
                                 }
-                            )
-                            
-                            SettingsActionItem(
-                                icon = Icons.AutoMirrored.Filled.Logout,
-                                title = "Sign Out",
-                                titleColor = MaterialTheme.colorScheme.error,
-                                iconColor = MaterialTheme.colorScheme.error,
-                                onClick = { showSignOutDialog = true }
-                            )
-                        } else {
-                            // Sign In Prompt
-                            ListItem(
-                                headlineContent = { Text("Sign in to YouTube Music", fontWeight = FontWeight.SemiBold) },
-                                supportingContent = { Text("Sync playlists and library") },
-                                leadingContent = {
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        
+                        HorizontalDivider()
+
+                        // Account Actions
+                        SettingsActionItem(
+                            icon = Icons.Default.SwitchAccount,
+                            title = "Switch Account",
+                            onClick = { 
+                                viewModel.fetchAvailableAccounts()
+                                showAccountsSheet = true 
+                            }
+                        )
+                        
+                        SettingsActionItem(
+                            icon = Icons.AutoMirrored.Filled.Logout,
+                            title = "Sign Out",
+                            titleColor = MaterialTheme.colorScheme.error,
+                            iconColor = MaterialTheme.colorScheme.error,
+                            onClick = { showSignOutDialog = true }
+                        )
+                    } else {
+                        // Sign In Prompt
+                        ListItem(
+                            headlineContent = { Text("Sign in to YouTube Music", fontWeight = FontWeight.SemiBold) },
+                            supportingContent = { Text("Sync playlists and library") },
+                            leadingContent = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(SquircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.Login,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
-                                },
-                                trailingContent = {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, modifier = Modifier.size(16.dp))
-                                },
-                                modifier = Modifier.clickable(onClick = onLoginClick),
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // --- Appearance Section ---
-                item {
-                    SettingsSectionTitle("Appearance")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        SettingsNavigationItem(
-                            icon = Icons.Default.DarkMode,
-                            title = "Appearance",
-                            subtitle = "Theme, dark mode, colors",
-                            onClick = onAppearanceClick
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // --- General Section ---
-                item {
-                    SettingsSectionTitle("General")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        SettingsSwitchItem(
-                            icon = Icons.Default.WifiOff,
-                            title = "Offline Mode",
-                            subtitle = "Only play downloaded songs",
-                            checked = offlineModeEnabled,
-                            onCheckedChange = { scope.launch { viewModel.setOfflineMode(it) } }
-                        )
-                        
-                        HorizontalDivider()
-
-                        SettingsSwitchItem(
-                            icon = Icons.Default.Warning, // Or Icons.Default.Security or Icons.Default.VisibilityOff
-                            title = "Privacy Mode",
-                            subtitle = "Stop history & activity sharing",
-                            checked = uiState.privacyModeEnabled,
-                            onCheckedChange = { viewModel.setPrivacyModeEnabled(it) }
-                        )
-                        
-                        HorizontalDivider()
-                        
-                        SettingsSwitchItem(
-                            icon = Icons.Default.PictureInPicture,
-                            title = "Picture-in-Picture",
-                            subtitle = "Show mini player when backgrounded",
-                            checked = floatingPlayerEnabled,
-                            onCheckedChange = { enabled ->
-                                scope.launch { viewModel.setDynamicIslandEnabled(enabled) }
-                            }
-                        )
-
-                        HorizontalDivider()
-
-                        SettingsSwitchItem(
-                            icon = Icons.Default.Warning,
-                            title = "Crash Reporting & Logging",
-                            subtitle = "Help developer fix issues by sharing logs",
-                            checked = uiState.loggingEnabled,
-                            onCheckedChange = { viewModel.setLoggingEnabled(it) }
-                        )
-                        
-                        if (uiState.loggingEnabled) {
-                            HorizontalDivider()
-                            SettingsActionItem(
-                                icon = Icons.Default.Info,
-                                title = "Share App Logs",
-                                onClick = { viewModel.sharePersistentLogs() }
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // --- Bug Reproduction Section ---
-                item {
-                    SettingsSectionTitle("Bug Reproduction")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        ListItem(
-                            headlineContent = { Text("SuvMusic Session", fontWeight = FontWeight.SemiBold) },
-                            supportingContent = { 
-                                Text(
-                                    if (uiState.isBugReportingSessionActive) "Recording logs... Reproduce the bug now" 
-                                    else "Start a session to capture logs for debugging"
-                                ) 
+                                }
                             },
-                            leadingContent = {
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, modifier = Modifier.size(14.dp))
+                            },
+                            modifier = Modifier
+                                .dpadFocusable(onClick = onLoginClick, shape = SquircleShape)
+                                .clip(SquircleShape),
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // --- Appearance Section ---
+            item {
+                SettingsSectionTitle("Appearance")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsNavigationItem(
+                        icon = Icons.Default.DarkMode,
+                        title = "Appearance",
+                        subtitle = "Theme, dark mode, colors",
+                        onClick = onAppearanceClick
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // --- General Section ---
+            item {
+                SettingsSectionTitle("General")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsSwitchItem(
+                        icon = Icons.Default.WifiOff,
+                        title = "Offline Mode",
+                        subtitle = "Only play downloaded songs",
+                        checked = offlineModeEnabled,
+                        onCheckedChange = { scope.launch { viewModel.setOfflineMode(it) } }
+                    )
+                    
+                    HorizontalDivider()
+
+                    SettingsSwitchItem(
+                        icon = Icons.Default.Warning,
+                        title = "Privacy Mode",
+                        subtitle = "Stop history & activity sharing",
+                        checked = uiState.privacyModeEnabled,
+                        onCheckedChange = { viewModel.setPrivacyModeEnabled(it) }
+                    )
+                    
+                    HorizontalDivider()
+                    
+                    SettingsSwitchItem(
+                        icon = Icons.Default.PictureInPicture,
+                        title = "Picture-in-Picture",
+                        subtitle = "Show mini player when backgrounded",
+                        checked = floatingPlayerEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch { viewModel.setDynamicIslandEnabled(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    SettingsSwitchItem(
+                        icon = Icons.Default.Warning,
+                        title = "Crash Reporting & Logging",
+                        subtitle = "Help developer fix issues by sharing logs",
+                        checked = uiState.loggingEnabled,
+                        onCheckedChange = { viewModel.setLoggingEnabled(it) }
+                    )
+                    
+                    if (uiState.loggingEnabled) {
+                        HorizontalDivider()
+                        SettingsActionItem(
+                            icon = Icons.Default.Info,
+                            title = "Share App Logs",
+                            onClick = { viewModel.sharePersistentLogs() }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // --- Bug Reproduction Section ---
+            item {
+                SettingsSectionTitle("Bug Reproduction")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    ListItem(
+                        headlineContent = { Text("SuvMusic Session", fontWeight = FontWeight.SemiBold) },
+                        supportingContent = { 
+                            Text(
+                                if (uiState.isBugReportingSessionActive) "Recording logs... Reproduce the bug now" 
+                                else "Start a session to capture logs for debugging"
+                            ) 
+                        },
+                        leadingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(SquircleShape)
+                                    .background(
+                                        if (uiState.isBugReportingSessionActive) MaterialTheme.colorScheme.errorContainer
+                                        else MaterialTheme.colorScheme.primaryContainer
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Icon(
                                     imageVector = if (uiState.isBugReportingSessionActive) Icons.Default.GraphicEq else Icons.Default.MusicNote,
                                     contentDescription = null,
                                     tint = if (uiState.isBugReportingSessionActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
-                            },
-                            trailingContent = {
-                                TextButton(
-                                    onClick = {
-                                        if (uiState.isBugReportingSessionActive) {
-                                            viewModel.stopBugReportingSession { file ->
-                                                viewModel.shareBugReport(file)
-                                            }
-                                        } else {
-                                            bugDescription = ""
-                                            showBugDescriptionDialog = true
+                            }
+                        },
+                        trailingContent = {
+                            TextButton(
+                                onClick = {
+                                    if (uiState.isBugReportingSessionActive) {
+                                        viewModel.stopBugReportingSession { file ->
+                                            viewModel.shareBugReport(file)
                                         }
-                                    },
-                                    colors = if (uiState.isBugReportingSessionActive) {
-                                        androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                                     } else {
-                                        androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                                        bugDescription = ""
+                                        showBugDescriptionDialog = true
                                     }
-                                ) {
-                                    Text(if (uiState.isBugReportingSessionActive) "Stop & Share" else "Start")
+                                },
+                                colors = if (uiState.isBugReportingSessionActive) {
+                                    androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                } else {
+                                    androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                                 }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
+                            ) {
+                                Text(if (uiState.isBugReportingSessionActive) "Stop & Share" else "Start")
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
 
-                // --- Bluetooth Section ---
-                item {
-                    SettingsSectionTitle("Bluetooth")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        SettingsSwitchItem(
-                            icon = Icons.Default.HeadsetMic,
-                            title = "Bluetooth Autoplay",
-                            subtitle = "Resume when connecting to devices",
-                            checked = uiState.bluetoothAutoplayEnabled,
-                            onCheckedChange = { scope.launch { viewModel.setBluetoothAutoplayEnabled(it) } }
-                        )
+            // --- Bluetooth Section ---
+            item {
+                SettingsSectionTitle("Bluetooth")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsSwitchItem(
+                        icon = Icons.Default.HeadsetMic,
+                        title = "Bluetooth Autoplay",
+                        subtitle = "Resume when connecting to devices",
+                        checked = uiState.bluetoothAutoplayEnabled,
+                        onCheckedChange = { scope.launch { viewModel.setBluetoothAutoplayEnabled(it) } }
+                    )
 
+                    HorizontalDivider()
+
+                    SettingsSwitchItem(
+                        icon = Icons.Default.Lyrics,
+                        title = "Announce Songs",
+                        subtitle = "Speak title when song changes (TTS)",
+                        checked = uiState.speakSongDetailsEnabled,
+                        onCheckedChange = { scope.launch { viewModel.setSpeakSongDetailsEnabled(it) } }
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // --- Player & Audio ---
+            item {
+                SettingsSectionTitle("Player & Audio")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsNavigationItem(
+                        icon = Icons.Default.GraphicEq,
+                        title = "Playback",
+                        subtitle = "Audio quality, gapless, equalizer",
+                        onClick = onPlaybackClick
+                    )
+                    
+                    HorizontalDivider()
+                    
+                    SettingsNavigationItem(
+                        icon = Icons.Default.Tune,
+                        title = "Customization",
+                        subtitle = "Player UI, artwork style",
+                        onClick = onCustomizationClick
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // --- Integrations ---
+            item {
+                SettingsSectionTitle("Integrations")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsSwitchItem(
+                        icon = Icons.Default.FastForward,
+                        title = "Enable SponsorBlock",
+                        subtitle = "Automatically skip non-music segments",
+                        checked = sponsorBlockEnabled,
+                        onCheckedChange = { scope.launch { viewModel.setSponsorBlockEnabled(it) } }
+                    )
+                    
+                    if (sponsorBlockEnabled) {
                         HorizontalDivider()
-
-                        SettingsSwitchItem(
-                            icon = Icons.Default.Lyrics,
-                            title = "Announce Songs",
-                            subtitle = "Speak title when song changes (TTS)",
-                            checked = uiState.speakSongDetailsEnabled,
-                            onCheckedChange = { scope.launch { viewModel.setSpeakSongDetailsEnabled(it) } }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // --- Player & Audio ---
-                item {
-                    SettingsSectionTitle("Player & Audio")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                         SettingsNavigationItem(
-                            icon = Icons.Default.GraphicEq,
-                            title = "Playback",
-                            subtitle = "Audio quality, gapless, equalizer",
-                            onClick = onPlaybackClick
-                        )
-                        
-                        HorizontalDivider()
-                        
-                        SettingsNavigationItem(
-                            icon = Icons.Default.Tune,
-                            title = "Customization",
-                            subtitle = "Player UI, artwork style",
-                            onClick = onCustomizationClick
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // --- Integrations ---
-                item {
-                    SettingsSectionTitle("Integrations")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        SettingsSwitchItem(
                             icon = Icons.Default.FastForward,
-                            title = "Enable SponsorBlock",
-                            subtitle = "Automatically skip non-music segments",
-                            checked = sponsorBlockEnabled,
-                            onCheckedChange = { scope.launch { viewModel.setSponsorBlockEnabled(it) } }
-                        )
-                        
-                        if (sponsorBlockEnabled) {
-                            HorizontalDivider()
-                            SettingsNavigationItem(
-                                icon = Icons.Default.FastForward,
-                                title = "SponsorBlock",
-                                subtitle = "Skip non-music segments",
-                                onClick = onSponsorBlockClick
-                            )
-                        }
-
-                        HorizontalDivider()
-
-                        // Last.fm Integration
-                        val isLastFmConnected = uiState.lastFmUsername != null
-                        SettingsNavigationItem(
-                            icon = Icons.Default.MusicNote,
-                            title = "Last.fm",
-                            subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music hits",
-                            onClick = onLastFmClick
-                        )
-
-                        HorizontalDivider()
-
-                        val isDiscordConnected = uiState.discordToken.isNotBlank()
-                        SettingsNavigationItem(
-                            icon = Icons.Default.GraphicEq,
-                            title = "Discord RPC",
-                            subtitle = if (isDiscordConnected) "Connected" else "Connect your Discord",
-                            onClick = onDiscordClick
+                            title = "SponsorBlock Settings",
+                            subtitle = "Configure segment types to skip",
+                            onClick = onSponsorBlockClick
                         )
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
+
+                    HorizontalDivider()
+
+                    // Last.fm Integration
+                    val isLastFmConnected = uiState.lastFmUsername != null
+                    SettingsNavigationItem(
+                        icon = Icons.Default.MusicNote,
+                        title = "Last.fm",
+                        subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music hits",
+                        onClick = onLastFmClick
+                    )
+
+                    HorizontalDivider()
+
+                    val isDiscordConnected = uiState.discordToken.isNotBlank()
+                    SettingsNavigationItem(
+                        icon = Icons.Default.GraphicEq,
+                        title = "Discord RPC",
+                        subtitle = if (isDiscordConnected) "Connected" else "Connect your Discord",
+                        onClick = onDiscordClick
+                    )
                 }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
-                // --- Misc Section ---
-                item {
-                    SettingsSectionTitle("Misc")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        SettingsNavigationItem(
-                            icon = Icons.Default.Tune, // Using Tune or similar generic icon
-                            title = "Misc Settings",
-                            subtitle = "Other settings",
-                            onClick = onMiscClick
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
+            // --- Misc Section ---
+            item {
+                SettingsSectionTitle("Misc")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsNavigationItem(
+                        icon = Icons.Default.Tune,
+                        title = "Misc Settings",
+                        subtitle = "Advanced & experimental features",
+                        onClick = onMiscClick
+                    )
                 }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
-                // --- Storage & Data ---
-                item {
-                    SettingsSectionTitle("Storage & Data")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        SettingsNavigationItem(
-                            icon = Icons.Default.Storage,
-                            title = "Storage Manager",
-                            subtitle = "Manage downloads & cache",
-                            onClick = onStorageClick
-                        )
-                        
-                        HorizontalDivider()
-                        
-                        SettingsNavigationItem(
-                            icon = Icons.Default.Info,
-                            title = "Listening Stats",
-                            subtitle = "Your music habits",
-                            onClick = onStatsClick
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
+            // --- Storage & Data ---
+            item {
+                SettingsSectionTitle("Storage & Data")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsNavigationItem(
+                        icon = Icons.Default.Storage,
+                        title = "Storage Manager",
+                        subtitle = "Manage downloads & cache",
+                        onClick = onStorageClick
+                    )
+                    
+                    HorizontalDivider()
+                    
+                    SettingsNavigationItem(
+                        icon = Icons.Default.Info,
+                        title = "Listening Stats",
+                        subtitle = "Your music habits",
+                        onClick = onStatsClick
+                    )
                 }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
-                // --- Support & About ---
-                item {
-                    SettingsSectionTitle("About & Support")
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        SettingsNavigationItem(
-                            icon = Icons.Default.Favorite,
-                            title = "Support Project",
-                            subtitle = "Your support keeps SuvMusic alive! 💖",
-                            onClick = onSupportClick
-                        )
-                        
-                        HorizontalDivider()
+            // --- Support & About ---
+            item {
+                SettingsSectionTitle("About & Support")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsNavigationItem(
+                        icon = Icons.Default.Favorite,
+                        title = "Support Project",
+                        subtitle = "Your support keeps SuvMusic alive! 💖",
+                        onClick = onSupportClick
+                    )
+                    
+                    HorizontalDivider()
 
-                         SettingsNavigationItem(
-                            icon = Icons.Default.Person,
-                            title = "Credits",
-                            subtitle = "Developers & Libraries",
-                            onClick = onCreditsClick
-                        )
+                     SettingsNavigationItem(
+                        icon = Icons.Default.Person,
+                        title = "Credits",
+                        subtitle = "Developers & Libraries",
+                        onClick = onCreditsClick
+                    )
 
-                        HorizontalDivider()
-                        
-                        SettingsNavigationItem(
-                            icon = Icons.Default.Album,
-                            title = "About SuvMusic",
-                            subtitle = "Version ${uiState.currentVersion}",
-                            onClick = onAboutClick
-                        )
+                    HorizontalDivider()
+                    
+                    SettingsNavigationItem(
+                        icon = Icons.Default.Album,
+                        title = "About SuvMusic",
+                        subtitle = "Version ${uiState.currentVersion}",
+                        onClick = onAboutClick
+                    )
 
-                        HorizontalDivider()
+                    HorizontalDivider()
 
-                        SettingsNavigationItem(
-                            icon = Icons.Default.SystemUpdate,
-                            title = "Update Channel",
-                            subtitle = uiState.updateChannel.label,
-                            onClick = { showUpdateChannelSheet = true }
-                        )
+                    SettingsNavigationItem(
+                        icon = Icons.Default.SystemUpdate,
+                        title = "Update Channel",
+                        subtitle = uiState.updateChannel.label,
+                        onClick = { showUpdateChannelSheet = true }
+                    )
 
-                        HorizontalDivider()
+                    HorizontalDivider()
 
-                        SettingsNavigationItem(
-                            icon = Icons.Default.SystemUpdate,
-                            title = "Check for Updates",
-                            subtitle = "Check for app updates and changelogs",
-                            onClick = onUpdaterClick
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(32.dp))
+                    SettingsNavigationItem(
+                        icon = Icons.Default.SystemUpdate,
+                        title = "Check for Updates",
+                        subtitle = "Check for app updates and changelogs",
+                        onClick = onUpdaterClick
+                    )
                 }
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -624,7 +613,8 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) { Text("Cancel") }
             },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = SquircleShape
         )
     }
 
@@ -634,12 +624,13 @@ fun SettingsScreen(
             onDismissRequest = { showAccountsSheet = false },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor = MaterialTheme.colorScheme.onSurface
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 32.dp) // Add padding for navigation bar/gesture area
+                    .padding(bottom = 32.dp)
             ) {
                 Text(
                     text = "Switch Account",
@@ -674,22 +665,25 @@ fun SettingsScreen(
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(40.dp)
-                                        .clip(CircleShape)
+                                        .clip(SquircleShape)
                                         .border(
-                                            if (isCurrent) 2.dp else 0.dp, 
+                                            if (isCurrent) 1.5.dp else 0.dp, 
                                             MaterialTheme.colorScheme.primary, 
-                                            CircleShape
+                                            SquircleShape
                                         )
                                 )
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    viewModel.switchAccount(account)
-                                    scope.launch { sheetState.hide() }.invokeOnCompletion { 
-                                        showAccountsSheet = false 
-                                    }
-                                }
+                                .dpadFocusable(
+                                    onClick = {
+                                        viewModel.switchAccount(account)
+                                        scope.launch { sheetState.hide() }.invokeOnCompletion { 
+                                            showAccountsSheet = false 
+                                        }
+                                    },
+                                    shape = SquircleShape
+                                )
                                 .padding(horizontal = 8.dp),
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
@@ -705,8 +699,6 @@ fun SettingsScreen(
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                     )
                     uiState.storedAccounts.forEach { account ->
-                        // Skip if it is the current one to avoid duplication if we want, 
-                        // but stored accounts are history, so maybe keep them.
                         val isCurrent = account.email == (uiState.storedAccounts.firstOrNull { it.email == "current" }?.email ?: "")
                         
                         ListItem(
@@ -723,11 +715,11 @@ fun SettingsScreen(
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(40.dp)
-                                        .clip(CircleShape)
+                                        .clip(SquircleShape)
                                         .border(
-                                            if (isCurrent) 2.dp else 0.dp, 
+                                            if (isCurrent) 1.5.dp else 0.dp, 
                                             MaterialTheme.colorScheme.primary, 
-                                            CircleShape
+                                            SquircleShape
                                         )
                                 )
                             },
@@ -743,14 +735,16 @@ fun SettingsScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    viewModel.switchAccount(account)
-                                    // Scope needed to hide sheet properly
-                                    scope.launch { sheetState.hide() }.invokeOnCompletion { 
-                                        showAccountsSheet = false 
-                                    }
-                                }
-                                .padding(horizontal = 8.dp), // Inner padding
+                                .dpadFocusable(
+                                    onClick = {
+                                        viewModel.switchAccount(account)
+                                        scope.launch { sheetState.hide() }.invokeOnCompletion { 
+                                            showAccountsSheet = false 
+                                        }
+                                    },
+                                    shape = SquircleShape
+                                )
+                                .padding(horizontal = 8.dp),
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
                     }
@@ -763,7 +757,7 @@ fun SettingsScreen(
                     headlineContent = { Text("Add another account", fontWeight = FontWeight.Medium) },
                     leadingContent = {
                         Surface(
-                            shape = CircleShape,
+                            shape = SquircleShape,
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             modifier = Modifier.size(40.dp)
                         ) {
@@ -777,15 +771,16 @@ fun SettingsScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            // Fix: Don't logout immediately! Only clear WebView cookies.
-                            viewModel.clearWebViewCookies()
-                            
-                            scope.launch { sheetState.hide() }.invokeOnCompletion { 
-                                showAccountsSheet = false 
-                                onLoginClick()
-                            }
-                        }
+                        .dpadFocusable(
+                            onClick = {
+                                viewModel.clearWebViewCookies()
+                                scope.launch { sheetState.hide() }.invokeOnCompletion { 
+                                    showAccountsSheet = false 
+                                    onLoginClick()
+                                }
+                            },
+                            shape = SquircleShape
+                        )
                         .padding(horizontal = 8.dp),
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
@@ -811,7 +806,7 @@ fun SettingsScreen(
                         placeholder = { Text("e.g. App crashes when I skip songs...") },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 5,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = SquircleShape
                     )
                 }
             },
@@ -830,7 +825,8 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = SquircleShape
         )
     }
 
@@ -839,7 +835,8 @@ fun SettingsScreen(
         ModalBottomSheet(
             onDismissRequest = { showUpdateChannelSheet = false },
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor = MaterialTheme.colorScheme.onSurface
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -866,10 +863,13 @@ fun SettingsScreen(
                                 }
                             )
                         },
-                        modifier = Modifier.clickable { 
-                            viewModel.setUpdateChannel(channel)
-                            showUpdateChannelSheet = false
-                        },
+                        modifier = Modifier.dpadFocusable(
+                            onClick = { 
+                                viewModel.setUpdateChannel(channel)
+                                showUpdateChannelSheet = false
+                            },
+                            shape = SquircleShape
+                        ),
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
@@ -892,20 +892,20 @@ private fun SettingsSectionTitle(title: String) {
 }
 
 @Composable
-private fun GlassmorphicCard(
+private fun SettingsCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+        shape = SquircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         ),
-        tonalElevation = 0.dp
+        tonalElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(vertical = 8.dp)
@@ -917,7 +917,7 @@ private fun GlassmorphicCard(
 
 @Composable
 private fun HorizontalDivider() {
-    androidx.compose.material3.HorizontalDivider(
+    M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
     )
@@ -934,17 +934,32 @@ private fun SettingsNavigationItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
         supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
         leadingContent = {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         trailingContent = {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(12.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         },
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
+            .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
@@ -960,9 +975,24 @@ private fun SettingsActionItem(
     ListItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Medium, color = titleColor) },
         leadingContent = {
-            Icon(imageVector = icon, contentDescription = null, tint = iconColor)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = if (titleColor == MaterialTheme.colorScheme.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
+            .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
@@ -980,7 +1010,22 @@ private fun SettingsSwitchItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
         supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
         leadingContent = icon?.let {
-            { Icon(imageVector = it, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+            { 
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(SquircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = it, 
+                        contentDescription = null, 
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         },
         trailingContent = {
             Switch(
@@ -992,7 +1037,9 @@ private fun SettingsSwitchItem(
                 )
             )
         },
-        modifier = modifier.clickable { onCheckedChange(!checked) },
+        modifier = modifier
+            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
+            .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
