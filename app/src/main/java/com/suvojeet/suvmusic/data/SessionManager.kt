@@ -148,6 +148,7 @@ class SessionManager @Inject constructor(
         private val VOLUME_BOOST_ENABLED_KEY = booleanPreferencesKey("volume_boost_enabled")
         private val VOLUME_BOOST_AMOUNT_KEY = intPreferencesKey("volume_boost_amount")
         private val SPONSOR_BLOCK_ENABLED_KEY = booleanPreferencesKey("sponsor_block_enabled")
+        private val HISTORY_SYNC_MIGRATED_KEY = booleanPreferencesKey("history_sync_migrated")
         private val SPONSOR_BLOCK_CATEGORIES_KEY = stringSetPreferencesKey("sponsor_block_categories_v2")
 
         private val AUTH_USER_INDEX_KEY = intPreferencesKey("auth_user_index")
@@ -902,11 +903,13 @@ class SessionManager @Inject constructor(
     
     // --- History Sync ---
 
-    suspend fun isYouTubeHistorySyncEnabled(): Boolean = 
-        context.dataStore.data.first()[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] ?: false
+    suspend fun isYouTubeHistorySyncEnabled(): Boolean {
+        val prefs = context.dataStore.data.first()
+        return prefs[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] ?: isLoggedIn()
+    }
 
     val youtubeHistorySyncEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] ?: false
+        preferences[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] ?: isLoggedIn()
     }
 
     suspend fun setYouTubeHistorySyncEnabled(enabled: Boolean) {
@@ -1328,13 +1331,22 @@ class SessionManager @Inject constructor(
     init {
         migrationScope.launch {
             // Warm up encrypted prefs on background thread
-            val prefs = encryptedPrefs 
+            val prefs = encryptedPrefs
             migrateSensitiveData()
+
+            // Auto-enable history sync if logged in (one-time migration or first login)
+            if (isLoggedIn()) {
+                val currentPrefs = context.dataStore.data.first()
+                if (currentPrefs[HISTORY_SYNC_MIGRATED_KEY] != true) {
+                    setYouTubeHistorySyncEnabled(true)
+                    context.dataStore.edit { it[HISTORY_SYNC_MIGRATED_KEY] = true }
+                }
+            }
+
             // Initial login check on background thread
             _isLoggedInFlow.value = isLoggedIn()
         }
     }
-
     private suspend fun migrateSensitiveData() {
         val dataStore = context.dataStore.data.first()
         val edit = encryptedPrefs.edit()
@@ -1377,6 +1389,10 @@ class SessionManager @Inject constructor(
         }
         context.dataStore.edit { it.remove(COOKIES_KEY) }
         _isLoggedInFlow.value = true
+        
+        // Enable history sync by default on login
+        setYouTubeHistorySyncEnabled(true)
+        context.dataStore.edit { it[HISTORY_SYNC_MIGRATED_KEY] = true }
     }
     
     suspend fun clearCookies() {
