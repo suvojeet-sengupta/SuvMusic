@@ -35,6 +35,9 @@ data class LibraryUiState(
     val likedSongsCount: Int = 0,
     val libraryArtists: List<Artist> = emptyList(),
     val libraryAlbums: List<Album> = emptyList(),
+    val localArtists: List<Artist> = emptyList(),
+    val localAlbums: List<Album> = emptyList(),
+    val localFolders: Map<String, List<Song>> = emptyMap(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val importState: ImportState = ImportState.Idle,
@@ -60,7 +63,8 @@ enum class LibraryFilter(val title: String) {
     PLAYLISTS("Playlists"),
     SONGS("Songs"),
     ALBUMS("Albums"),
-    ARTISTS("Artists")
+    ARTISTS("Artists"),
+    FOLDERS("Folders")
 }
 
 sealed class ImportState {
@@ -194,7 +198,16 @@ class LibraryViewModel @Inject constructor(
             try {
                 // Load local audio
                 val local = localAudioRepository.getAllLocalSongs()
-                _uiState.update { it.copy(localSongs = local) }
+                val localAlbums = localAudioRepository.getAllLocalAlbums()
+                val localArtists = localAudioRepository.getAllLocalArtists()
+                val localFolders = local.groupBy { it.customFolderPath ?: "Root" }
+                
+                _uiState.update { it.copy(
+                    localSongs = local,
+                    localAlbums = localAlbums,
+                    localArtists = localArtists,
+                    localFolders = localFolders
+                ) }
 
                 // Liked songs are now observed via Flow, no need to fetch here manually
                 // But if it's the first run and empty, we might want to trigger a sync
