@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -41,7 +42,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -49,6 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.util.dpadFocusable
+import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,24 +65,22 @@ fun MiscScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Background Gradient
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.surface,
-            MaterialTheme.colorScheme.surfaceContainer,
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    )
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.statusBars,
         topBar = {
             TopAppBar(
                 title = { Text("Misc", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    Box(
+                        modifier = Modifier
+                            .dpadFocusable(
+                                onClick = onBack,
+                                shape = CircleShape,
+                            )
+                            .padding(8.dp)
+                    ) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -87,73 +91,84 @@ fun MiscScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundBrush)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp)
-            ) {
-                item {
-                    GlassmorphicCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        MiscSwitchItem(
-                            icon = Icons.Default.Notes,
-                            title = "Stop music on task clear",
-                            checked = uiState.stopMusicOnTaskClear,
-                            onCheckedChange = { viewModel.setStopMusicOnTaskClear(it) }
-                        )
+            item {
+                SettingsSectionTitle("Advanced & Experimental")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    MiscSwitchItem(
+                        icon = Icons.Default.Notes,
+                        title = "Stop music on task clear",
+                        subtitle = "Kills the playback service when app is swiped away",
+                        checked = uiState.stopMusicOnTaskClear,
+                        onCheckedChange = { viewModel.setStopMusicOnTaskClear(it) }
+                    )
 
-                        HorizontalDivider()
+                    HorizontalDivider()
 
-                        MiscSwitchItem(
-                            icon = Icons.Default.VolumeOff,
-                            title = "Pause music when media is muted",
-                            checked = uiState.pauseMusicOnMediaMuted,
-                            onCheckedChange = { viewModel.setPauseMusicOnMediaMuted(it) }
-                        )
-                        
-                        HorizontalDivider()
+                    MiscSwitchItem(
+                        icon = Icons.Default.VolumeOff,
+                        title = "Pause music when media is muted",
+                        subtitle = "Pauses playback if volume becomes zero",
+                        checked = uiState.pauseMusicOnMediaMuted,
+                        onCheckedChange = { viewModel.setPauseMusicOnMediaMuted(it) }
+                    )
+                    
+                    HorizontalDivider()
 
-                        MiscSwitchItem(
-                            icon = Icons.Default.Smartphone,
-                            title = "Keep screen on when player is expanded",
-                            checked = uiState.keepScreenOn,
-                            onCheckedChange = { viewModel.setKeepScreenOn(it) }
-                        )
-                        
-                        HorizontalDivider()
-                        
-                        MiscNavigationItem(
-                            icon = Icons.Default.Lyrics,
-                            title = "Lyrics Providers",
-                            onClick = onLyricsProvidersClick
-                        )
-                    }
+                    MiscSwitchItem(
+                        icon = Icons.Default.Smartphone,
+                        title = "Keep screen on when player is expanded",
+                        subtitle = "Prevents device from sleeping while viewing player",
+                        checked = uiState.keepScreenOn,
+                        onCheckedChange = { viewModel.setKeepScreenOn(it) }
+                    )
+                    
+                    HorizontalDivider()
+                    
+                    MiscNavigationItem(
+                        icon = Icons.Default.Lyrics,
+                        title = "Lyrics Providers",
+                        subtitle = "Configure where to fetch lyrics from",
+                        onClick = onLyricsProvidersClick
+                    )
                 }
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
 @Composable
-private fun GlassmorphicCard(
+private fun SettingsSectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun SettingsCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+        shape = SquircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         ),
-        tonalElevation = 0.dp
+        tonalElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(vertical = 8.dp)
@@ -165,7 +180,7 @@ private fun GlassmorphicCard(
 
 @Composable
 private fun HorizontalDivider() {
-    androidx.compose.material3.HorizontalDivider(
+    M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
     )
@@ -175,13 +190,28 @@ private fun HorizontalDivider() {
 private fun MiscSwitchItem(
     icon: ImageVector,
     title: String,
+    subtitle: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
     ListItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+        supportingContent = subtitle?.let { { Text(it) } },
         leadingContent = {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         trailingContent = {
             Switch(
@@ -193,7 +223,9 @@ private fun MiscSwitchItem(
                 )
             )
         },
-        modifier = Modifier.clickable { onCheckedChange(!checked) },
+        modifier = Modifier
+            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
+            .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
@@ -202,22 +234,39 @@ private fun MiscSwitchItem(
 private fun MiscNavigationItem(
     icon: ImageVector,
     title: String,
+    subtitle: String? = null,
     onClick: () -> Unit
 ) {
     ListItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+        supportingContent = subtitle?.let { { Text(it) } },
         leadingContent = {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         trailingContent = {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(12.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         },
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
+            .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
