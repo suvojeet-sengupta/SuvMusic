@@ -525,11 +525,10 @@ fun ImmersiveArtistHeader(
                      modifier = Modifier.height(48.dp).dpadFocusable(onClick = onSubscribe, shape = SquircleShape)
                  ) {
                      if (isSubscribing) {
-                         CircularProgressIndicator(
-                             modifier = Modifier.size(16.dp),
-                             color = LocalContentColor.current,
-                             strokeWidth = 2.dp
-                         )
+                         LoadingIndicator(
+                         modifier = Modifier.size(16.dp),
+                         color = LocalContentColor.current
+                     )
                      } else {
                          Text(
                              text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),

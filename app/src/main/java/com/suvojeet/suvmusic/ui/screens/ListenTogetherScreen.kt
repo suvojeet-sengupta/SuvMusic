@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -331,10 +332,9 @@ fun ConnectToServerContent(
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
                     if (connectionState == ConnectionState.CONNECTING) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.size(24.dp), 
-                            color = MaterialTheme.colorScheme.onPrimary, 
-                            strokeWidth = 2.5.dp
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
                         Text(

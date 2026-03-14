@@ -1,12 +1,14 @@
 package com.suvojeet.suvmusic.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
  * Material 3 Expressive shapes.
- * Embraces tension by mixing corner types.
+ * Combines standard Material shapes with custom music-focused variants.
  */
 val Shapes = Shapes(
     // Extra Small - for small chips, elements
@@ -25,7 +27,7 @@ val Shapes = Shapes(
     extraLarge = RoundedCornerShape(32.dp)
 )
 
-// Custom expressive shapes
+// Custom shapes used throughout the app
 val MusicCardShape = RoundedCornerShape(20.dp)
 val PlayerCardShape = RoundedCornerShape(
     topStart = 32.dp,
@@ -52,3 +54,20 @@ val NewReleaseCardShape = RoundedCornerShape(
     topEnd = 12.dp,
     bottomEnd = 12.dp
 )
+
+/**
+ * M3E Expressive shapes — morph-ready shapes from Material's shape library.
+ * Use these for elements that benefit from organic, expressive forms:
+ *   - Album art → Cookie9Sided gives a playful, distinctive look
+ *   - FABs → Clover4Leaf morphs beautifully on press
+ *   - Mini player indicator → Arch for a flowing, musical feel
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+object ExpressiveShapes {
+    val AlbumArt = MaterialShapes.Cookie9Sided
+    val Fab = MaterialShapes.Clover4Leaf
+    val MiniPlayer = MaterialShapes.Arch
+    val NowPlaying = MaterialShapes.Cookie6Sided
+    val ActionChip = MaterialShapes.Pill
+    val GenreCard = MaterialShapes.Fan
+}
