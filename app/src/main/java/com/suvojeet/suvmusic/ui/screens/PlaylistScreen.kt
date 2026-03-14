@@ -789,7 +789,7 @@ private fun SongListItem(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(SquircleShape)
                 .background(Color(0xFF2A2A2A))
         ) {
             if (song.thumbnailUrl != null) {
