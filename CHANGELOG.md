@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.1.0.0] - 2026-03-14
+
+### Added
+- **Material 3 Expressive Redesign**: Massive UI overhaul across the entire app with unified expressive components.
+- **Expressive Shapes**: Switched to modern `Squircle` shapes (28.dp) for all artwork, thumbnails, and action buttons.
+- **Redesigned Core Screens**: Completely refreshed Settings, Album, Playlist, Artist, and Search screens for a more premium look and feel.
+- **Enhanced Updater**: New M3E-styled Updater screen and dialog with custom pulse loading indicators.
+- **Listen Together 3.0**: Redesigned sync screen with better visual feedback and expressive controls.
+
+### Changed
+- **Unified Icons**: Standardized setting items with icons enclosed in expressive squircle boxes.
+- **Improved Hierarchy**: Standardized section titles and spacing across all configuration interfaces.
+
+### Fixed
+- **Robust Backup Restore**: Resolved critical Swift Backup restoration crashes by robustly handling encrypted preference corruption after OS re-installs.
+- **Login Optimization**: Automatically enables 'Sync with YouTube History' for logged-in users to ensure a seamless experience from the first run.
+
+### Performance
+- **TV & D-pad Optimization**: Integrated `dpadFocusable` across all major UI elements for buttery-smooth remote navigation.
+
 ## [2.0.2.0] - 2026-03-10
 
 ### Added

@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.1.0.0",
+      "versionCode": 18,
+      "date": "March 14, 2026",
+      "description": "• Material 3 Expressive Redesign: Massive UI overhaul with unified expressive components and squircle shapes.\n• Visual Consistency: Switched all artwork, thumbnails, and action buttons to modern Squircle shapes.\n• Redesigned Core Screens: Completely refreshed Settings, Album, Playlist, Artist, and Search screens.\n• Robust Backup Restore: Fixed crashes after Swift Backup restoration by handling corrupted encryption keys.\n• Seamless History Sync: Automatically enables 'Sync with YouTube History' for logged-in users.\n• TV Optimization: Integrated dpadFocusable across all major interactive elements for better remote navigation.",
+      "isMajorUpdate": true
+    },
+    {
       "versionName": "2.0.2.0",
       "versionCode": 17,
       "date": "March 10, 2026",
