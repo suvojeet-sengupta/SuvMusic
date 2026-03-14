@@ -65,6 +65,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ResultFilter
 import com.suvojeet.suvmusic.ui.viewmodel.SearchTab
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -217,7 +218,8 @@ fun SearchScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         colors = SearchBarDefaults.colors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        )
+                        ),
+                        shape = SquircleShape
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth(),
@@ -453,7 +455,7 @@ fun SearchScreen(
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
                             Text("Trending Searches", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
                             uiState.trendingSearches.forEach { term ->
-                                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.onTrendingSearchClick(term) }.padding(vertical = 12.dp, horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(modifier = Modifier.fillMaxWidth().clip(SquircleShape).clickable { viewModel.onTrendingSearchClick(term) }.padding(vertical = 12.dp, horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Text(term, style = MaterialTheme.typography.bodyLarge)
@@ -505,11 +507,11 @@ private fun SuggestionItem(suggestion: String, accentColor: Color, onClick: () -
 
 @Composable
 private fun SearchResultItem(song: Song, onClick: () -> Unit, onArtistClick: (String) -> Unit = {}, onMoreClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(model = song.thumbnailUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
+    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick, shape = SquircleShape).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        AsyncImage(model = song.thumbnailUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(SquircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (song.isVideo) "Video" else "Song", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(" • ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -522,11 +524,11 @@ private fun SearchResultItem(song: Song, onClick: () -> Unit, onArtistClick: (St
 
 @Composable
 fun ArtistSearchListItem(artist: Artist, onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick, shape = SquircleShape).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         AsyncImage(model = artist.thumbnailUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(artist.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(artist.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
             artist.subscribers?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
@@ -534,11 +536,11 @@ fun ArtistSearchListItem(artist: Artist, onClick: () -> Unit) {
 
 @Composable
 fun AlbumSearchListItem(album: Album, onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(model = album.thumbnailUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
+    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick, shape = SquircleShape).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        AsyncImage(model = album.thumbnailUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(SquircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(album.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(album.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
             Text("Album • ${album.artist}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -546,11 +548,11 @@ fun AlbumSearchListItem(album: Album, onClick: () -> Unit) {
 
 @Composable
 fun PlaylistSearchListItem(playlist: Playlist, onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(model = playlist.thumbnailUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
+    Row(modifier = Modifier.fillMaxWidth().dpadFocusable(onClick = onClick, shape = SquircleShape).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        AsyncImage(model = playlist.thumbnailUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(SquircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(playlist.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(playlist.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
             Text("Playlist • ${playlist.author}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -558,30 +560,30 @@ fun PlaylistSearchListItem(playlist: Playlist, onClick: () -> Unit) {
 
 @Composable
 private fun ArtistSearchCard(artist: Artist, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(100.dp).dpadFocusable(onClick = onClick, shape = RoundedCornerShape(8.dp))) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(100.dp).dpadFocusable(onClick = onClick, shape = SquircleShape)) {
         AsyncImage(model = artist.thumbnailUrl, contentDescription = artist.name, modifier = Modifier.size(80.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(artist.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(artist.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(artist.subscribers ?: "Artist", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
 }
 
 @Composable
 private fun PlaylistSearchCard(playlist: Playlist, onClick: () -> Unit) {
-    Column(modifier = Modifier.width(140.dp).dpadFocusable(onClick = onClick, shape = RoundedCornerShape(8.dp))) {
-        AsyncImage(model = playlist.thumbnailUrl, contentDescription = playlist.title, modifier = Modifier.size(140.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
+    Column(modifier = Modifier.width(140.dp).dpadFocusable(onClick = onClick, shape = SquircleShape)) {
+        AsyncImage(model = playlist.thumbnailUrl, contentDescription = playlist.title, modifier = Modifier.size(140.dp).clip(SquircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(playlist.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(playlist.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (playlist.author.isNotBlank()) Text(playlist.author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @Composable
 private fun AlbumSearchCard(album: Album, onClick: () -> Unit) {
-    Column(modifier = Modifier.width(140.dp).dpadFocusable(onClick = onClick, shape = RoundedCornerShape(8.dp))) {
-        AsyncImage(model = album.thumbnailUrl, contentDescription = album.title, modifier = Modifier.size(140.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
+    Column(modifier = Modifier.width(140.dp).dpadFocusable(onClick = onClick, shape = SquircleShape)) {
+        AsyncImage(model = album.thumbnailUrl, contentDescription = album.title, modifier = Modifier.size(140.dp).clip(SquircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(album.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(album.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         val subtitle = (if (album.artist.isNotBlank()) album.artist else "") + (if (album.year != null) " • ${album.year}" else "")
         if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }

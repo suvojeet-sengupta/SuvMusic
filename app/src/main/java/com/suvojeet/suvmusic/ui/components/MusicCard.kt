@@ -40,21 +40,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.ui.theme.AlbumArtShape
-import com.suvojeet.suvmusic.ui.theme.GlassPurple
-import com.suvojeet.suvmusic.ui.theme.MusicCardShape
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
-import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import com.suvojeet.suvmusic.util.ImageUtils
+import com.suvojeet.suvmusic.util.dpadFocusable
 
 /**
- * Beautiful music card with glassmorphism effect.
- * Used for displaying songs in lists and grids.
+ * Beautiful music card with Material 3 Expressive design.
  */
 @Composable
 fun MusicCard(
@@ -67,18 +64,10 @@ fun MusicCard(
     textColor: Color? = null,
     subTextColor: Color? = null
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
     val context = LocalContext.current
     
-    val elevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 8.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh),
-        label = "elevation"
-    )
-    
     val defaultBackgroundColor = if (isPlaying) 
-        MaterialTheme.colorScheme.primaryContainer 
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
     else 
         MaterialTheme.colorScheme.surfaceContainerHigh
 
@@ -87,13 +76,12 @@ fun MusicCard(
     val highResThumbnail = remember(song.thumbnailUrl) {
         val url = song.thumbnailUrl ?: return@remember null
         
-        // Handle local file paths (for downloaded songs)
+        // Handle local file paths
         if (url.startsWith("/") || url.startsWith("file://")) {
             val path = url.removePrefix("file://")
             val file = java.io.File(path)
             if (file.exists()) file else null
         } else {
-            // Use high quality as requested
             ImageUtils.getHighResThumbnailUrl(url, size = 544)
         }
     }
@@ -101,15 +89,10 @@ fun MusicCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(if (backgroundColor == Color.Transparent) 0.dp else elevation, MusicCardShape)
-            .clip(MusicCardShape)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            ),
+            .dpadFocusable(onClick = onClick, shape = SquircleShape),
         color = cardBackgroundColor,
-        shape = MusicCardShape
+        shape = SquircleShape,
+        tonalElevation = if (isPlaying) 4.dp else 1.dp
     ) {
         Row(
             modifier = Modifier
@@ -118,8 +101,6 @@ fun MusicCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Album Art
-
-
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -132,7 +113,7 @@ fun MusicCard(
                         model = ImageRequest.Builder(context)
                             .data(highResThumbnail)
                             .crossfade(true)
-                            .size(128) // 2x for high DPI (64 * 2)
+                            .size(128)
                             .build(),
                         contentDescription = song.title,
                         modifier = Modifier.size(64.dp),
@@ -148,23 +129,16 @@ fun MusicCard(
                 }
                 
                 // Playing indicator overlay
-                if (isPlaying) { // In MusicCard, isPlaying means it IS the current song and we want to show indicator
+                if (isPlaying) {
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        GlassPurple.copy(alpha = 0.8f),
-                                        Color.Transparent
-                                    )
-                                )
-                            ),
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.3f)),
                         contentAlignment = Alignment.Center
                     ) {
                         NowPlayingAnimation(
                             color = Color.White,
-                            isPlaying = true, // For now keeping it true if isPlaying is true
+                            isPlaying = true,
                             barCount = 3,
                             barWidth = 3.dp,
                             maxBarHeight = 20.dp,
@@ -172,17 +146,16 @@ fun MusicCard(
                         )
                     }
                 } else if (song.isMembersOnly) {
-                    // Members Only Badge
                      Box(
                         modifier = Modifier
-                            .size(64.dp)
-                            .background(Color.Black.copy(alpha = 0.5f)),
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f)),
                         contentAlignment = Alignment.BottomEnd
                     ) {
                         Icon(
                              imageVector = Icons.Default.Lock,
                              contentDescription = "Members Only",
-                             modifier = Modifier.size(18.dp).padding(2.dp),
+                             modifier = Modifier.size(18.dp).padding(4.dp),
                              tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -199,14 +172,12 @@ fun MusicCard(
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = textColor ?: (if (isPlaying) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurface),
+                    fontWeight = FontWeight.Bold,
+                    color = textColor ?: MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = song.artist,
                     style = MaterialTheme.typography.bodyMedium,
@@ -229,7 +200,7 @@ fun MusicCard(
 }
 
 /**
- * Compact music card for horizontal lists.
+ * Compact music card for horizontal lists - M3E.
  */
 @Composable
 fun CompactMusicCard(
@@ -241,13 +212,11 @@ fun CompactMusicCard(
     val highResThumbnail = remember(song.thumbnailUrl) {
         val url = song.thumbnailUrl ?: return@remember null
         
-        // Handle local file paths (for downloaded songs)
         if (url.startsWith("/") || url.startsWith("file://")) {
             val path = url.removePrefix("file://")
             val file = java.io.File(path)
             if (file.exists()) file else null
         } else {
-            // Use high quality as requested
             ImageUtils.getHighResThumbnailUrl(url, size = 544)
         }
     }
@@ -255,18 +224,17 @@ fun CompactMusicCard(
     Surface(
         modifier = modifier
             .width(140.dp)
-            .clickable(onClick = onClick),
+            .dpadFocusable(onClick = onClick, shape = SquircleShape),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MusicCardShape
+        shape = SquircleShape,
+        tonalElevation = 1.dp
     ) {
         Column {
             // Album Art
-
-
             Box(
                 modifier = Modifier
                     .size(140.dp)
-                    .clip(MusicCardShape)
+                    .clip(SquircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
@@ -275,7 +243,7 @@ fun CompactMusicCard(
                         model = ImageRequest.Builder(context)
                             .data(highResThumbnail)
                             .crossfade(true)
-                            .size(280) // 2x for high DPI
+                            .size(280)
                             .build(),
                         contentDescription = song.title,
                         modifier = Modifier.size(140.dp),
@@ -298,6 +266,7 @@ fun CompactMusicCard(
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
