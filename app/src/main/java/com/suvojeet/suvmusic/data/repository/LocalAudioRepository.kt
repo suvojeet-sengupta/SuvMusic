@@ -151,10 +151,10 @@ class LocalAudioRepository @Inject constructor(
                     com.suvojeet.suvmusic.core.model.Album(
                         id = id.toString(),
                         title = albumTitle,
-                        author = artistName,
+                        artist = artistName,
                         thumbnailUrl = albumArtUri.toString(),
-                        year = null, // Can be added if model supports it
-                        songs = emptyList() // Loaded on demand
+                        year = null,
+                        songs = emptyList()
                     )
                 )
             }
@@ -180,7 +180,6 @@ class LocalAudioRepository @Inject constructor(
         )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists._ID)
             val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.ARTIST)
-            val tracksColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.NUMBER_OF_TRACKS)
             
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
@@ -190,8 +189,8 @@ class LocalAudioRepository @Inject constructor(
                     com.suvojeet.suvmusic.core.model.Artist(
                         id = id.toString(),
                         name = artistName,
-                        thumbnailUrl = null, // MediaStore doesn't provide artist photos easily
-                        browseId = id.toString()
+                        thumbnailUrl = null,
+                        channelId = id.toString()
                     )
                 )
             }
@@ -220,7 +219,6 @@ class LocalAudioRepository @Inject constructor(
             selectionArgs,
             "${MediaStore.Audio.Media.TRACK} ASC"
         )?.use { cursor ->
-            // ... (similar cursor processing as getAllLocalSongs)
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
@@ -258,7 +256,14 @@ class LocalAudioRepository @Inject constructor(
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val albumArtUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), id)
-                albums.add(com.suvojeet.suvmusic.core.model.Album(id.toString(), cursor.getString(albumColumn) ?: "Unknown", cursor.getString(artistColumn) ?: "Unknown", albumArtUri.toString(), null, emptyList()))
+                albums.add(com.suvojeet.suvmusic.core.model.Album(
+                    id = id.toString(),
+                    title = cursor.getString(albumColumn) ?: "Unknown",
+                    artist = cursor.getString(artistColumn) ?: "Unknown",
+                    thumbnailUrl = albumArtUri.toString(),
+                    year = null,
+                    songs = emptyList()
+                ))
             }
         }
         albums
@@ -314,7 +319,14 @@ class LocalAudioRepository @Inject constructor(
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val albumArtUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), id)
-                albums.add(com.suvojeet.suvmusic.core.model.Album(id.toString(), cursor.getString(albumColumn) ?: "Unknown", cursor.getString(artistColumn) ?: "Unknown", albumArtUri.toString(), null, emptyList()))
+                albums.add(com.suvojeet.suvmusic.core.model.Album(
+                    id = id.toString(),
+                    title = cursor.getString(albumColumn) ?: "Unknown",
+                    artist = cursor.getString(artistColumn) ?: "Unknown",
+                    thumbnailUrl = albumArtUri.toString(),
+                    year = null,
+                    songs = emptyList()
+                ))
             }
         }
         albums
@@ -335,7 +347,12 @@ class LocalAudioRepository @Inject constructor(
             val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.ARTIST)
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
-                artists.add(com.suvojeet.suvmusic.core.model.Artist(id.toString(), cursor.getString(artistColumn) ?: "Unknown", null, id.toString()))
+                artists.add(com.suvojeet.suvmusic.core.model.Artist(
+                    id = id.toString(),
+                    name = cursor.getString(artistColumn) ?: "Unknown",
+                    thumbnailUrl = null,
+                    channelId = id.toString()
+                ))
             }
         }
         artists
