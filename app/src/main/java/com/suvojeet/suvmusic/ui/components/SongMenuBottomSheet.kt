@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddToQueue
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
@@ -57,6 +58,7 @@ fun SongMenuBottomSheet(
     onAddToPlaylist: () -> Unit,
     onDownload: () -> Unit,
     onShare: () -> Unit,
+    onRemoveFromPlaylist: (() -> Unit)? = null,
     onViewArtist: (() -> Unit)? = null,
     onViewAlbum: (() -> Unit)? = null,
     onListenTogether: () -> Unit = {},
@@ -207,6 +209,14 @@ fun SongMenuBottomSheet(
                     subtitle = "Sync music with others in real-time",
                     onClick = { onListenTogether(); onDismiss() }
                 )
+                
+                if (onRemoveFromPlaylist != null) {
+                    MenuActionItem(
+                        icon = Icons.Default.Delete,
+                        title = "Remove from playlist",
+                        onClick = { onRemoveFromPlaylist(); onDismiss() }
+                    )
+                }
                 
                 if (onViewArtist != null) {
                     MenuActionItem(
