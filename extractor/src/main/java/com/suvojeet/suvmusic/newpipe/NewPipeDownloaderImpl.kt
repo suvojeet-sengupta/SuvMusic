@@ -48,12 +48,22 @@ class NewPipeDownloaderImpl(
             }
         }
 
-        // Add default user agent if not present
+        // Improved Header Handling:
+        // Use a more modern and consistent User-Agent.
+        // Some YouTube endpoints are very sensitive to User-Agent/Client mismatches.
         if (!headers.containsKey("User-Agent")) {
-            requestBuilder.addHeader(
-                "User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
+            val isAndroidClient = url.contains("android") || url.contains("googlevideo.com")
+            val userAgent = if (isAndroidClient) {
+                "com.google.android.youtube/19.05.36 (Linux; U; Android 14; en_US) gzip"
+            } else {
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            }
+            requestBuilder.addHeader("User-Agent", userAgent)
+        }
+        
+        // Add common headers to look more like a real browser/app
+        if (!headers.containsKey("Accept-Language")) {
+            requestBuilder.addHeader("Accept-Language", "en-US,en;q=0.9")
         }
 
         try {

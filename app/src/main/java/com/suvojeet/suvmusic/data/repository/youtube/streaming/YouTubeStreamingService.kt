@@ -67,19 +67,41 @@ class YouTubeStreamingService @Inject constructor(
             }
         }
         
-        retryWithBackoff {
+        // Try primary URL
+        val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId)
+        if (primaryResult != null) return@withContext primaryResult
+        
+        // Try music fallback
+        android.util.Log.d("YouTubeStreaming", "Primary resolution failed for $videoId, trying music fallback")
+        resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId)
+    }
+
+    private suspend fun resolveStreamWithUrl(streamUrl: String, videoId: String): String? {
+        val cacheKey = "audio_$videoId"
+        return retryWithBackoff {
             val startTime = System.currentTimeMillis()
             val audioQuality = sessionManager.getAudioQuality()
-            android.util.Log.d("YouTubeStreaming", "Fetching audio stream for $videoId. Target Quality: $audioQuality")
+            android.util.Log.d("YouTubeStreaming", "Fetching audio stream for $videoId via $streamUrl. Target Quality: $audioQuality")
 
-            val streamUrl = "https://www.youtube.com/watch?v=$videoId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: throw IllegalStateException("YouTube service not found")
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
-            streamExtractor.fetchPage()
+            try {
+                streamExtractor.fetchPage()
+            } catch (e: org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException) {
+                android.util.Log.e("YouTubeStreaming", "Content not available for $videoId: ${e.message}")
+                // If it's unplayable on primary URL, don't bother retrying this specific URL
+                // The outer getStreamUrl will catch the null result and try fallback
+                return@retryWithBackoff null
+            }
             
             val audioStreams = streamExtractor.audioStreams
+            if (audioStreams.isEmpty()) {
+                android.util.Log.w("YouTubeStreaming", "No audio streams found for $videoId")
+                return@retryWithBackoff null
+            }
+
             val targetBitrate = when (audioQuality) {
                 com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 64
                 com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 128
@@ -148,16 +170,37 @@ class YouTubeStreamingService @Inject constructor(
                 audioUrl = cachedAudio?.url  // May be null for muxed streams
             )
         }
-        
-        retryWithBackoff {
-            android.util.Log.d("YouTubeStreaming", "Fetching video stream for $videoId. Quality: $targetQuality (Max: ${targetQuality.maxResolution}p)")
 
-            val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+        // Try primary URL
+        val primaryResult = resolveVideoWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, targetQuality)
+        if (primaryResult != null) return@withContext primaryResult
+
+        // Try music fallback
+        android.util.Log.d("YouTubeStreaming", "Primary video resolution failed for $videoId, trying music fallback")
+        resolveVideoWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, targetQuality)
+    }
+
+    private suspend fun resolveVideoWithUrl(
+        streamUrl: String,
+        videoId: String,
+        targetQuality: com.suvojeet.suvmusic.data.model.VideoQuality
+    ): VideoStreamResult? {
+        val videoCacheKey = "video_${videoId}_${targetQuality.name}"
+        val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
+
+        return retryWithBackoff {
+            android.util.Log.d("YouTubeStreaming", "Fetching video stream for $videoId via $streamUrl. Quality: $targetQuality (Max: ${targetQuality.maxResolution}p)")
+
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
                 ?: throw IllegalStateException("YouTube service not found")
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
-            streamExtractor.fetchPage()
+            try {
+                streamExtractor.fetchPage()
+            } catch (e: org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException) {
+                android.util.Log.e("YouTubeStreaming", "Video content not available for $videoId via $streamUrl: ${e.message}")
+                return@retryWithBackoff null
+            }
             
             val targetResolution = targetQuality.maxResolution
             
@@ -174,8 +217,8 @@ class YouTubeStreamingService @Inject constructor(
                     val videoOnlyStreams = streamExtractor.videoOnlyStreams
                     val audioStreams = streamExtractor.audioStreams
                     
-                    android.util.Log.d("YouTubeStreaming", "Available video-only streams: ${videoOnlyStreams.map { "${it.resolution} (${it.format?.name})" }}")
-                    android.util.Log.d("YouTubeStreaming", "Available audio streams: ${audioStreams.map { "${it.averageBitrate}kbps (${it.format?.name})" }}")
+                    android.util.Log.d("YouTubeStreaming", "Available video-only streams: ${videoOnlyStreams.map { \"${it.resolution} (${it.format?.name})\" }}")
+                    android.util.Log.d("YouTubeStreaming", "Available audio streams: ${audioStreams.map { \"${it.averageBitrate}kbps (${it.format?.name})\" }}")
                     
                     // Find best video-only stream at or below target resolution
                     val bestVideoStream = videoOnlyStreams
@@ -221,7 +264,7 @@ class YouTubeStreamingService @Inject constructor(
                         }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.w("YouTubeStreaming", "Failed to get video-only streams, falling back to muxed", e)
+                    android.util.Log.w("YouTubeStreaming", "Failed to get video-only streams for $videoId", e)
                 }
             }
             
