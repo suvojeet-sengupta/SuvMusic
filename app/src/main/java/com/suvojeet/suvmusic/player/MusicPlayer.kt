@@ -360,12 +360,11 @@ class MusicPlayer @Inject constructor(
             if (playbackState == Player.STATE_ENDED) {
                 val controller = mediaController ?: return
                 val state = _playerState.value
-                val currentIndex = controller.currentMediaItemIndex
+                val nextIndex = controller.nextMediaItemIndex
                 val queueSize = state.queue.size
                 
-                if (currentIndex < queueSize - 1) {
-                    // More songs in queue — player couldn't auto-transition (bad URI)
-                    val nextIndex = currentIndex + 1
+                if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET) {
+                    // More songs in queue — player couldn't auto-transition (e.g. bad placeholder URI)
                     val nextSong = state.queue.getOrNull(nextIndex)
                     if (nextSong != null) {
                         scope.launch {
@@ -521,10 +520,12 @@ class MusicPlayer @Inject constructor(
                     
                     // Check if URI needs resolution:
                     // - YouTube placeholders: "https://youtube.com/watch?v=..."
+                    // - General placeholders: "https://placeholder.invalid/..."
                     // - JioSaavn/empty: null, empty, or doesn't look like a valid stream URL
                     val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+                    val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
                     val isEmptyOrInvalid = currentUri.isNullOrBlank()
-                    val needsResolution = isYouTubePlaceholder || isEmptyOrInvalid
+                    val needsResolution = isYouTubePlaceholder || isInvalidPlaceholder || isEmptyOrInvalid
                     
                     if (!needsResolution && currentUri != null) {
                         // Check if preloaded content mode matches current video mode
@@ -592,11 +593,12 @@ class MusicPlayer @Inject constructor(
                                error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
                                error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
             
-            // Placeholder Check: If current URI is a YouTube watch URL, it will fail and MUST be resolved
+            // Placeholder Check: If current URI is a placeholder, it MUST be resolved
             val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
             val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+            val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
-            if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isYouTubePlaceholder) {
+            if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isYouTubePlaceholder || isInvalidPlaceholder) {
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
@@ -1056,13 +1058,10 @@ class MusicPlayer @Inject constructor(
         
         val state = _playerState.value
         val isVideoMode = state.isVideoMode
-        var nextIndex = state.currentIndex + 1
         
-        // Handle shuffle mode
-        if (state.shuffleEnabled && state.queue.size > 1) {
-            // For shuffle, we can't predict the next song, so skip preloading
-            return
-        }
+        // Correctly handle next index for both shuffle and linear modes using Media3's built-in logic
+        val nextIndex = mediaController?.nextMediaItemIndex ?: (state.currentIndex + 1)
+        if (nextIndex == -1 || nextIndex == androidx.media3.common.C.INDEX_UNSET) return
 
         // Fix: If Repeat One is active, don't preload next song (we will loop current one)
         if (state.repeatMode == RepeatMode.ONE) {
@@ -1320,23 +1319,16 @@ class MusicPlayer @Inject constructor(
         val state = _playerState.value
         val queue = state.queue
         if (queue.isEmpty()) return
+        val controller = mediaController ?: return
 
-        // Determine next index based on shuffle/repeat/order
-        val nextIndex = if (state.shuffleEnabled) {
-            // Ensure we don't pick the same song if queue > 1
-            if (queue.size > 1) {
-                var random = queue.indices.random()
-                while (random == state.currentIndex) {
-                    random = queue.indices.random()
-                }
-                random
-            } else 0
-        } else {
-            state.currentIndex + 1
-        }
+        // Use Media3's built-in logic to determine next index for both shuffle/linear/repeat
+        val nextIndex = controller.nextMediaItemIndex
         
-        if (nextIndex in queue.indices) {
-            playSong(queue[nextIndex], queue, nextIndex)
+        if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET && nextIndex in queue.indices) {
+             // Optimization: Instead of playSong() which resets the whole playlist,
+             // we just seek to the next item. The onMediaItemTransition will handle 
+             // resolution if it's a placeholder.
+             controller.seekToNextMediaItem()
         } else {
             // End of queue logic
              if (state.repeatMode == RepeatMode.ALL) {
@@ -1379,26 +1371,17 @@ class MusicPlayer @Inject constructor(
         
         val queue = state.queue
         if (queue.isEmpty()) return
+        val controller = mediaController ?: return
         
-        val prevIndex = if (state.shuffleEnabled) {
-            if (queue.size > 1) {
-                 var random = queue.indices.random() // Ideally we'd have a history stack
-                 while (random == state.currentIndex) {
-                     random = queue.indices.random()
-                 }
-                 random
-             } else 0
-        } else {
-            state.currentIndex - 1
-        }
+        val prevIndex = controller.previousMediaItemIndex
 
-        if (prevIndex in queue.indices) {
-             playSong(queue[prevIndex], queue, prevIndex)
+        if (prevIndex != -1 && prevIndex != androidx.media3.common.C.INDEX_UNSET && prevIndex in queue.indices) {
+             controller.seekToPreviousMediaItem()
         } else {
             // If at start and repeat all is on, go to end? Or just stop.
             if (state.repeatMode == RepeatMode.ALL && queue.isNotEmpty()) {
                 val lastIndex = queue.lastIndex
-                playSong(queue[lastIndex], queue, lastIndex)
+                controller.seekTo(lastIndex, 0L)
             }
         }
     }
