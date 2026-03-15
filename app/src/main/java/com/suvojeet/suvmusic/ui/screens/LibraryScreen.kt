@@ -589,8 +589,15 @@ fun PlaylistsGrid(
     filterChips: @Composable () -> Unit,
     controlBar: @Composable () -> Unit
 ) {
+    val windowSize = com.suvojeet.suvmusic.ui.utils.rememberWindowSize()
+    val gridColumns = when (windowSize) {
+        com.suvojeet.suvmusic.ui.utils.WindowSize.Expanded -> 4
+        com.suvojeet.suvmusic.ui.utils.WindowSize.Medium -> 3
+        com.suvojeet.suvmusic.ui.utils.WindowSize.Compact -> 2
+    }
+
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(gridColumns),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)

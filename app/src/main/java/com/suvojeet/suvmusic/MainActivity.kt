@@ -616,8 +616,8 @@ fun SuvMusicApp(
         }
     }
     
-    // Check for TV Mode
-    val isTv = remember { com.suvojeet.suvmusic.util.TvUtils.isTv(context) }
+    // Determine device type for adaptive layouts
+    val deviceType = com.suvojeet.suvmusic.ui.utils.rememberDeviceType()
 
     if (showWelcomeDialog) {
         androidx.compose.material3.AlertDialog(
@@ -686,11 +686,9 @@ fun SuvMusicApp(
                     }
                 },
                 bottomBar = {
-                    if (showBottomNav && !isTv) {
+                    if (showBottomNav && deviceType == com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
                         Column {
-
-                            
-                            // Bottom navigation
+                            // Bottom navigation (phone only)
                             val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
                             val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
                             
@@ -729,19 +727,39 @@ fun SuvMusicApp(
                 val currentBottomPadding = innerPadding.calculateBottomPadding()
 
                 Row(modifier = Modifier.fillMaxSize()) {
-                    if (isTv && showBottomNav) {
-                        com.suvojeet.suvmusic.ui.components.TvNavigationRail(
-                            currentDestination = currentDestination,
-                            onDestinationChange = { destination ->
-                                navController.navigate(destination.route) {
-                                    popUpTo(Destination.Home.route) {
-                                        saveState = true
+                    // Side navigation rail for TV and Tablet
+                    if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
+                        when (deviceType) {
+                            com.suvojeet.suvmusic.ui.utils.DeviceType.TV -> {
+                                com.suvojeet.suvmusic.ui.components.TvNavigationRail(
+                                    currentDestination = currentDestination,
+                                    onDestinationChange = { destination ->
+                                        navController.navigate(destination.route) {
+                                            popUpTo(Destination.Home.route) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                                )
                             }
-                        )
+                            com.suvojeet.suvmusic.ui.utils.DeviceType.Tablet -> {
+                                com.suvojeet.suvmusic.ui.components.AdaptiveNavigationRail(
+                                    currentDestination = currentDestination,
+                                    onDestinationChange = { destination ->
+                                        navController.navigate(destination.route) {
+                                            popUpTo(Destination.Home.route) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                )
+                            }
+                            else -> { /* Phone handled by bottomBar */ }
+                        }
                     }
                     
                     Box(
@@ -818,7 +836,7 @@ fun SuvMusicApp(
                             onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                             startDestination = Destination.Home.route, // Always start at Home
                             // Removed sharedTransitionScope
-                            isTv = isTv,
+                            deviceType = deviceType,
                             dominantColors = defaultDominantColors
                         )
                     }
