@@ -11,10 +11,10 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.core.graphics.drawable.toBitmap
-import coil.imageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.asDrawable
+import coil3.imageLoader
+import coil3.request.*
+import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -87,9 +87,13 @@ object LyricsImageGenerator {
                     .size(width, height) 
                     .build()
 
-                val result = (loader.execute(request) as? SuccessResult)?.drawable
+                val result = (loader.execute(request) as? SuccessResult)?.image
                 if (result != null) {
-                    val artBitmap = result.toBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    val artBitmap = result.toBitmap().let {
+                         if (it.width != width || it.height != height) {
+                             Bitmap.createScaledBitmap(it, width, height, true)
+                         } else it
+                    }
                     
                     // Draw blurred/dimmed artwork
                     // Simple dimming overlay

@@ -46,6 +46,8 @@ import com.suvojeet.suvmusic.ui.screens.SponsorBlockSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 
+import androidx.navigation.toRoute
+
 /**
  * Main navigation graph for the app.
  */
@@ -97,7 +99,7 @@ fun NavGraph(
     modifier: Modifier = Modifier,
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
-    startDestination: String = Destination.Home.route,
+    startDestination: Any = Destination.Home,
     deviceType: DeviceType = DeviceType.Phone,
     dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null
 ) {
@@ -126,7 +128,7 @@ fun NavGraph(
             fadeOut(animationSpec = tween(300))
         }
     ) {
-        composable(Destination.Home.route) {
+        composable<Destination.Home> {
             when (deviceType) {
                 DeviceType.TV -> {
                     com.suvojeet.suvmusic.ui.screens.TvHomeScreen(
@@ -137,7 +139,7 @@ fun NavGraph(
                                     playlistId = playlist.id,
                                     name = playlist.name,
                                     thumbnailUrl = playlist.thumbnailUrl
-                                ).route
+                                )
                             )
                         },
                         onAlbumClick = { album ->
@@ -146,7 +148,7 @@ fun NavGraph(
                                     albumId = album.id,
                                     name = album.title,
                                     thumbnailUrl = album.thumbnailUrl
-                                ).route
+                                )
                             )
                         }
                     )
@@ -160,7 +162,7 @@ fun NavGraph(
                                     playlistId = playlist.id,
                                     name = playlist.name,
                                     thumbnailUrl = playlist.thumbnailUrl
-                                ).route
+                                )
                             )
                         },
                         onAlbumClick = { album ->
@@ -169,17 +171,17 @@ fun NavGraph(
                                     albumId = album.id,
                                     name = album.title,
                                     thumbnailUrl = album.thumbnailUrl
-                                ).route
+                                )
                             )
                         },
                         onRecentsClick = {
-                            navController.navigate(Destination.Recents.route)
+                            navController.navigate(Destination.Recents)
                         },
                         onExploreClick = { browseId, title ->
                             if (browseId == "FEmusic_moods_and_genres") {
-                                navController.navigate(Destination.MoodAndGenres.route)
+                                navController.navigate(Destination.MoodAndGenres)
                             } else {
-                                navController.navigate(Destination.Explore.buildRoute(browseId, title))
+                                navController.navigate(Destination.Explore(browseId, title))
                             }
                         },
                         onStartRadio = { onStartRadio(null, null) },
@@ -195,7 +197,7 @@ fun NavGraph(
                                     playlistId = playlist.id,
                                     name = playlist.name,
                                     thumbnailUrl = playlist.thumbnailUrl
-                                ).route
+                                )
                             )
                         },
                         onAlbumClick = { album ->
@@ -204,25 +206,25 @@ fun NavGraph(
                                     albumId = album.id,
                                     name = album.title,
                                     thumbnailUrl = album.thumbnailUrl
-                                ).route
+                                )
                             )
                         },
                         onRecentsClick = {
-                            navController.navigate(Destination.Recents.route)
+                            navController.navigate(Destination.Recents)
                         },
                         onListenTogetherClick = {
-                            navController.navigate(Destination.ListenTogether.route)
+                            navController.navigate(Destination.ListenTogether)
                         },
                         onExploreClick = { browseId, title ->
                             if (browseId == "FEmusic_moods_and_genres") {
-                                navController.navigate(Destination.MoodAndGenres.route)
+                                navController.navigate(Destination.MoodAndGenres)
                             } else {
-                                navController.navigate(Destination.Explore.buildRoute(browseId, title))
+                                navController.navigate(Destination.Explore(browseId, title))
                             }
                         },
                         onStartRadio = { onStartRadio(null, null) },
                         onCreateMixClick = {
-                            navController.navigate(Destination.PickMusic.route)
+                            navController.navigate(Destination.PickMusic)
                         },
                         currentSong = playbackInfo.currentSong
                     )
@@ -230,7 +232,7 @@ fun NavGraph(
             }
         }
         
-        composable(Destination.ListenTogether.route) {
+        composable<Destination.ListenTogether> {
             ListenTogetherScreen(
                 onDismiss = { navController.popBackStack() },
                 dominantColors = dominantColors ?: com.suvojeet.suvmusic.ui.components.DominantColors(
@@ -242,13 +244,7 @@ fun NavGraph(
             )
         }
         
-        composable(
-            route = Destination.Explore.ROUTE,
-            arguments = listOf(
-                navArgument(Destination.Explore.ARG_BROWSE_ID) { type = NavType.StringType },
-                navArgument(Destination.Explore.ARG_TITLE) { type = NavType.StringType }
-            )
-        ) {
+        composable<Destination.Explore> {
             com.suvojeet.suvmusic.ui.screens.ExploreScreen(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
@@ -258,7 +254,7 @@ fun NavGraph(
                             playlistId = playlist.id,
                             name = playlist.name,
                             thumbnailUrl = playlist.thumbnailUrl
-                        ).route
+                        )
                     )
                 },
                 onAlbumClick = { album ->
@@ -267,56 +263,44 @@ fun NavGraph(
                             albumId = album.id,
                             name = album.title,
                             thumbnailUrl = album.thumbnailUrl
-                        ).route
+                        )
                     )
                 }
             )
-                }
+        }
 
 
-        composable(Destination.MoodAndGenres.route) {
+        composable<Destination.MoodAndGenres> {
             com.suvojeet.suvmusic.ui.screens.MoodAndGenresScreen(
                 onCategoryClick = { browseId, params, title ->
                     navController.navigate(
-                        Destination.MoodAndGenresDetail.buildRoute(browseId, params, title)
+                        Destination.MoodAndGenresDetail(browseId, params, title)
                     )
                 },
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(
-            route = Destination.MoodAndGenresDetail.ROUTE,
-            arguments = listOf(
-                navArgument(Destination.MoodAndGenresDetail.ARG_BROWSE_ID) { type = NavType.StringType },
-                navArgument(Destination.MoodAndGenresDetail.ARG_PARAMS) { 
-                    type = NavType.StringType 
-                    nullable = true
-                },
-                navArgument(Destination.MoodAndGenresDetail.ARG_TITLE) { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val browseId = backStackEntry.arguments?.getString(Destination.MoodAndGenresDetail.ARG_BROWSE_ID) ?: ""
-            val params = backStackEntry.arguments?.getString(Destination.MoodAndGenresDetail.ARG_PARAMS)
-            val title = backStackEntry.arguments?.getString(Destination.MoodAndGenresDetail.ARG_TITLE) ?: ""
+        composable<Destination.MoodAndGenresDetail> { backStackEntry ->
+            val route = backStackEntry.toRoute<Destination.MoodAndGenresDetail>()
 
             com.suvojeet.suvmusic.ui.screens.MoodAndGenresDetailScreen(
-                browseId = browseId,
-                params = params,
-                title = title,
+                browseId = route.browseId,
+                params = route.params,
+                title = route.title,
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> onPlaySong(songs, index) }
             )
         }
         
-        composable(Destination.Search.route) {
+        composable<Destination.Search> {
             SearchScreen(
                 onSongClick = { songs, index -> 
                     // Don't pass search results as queue — fetch recommendations instead
                     onStartRadio(songs[index], null)
                 },
                 onArtistClick = { artistId ->
-                    navController.navigate(Destination.Artist(artistId).route)
+                    navController.navigate(Destination.Artist(artistId))
                 },
                 onPlaylistClick = { playlistId ->
                     navController.navigate(
@@ -324,7 +308,7 @@ fun NavGraph(
                             playlistId = playlistId,
                             name = null,
                             thumbnailUrl = null
-                        ).route
+                        )
                     )
                 },
                 onAlbumClick = { album ->
@@ -333,19 +317,19 @@ fun NavGraph(
                             albumId = album.id,
                             name = album.title,
                             thumbnailUrl = album.thumbnailUrl
-                        ).route
+                        )
                     )
                 }
             )
         }
         
-        composable(Destination.Library.route) {
+        composable<Destination.Library> {
             LibraryScreen(
                 onSongClick = { songs, index -> 
                     onPlaySong(songs, index)
                 },
                 onHistoryClick = {
-                    navController.navigate(Destination.Recents.route)
+                    navController.navigate(Destination.Recents)
                 },
                 onPlaylistClick = { playlist ->
                     navController.navigate(
@@ -353,11 +337,11 @@ fun NavGraph(
                             playlistId = playlist.id,
                             name = playlist.name,
                             thumbnailUrl = playlist.thumbnailUrl
-                        ).route
+                        )
                     )
                 },
                 onArtistClick = { artistId ->
-                    navController.navigate(Destination.Artist(artistId).route)
+                    navController.navigate(Destination.Artist(artistId))
                 },
                 onAlbumClick = { album ->
                     navController.navigate(
@@ -365,50 +349,47 @@ fun NavGraph(
                             albumId = album.id,
                             name = album.title,
                             thumbnailUrl = album.thumbnailUrl
-                        ).route
+                        )
                     )
                 },
                 onDownloadsClick = {
-                    navController.navigate(Destination.Downloads.route)
+                    navController.navigate(Destination.Downloads)
                 }
             )
         }
 
-        composable(Destination.Downloads.route) {
+        composable<Destination.Downloads> {
             com.suvojeet.suvmusic.ui.screens.DownloadsScreen(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
                 onPlayAll = { songs -> onPlaySong(songs, 0) },
                 onShufflePlay = { songs -> 
-                    // Shuffle logic should be handled by player or passing shuffled list
-                    // For now, we can just pass the list and handle shuffle in player if needed
-                    // Or ideally pass a shuffled list from here
                     val shuffledSongs = songs.shuffled()
                     onPlaySong(shuffledSongs, 0)
                 }
             )
         }
         
-        composable(Destination.Settings.route) {
+        composable<Destination.Settings> {
             SettingsScreen(
-                onLoginClick = { navController.navigate(Destination.YouTubeLogin.route) },
-                onPlaybackClick = { navController.navigate(Destination.PlaybackSettings.route) },
-                onAppearanceClick = { navController.navigate(Destination.AppearanceSettings.route) },
-                onCustomizationClick = { navController.navigate(Destination.CustomizationSettings.route) },
-                onStorageClick = { navController.navigate(Destination.Storage.route) },
-                onStatsClick = { navController.navigate(Destination.ListeningStats.route) },
-                onSupportClick = { navController.navigate(Destination.Support.route) },
-                onAboutClick = { navController.navigate(Destination.About.route) },
-                onMiscClick = { navController.navigate(Destination.Misc.route) },
-                onCreditsClick = { navController.navigate(Destination.Credits.route) },
-                onLastFmClick = { navController.navigate(Destination.LastFmLogin.route) },
-                onSponsorBlockClick = { navController.navigate(Destination.SponsorBlockSettings.route) },
-                onDiscordClick = { navController.navigate(Destination.DiscordSettings.route) },
-                onUpdaterClick = { navController.navigate(Destination.Updater.route) }
+                onLoginClick = { navController.navigate(Destination.YouTubeLogin) },
+                onPlaybackClick = { navController.navigate(Destination.PlaybackSettings) },
+                onAppearanceClick = { navController.navigate(Destination.AppearanceSettings) },
+                onCustomizationClick = { navController.navigate(Destination.CustomizationSettings) },
+                onStorageClick = { navController.navigate(Destination.Storage) },
+                onStatsClick = { navController.navigate(Destination.ListeningStats) },
+                onSupportClick = { navController.navigate(Destination.Support) },
+                onAboutClick = { navController.navigate(Destination.About) },
+                onMiscClick = { navController.navigate(Destination.Misc) },
+                onCreditsClick = { navController.navigate(Destination.Credits) },
+                onLastFmClick = { navController.navigate(Destination.LastFmLogin) },
+                onSponsorBlockClick = { navController.navigate(Destination.SponsorBlockSettings) },
+                onDiscordClick = { navController.navigate(Destination.DiscordSettings) },
+                onUpdaterClick = { navController.navigate(Destination.Updater) }
             )
         }
 
-        composable(Destination.Updater.route) {
+        composable<Destination.Updater> {
             com.suvojeet.suvmusic.updater.UpdaterScreen(
                 currentVersionCode = com.suvojeet.suvmusic.BuildConfig.VERSION_CODE,
                 currentVersionName = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME,
@@ -417,25 +398,25 @@ fun NavGraph(
             )
         }
 
-        composable(Destination.Changelog.route) {
+        composable<Destination.Changelog> {
             com.suvojeet.suvmusic.ui.screens.ChangelogScreen(
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.Storage.route) {
+        composable<Destination.Storage> {
             val settingsViewModel = androidx.hilt.navigation.compose.hiltViewModel<com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel>()
             downloadRepository?.let { repo ->
                 StorageScreen(
                     downloadRepository = repo,
                     settingsViewModel = settingsViewModel,
                     onBackClick = { navController.popBackStack() },
-                    onPlayerCacheClick = { navController.navigate(Destination.PlayerCache.route) }
+                    onPlayerCacheClick = { navController.navigate(Destination.PlayerCache) }
                 )
             }
         }
 
-        composable(Destination.PlayerCache.route) {
+        composable<Destination.PlayerCache> {
             downloadRepository?.let { repo ->
                 val settingsViewModel = androidx.hilt.navigation.compose.hiltViewModel<com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel>()
                 com.suvojeet.suvmusic.ui.screens.PlayerCacheScreen(
@@ -446,97 +427,97 @@ fun NavGraph(
             }
         }
         
-        composable(Destination.PlaybackSettings.route) {
+        composable<Destination.PlaybackSettings> {
             PlaybackSettingsScreen(
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.AppearanceSettings.route) {
+        composable<Destination.AppearanceSettings> {
             AppearanceSettingsScreen(
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.CustomizationSettings.route) {
+        composable<Destination.CustomizationSettings> {
             CustomizationScreen(
                 onBack = { navController.popBackStack() },
-                onSeekbarStyleClick = { navController.navigate(Destination.SeekbarStyleSettings.route) },
-                onArtworkShapeClick = { navController.navigate(Destination.ArtworkShapeSettings.route) },
-                onArtworkSizeClick = { navController.navigate(Destination.ArtworkSizeSettings.route) }
+                onSeekbarStyleClick = { navController.navigate(Destination.SeekbarStyleSettings) },
+                onArtworkShapeClick = { navController.navigate(Destination.ArtworkShapeSettings) },
+                onArtworkSizeClick = { navController.navigate(Destination.ArtworkSizeSettings) }
             )
         }
         
-        composable(Destination.ArtworkShapeSettings.route) {
+        composable<Destination.ArtworkShapeSettings> {
             ArtworkShapeScreen(
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.SeekbarStyleSettings.route) {
+        composable<Destination.SeekbarStyleSettings> {
             SeekbarStyleScreen(
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.ArtworkSizeSettings.route) {
+        composable<Destination.ArtworkSizeSettings> {
             ArtworkSizeScreen(
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.Recents.route) {
+        composable<Destination.Recents> {
             RecentsScreen(
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.About.route) {
+        composable<Destination.About> {
             AboutScreen(
                 onBack = { navController.popBackStack() },
-                onHowItWorksClick = { navController.navigate(Destination.HowItWorks.route) }
+                onHowItWorksClick = { navController.navigate(Destination.HowItWorks) }
             )
         }
         
-        composable(Destination.HowItWorks.route) {
+        composable<Destination.HowItWorks> {
             HowItWorksScreen(
                 onBack = { navController.popBackStack() }
             )
         }
         
-        composable(Destination.Support.route) {
+        composable<Destination.Support> {
             SupportScreen(
                 onBack = { navController.popBackStack() }
             )
         }
 
-        composable(Destination.Misc.route) {
+        composable<Destination.Misc> {
             MiscScreen(
                 onBack = { navController.popBackStack() },
-                onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders.route) }
+                onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders) }
             )
         }
 
-        composable(Destination.Credits.route) {
+        composable<Destination.Credits> {
             com.suvojeet.suvmusic.ui.screens.CreditsScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(Destination.LyricsProviders.route) {
+        composable<Destination.LyricsProviders> {
             LyricsProvidersScreen(
                 onBack = { navController.popBackStack() }
             )
         }
 
-        composable(Destination.SponsorBlockSettings.route) {
+        composable<Destination.SponsorBlockSettings> {
             SponsorBlockSettingsScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(Destination.PickMusic.route) {
+        composable<Destination.PickMusic> {
             com.suvojeet.suvmusic.ui.screens.PickMusicScreen(
                 onBackClick = { navController.popBackStack() },
                 onMixCreated = { songs ->
@@ -549,14 +530,14 @@ fun NavGraph(
             )
         }
         
-        composable(Destination.ListeningStats.route) {
+        composable<Destination.ListeningStats> {
             com.suvojeet.suvmusic.ui.screens.ListeningStatsScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
         
         
-        composable(Destination.YouTubeLogin.route) {
+        composable<Destination.YouTubeLogin> {
             YouTubeLoginScreen(
                 sessionManager = sessionManager,
                 onLoginSuccess = {
@@ -575,8 +556,8 @@ fun NavGraph(
                     }
 
                     // Navigate to Home and clear back stack
-                    navController.navigate(Destination.Home.route) {
-                        popUpTo(0) { inclusive = true }
+                    navController.navigate(Destination.Home) {
+                        popUpTo<Destination.Home> { inclusive = true }
                         launchSingleTop = true
                     }
                 },
@@ -586,7 +567,7 @@ fun NavGraph(
             )
         }
 
-        composable(Destination.LastFmLogin.route) {
+        composable<Destination.LastFmLogin> {
             com.suvojeet.suvmusic.ui.screens.settings.LastFmSettingsScreen(
                 onBack = { navController.popBackStack() },
                 onLoginSuccess = { username ->
@@ -596,30 +577,13 @@ fun NavGraph(
             )
         }
 
-        composable(Destination.DiscordSettings.route) {
+        composable<Destination.DiscordSettings> {
             com.suvojeet.suvmusic.ui.screens.settings.DiscordSettingsScreen(
                 onBack = { navController.popBackStack() }
             )
         }
 
-        composable(
-            route = Destination.Playlist.ROUTE,
-            arguments = listOf(
-                navArgument(Destination.Playlist.ARG_PLAYLIST_ID) {
-                    type = NavType.StringType
-                },
-                navArgument(Destination.Playlist.ARG_NAME) {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument(Destination.Playlist.ARG_THUMBNAIL) {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
-            )
-        ) { backStackEntry ->
+        composable<Destination.Playlist> {
             PlaylistScreen(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
@@ -637,12 +601,7 @@ fun NavGraph(
             )
         }
 
-        composable(
-            route = Destination.Artist.ROUTE,
-            arguments = listOf(
-                navArgument(Destination.Artist.ARG_ARTIST_ID) { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
+        composable<Destination.Artist> { backStackEntry ->
             com.suvojeet.suvmusic.ui.screens.ArtistScreen(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> 
@@ -654,27 +613,23 @@ fun NavGraph(
                             albumId = album.id,
                             name = album.title,
                             thumbnailUrl = album.thumbnailUrl
-                        ).route
+                        )
                     )
                 },
                 onSeeAllAlbumsClick = {
-                    val currentId = backStackEntry.arguments?.getString(Destination.Artist.ARG_ARTIST_ID)
-                    if (currentId != null) {
-                        navController.navigate(
-                            Destination.ArtistDiscography(currentId, Destination.ArtistDiscography.TYPE_ALBUMS).route
-                        )
-                    }
+                    val route = backStackEntry.toRoute<Destination.Artist>()
+                    navController.navigate(
+                        Destination.ArtistDiscography(route.artistId, Destination.ArtistDiscography.TYPE_ALBUMS)
+                    )
                 },
                 onSeeAllSinglesClick = {
-                    val currentId = backStackEntry.arguments?.getString(Destination.Artist.ARG_ARTIST_ID)
-                    if (currentId != null) {
-                        navController.navigate(
-                            Destination.ArtistDiscography(currentId, Destination.ArtistDiscography.TYPE_SINGLES).route
-                        )
-                    }
+                    val route = backStackEntry.toRoute<Destination.Artist>()
+                    navController.navigate(
+                        Destination.ArtistDiscography(route.artistId, Destination.ArtistDiscography.TYPE_SINGLES)
+                    )
                 },
                 onArtistClick = { artist ->
-                    navController.navigate(Destination.Artist(artist.id).route)
+                    navController.navigate(Destination.Artist(artist.id))
                 },
                 onPlaylistClick = { playlist ->
                     navController.navigate(
@@ -682,7 +637,7 @@ fun NavGraph(
                             playlistId = playlist.id,
                             name = playlist.title,
                             thumbnailUrl = playlist.thumbnailUrl
-                        ).route
+                        )
                     )
                 },
                 onStartRadio = { radioId ->
@@ -691,25 +646,17 @@ fun NavGraph(
                              playlistId = radioId,
                              name = null, // Navigation will fetch details or use generic "Radio"
                              thumbnailUrl = null
-                         ).route
+                         )
                      )
                 }
             )
         }
 
-        composable(
-            route = Destination.ArtistDiscography.ROUTE,
-            arguments = listOf(
-                navArgument(Destination.ArtistDiscography.ARG_ARTIST_ID) { type = NavType.StringType },
-                navArgument(Destination.ArtistDiscography.ARG_TYPE) { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val artistId = backStackEntry.arguments?.getString(Destination.ArtistDiscography.ARG_ARTIST_ID) ?: ""
-            val type = backStackEntry.arguments?.getString(Destination.ArtistDiscography.ARG_TYPE) ?: ""
-            
+        composable<Destination.ArtistDiscography> { backStackEntry ->
+            val route = backStackEntry.toRoute<Destination.ArtistDiscography>()
             com.suvojeet.suvmusic.ui.screens.ArtistDiscographyScreen(
-                artistId = artistId,
-                type = type,
+                artistId = route.artistId,
+                type = route.type,
                 onBackClick = { navController.popBackStack() },
                 onAlbumClick = { album ->
                     navController.navigate(
@@ -717,28 +664,13 @@ fun NavGraph(
                             albumId = album.id,
                             name = album.title,
                             thumbnailUrl = album.thumbnailUrl
-                        ).route
+                        )
                     )
                 }
             )
         }
 
-        composable(
-            route = Destination.Album.ROUTE,
-            arguments = listOf(
-                navArgument(Destination.Album.ARG_ALBUM_ID) { type = NavType.StringType },
-                navArgument(Destination.Album.ARG_NAME) {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument(Destination.Album.ARG_THUMBNAIL) {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
-            )
-        ) {
+        composable<Destination.Album> {
             com.suvojeet.suvmusic.ui.screens.AlbumScreen(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> onPlaySong(songs, index) },

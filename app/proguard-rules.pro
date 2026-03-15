@@ -49,8 +49,8 @@
 -dontwarn androidx.media3.**
 
 # Keep Coil
--keep class coil.** { *; }
--dontwarn coil.**
+-keep class coil3.** { *; }
+-dontwarn coil3.**
 
 # General Android rules
 -keepattributes SourceFile,LineNumberTable

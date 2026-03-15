@@ -11,9 +11,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
-import coil.imageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -73,12 +75,10 @@ fun rememberDominantColors(
                 
                 val result = loader.execute(request)
                 if (result is SuccessResult) {
-                    val bitmap = (result.drawable as? BitmapDrawable)?.bitmap
-                    bitmap?.let {
-                        val newColors = extractColorsFromBitmap(it, isDarkTheme)
-                        withContext(Dispatchers.Main) {
-                            colors = newColors
-                        }
+                    val bitmap = result.image.toBitmap()
+                    val newColors = extractColorsFromBitmap(bitmap, isDarkTheme)
+                    withContext(Dispatchers.Main) {
+                        colors = newColors
                     }
                 }
             } catch (e: Exception) {

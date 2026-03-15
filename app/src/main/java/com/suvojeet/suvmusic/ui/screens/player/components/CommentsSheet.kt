@@ -24,8 +24,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.suvojeet.suvmusic.data.model.Comment
 import com.suvojeet.suvmusic.ui.components.PulseLoadingIndicator
 
@@ -274,6 +275,7 @@ fun CommentItem(
     accentColor: Color,
     isHighlighted: Boolean = false
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -285,7 +287,7 @@ fun CommentItem(
     ) {
         // Avatar
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+            model = ImageRequest.Builder(context)
                 .data(comment.authorThumbnailUrl)
                 .crossfade(true)
                 .build(),
