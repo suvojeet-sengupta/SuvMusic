@@ -115,12 +115,11 @@ fun PlaylistScreen(
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
 
-    // Selection mode back handler
-    androidx.compose.runtime.DisposableEffect(uiState.isSelectionMode) {
+    // Selection mode cleanup when leaving screen
+    val currentViewModel by rememberUpdatedState(viewModel)
+    androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose {
-            if (uiState.isSelectionMode) {
-                viewModel.clearSelection()
-            }
+            currentViewModel.clearSelection()
         }
     }
 
