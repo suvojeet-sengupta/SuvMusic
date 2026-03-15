@@ -1643,7 +1643,7 @@ class YouTubeRepository @Inject constructor(
         try {
             if (!sessionManager.isLoggedIn() || setVideoIds.isEmpty()) return@withContext false
             
-            val cookies = sessionManager.getCookies() ?: return@withContext null
+            val cookies = sessionManager.getCookies() ?: return@withContext false
             val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
             
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
