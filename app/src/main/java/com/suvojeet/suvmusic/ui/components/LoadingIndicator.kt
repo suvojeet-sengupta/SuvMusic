@@ -17,19 +17,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.WavyProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 
 /**
- * Standard loading indicator using Material 3 Expressive [WavyProgressIndicator].
+ * Standard loading indicator. Falls back to CircularProgressIndicator if M3E Wavy is unavailable.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadingIndicator(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary
 ) {
-    WavyProgressIndicator(
+    CircularProgressIndicator(
         modifier = modifier,
         color = color
     )

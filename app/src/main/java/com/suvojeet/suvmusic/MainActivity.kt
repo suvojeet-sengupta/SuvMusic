@@ -851,7 +851,7 @@ fun SuvMusicApp(
     if (showMiniPlayer) {
         val density = LocalDensity.current
         val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val navBarHeight = if (showBottomNav && !isTv) 80.dp else 0.dp
+        val navBarHeight = if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.TV) 80.dp else 0.dp
         val bottomPaddingPx = with(density) { navBarPadding.toPx() + navBarHeight.toPx() }
 
         ExpandablePlayerSheet(
