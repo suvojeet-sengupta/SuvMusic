@@ -303,7 +303,9 @@ fun GridSection(
     // Pre-chunk items into columns of 2 for a grid layout.
     // Using a regular Row + horizontalScroll instead of LazyHorizontalGrid
     // to avoid nested lazy layout conflicts with the parent LazyColumn.
-    val chunkedItems = remember(section.items) { section.items.chunked(2) }
+    val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
+    val chunkCount = if (isLandscape) 1 else 2
+    val chunkedItems = remember(section.items, isLandscape) { section.items.chunked(chunkCount) }
     val scrollState = rememberScrollState()
 
     Column(
@@ -356,7 +358,10 @@ fun QuickPicksSection(
     val songs = remember(items) {
         items.filterIsInstance<HomeItem.SongItem>().map { it.song }
     }
-    val chunkedItems = remember(items) { items.chunked(4) }
+    
+    val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
+    val chunkCount = if (isLandscape) 2 else 4
+    val chunkedItems = remember(items, isLandscape) { items.chunked(chunkCount) }
     val lazyListState = rememberLazyListState()
     
     Column(
@@ -712,7 +717,9 @@ fun ExploreGridSection(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
              val items = section.items.filterIsInstance<HomeItem.ExploreItem>()
-             val rows = items.chunked(2)
+             val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
+             val chunkCount = if (isLandscape) 1 else 2
+             val rows = items.chunked(chunkCount)
              
              rows.forEach { rowItems ->
                  Row(
