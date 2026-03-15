@@ -17,6 +17,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.WavyProgressIndicator
+
+/**
+ * Standard loading indicator using Material 3 Expressive [WavyProgressIndicator].
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun LoadingIndicator(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    WavyProgressIndicator(
+        modifier = modifier,
+        color = color
+    )
+}
+
 /**
  * A unique pulsing loading indicator that mimics a mix of Apple Music and Spotify styles.
  * It features a pulsing glow effect behind a central music icon.
