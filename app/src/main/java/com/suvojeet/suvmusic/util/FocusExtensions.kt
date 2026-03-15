@@ -36,9 +36,18 @@ fun Modifier.dpadFocusable(
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     var isFocused by remember { mutableStateOf(false) }
 
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isFocused) focusedScale else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "FocusScale"
+    )
+
     this
         .onFocusChanged { isFocused = it.isFocused }
-        .scale(if (isFocused) focusedScale else 1f)
+        .scale(scale)
         .then(
             if (onClick != null) {
                 Modifier.clickable(
