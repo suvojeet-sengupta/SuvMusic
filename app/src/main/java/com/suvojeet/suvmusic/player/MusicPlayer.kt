@@ -588,7 +588,9 @@ class MusicPlayer @Inject constructor(
             val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
                                error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ||
                                error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
-                               error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED
+                               error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ||
+                               error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+                               error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
             
             // Placeholder Check: If current URI is a YouTube watch URL, it will fail and MUST be resolved
             val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
@@ -765,7 +767,38 @@ class MusicPlayer @Inject constructor(
                     if (attempts < 2) delay(1000)
                 }
             }
-            
+
+            // --- SEARCH FALLBACK ---
+            // If direct resolution failed after retries, try searching for an alternative ID
+            // This is a powerful recovery mechanism for "This video is not available" errors
+            if (streamUrl == null && song.source == SongSource.YOUTUBE) {
+                android.util.Log.d("MusicPlayer", "Direct resolution failed for ${song.id}, attempting search fallback...")
+                try {
+                    val fallbackId = youTubeRepository.getBestVideoId(song)
+                    if (fallbackId != song.id) {
+                        android.util.Log.d("MusicPlayer", "Found fallback ID: $fallbackId for original ID: ${song.id}. Resolving...")
+                        val fallbackResult = kotlinx.coroutines.withTimeoutOrNull(15_000L) {
+                            if (_playerState.value.isVideoMode) {
+                                val videoResult = youTubeRepository.getVideoStreamResult(fallbackId)
+                                Pair(videoResult?.videoUrl, videoResult?.audioUrl)
+                            } else {
+                                Pair(youTubeRepository.getStreamUrl(fallbackId), null)
+                            }
+                        }
+
+                        if (fallbackResult?.first != null) {
+                            android.util.Log.i("MusicPlayer", "Search fallback successful for ${song.id} -> $fallbackId")
+                            streamUrl = fallbackResult.first
+                            audioStreamUrl = fallbackResult.second
+                            // Update resolved ID cache so we don't search again for this song session
+                            resolvedVideoIds.put(song.id, fallbackId)
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MusicPlayer", "Search fallback failed", e)
+                }
+            }
+
             // Handle null stream URL - show error and clear loading state
             if (streamUrl == null) {
                 android.util.Log.e("MusicPlayer", "Failed to resolve stream URL for: ${song.id} after retries")
