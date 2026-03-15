@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.HorizontalDivider
@@ -59,6 +61,8 @@ fun SongMenuBottomSheet(
     onDownload: () -> Unit,
     onShare: () -> Unit,
     onRemoveFromPlaylist: (() -> Unit)? = null,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
     onViewArtist: (() -> Unit)? = null,
     onViewAlbum: (() -> Unit)? = null,
     onListenTogether: () -> Unit = {},
@@ -215,6 +219,22 @@ fun SongMenuBottomSheet(
                         icon = Icons.Default.Delete,
                         title = "Remove from playlist",
                         onClick = { onRemoveFromPlaylist(); onDismiss() }
+                    )
+                }
+
+                if (onMoveUp != null) {
+                    MenuActionItem(
+                        icon = Icons.Default.ArrowUpward,
+                        title = "Move Up",
+                        onClick = { onMoveUp(); onDismiss() }
+                    )
+                }
+
+                if (onMoveDown != null) {
+                    MenuActionItem(
+                        icon = Icons.Default.ArrowDownward,
+                        title = "Move Down",
+                        onClick = { onMoveDown(); onDismiss() }
                     )
                 }
                 

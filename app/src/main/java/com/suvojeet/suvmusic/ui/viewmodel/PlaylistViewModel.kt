@@ -34,7 +34,9 @@ data class PlaylistUiState(
     val showAddToPlaylistSheet: Boolean = false,
     val showCreatePlaylistDialog: Boolean = false,
     val isCreatingPlaylist: Boolean = false,
-    val selectedSong: Song? = null
+    val selectedSong: Song? = null,
+    val selectedSongIds: Set<String> = emptySet(),
+    val isSelectionMode: Boolean = false
 ) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
@@ -428,6 +430,59 @@ class PlaylistViewModel @Inject constructor(
             }
             
             if (success) {
+                refreshPlaylist()
+            }
+        }
+    }
+
+    fun toggleSongSelection(song: Song) {
+        val id = song.setVideoId ?: song.id
+        val currentSelected = _uiState.value.selectedSongIds.toMutableSet()
+        
+        if (currentSelected.contains(id)) {
+            currentSelected.remove(id)
+        } else {
+            currentSelected.add(id)
+        }
+        
+        _uiState.update { 
+            it.copy(
+                selectedSongIds = currentSelected,
+                isSelectionMode = currentSelected.isNotEmpty()
+            )
+        }
+    }
+
+    fun clearSelection() {
+        _uiState.update { 
+            it.copy(
+                selectedSongIds = emptySet(),
+                isSelectionMode = false
+            )
+        }
+    }
+
+    fun removeSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        if (selectedIds.isEmpty()) return
+        
+        viewModelScope.launch {
+            val isLocal = playlistId.startsWith("local_") || playlistId == "LM"
+            val success = if (isLocal) {
+                try {
+                    selectedIds.forEach { songId ->
+                        libraryRepository.removeSongFromPlaylist(playlistId, songId)
+                    }
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            } else {
+                youTubeRepository.removeSongsFromPlaylist(playlistId, selectedIds.toList())
+            }
+            
+            if (success) {
+                clearSelection()
                 refreshPlaylist()
             }
         }
