@@ -323,10 +323,10 @@ class YouTubeStreamingService @Inject constructor(
             streamExtractor.fetchPage()
 
             val results = mutableListOf<Song>()
-            val items = streamExtractor.relatedItems
+            val itemsPage = streamExtractor.relatedItems
             
-            if (items != null) {
-                for (item in items) {
+            if (itemsPage != null) {
+                for (item in itemsPage.items) {
                     if (item is StreamInfoItem) {
                         try {
                             val id = item.url?.substringAfter("v=")?.substringBefore("&") 
