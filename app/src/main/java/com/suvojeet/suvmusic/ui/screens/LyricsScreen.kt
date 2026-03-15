@@ -279,10 +279,10 @@ fun LyricsScreen(
                         modifier = Modifier.padding(32.dp)
                     ) {
                         LoadingIndicator(
-                            color = textColor.copy(alpha = 0.7f),
-                            modifier = Modifier.size(36.dp)
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(52.dp)
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                         Text(
                             text = currentMessage,
                             style = MaterialTheme.typography.bodyLarge,
