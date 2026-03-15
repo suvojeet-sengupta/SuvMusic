@@ -409,16 +409,20 @@ fun PlaylistScreen(
                 onRemoveFromPlaylist = if (uiState.isEditable) {
                     { viewModel.removeSongFromPlaylist(song) }
                 } else null,
-                onMoveUp = if (uiState.isEditable && playlist.songs.indexOf(song) > 0) {
+                onMoveUp = if (uiState.isEditable && (playlist?.songs?.indexOf(song) ?: -1) > 0) {
                     { 
-                        val currentIndex = playlist.songs.indexOf(song)
-                        viewModel.reorderSong(currentIndex, currentIndex - 1)
+                        val currentIndex = playlist?.songs?.indexOf(song) ?: -1
+                        if (currentIndex > 0) {
+                            viewModel.reorderSong(currentIndex, currentIndex - 1)
+                        }
                     }
                 } else null,
-                onMoveDown = if (uiState.isEditable && playlist.songs.indexOf(song) < playlist.songs.size - 1) {
+                onMoveDown = if (uiState.isEditable && (playlist?.songs?.indexOf(song) ?: -1) != -1 && (playlist?.songs?.indexOf(song) ?: -1) < (playlist?.songs?.size ?: 0) - 1) {
                     { 
-                        val currentIndex = playlist.songs.indexOf(song)
-                        viewModel.reorderSong(currentIndex, currentIndex + 1)
+                        val currentIndex = playlist?.songs?.indexOf(song) ?: -1
+                        if (currentIndex != -1 && currentIndex < (playlist?.songs?.size ?: 0) - 1) {
+                            viewModel.reorderSong(currentIndex, currentIndex + 1)
+                        }
                     }
                 } else null,
                 showShare = playlist?.id != "CACHED_ALL" && playlist?.id != "DEVICE_SONGS"
