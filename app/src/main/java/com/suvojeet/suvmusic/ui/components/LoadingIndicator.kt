@@ -20,14 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CircularProgressIndicator
 
 /**
- * Standard loading indicator. Falls back to CircularProgressIndicator if M3E Wavy is unavailable.
+ * Standard loading indicator. Uses M3E expressive bouncy dots.
  */
 @Composable
 fun LoadingIndicator(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary
 ) {
-    CircularProgressIndicator(
+    androidx.compose.material3.LoadingIndicator(
         modifier = modifier,
         color = color
     )
