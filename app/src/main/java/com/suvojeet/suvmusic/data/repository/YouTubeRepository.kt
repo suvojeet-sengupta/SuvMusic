@@ -115,14 +115,8 @@ class YouTubeRepository @Inject constructor(
                 }
                 
                 // Set localization based on user preferences
-                val preferredLanguages = sessionManager.getPreferredLanguages()
-                val langCode = if (preferredLanguages.isNotEmpty()) {
-                    getLanguageCode(preferredLanguages.first())
-                } else {
-                    "en"
-                }
+                val localization = Localization.DEFAULT
                 
-                val localization = Localization.fromLocaleCode(langCode)
                 NewPipe.init(downloader, localization)
                 isInitialized = true
             } catch (e: Exception) {
