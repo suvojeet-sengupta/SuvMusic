@@ -369,6 +369,9 @@ fun PlaylistScreen(
                 onAddToPlaylist = { playlistMgmtViewModel.showAddToPlaylistSheet(song) },
                 onDownload = { viewModel.downloadSong(song) },
                 onShare = { shareSong(song) },
+                onRemoveFromPlaylist = if (uiState.isEditable) {
+                    { viewModel.removeSongFromPlaylist(song) }
+                } else null,
                 showShare = playlist?.id != "CACHED_ALL" && playlist?.id != "DEVICE_SONGS"
             )
         }

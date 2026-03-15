@@ -408,6 +408,31 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
+    fun removeSongFromPlaylist(song: Song) {
+        viewModelScope.launch {
+            val isLocal = playlistId.startsWith("local_") || playlistId == "LM"
+            val success = if (isLocal) {
+                try {
+                    libraryRepository.removeSongFromPlaylist(playlistId, song.id)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            } else {
+                val setVideoId = song.setVideoId
+                if (setVideoId != null) {
+                    youTubeRepository.removeSongFromPlaylist(playlistId, setVideoId)
+                } else {
+                    false
+                }
+            }
+            
+            if (success) {
+                refreshPlaylist()
+            }
+        }
+    }
+
     fun showCreatePlaylistDialog() {
         _uiState.update { it.copy(showCreatePlaylistDialog = true) }
     }

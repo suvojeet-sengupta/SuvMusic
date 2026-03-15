@@ -1583,6 +1583,57 @@ class YouTubeRepository @Inject constructor(
     }
 
     /**
+     * Remove a song from a YouTube Music playlist.
+     * @param playlistId The ID of the playlist
+     * @param setVideoId The unique setVideoId for the specific song instance in the playlist
+     * @return True if successful
+     */
+    suspend fun removeSongFromPlaylist(playlistId: String, setVideoId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            if (!sessionManager.isLoggedIn()) return@withContext false
+            
+            val cookies = sessionManager.getCookies() ?: return@withContext false
+            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            
+            val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
+            
+            val jsonBody = JSONObject().apply {
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", YouTubeConfig.CLIENT_NAME)
+                        put("clientVersion", YouTubeConfig.CLIENT_VERSION)
+                        put("hl", "en")
+                        put("gl", "US")
+                    })
+                })
+                put("playlistId", realPlaylistId)
+                put("actions", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("action", "ACTION_REMOVE_VIDEO")
+                        put("setVideoId", setVideoId)
+                    })
+                })
+            }
+            
+            val request = okhttp3.Request.Builder()
+                .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
+                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                .addHeader("Cookie", cookies)
+                .addHeader("Authorization", authHeader)
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .addHeader("Origin", "https://music.youtube.com")
+                .addHeader("X-Goog-AuthUser", "0")
+                .build()
+            
+            val response = okHttpClient.newCall(request).execute()
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
      * Rename a playlist.
      * @param playlistId The ID of the playlist
      * @param newTitle The new title
