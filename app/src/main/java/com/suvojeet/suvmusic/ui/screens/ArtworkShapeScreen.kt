@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -59,6 +59,7 @@ fun ArtworkShapeScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val sessionManager = remember { SessionManager(context) }
     
     val artworkShapeString by sessionManager.artworkShapeFlow.collectAsState(initial = "ROUNDED_SQUARE")
@@ -112,7 +113,7 @@ fun ArtworkShapeScreen(
                         isSelected = shape == currentArtworkShape,
                         primaryColor = primaryColor,
                         onClick = {
-                            CoroutineScope(Dispatchers.IO).launch {
+                            scope.launch(Dispatchers.IO) {
                                 sessionManager.setArtworkShape(shape.name)
                             }
                         },
@@ -131,7 +132,7 @@ fun ArtworkShapeScreen(
                         isSelected = shape == currentArtworkShape,
                         primaryColor = primaryColor,
                         onClick = {
-                            CoroutineScope(Dispatchers.IO).launch {
+                            scope.launch(Dispatchers.IO) {
                                 sessionManager.setArtworkShape(shape.name)
                             }
                         },

@@ -8,8 +8,11 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
-import coil.imageLoader
-import coil.request.ImageRequest
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.asDrawable
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CoroutineScope
@@ -134,7 +137,8 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 .build()
 
             val result = imageLoader.execute(request)
-            val drawable = result.drawable ?: return null
+            if (result !is SuccessResult) return null
+            val drawable = result.image.asDrawable(context.resources)
 
             // Always create a fresh bitmap by drawing to canvas.
             // This ensures we own the bitmap entirely and Coil won't recycle it from under us.

@@ -7,6 +7,7 @@ import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.di.ApplicationScope
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import dagger.Module
@@ -39,9 +40,10 @@ object AppModule {
         searchService: com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService,
         networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor,
         libraryRepository: LibraryRepository,
-        listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
+        listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository,
+        @ApplicationScope externalScope: kotlinx.coroutines.CoroutineScope
     ): YouTubeRepository {
-        return YouTubeRepository(sessionManager, jsonParser, apiClient, streamingService, searchService, networkMonitor, libraryRepository, listeningHistoryRepository)
+        return YouTubeRepository(sessionManager, jsonParser, apiClient, streamingService, searchService, networkMonitor, libraryRepository, listeningHistoryRepository, externalScope)
     }
     
     @Provides

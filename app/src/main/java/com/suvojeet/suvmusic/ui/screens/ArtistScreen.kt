@@ -32,8 +32,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
@@ -372,6 +373,7 @@ fun ImmersiveArtistHeader(
     isSubscribing: Boolean,
     onStartRadio: () -> Unit
 ) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -385,7 +387,7 @@ fun ImmersiveArtistHeader(
 
         // Background Image
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+            model = ImageRequest.Builder(context)
                 .data(highResThumbnail)
                 .crossfade(true)
                 .build(),
@@ -580,6 +582,7 @@ fun TopSongRow(
     song: Song,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -598,7 +601,7 @@ fun TopSongRow(
 
         // Thumbnail
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+            model = ImageRequest.Builder(context)
                 .data(song.thumbnailUrl)
                 .crossfade(true)
                 .build(),
@@ -648,13 +651,14 @@ fun ArtistContentCard(
     onClick: () -> Unit,
     shape: androidx.compose.ui.graphics.Shape = SquircleShape
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .width(160.dp)
             .dpadFocusable(onClick = onClick, shape = shape)
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+            model = ImageRequest.Builder(context)
                 .data(imageUrl)
                 .crossfade(true)
                 .build(),
@@ -692,6 +696,7 @@ fun ArtistCircleCard(
     artist: ArtistPreview,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .width(140.dp)
@@ -699,7 +704,7 @@ fun ArtistCircleCard(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+            model = ImageRequest.Builder(context)
                 .data(artist.thumbnailUrl)
                 .crossfade(true)
                 .build(),
@@ -729,6 +734,7 @@ fun ArtistVideoCard(
     video: Song,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .width(280.dp) // Wider for 16:9 video look
@@ -742,7 +748,7 @@ fun ArtistVideoCard(
                 .background(Color.Black)
         ) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
+                model = ImageRequest.Builder(context)
                     .data(video.thumbnailUrl)
                     .crossfade(true)
                     .build(),
@@ -791,6 +797,7 @@ fun AboutArtistCard(
     artist: Artist,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
      Box(
          modifier = Modifier
              .fillMaxWidth()
@@ -804,7 +811,7 @@ fun AboutArtistCard(
          if (thumbnailUrl != null) {
               val highResThumbnail = thumbnailUrl.replace(Regex("w\\d+-h\\d+"), "w800-h800")
               AsyncImage(
-                  model = ImageRequest.Builder(LocalContext.current)
+                  model = ImageRequest.Builder(context)
                       .data(highResThumbnail)
                       .crossfade(true)
                       .build(),

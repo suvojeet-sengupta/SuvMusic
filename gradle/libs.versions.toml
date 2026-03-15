@@ -8,15 +8,15 @@ espressoCore = "3.6.1"
 splashscreen = "1.0.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
-composeBom = "2026.01.01"
+composeBom = "2026.02.00"
 material3 = "1.5.0-alpha15"
 media3 = "1.9.2"
 mediarouter = "1.8.1"
 newpipeExtractor = "v0.26.0"
 okhttp = "5.0.0-alpha.14"
-coil = "2.7.0"
+coil = "3.1.0"
 hilt = "2.59.1"
-navigationCompose = "2.8.4"
+navigationCompose = "2.9.0"
 datastorePreferences = "1.1.1"
 room = "2.8.4"
 gson = "2.13.2"
@@ -107,7 +107,8 @@ retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = 
 converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 
 # Image Loading
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # Hilt DI
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
