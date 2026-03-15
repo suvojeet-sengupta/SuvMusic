@@ -181,7 +181,7 @@ fun MediumSongCard(
                 contentDescription = song.title,
                 modifier = Modifier
                     .size(170.dp)
-                    .clip(RoundedCornerShape(20.dp)),
+                    .clip(SquircleShape),
                 contentScale = ContentScale.Crop
             )
             
@@ -300,6 +300,10 @@ fun Modifier.bounceClick(
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
         label = "bounce"
     )
 

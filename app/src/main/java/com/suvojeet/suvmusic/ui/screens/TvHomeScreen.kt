@@ -34,6 +34,7 @@ import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
 import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.util.dpadFocusable
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import java.util.Calendar
 
 /**
@@ -276,11 +277,11 @@ private fun TvQuickAccessCard(
             .dpadFocusable(
                 onClick = onClick,
                 focusedScale = 1.05f,
-                shape = RoundedCornerShape(8.dp),
+                shape = SquircleShape,
                 borderWidth = 2.dp,
                 borderColor = MaterialTheme.colorScheme.primary
             )
-            .clip(RoundedCornerShape(8.dp))
+            .clip(SquircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -335,11 +336,11 @@ private fun TvSongCard(song: Song, onClick: () -> Unit) {
             .width(200.dp)
             .dpadFocusable(
                 onClick = onClick,
-                shape = RoundedCornerShape(12.dp), 
+                shape = SquircleShape, 
                 focusedScale = 1.1f,
                 borderColor = MaterialTheme.colorScheme.primary
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SquircleShape)
             .padding(8.dp) // Inner padding so focus border doesn't overlap text
     ) {
         AsyncImage(
@@ -347,7 +348,7 @@ private fun TvSongCard(song: Song, onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier
                 .size(184.dp) // 200 - 16 padding
-                .clip(RoundedCornerShape(8.dp))
+                .clip(SquircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
@@ -376,10 +377,10 @@ private fun TvPlaylistCard(playlist: com.suvojeet.suvmusic.core.model.PlaylistDi
             .width(200.dp)
             .dpadFocusable(
                 onClick = onClick,
-                shape = RoundedCornerShape(12.dp),
+                shape = SquircleShape,
                 focusedScale = 1.1f
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SquircleShape)
             .padding(8.dp)
     ) {
         AsyncImage(
@@ -387,7 +388,7 @@ private fun TvPlaylistCard(playlist: com.suvojeet.suvmusic.core.model.PlaylistDi
             contentDescription = null,
             modifier = Modifier
                 .size(184.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(SquircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
@@ -414,10 +415,10 @@ private fun TvAlbumCard(album: com.suvojeet.suvmusic.core.model.Album, onClick: 
             .width(200.dp)
             .dpadFocusable(
                 onClick = onClick,
-                shape = RoundedCornerShape(12.dp),
+                shape = SquircleShape,
                 focusedScale = 1.1f
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SquircleShape)
             .padding(8.dp)
     ) {
         AsyncImage(
@@ -425,7 +426,7 @@ private fun TvAlbumCard(album: com.suvojeet.suvmusic.core.model.Album, onClick: 
             contentDescription = null,
             modifier = Modifier
                 .size(184.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(SquircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
