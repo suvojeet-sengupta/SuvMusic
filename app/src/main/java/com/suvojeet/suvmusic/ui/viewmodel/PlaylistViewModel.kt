@@ -318,8 +318,30 @@ class PlaylistViewModel @Inject constructor(
     fun deletePlaylist() {
         viewModelScope.launch {
             _uiState.update { it.copy(isDeleting = true) }
-            val success = youTubeRepository.deletePlaylist(playlistId)
-            _uiState.update { it.copy(isDeleting = false, deleteSuccess = success) }
+            
+            val isLocal = playlistId.startsWith("local_") || playlistId == "LM"
+            val success = if (isLocal) {
+                try {
+                    libraryRepository.removePlaylist(playlistId)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            } else {
+                val ytSuccess = youTubeRepository.deletePlaylist(playlistId)
+                if (ytSuccess) {
+                    libraryRepository.removePlaylist(playlistId)
+                }
+                ytSuccess
+            }
+            
+            _uiState.update { 
+                it.copy(
+                    isDeleting = false, 
+                    deleteSuccess = success,
+                    error = if (!success) "Failed to delete playlist" else null
+                ) 
+            }
         }
     }
 
