@@ -131,6 +131,13 @@ fun PremiumLoadingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            LoadingIndicator(
+                modifier = Modifier.size(52.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+
             Text(
                 text = currentMessage + dots,
                 style = MaterialTheme.typography.headlineSmall.copy(
