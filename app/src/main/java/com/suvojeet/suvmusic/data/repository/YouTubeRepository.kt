@@ -36,6 +36,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.comments.CommentsInfoItem
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.util.concurrent.TimeUnit
@@ -106,10 +107,23 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-    private fun initializeNewPipe() {
+    private suspend fun initializeNewPipe() {
         if (!isInitialized) {
             try {
-                NewPipe.init(NewPipeDownloaderImpl(okHttpClient) { sessionManager.getCookies() ?: "" })
+                val downloader = NewPipeDownloaderImpl(okHttpClient) { 
+                    sessionManager.getCookies() ?: "" 
+                }
+                
+                // Set localization based on user preferences
+                val preferredLanguages = sessionManager.getPreferredLanguages()
+                val langCode = if (preferredLanguages.isNotEmpty()) {
+                    getLanguageCode(preferredLanguages.first())
+                } else {
+                    "en"
+                }
+                
+                val localization = Localization.fromLocaleCode(langCode)
+                NewPipe.init(downloader, localization)
                 isInitialized = true
             } catch (e: Exception) {
                 isInitialized = true
