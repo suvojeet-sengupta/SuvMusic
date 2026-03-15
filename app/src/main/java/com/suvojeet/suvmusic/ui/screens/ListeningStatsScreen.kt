@@ -40,8 +40,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Offset
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.suvojeet.suvmusic.core.data.local.dao.ArtistStats
 import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
 import com.suvojeet.suvmusic.ui.viewmodel.DailyListening
@@ -593,6 +594,7 @@ private fun StatCardSmall(
 
 @Composable
 private fun TopSongCard(song: ListeningHistory) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.width(140.dp),
         shape = RoundedCornerShape(12.dp),
@@ -600,7 +602,7 @@ private fun TopSongCard(song: ListeningHistory) {
     ) {
         Column {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
+                model = ImageRequest.Builder(context)
                     .data(song.thumbnailUrl)
                     .crossfade(true)
                     .build(),

@@ -83,6 +83,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.suvojeet.suvmusic.pip.PipHelper
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.toRoute
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -539,7 +541,7 @@ fun SuvMusicApp(
     val isMiniPlayerDismissed by playerViewModel.isMiniPlayerDismissed.collectAsStateWithLifecycle(initialValue = false)
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val destination = navBackStackEntry?.destination
     
     var currentDestination by remember { mutableStateOf<Destination>(Destination.Home) }
     
@@ -556,24 +558,24 @@ fun SuvMusicApp(
     }
     
     // Update current destination based on route
-    currentDestination = when (currentRoute) {
-        Destination.Home.route -> Destination.Home
-        Destination.Search.route -> Destination.Search
-        Destination.Library.route -> Destination.Library
-        Destination.Settings.route -> Destination.Settings
+    currentDestination = when {
+        destination?.hasRoute<Destination.Home>() == true -> Destination.Home
+        destination?.hasRoute<Destination.Search>() == true -> Destination.Search
+        destination?.hasRoute<Destination.Library>() == true -> Destination.Library
+        destination?.hasRoute<Destination.Settings>() == true -> Destination.Settings
         else -> currentDestination
     }
     
-    val showBottomNav = currentRoute in listOf(
-        Destination.Home.route,
-        Destination.Search.route,
-        Destination.Library.route,
-        Destination.Settings.route
-    )
+    val showBottomNav = destination?.let {
+        it.hasRoute<Destination.Home>() ||
+        it.hasRoute<Destination.Search>() ||
+        it.hasRoute<Destination.Library>() ||
+        it.hasRoute<Destination.Settings>()
+    } ?: false
     
     // Auto-show MiniPlayer when returning to Home
-    LaunchedEffect(currentRoute) {
-        if (currentRoute == Destination.Home.route) {
+    LaunchedEffect(destination) {
+        if (destination?.hasRoute<Destination.Home>() == true) {
             playerViewModel.showMiniPlayer()
         }
     }
@@ -583,7 +585,7 @@ fun SuvMusicApp(
     // With bottom sheet, "Player screen" is just the expanded state.
     // We hide the sheet if the current route is one where we don't want player (e.g. login?)
     // or if dismissed.
-    val showMiniPlayer = !isMiniPlayerDismissed && currentRoute != Destination.YouTubeLogin.route && hasSong
+    val showMiniPlayer = !isMiniPlayerDismissed && destination?.hasRoute<Destination.YouTubeLogin>() != true && hasSong
     
     // Don't show global volume indicator on PlayerScreen (it has its own)
     val showGlobalVolumeIndicator = hasSong && !isPlayerExpanded
@@ -641,7 +643,7 @@ fun SuvMusicApp(
                     onClick = { 
                         showWelcomeDialog = false
                         // Navigate to Login, which will set onboarding completed on success
-                        navController.navigate(Destination.YouTubeLogin.route)
+                        navController.navigate(Destination.YouTubeLogin)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -705,9 +707,9 @@ fun SuvMusicApp(
 
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,
-                                onDestinationChange = { destination ->
-                                    navController.navigate(destination.route) {
-                                        popUpTo(Destination.Home.route) {
+                                onDestinationChange = { dest ->
+                                    navController.navigate(dest) {
+                                        popUpTo<Destination.Home> {
                                             saveState = true
                                         }
                                         launchSingleTop = true
@@ -733,9 +735,9 @@ fun SuvMusicApp(
                             com.suvojeet.suvmusic.ui.utils.DeviceType.TV -> {
                                 com.suvojeet.suvmusic.ui.components.TvNavigationRail(
                                     currentDestination = currentDestination,
-                                    onDestinationChange = { destination ->
-                                        navController.navigate(destination.route) {
-                                            popUpTo(Destination.Home.route) {
+                                    onDestinationChange = { dest ->
+                                        navController.navigate(dest) {
+                                            popUpTo<Destination.Home> {
                                                 saveState = true
                                             }
                                             launchSingleTop = true
@@ -747,9 +749,9 @@ fun SuvMusicApp(
                             com.suvojeet.suvmusic.ui.utils.DeviceType.Tablet -> {
                                 com.suvojeet.suvmusic.ui.components.AdaptiveNavigationRail(
                                     currentDestination = currentDestination,
-                                    onDestinationChange = { destination ->
-                                        navController.navigate(destination.route) {
-                                            popUpTo(Destination.Home.route) {
+                                    onDestinationChange = { dest ->
+                                        navController.navigate(dest) {
+                                            popUpTo<Destination.Home> {
                                                 saveState = true
                                             }
                                             launchSingleTop = true
@@ -834,7 +836,7 @@ fun SuvMusicApp(
                             selectedLyricsProvider = selectedLyricsProvider,
                             enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
                             onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
-                            startDestination = Destination.Home.route, // Always start at Home
+                            startDestination = Destination.Home, // Always start at Home
                             // Removed sharedTransitionScope
                             deviceType = deviceType,
                             dominantColors = defaultDominantColors
@@ -922,12 +924,12 @@ fun SuvMusicApp(
                         } else {
                             val finalId = artistCredits.firstOrNull()?.artistId ?: artistIdOrName
                             onCollapse()
-                            navController.navigate(Destination.Artist(finalId).route)
+                            navController.navigate(Destination.Artist(finalId))
                         }
                     },
                     onAlbumClick = { albumId ->
                         onCollapse()
-                        navController.navigate(Destination.Album(albumId = albumId, name = null, thumbnailUrl = null).route)
+                        navController.navigate(Destination.Album(albumId = albumId, name = null, thumbnailUrl = null))
                     },
                     onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
                     onPostComment = { commentText -> playerViewModel.postComment(commentText) },
@@ -936,7 +938,7 @@ fun SuvMusicApp(
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
                     onListenTogetherClick = {
                         onCollapse()
-                        navController.navigate(Destination.ListenTogether.route)
+                        navController.navigate(Destination.ListenTogether)
                     }
                 )
 
@@ -957,7 +959,7 @@ fun SuvMusicApp(
                 onArtistClick = { artistId ->
                     playerViewModel.toggleMultipleArtistsDialog(false)
                     playerViewModel.collapsePlayer()
-                    navController.navigate(Destination.Artist(artistId).route)
+                    navController.navigate(Destination.Artist(artistId))
                 },
                 onDismiss = { playerViewModel.toggleMultipleArtistsDialog(false) },
                 dominantColors = defaultDominantColors

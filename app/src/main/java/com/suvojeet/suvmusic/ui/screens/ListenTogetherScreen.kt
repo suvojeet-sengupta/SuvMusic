@@ -984,7 +984,7 @@ fun RoomContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (track?.thumbnail != null) {
-                            coil.compose.AsyncImage(
+                            coil3.compose.AsyncImage(
                                 model = track.thumbnail,
                                 contentDescription = null,
                                 modifier = Modifier

@@ -10,12 +10,15 @@ import org.acra.config.*
 import org.acra.data.StringFormat
 import org.acra.ktx.initAcra
 
-import coil.ImageLoader
-import coil.ImageLoaderFactory
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
-import coil.request.CachePolicy
-import coil.util.DebugLogger
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.memory.*
+import coil3.request.CachePolicy
+import coil3.request.crossfade
+import coil3.util.DebugLogger
+import okio.Path.Companion.toPath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,15 +29,13 @@ import kotlinx.coroutines.withContext
  * Annotated with @HiltAndroidApp to enable Hilt dependency injection.
  */
 @HiltAndroidApp
-class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Configuration.Provider {
+class SuvMusicApplication : Application(), SingletonImageLoader.Factory, androidx.work.Configuration.Provider {
     
     @javax.inject.Inject
     lateinit var workerFactory: androidx.hilt.work.HiltWorkerFactory
 
     @javax.inject.Inject
     lateinit var sessionManager: com.suvojeet.suvmusic.data.SessionManager
-
-
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -64,7 +65,6 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
     override fun onCreate() {
         super.onCreate()
 
-        
         // Initialize logging early
         applicationScope.launch {
             val enabled = sessionManager.isLoggingEnabled()
@@ -86,16 +86,16 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             .setWorkerFactory(workerFactory)
             .build()
 
-    override fun newImageLoader(): ImageLoader {
-        return ImageLoader.Builder(this)
+    override fun newImageLoader(context: Context): ImageLoader {
+        return ImageLoader.Builder(context)
             .memoryCache {
-                MemoryCache.Builder(this)
-                    .maxSizePercent(0.30) // Use 30% of available heap for images (was 25%)
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.30) // Use 30% of available heap for images (was 25%)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("image_cache"))
+                    .directory(cacheDir.resolve("image_cache").absolutePath.toPath())
                     .maxSizeBytes(150 * 1024 * 1024) // 150MB disk cache — sensible for album art
                     .build()
             }
@@ -103,7 +103,6 @@ class SuvMusicApplication : Application(), ImageLoaderFactory, androidx.work.Con
             .networkCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
             .memoryCachePolicy(CachePolicy.ENABLED)
-            .allowHardware(true) // Ensure hardware bitmaps are used for efficiency
             .crossfade(true)
             .apply { if (BuildConfig.DEBUG) logger(DebugLogger()) }
             .build()

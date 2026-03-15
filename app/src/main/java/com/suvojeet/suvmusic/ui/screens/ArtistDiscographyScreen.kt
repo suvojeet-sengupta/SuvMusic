@@ -26,8 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
@@ -127,6 +128,7 @@ private fun DiscographyAlbumCard(
     album: Album,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -141,7 +143,7 @@ private fun DiscographyAlbumCard(
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
+                model = ImageRequest.Builder(context)
                     .data(album.thumbnailUrl)
                     .crossfade(true)
                     .build(),
