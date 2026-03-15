@@ -2,11 +2,13 @@ package com.suvojeet.suvmusic.ui.screens
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -112,6 +114,19 @@ fun PlaylistScreen(
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
+
+    // Selection mode back handler
+    androidx.compose.runtime.DisposableEffect(uiState.isSelectionMode) {
+        onDispose {
+            if (uiState.isSelectionMode) {
+                viewModel.clearSelection()
+            }
+        }
+    }
+
+    androidx.activity.compose.BackHandler(enabled = uiState.isSelectionMode) {
+        viewModel.clearSelection()
+    }
 
     // Handle delete success
     androidx.compose.runtime.LaunchedEffect(uiState.deleteSuccess) {
@@ -296,13 +311,25 @@ fun PlaylistScreen(
                 } else {
                     // Song List
                     itemsIndexed(playlist.songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
+                        val isSelected = uiState.selectedSongIds.contains(song.setVideoId ?: song.id)
                         SongListItem(
                             song = song,
                             isEditable = uiState.isEditable,
+                            isSelected = isSelected,
+                            isSelectionMode = uiState.isSelectionMode,
                             onReorder = { fromIndex, toIndex -> viewModel.reorderSong(fromIndex, toIndex) },
                             index = index,
                             totalSongs = playlist.songs.size,
-                            onClick = { onSongClick(playlist.songs, index) },
+                            onClick = { 
+                                if (uiState.isSelectionMode) {
+                                    viewModel.toggleSongSelection(song)
+                                } else {
+                                    onSongClick(playlist.songs, index) 
+                                }
+                            },
+                            onLongClick = {
+                                viewModel.toggleSongSelection(song)
+                            },
                             onMoreClick = { 
                                 selectedSong = song
                                 showSongMenu = true 
@@ -320,13 +347,23 @@ fun PlaylistScreen(
                 enter = androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
                 exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { -it })
             ) {
-                TopBar(
-                    title = playlist.title,
-                    isScrolled = isScrolled,
-                    onBackClick = onBackClick,
-                    contentColor = contentColor,
-                    isDarkTheme = isDarkTheme
-                )
+                if (uiState.isSelectionMode) {
+                    SelectionTopBar(
+                        selectedCount = uiState.selectedSongIds.size,
+                        onCloseClick = { viewModel.clearSelection() },
+                        onDeleteClick = { viewModel.removeSelectedSongs() },
+                        contentColor = contentColor,
+                        isDarkTheme = isDarkTheme
+                    )
+                } else {
+                    TopBar(
+                        title = playlist.title,
+                        isScrolled = isScrolled,
+                        onBackClick = onBackClick,
+                        contentColor = contentColor,
+                        isDarkTheme = isDarkTheme
+                    )
+                }
             }
             
             // Media Menu Bottom Sheet
@@ -371,6 +408,18 @@ fun PlaylistScreen(
                 onShare = { shareSong(song) },
                 onRemoveFromPlaylist = if (uiState.isEditable) {
                     { viewModel.removeSongFromPlaylist(song) }
+                } else null,
+                onMoveUp = if (uiState.isEditable && playlist.songs.indexOf(song) > 0) {
+                    { 
+                        val currentIndex = playlist.songs.indexOf(song)
+                        viewModel.reorderSong(currentIndex, currentIndex - 1)
+                    }
+                } else null,
+                onMoveDown = if (uiState.isEditable && playlist.songs.indexOf(song) < playlist.songs.size - 1) {
+                    { 
+                        val currentIndex = playlist.songs.indexOf(song)
+                        viewModel.reorderSong(currentIndex, currentIndex + 1)
+                    }
                 } else null,
                 showShare = playlist?.id != "CACHED_ALL" && playlist?.id != "DEVICE_SONGS"
             )
@@ -733,26 +782,89 @@ private fun PlaylistHeader(
 }
 
 @Composable
+private fun SelectionTopBar(
+    selectedCount: Int,
+    onCloseClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    contentColor: Color,
+    isDarkTheme: Boolean
+) {
+    val scrolledColor = if (isDarkTheme) Color(0xFF1D1D1D).copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f)
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(scrolledColor)
+            .statusBarsPadding()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onCloseClick) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close selection",
+                tint = contentColor
+            )
+        }
+        
+        Text(
+            text = "$selectedCount selected",
+            style = MaterialTheme.typography.titleMedium,
+            color = contentColor,
+            modifier = Modifier.weight(1f)
+        )
+        
+        IconButton(onClick = onDeleteClick) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete selected",
+                tint = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+@Composable
 private fun SongListItem(
     song: Song,
     isEditable: Boolean = false,
+    isSelected: Boolean = false,
+    isSelectionMode: Boolean = false,
     onReorder: ((from: Int, to: Int) -> Unit)? = null,
     index: Int = 0,
     totalSongs: Int = 0,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onMoreClick: () -> Unit = {},
     titleColor: Color,
     subtitleColor: Color
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    val backgroundColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                      else Color.Transparent,
+        label = "ItemSelectionBackground"
+    )
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .dpadFocusable(onClick = onClick)
+            .background(backgroundColor)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Selection Indicator (Radio button style)
+        if (isSelectionMode) {
+            androidx.compose.material3.Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
+
         // Song Thumbnail
         Box(
             modifier = Modifier
@@ -795,42 +907,8 @@ private fun SongListItem(
         }
         
         // More Options
-        if (isEditable) {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More options",
-                        tint = subtitleColor.copy(alpha = 0.7f)
-                    )
-                }
-                
-                androidx.compose.material3.DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    if (index > 0) {
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text("Move Up") },
-                            onClick = {
-                                showMenu = false
-                                onReorder?.invoke(index, index - 1)
-                            }
-                        )
-                    }
-                    if (index < totalSongs - 1) {
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text("Move Down") },
-                            onClick = {
-                                showMenu = false
-                                onReorder?.invoke(index, index + 1)
-                            }
-                        )
-                    }
-                }
-            }
-        } else {
-             IconButton(onClick = onMoreClick) {
+        if (!isSelectionMode) {
+            IconButton(onClick = onMoreClick) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More options",
