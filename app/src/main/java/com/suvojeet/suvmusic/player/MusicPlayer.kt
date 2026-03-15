@@ -1060,7 +1060,7 @@ class MusicPlayer @Inject constructor(
         val isVideoMode = state.isVideoMode
         
         // Correctly handle next index for both shuffle and linear modes using Media3's built-in logic
-        val nextIndex = mediaController?.nextMediaItemIndex ?: (state.currentIndex + 1)
+        var nextIndex = mediaController?.nextMediaItemIndex ?: (state.currentIndex + 1)
         if (nextIndex == -1 || nextIndex == androidx.media3.common.C.INDEX_UNSET) return
 
         // Fix: If Repeat One is active, don't preload next song (we will loop current one)
