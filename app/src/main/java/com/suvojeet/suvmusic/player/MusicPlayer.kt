@@ -360,26 +360,16 @@ class MusicPlayer @Inject constructor(
             if (playbackState == Player.STATE_ENDED) {
                 val controller = mediaController ?: return
                 val state = _playerState.value
-                val currentIndex = controller.currentMediaItemIndex
                 val queueSize = state.queue.size
                 
-                if (currentIndex < queueSize - 1) {
+                if (controller.hasNextMediaItem()) {
                     // More songs in queue — player couldn't auto-transition (bad URI)
-                    val nextIndex = currentIndex + 1
+                    val nextIndex = controller.nextMediaItemIndex
                     val nextSong = state.queue.getOrNull(nextIndex)
                     if (nextSong != null) {
                         scope.launch {
-                            controller.seekTo(nextIndex, 0L)
+                            controller.seekToNextMediaItem()
                             resolveAndPlayCurrentItem(nextSong, nextIndex, shouldPlay = true)
-                        }
-                    }
-                } else if (state.repeatMode == RepeatMode.ALL && queueSize > 0) {
-                    // Wrap around to beginning of queue
-                    val firstSong = state.queue.firstOrNull()
-                    if (firstSong != null) {
-                        scope.launch {
-                            controller.seekTo(0, 0L)
-                            resolveAndPlayCurrentItem(firstSong, 0, shouldPlay = true)
                         }
                     }
                 } else if (state.isAutoplayEnabled || state.isRadioMode) {
@@ -523,8 +513,9 @@ class MusicPlayer @Inject constructor(
                     // - YouTube placeholders: "https://youtube.com/watch?v=..."
                     // - JioSaavn/empty: null, empty, or doesn't look like a valid stream URL
                     val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+                    val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
                     val isEmptyOrInvalid = currentUri.isNullOrBlank()
-                    val needsResolution = isYouTubePlaceholder || isEmptyOrInvalid
+                    val needsResolution = isYouTubePlaceholder || isInvalidPlaceholder || isEmptyOrInvalid
                     
                     if (!needsResolution && currentUri != null) {
                         // Check if preloaded content mode matches current video mode
@@ -557,6 +548,10 @@ class MusicPlayer @Inject constructor(
                         android.util.Log.d("MusicPlayer", "Preloaded mode mismatch: preloaded=$preloadedIsVideoMode, current=${_playerState.value.isVideoMode}")
                     }
                     
+                    if (needsResolution) {
+                        controller.pause() // Prevent player from failing on placeholder URI
+                    }
+                    
                     // Check sleep timer (only for auto transitions)
                     val timerTriggered = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
                         sleepTimerManager.onSongEnded()
@@ -564,8 +559,10 @@ class MusicPlayer @Inject constructor(
                         false
                     }
                     
+                    val wasPlaying = controller.playWhenReady
                     scope.launch {
-                        resolveAndPlayCurrentItem(song, index, shouldPlay = !timerTriggered)
+                        val shouldPlayNext = !timerTriggered && (wasPlaying || reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
+                        resolveAndPlayCurrentItem(song, index, shouldPlay = shouldPlayNext)
                     }
                 }
             }
@@ -595,8 +592,9 @@ class MusicPlayer @Inject constructor(
             // Placeholder Check: If current URI is a YouTube watch URL, it will fail and MUST be resolved
             val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
             val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+            val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
-            if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isYouTubePlaceholder) {
+            if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isYouTubePlaceholder || isInvalidPlaceholder) {
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
