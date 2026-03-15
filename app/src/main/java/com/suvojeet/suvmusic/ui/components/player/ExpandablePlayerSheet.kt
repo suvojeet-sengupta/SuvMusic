@@ -60,7 +60,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.ui.components.DominantColors

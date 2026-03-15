@@ -88,7 +88,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
