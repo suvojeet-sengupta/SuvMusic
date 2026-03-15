@@ -361,9 +361,15 @@ class MusicPlayer @Inject constructor(
                 val controller = mediaController ?: return
                 val state = _playerState.value
                 val queueSize = state.queue.size
+                val endedUri = controller.currentMediaItem?.localConfiguration?.uri?.toString()
+                val endedOnPlaceholder = endedUri.isNullOrBlank() ||
+                    endedUri.contains("placeholder.invalid") ||
+                    endedUri.contains("youtube.com/watch") ||
+                    endedUri.contains("youtu.be")
                 
-                if (controller.hasNextMediaItem()) {
-                    // More songs in queue — player couldn't auto-transition (bad URI)
+                if (controller.hasNextMediaItem() && endedOnPlaceholder) {
+                    // Only force-advance when the ended item was a placeholder/invalid URI.
+                    // For normal items, the player handles AUTO transitions itself.
                     val nextIndex = controller.nextMediaItemIndex
                     val nextSong = state.queue.getOrNull(nextIndex)
                     if (nextSong != null) {
