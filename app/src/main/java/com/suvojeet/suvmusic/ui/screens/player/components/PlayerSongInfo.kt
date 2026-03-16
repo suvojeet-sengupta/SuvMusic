@@ -166,9 +166,9 @@ fun SongInfoSection(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = when (song.source) {
-                            SongSource.JIOSAAVN -> "HQ Audio • 320kbps"
+                            SongSource.JIOSAAVN -> "AAC • 320kbps"
                             SongSource.LOCAL -> "Local"
-                            else -> "Opus • HQ Audio"
+                            else -> "Opus • 160kbps"
                         },
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Medium,
