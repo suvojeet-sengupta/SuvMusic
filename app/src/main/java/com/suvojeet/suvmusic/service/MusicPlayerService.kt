@@ -110,6 +110,9 @@ class MusicPlayerService : MediaLibraryService() {
     // Cache for search results so onSearch & onGetSearchResult stay consistent
     private var cachedSearchQuery: String? = null
     private var cachedSearchResults: List<com.suvojeet.suvmusic.core.model.Song> = emptyList()
+    
+    // Browse-level song cache: videoId -> Song, populated by createPlayableMediaItem
+    private val cachedBrowseSongs: MutableMap<String, com.suvojeet.suvmusic.core.model.Song> = mutableMapOf()
 
     private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
         android.util.Log.e("MusicPlayerService", "Coroutine exception", throwable)
@@ -541,7 +544,8 @@ class MusicPlayerService : MediaLibraryService() {
                 browser: MediaSession.ControllerInfo,
                 mediaId: String
             ): com.google.common.util.concurrent.ListenableFuture<LibraryResult<MediaItem>> {
-                val song = cachedSearchResults.find { it.id == mediaId }
+                // Check browse cache first, then search results
+                val song = cachedBrowseSongs[mediaId] ?: cachedSearchResults.find { it.id == mediaId }
                 return if (song != null) {
                     com.google.common.util.concurrent.Futures.immediateFuture(LibraryResult.ofItem(createPlayableMediaItem(song), null))
                 } else {
@@ -555,10 +559,60 @@ class MusicPlayerService : MediaLibraryService() {
                 mediaItems: MutableList<MediaItem>,
                 startIndex: Int,
                 startPositionMs: Long
-            ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaSession.MediaItemsWithStartPosition> {
-                return com.google.common.util.concurrent.Futures.immediateFuture(
-                    androidx.media3.session.MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs)
-                )
+            ): com.google.common.util.concurrent.ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+                // Phone-side items typically already have URIs — pass through immediately
+                val allHaveUris = mediaItems.all { it.localConfiguration?.uri != null }
+                if (allHaveUris) {
+                    return com.google.common.util.concurrent.Futures.immediateFuture(
+                        MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs)
+                    )
+                }
+
+                // Android Auto browse items need async URI resolution
+                val future = com.google.common.util.concurrent.SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
+                serviceScope.launch {
+                    try {
+                        val resolved = mediaItems.mapIndexed { index, item ->
+                            if (item.localConfiguration?.uri != null) return@mapIndexed item
+
+                            val videoId = item.mediaId
+                            val song = cachedBrowseSongs[videoId] ?: cachedSearchResults.find { it.id == videoId }
+                            val streamUrl = resolveStreamUrlWithRetry(videoId)
+
+                            if (streamUrl != null) {
+                                if (song != null) {
+                                    createPlayableMediaItem(song).buildUpon()
+                                        .setUri(Uri.parse(streamUrl))
+                                        .build()
+                                } else {
+                                    item.buildUpon()
+                                        .setUri(Uri.parse(streamUrl))
+                                        .setMediaMetadata(
+                                            item.mediaMetadata.buildUpon()
+                                                .setIsPlayable(true)
+                                                .setIsBrowsable(false)
+                                                .build()
+                                        )
+                                        .build()
+                                }
+                            } else {
+                                android.util.Log.e("MusicPlayerService", "onSetMediaItems: failed to resolve URI for $videoId")
+                                null
+                            }
+                        }.filterNotNull().toMutableList()
+
+                        if (resolved.isEmpty()) {
+                            future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
+                        } else {
+                            val safeIndex = startIndex.coerceIn(0, (resolved.size - 1).coerceAtLeast(0))
+                            future.set(MediaSession.MediaItemsWithStartPosition(resolved, safeIndex, startPositionMs))
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MusicPlayerService", "onSetMediaItems async resolution failed", e)
+                        future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
+                    }
+                }
+                return future
             }
 
             override fun onGetChildren(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, parentId: String, page: Int, pageSize: Int, params: LibraryParams?): com.google.common.util.concurrent.ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
@@ -1046,6 +1100,9 @@ class MusicPlayerService : MediaLibraryService() {
         .build()
 
     private fun createPlayableMediaItem(song: com.suvojeet.suvmusic.core.model.Song): MediaItem {
+        // Cache every song encountered during browsing for later URI resolution in onSetMediaItems
+        cachedBrowseSongs[song.id] = song
+
         val artworkUri = if (!song.thumbnailUrl.isNullOrEmpty()) Uri.parse(song.thumbnailUrl) else null
         val contentUri = song.localUri ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else null
         val metadata = MediaMetadata.Builder()
