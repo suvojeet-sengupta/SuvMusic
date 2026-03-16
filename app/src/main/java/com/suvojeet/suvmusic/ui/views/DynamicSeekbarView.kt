@@ -58,7 +58,8 @@ class DynamicSeekbarView @JvmOverloads constructor(
             SeekbarStyle.CLASSIC -> drawClassic(canvas)
             SeekbarStyle.DOTS -> drawDots(canvas)
             SeekbarStyle.GRADIENT_BAR -> drawGradient(canvas)
-            SeekbarStyle.MATERIAL -> drawClassic(canvas) // Reuse classic style for now
+            SeekbarStyle.MATERIAL -> drawClassic(canvas)
+            SeekbarStyle.M3E_WAVY -> drawWaveLine(canvas) // M3E not available in View, use wave line
         }
     }
 
