@@ -927,7 +927,10 @@ class YouTubeRepository @Inject constructor(
             var currentJson = JSONObject(json)
             var continuationToken = extractContinuationToken(currentJson)
             var pageCount = 0
-            while (continuationToken != null && pageCount < 100) { // Limit to 10000 songs
+            // Reduce pagination for auto-mix playlists to prevent AA callback timeouts
+            val isAutoMix = playlistId.startsWith("RD") || playlistId.startsWith("RTM")
+            val maxPages = if (isAutoMix) 2 else 100
+            while (continuationToken != null && pageCount < maxPages) { // Auto-mixes: 2 pages max (~100 songs)
                 val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parseSongsFromInternalJson(continuationResponse)
@@ -1024,6 +1027,94 @@ class YouTubeRepository @Inject constructor(
             }
             Playlist(playlistId, "Error loading playlist", "", null, emptyList())
         }
+    }
+
+    /**
+     * Fetch auto-generated mix playlists (Mixed For You, Replay Mix, Discover Mix, Supermix).
+     * These use YouTube's /next endpoint — NOT /browse.
+     * IDs: RDAMPL* (Mixed For You), RDCLAK* (Discover Mix), RDGMUK* (Replay Mix), RTM/RDTMAK (Supermix)
+     */
+    suspend fun getAutoMixPlaylist(playlistId: String): com.suvojeet.suvmusic.core.model.Playlist = withContext(Dispatchers.IO) {
+        try {
+            val bodyJson = """
+                {
+                    "playlistId": "$playlistId"
+                }
+            """.trimIndent()
+
+            val json = fetchInternalApiWithBody("next", bodyJson)
+            val songs = parseAutoMixQueue(json)
+
+            if (songs.isNotEmpty()) {
+                return @withContext com.suvojeet.suvmusic.core.model.Playlist(
+                    id = playlistId,
+                    title = resolveAutoMixTitle(playlistId),
+                    author = "YouTube Music",
+                    thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
+                    songs = songs
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("YouTubeRepository", "getAutoMixPlaylist failed for $playlistId", e)
+        }
+        com.suvojeet.suvmusic.core.model.Playlist(
+            id = playlistId,
+            title = resolveAutoMixTitle(playlistId),
+            author = "YouTube Music",
+            thumbnailUrl = null,
+            songs = emptyList()
+        )
+    }
+
+    private fun resolveAutoMixTitle(playlistId: String): String = when {
+        playlistId.startsWith("RDAMPL") -> "Mixed For You"
+        playlistId.startsWith("RDCLAK") -> "Discover Mix"
+        playlistId.startsWith("RDGMUK") -> "Replay Mix"
+        playlistId.startsWith("RTM") || playlistId.startsWith("RDTMAK") -> "My Supermix"
+        else -> "Your Mix"
+    }
+
+    private fun parseAutoMixQueue(json: String): List<com.suvojeet.suvmusic.core.model.Song> {
+        val songs = mutableListOf<com.suvojeet.suvmusic.core.model.Song>()
+        if (json.isBlank()) return songs
+        try {
+            val root = org.json.JSONObject(json)
+            val contents = root
+                .optJSONObject("contents")
+                ?.optJSONObject("singleColumnMusicWatchNextResultsRenderer")
+                ?.optJSONObject("tabbedRenderer")
+                ?.optJSONObject("watchNextTabbedResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("musicQueueRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("playlistPanelRenderer")
+                ?.optJSONArray("contents") ?: return songs
+
+            for (i in 0 until contents.length()) {
+                val item = contents.optJSONObject(i)
+                    ?.optJSONObject("playlistPanelVideoRenderer") ?: continue
+                val videoId = item.optString("videoId").takeIf { it.isNotBlank() } ?: continue
+                val title = getRunText(item.optJSONObject("title")) ?: "Unknown"
+                val artist = getRunText(item.optJSONObject("shortBylineText")) ?: "Unknown Artist"
+                val thumbnail = extractThumbnail(item)
+                val duration = extractDuration(item)
+
+                com.suvojeet.suvmusic.core.model.Song.fromYouTube(
+                    videoId = videoId,
+                    title = title,
+                    artist = artist,
+                    album = "",
+                    duration = duration,
+                    thumbnailUrl = thumbnail
+                )?.let { songs.add(it) }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("YouTubeRepository", "parseAutoMixQueue failed", e)
+        }
+        return songs
     }
 
     suspend fun getArtist(browseId: String): Artist? = withContext(Dispatchers.IO) {

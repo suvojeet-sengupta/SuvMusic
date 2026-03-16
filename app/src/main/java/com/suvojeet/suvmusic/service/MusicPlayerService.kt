@@ -18,6 +18,7 @@ import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import org.json.JSONArray
+import org.json.JSONObject
 import com.google.common.collect.ImmutableList
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
@@ -92,6 +93,8 @@ class MusicPlayerService : MediaLibraryService() {
     private val COMMAND_LIKE = "COMMAND_LIKE"
     private val COMMAND_REPEAT = "COMMAND_REPEAT"
     private val COMMAND_SHUFFLE = "COMMAND_SHUFFLE"
+    private val COMMAND_START_RADIO = "COMMAND_START_RADIO"
+    private val COMMAND_STOP_RADIO = "COMMAND_STOP_RADIO"
     
     // Constants for Android Auto browsing
     private val ROOT_ID = "root"
@@ -113,6 +116,10 @@ class MusicPlayerService : MediaLibraryService() {
     
     // Browse-level song cache: videoId -> Song, populated by createPlayableMediaItem
     private val cachedBrowseSongs: MutableMap<String, com.suvojeet.suvmusic.core.model.Song> = mutableMapOf()
+
+    // Playlist context cache: songId -> ordered list of all songs in its parent playlist/section
+    // Used by onAddMediaItems to queue up remaining songs for skip support in Android Auto
+    private val playlistContextCache: MutableMap<String, List<com.suvojeet.suvmusic.core.model.Song>> = mutableMapOf()
 
     private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
         android.util.Log.e("MusicPlayerService", "Coroutine exception", throwable)
@@ -434,6 +441,8 @@ class MusicPlayerService : MediaLibraryService() {
                     .add(SessionCommand(COMMAND_LIKE, android.os.Bundle.EMPTY))
                     .add(SessionCommand(COMMAND_REPEAT, android.os.Bundle.EMPTY))
                     .add(SessionCommand(COMMAND_SHUFFLE, android.os.Bundle.EMPTY))
+                    .add(SessionCommand(COMMAND_START_RADIO, android.os.Bundle.EMPTY))
+                    .add(SessionCommand(COMMAND_STOP_RADIO, android.os.Bundle.EMPTY))
                     .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
                     .build()
                 
@@ -517,6 +526,46 @@ class MusicPlayerService : MediaLibraryService() {
                                      devices.find { it.id.toString() == deviceId }
                                  }
                                  player.setPreferredAudioDevice(targetDevice)
+                            }
+                        }
+                    }
+
+                    COMMAND_START_RADIO -> {
+                        val currentVideoId = session.player.currentMediaItem?.mediaId
+                        if (!currentVideoId.isNullOrBlank()) {
+                            serviceScope.launch {
+                                try {
+                                    android.util.Log.d("MusicPlayerService", "Start Radio for: $currentVideoId")
+                                    // Use getRelatedSongs which already handles /next endpoint internally
+                                    val radioSongs = youTubeRepository.getRelatedSongs(currentVideoId)
+                                    if (radioSongs.isNotEmpty()) {
+                                        val mediaItems = radioSongs.map { createPlayableMediaItem(it) }
+                                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            val player = session.player
+                                            val insertAt = player.currentMediaItemIndex + 1
+                                            mediaItems.forEachIndexed { i, item ->
+                                                player.addMediaItem(insertAt + i, item)
+                                            }
+                                        }
+                                        android.util.Log.d("MusicPlayerService", "Radio: added ${radioSongs.size} songs to queue")
+                                    } else {
+                                        android.util.Log.w("MusicPlayerService", "Radio: no songs returned for $currentVideoId")
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("MusicPlayerService", "Start Radio failed", e)
+                                }
+                            }
+                        }
+                    }
+
+                    COMMAND_STOP_RADIO -> {
+                        // Clear all items after current song
+                        serviceScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                            val player = session.player
+                            val currentIndex = player.currentMediaItemIndex
+                            val itemCount = player.mediaItemCount
+                            if (itemCount > currentIndex + 1) {
+                                player.removeMediaItems(currentIndex + 1, itemCount)
                             }
                         }
                     }
@@ -668,7 +717,18 @@ class MusicPlayerService : MediaLibraryService() {
                                 if (parentId.startsWith("section_")) {
                                     val index = parentId.removePrefix("section_").toIntOrNull()
                                     if (index != null && index in cachedHomeSections.indices) {
-                                        cachedHomeSections[index].items.forEach { homeItem ->
+                                        val section = cachedHomeSections[index]
+
+                                        // BUG FIX (Skip): Cache song list for this section so
+                                        // onAddMediaItems can populate the queue for skip support
+                                        val sectionSongs = section.items
+                                            .filterIsInstance<com.suvojeet.suvmusic.data.model.HomeItem.SongItem>()
+                                            .map { it.song }
+                                        sectionSongs.forEach { song ->
+                                            playlistContextCache[song.id] = sectionSongs
+                                        }
+
+                                        section.items.forEach { homeItem ->
                                              if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.SongItem) {
                                                  children.add(createPlayableMediaItem(homeItem.song))
                                              } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem) {
@@ -680,7 +740,30 @@ class MusicPlayerService : MediaLibraryService() {
                                     }
                                 } else if (parentId.startsWith("playlist_")) {
                                     val playlistId = parentId.removePrefix("playlist_")
-                                    val playlist = youTubeRepository.getPlaylist(playlistId)
+
+                                    // Auto-generated mixes (RD*, RTM) need /next endpoint, not /browse
+                                    // getPlaylist() times out on these in Android Auto due to pagination
+                                    val isAutoMix = playlistId.startsWith("RD") ||
+                                                    playlistId.startsWith("RTM")
+                                    val playlist = if (isAutoMix) {
+                                        kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                                            youTubeRepository.getAutoMixPlaylist(playlistId)
+                                        } ?: run {
+                                            android.util.Log.w("MusicPlayerService", "Auto-mix timed out: $playlistId")
+                                            com.suvojeet.suvmusic.core.model.Playlist(playlistId, resolveAutoMixTitle(playlistId), "YouTube Music", null, emptyList())
+                                        }
+                                    } else {
+                                        youTubeRepository.getPlaylist(playlistId)
+                                    }
+
+                                    // BUG FIX (Skip): Populate context cache so onAddMediaItems
+                                    // can append remaining songs for skip support
+                                    if (playlist.songs.isNotEmpty()) {
+                                        playlist.songs.forEach { song ->
+                                            playlistContextCache[song.id] = playlist.songs
+                                        }
+                                    }
+
                                     // Add Shuffle item
                                     if (playlist.songs.isNotEmpty()) {
                                         children.add(MediaItem.Builder()
@@ -831,6 +914,31 @@ class MusicPlayerService : MediaLibraryService() {
                          }
                          resolvedItem?.let { finalItems.add(it) }
                      }
+                     // BUG FIX (Skip): After resolving the tapped song, asynchronously
+                     // append the rest of its playlist to the player queue.
+                     // This allows AA skip to work. Items have no stream URLs yet —
+                     // MusicPlayer's onMediaItemTransition will resolve them lazily.
+                     if (finalItems.isNotEmpty()) {
+                         val firstId = finalItems.first().mediaId
+                         val context = playlistContextCache[firstId]
+                         if (context != null) {
+                             val startIndex = context.indexOfFirst { it.id == firstId }
+                             if (startIndex >= 0 && startIndex < context.size - 1) {
+                                 val remaining = context.subList(startIndex + 1, context.size)
+                                 serviceScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                     try {
+                                         val player = mediaLibrarySession?.player ?: return@launch
+                                         remaining.forEach { song ->
+                                             player.addMediaItem(createPlayableMediaItem(song))
+                                         }
+                                         android.util.Log.d("MusicPlayerService", "Skip fix: queued ${remaining.size} songs after ${firstId}")
+                                     } catch (e: Exception) {
+                                         android.util.Log.e("MusicPlayerService", "Skip fix queue append failed", e)
+                                     }
+                                 }
+                             }
+                         }
+                     }
                      updatedMediaItemsFuture.set(finalItems)
                  }
                  return updatedMediaItemsFuture
@@ -927,6 +1035,11 @@ class MusicPlayerService : MediaLibraryService() {
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_repeat))
                 .setSessionCommand(SessionCommand(COMMAND_REPEAT, android.os.Bundle.EMPTY))
                 .setIconResId(repeatIcon)
+                .build(),
+            CommandButton.Builder()
+                .setDisplayName("Start Radio")
+                .setSessionCommand(SessionCommand(COMMAND_START_RADIO, android.os.Bundle.EMPTY))
+                .setIconResId(com.suvojeet.suvmusic.R.drawable.ic_play)
                 .build()
         )
     }
@@ -1067,6 +1180,14 @@ class MusicPlayerService : MediaLibraryService() {
             }
         }
         return streamUrl
+    }
+
+    private fun resolveAutoMixTitle(playlistId: String): String = when {
+        playlistId.startsWith("RDAMPL") -> "Mixed For You"
+        playlistId.startsWith("RDCLAK") -> "Discover Mix"
+        playlistId.startsWith("RDGMUK") -> "Replay Mix"
+        playlistId.startsWith("RTM") || playlistId.startsWith("RDTMAK") -> "My Supermix"
+        else -> "Your Mix"
     }
 
     private fun createBrowsableMediaItem(
