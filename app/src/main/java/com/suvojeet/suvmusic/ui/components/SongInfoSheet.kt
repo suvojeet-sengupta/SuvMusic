@@ -1,5 +1,7 @@
 package com.suvojeet.suvmusic.ui.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,18 +38,11 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -69,11 +64,7 @@ import coil3.request.crossfade
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import javax.inject.Inject
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -83,7 +74,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 /**
  * Data class to hold artist credit information with thumbnail
@@ -96,7 +86,7 @@ data class ArtistCreditInfo(
 )
 
 /**
- * Apple Music-inspired Song Credits screen.
+ * Apple Music-inspired Song Credits screen (Updated to M3 Expressive).
  * Shows detailed song information like artist, album, duration, etc.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,12 +116,12 @@ fun SongInfoSheet(
             sheetState = sheetState,
             containerColor = Color.Transparent,
             dragHandle = null,
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
+            contentWindowInsets = { WindowInsets(0) }
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
+                    .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
             ) {
                 // Get high resolution thumbnail URL
                 val highResThumbnail = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
@@ -142,8 +132,8 @@ fun SongInfoSheet(
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(400.dp)
-                        .blur(60.dp),
+                        .height(450.dp)
+                        .blur(80.dp),
                     contentScale = ContentScale.Crop
                 )
                 
@@ -151,13 +141,13 @@ fun SongInfoSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(400.dp)
+                        .height(450.dp)
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                                    MaterialTheme.colorScheme.surface
+                                    MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.2f),
+                                    MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.7f),
+                                    MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
                                 )
                             )
                         )
@@ -167,58 +157,59 @@ fun SongInfoSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = 48.dp)
                 ) {
                     // Top bar with close button
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
+                            .padding(20.dp),
                         horizontalArrangement = Arrangement.End
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-                            modifier = Modifier.size(36.dp)
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(40.dp),
+                            onClick = onDismiss
                         ) {
-                            IconButton(onClick = onDismiss) {
+                            Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.Close,
+                                    imageVector = Icons.Rounded.Close,
                                     contentDescription = "Close",
                                     tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Artwork - High Quality
+                    // Artwork - Expressive styling
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 60.dp),
+                            .padding(horizontal = 48.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
                             model = highResThumbnail,
                             contentDescription = song.title,
                             modifier = Modifier
-                                .size(200.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .shadow(8.dp, RoundedCornerShape(12.dp)),
+                                .size(240.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .shadow(16.dp, RoundedCornerShape(24.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     // Song title
                     Text(
                         text = song.title,
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.5).sp,
+                            lineHeight = 32.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
@@ -229,13 +220,15 @@ fun SongInfoSheet(
                             .padding(horizontal = 24.dp)
                     )
                     
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     
                     // Artist name
                     val mainArtistId = song.artistId ?: artistCredits.firstOrNull()?.artistId
                     Text(
                         text = song.artist,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
                         color = if (mainArtistId != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
@@ -245,7 +238,7 @@ fun SongInfoSheet(
                             }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     // Quality & Source Badges
                     Row(
@@ -261,42 +254,32 @@ fun SongInfoSheet(
                             else -> "UNKNOWN"
                         }
                         
-                        Badge(text = sourceBadge)
+                        InfoBadge(text = sourceBadge, isPrimary = true)
                         
                         // Show actual codec from player
                         if (audioCodec != null) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            Badge(
+                            InfoBadge(
                                 text = audioCodec.uppercase(),
-                                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                isPrimary = false
                             )
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    // AUDIO INFORMATION Section (New)
-                    Text(
-                        text = "AUDIO INFORMATION",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            letterSpacing = 2.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    )
+                    // --- AUDIO INFORMATION Section ---
+                    ExpressiveSectionHeader("AUDIO INFORMATION")
                     
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Audio Info items
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(16.dp)
+                            .padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     ) {
-                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                            // Bitrate
+                        Column {
                             val bitrateDisplay = audioBitrate?.let { "${it}kbps" } ?: "Unknown"
                             CreditItem(
                                 icon = Icons.Default.MusicNote,
@@ -306,7 +289,6 @@ fun SongInfoSheet(
                             
                             CreditDivider()
                             
-                            // Codec
                             val codecDisplay = audioCodec?.uppercase() ?: "Unknown"
                             CreditItem(
                                 icon = Icons.Default.Headphones,
@@ -316,27 +298,18 @@ fun SongInfoSheet(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    // PERFORMING ARTISTS Section (Apple Music style)
-                    Text(
-                        text = "PERFORMING ARTISTS",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            letterSpacing = 2.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    )
+                    // --- PERFORMING ARTISTS Section ---
+                    ExpressiveSectionHeader("PERFORMING ARTISTS")
                     
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Artists vertical list in a Surface container
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(16.dp)
+                            .padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     ) {
                         Column {
                             artistCredits.forEachIndexed { index, artistInfo ->
@@ -351,37 +324,28 @@ fun SongInfoSheet(
                                 )
                                 if (index < artistCredits.lastIndex) {
                                     HorizontalDivider(
-                                        modifier = Modifier.padding(start = 72.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        modifier = Modifier.padding(start = 76.dp, end = 16.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                                     )
                                 }
                             }
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    // Credits section header
-                    Text(
-                        text = "CREDITS",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            letterSpacing = 2.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    )
+                    // --- CREDITS section ---
+                    ExpressiveSectionHeader("CREDITS")
                     
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Credits list
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(16.dp)
+                            .padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     ) {
-                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        Column {
                             CreditItem(
                                 icon = Icons.Default.Person,
                                 label = "Artist",
@@ -407,33 +371,24 @@ fun SongInfoSheet(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    // Additional info section
-                    Text(
-                        text = "ABOUT",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            letterSpacing = 2.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // --- ABOUT Section ---
+                    ExpressiveSectionHeader("ABOUT")
                     
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(16.dp)
+                            .padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     ) {
-                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        Column {
                             CreditItem(
                                 icon = Icons.Default.Language,
                                 label = "Source",
                                 value = when {
-                                    // For downloaded songs, show original source + Downloaded suffix
                                     song.source == com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> {
                                         when (song.originalSource) {
                                             com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ Audio (Downloaded)"
@@ -467,18 +422,21 @@ fun SongInfoSheet(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(40.dp))
+                    Spacer(modifier = Modifier.height(48.dp))
                     
                     // Footer
                     Text(
                         text = "Powered by SuvMusic",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(48.dp))
                 }
             }
         }
@@ -486,28 +444,40 @@ fun SongInfoSheet(
 }
 
 @Composable
-private fun Badge(
+private fun ExpressiveSectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontWeight = FontWeight.Black,
+            letterSpacing = 2.sp
+        ),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+        modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp)
+    )
+}
+
+@Composable
+private fun InfoBadge(
     text: String,
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    textColor: Color = MaterialTheme.colorScheme.onSurface
+    isPrimary: Boolean = false
 ) {
     Surface(
-        color = backgroundColor,
-        shape = RoundedCornerShape(4.dp),
-        modifier = Modifier.height(20.dp)
+        color = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.height(24.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 6.dp)
+            modifier = Modifier.padding(horizontal = 10.dp)
         ) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Black,
                     fontSize = 10.sp,
-                    letterSpacing = 0.5.sp
-                ),
-                color = textColor
+                    letterSpacing = 1.sp
+                )
             )
         }
     }
@@ -535,28 +505,41 @@ private fun CreditItem(
                     android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(22.dp)
-        )
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
         
         Spacer(modifier = Modifier.width(16.dp))
         
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Bold
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -565,10 +548,10 @@ private fun CreditItem(
         
         if (canCopy) {
             Icon(
-                imageVector = Icons.Default.ContentCopy,
+                imageVector = Icons.Rounded.ContentCopy,
                 contentDescription = "Copy",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(16.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -577,8 +560,8 @@ private fun CreditItem(
 @Composable
 private fun CreditDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        modifier = Modifier.padding(horizontal = 20.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
     )
 }
 
@@ -593,26 +576,18 @@ private fun formatDurationForCredits(duration: Long): String {
 
 /**
  * Get high resolution thumbnail URL for YouTube videos.
- * Converts low-res thumbnails to maxresdefault quality.
- * Handles both ytimg.com and lh3.googleusercontent.com formats.
  */
 private fun getHighResThumbnailUrl(originalUrl: String?, videoId: String): String {
-    // If no URL, try to construct from video ID
     if (originalUrl.isNullOrBlank()) {
         return "https://img.youtube.com/vi/$videoId/maxresdefault.jpg"
     }
     
-    // Handle lh3.googleusercontent.com URLs (YT Music style)
-    // These URLs have size parameters like =w60-h60 or =w120-h120
     if (originalUrl.contains("lh3.googleusercontent.com") || originalUrl.contains("yt3.ggpht.com")) {
-        // Remove size constraints to get full resolution
         return originalUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w544-h544")
             .replace(Regex("=s\\d+.*"), "=s544")
     }
     
-    // If it's a YouTube thumbnail URL, upgrade to maxresdefault
     if (originalUrl.contains("ytimg.com") || originalUrl.contains("youtube.com")) {
-        // Extract video ID from various YouTube thumbnail URL formats
         val ytVideoId = when {
             originalUrl.contains("/vi/") -> {
                 originalUrl.substringAfter("/vi/").substringBefore("/")
@@ -622,26 +597,7 @@ private fun getHighResThumbnailUrl(originalUrl: String?, videoId: String): Strin
         return "https://img.youtube.com/vi/$ytVideoId/hqdefault.jpg"
     }
     
-    // For non-YouTube URLs, return original
     return originalUrl
-}
-
-/**
- * Parse artist string into list of individual artists.
- * Handles common separators: comma, "&", "feat.", "ft.", "x", "with"
- * Returns list of pairs: (artistName, artistId?) - artistId is null for now
- */
-private fun parseArtists(artistString: String): List<Pair<String, String?>> {
-    if (artistString.isBlank()) return emptyList()
-    
-    // Split by common separators
-    val separatorRegex = Regex("[,&]|\\b(feat\\.?|ft\\.?|with|x)\\b", RegexOption.IGNORE_CASE)
-    val artists = artistString.split(separatorRegex)
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
-    
-    // Return as pairs with null artistId (would need API to get actual IDs)
-    return artists.map { it to null }
 }
 
 /**
@@ -661,15 +617,15 @@ private fun ArtistCreditRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = artistId != null, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Circular avatar - show thumbnail or initials
+        // Circular avatar
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(52.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             if (thumbnailUrl != null) {
@@ -686,7 +642,6 @@ private fun ArtistCreditRow(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                // Fallback to initials
                 val initials = artistName.split(" ")
                     .filter { it.isNotBlank() }
                     .take(2)
@@ -696,7 +651,7 @@ private fun ArtistCreditRow(
                 Text(
                     text = initials.ifEmpty { "?" },
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Black
                     ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -709,19 +664,33 @@ private fun ArtistCreditRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = artistName,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Bold
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = role,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+        
+        if (artistId != null) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp).rotate(180f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
         }
     }
 }
+
+// Add rotate import if needed, or just use 180f with a different icon
+import androidx.compose.ui.draw.rotate
 
 /**
  * ViewModel for fetching artist credits with thumbnails from YouTube Music
@@ -738,15 +707,12 @@ class SongInfoViewModel @Inject constructor(
     private var lastArtistString: String? = null
     
     fun fetchArtistCredits(artistString: String, source: com.suvojeet.suvmusic.core.model.SongSource = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
-        // Avoid refetching if same artist string
         if (artistString == lastArtistString && _artistCredits.value.isNotEmpty()) return
         lastArtistString = artistString
         
         viewModelScope.launch {
-            // First, parse the artist string to get individual names
             val artistNames = parseArtistNames(artistString)
             
-            // Show artists immediately with no thumbnail
             _artistCredits.value = artistNames.map { name ->
                 ArtistCreditInfo(
                     name = name,
@@ -756,7 +722,6 @@ class SongInfoViewModel @Inject constructor(
                 )
             }
             
-            // Then fetch thumbnails for each artist
             val updatedCredits = artistNames.map { name ->
                 try {
                     val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
@@ -792,8 +757,6 @@ class SongInfoViewModel @Inject constructor(
     
     private fun parseArtistNames(artistString: String): List<String> {
         if (artistString.isBlank()) return emptyList()
-        
-        // Split by common separators
         val separatorRegex = Regex("[,&]|\\b(feat\\.?|ft\\.?|with|x)\\b", RegexOption.IGNORE_CASE)
         return artistString.split(separatorRegex)
             .map { it.trim() }
