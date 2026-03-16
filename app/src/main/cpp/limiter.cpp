@@ -3,7 +3,7 @@
 Limiter::Limiter() : enabled(false), threshold(1.0f), ratio(1.0f), 
                      attackCoeff(0.0f), releaseCoeff(0.0f), makeupGain(1.0f),
                      delayWriteIndex(0), delayLength(0), envelope(0.0f),
-                     currentGain(1.0f), attackMs_(0.1f), releaseMs_(100.0f), currentSampleRate(0), balance(0.0f) {
+                     currentGain(1.0f), attackMs_(0.1f), releaseMs_(100.0f), currentSampleRate(0), currentNumChannels(0), balance(0.0f) {
     setParams(-0.1f, 20.0f, 0.1f, 100.0f, 0.0f);
 }
 
@@ -38,8 +38,9 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
         localReleaseMs = releaseMs_;
     }
 
-    if (sampleRate != currentSampleRate) {
+    if (sampleRate != currentSampleRate || numChannels != currentNumChannels) {
         currentSampleRate = sampleRate;
+        currentNumChannels = numChannels;
         delayLength = (int)(LOOKAHEAD_MS * sampleRate / 1000.0f);
         delayBuffer.assign(delayLength * numChannels, 0.0f);
         delayWriteIndex = 0;
@@ -68,15 +69,17 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
         float maxAbsInput = 0.0f;
         
         // Use a fixed-size array to avoid heap allocation in the loop
-        float inputFrame[8]; // Support up to 8 channels
-        int safeChannels = std::min(numChannels, 8);
+        float inputFrame[16]; // Support up to 16 channels (standard for immersive audio)
+        int safeChannels = std::min(numChannels, 16);
 
         for (int ch = 0; ch < safeChannels; ++ch) {
             float val = buffer[i * numChannels + ch] * localMakeupGain;
             
-            // Apply Balance
-            if (ch == 0) val *= balGainL;
-            if (ch == 1) val *= balGainR;
+            // Apply Balance (Stereo only)
+            if (numChannels >= 2) {
+                if (ch == 0) val *= balGainL;
+                if (ch == 1) val *= balGainR;
+            }
 
             inputFrame[ch] = val;
             float absSample = fabs(val);
@@ -118,22 +121,13 @@ void Limiter::process(float* buffer, int numFrames, int numChannels, int sampleR
             // Output = Delayed * Smoothed Gain
             float rawOutput = delayedSample * currentGain;
             
-            // Soft Clipping / Analog Saturation
-            // Adds warmth and protects against harsh digital clipping
-            // Formula: x / (1 + |x|) gives a very soft curve, but we want it harder near 1.0
-            // We'll use a Pade approximation of tanh for speed and warmth:
-            // f(x) = x * ( 27 + x*x ) / ( 27 + 9*x*x ) -> for small x
-            // But simpler safety soft-clip:
-            
             float outputSample;
             if (rawOutput < -1.5f) {
                 outputSample = -1.0f;
             } else if (rawOutput > 1.5f) {
                 outputSample = 1.0f;
             } else {
-                // Cubic soft-clipper (Common in guitar pedals/tube sims)
-                // Smoothly saturates between -1.0 and 1.0
-                // For input up to 1.5, it limits gracefully.
+                // Cubic soft-clipper
                 outputSample = rawOutput - (0.1481f * rawOutput * rawOutput * rawOutput);
                 
                 // Hard clamp the result to be absolutely safe

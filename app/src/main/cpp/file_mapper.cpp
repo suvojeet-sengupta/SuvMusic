@@ -36,20 +36,40 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nExtractWaveform(JNIEnv *en
     }
 
     size_t size = static_cast<size_t>(st.st_size);
-    if (size < sizeof(int16_t)) {
+    if (size < 12) { // Need at least some bytes for header check
         close(fd);
         env->ReleaseStringUTFChars(file_path, path);
         return nullptr;
     }
 
     // MMAP the file!
-    // This maps the entire file into memory without actually reading it.
-    // The OS will page in data as we access it.
     void *addr = mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (addr == MAP_FAILED) {
         close(fd);
         env->ReleaseStringUTFChars(file_path, path);
         return nullptr;
+    }
+
+    // Basic Header Check for compressed formats
+    const uint8_t* header = static_cast<const uint8_t*>(addr);
+    bool isCompressed = false;
+    
+    // Check for ID3 (MP3)
+    if (header[0] == 'I' && header[1] == 'D' && header[2] == '3') isCompressed = true;
+    // Check for fLaC
+    else if (header[0] == 'f' && header[1] == 'L' && header[2] == 'a' && header[3] == 'C') isCompressed = true;
+    // Check for MP4/AAC (ftyp)
+    else if (size > 12 && header[4] == 'f' && header[5] == 't' && header[6] == 'y' && header[7] == 'p') isCompressed = true;
+    // Check for Ogg
+    else if (header[0] == 'O' && header[1] == 'g' && header[2] == 'g' && header[3] == 'S') isCompressed = true;
+
+    if (isCompressed) {
+        __android_log_print(ANDROID_LOG_WARN, TAG, "Compressed file detected (%s). nExtractWaveform only supports raw PCM.", path);
+        munmap(addr, size);
+        close(fd);
+        env->ReleaseStringUTFChars(file_path, path);
+        // Return empty array to indicate unsupported format
+        return env->NewFloatArray(0);
     }
 
     // For demonstration, we assume it's a raw 16-bit PCM file (or we treat any file as bytes)

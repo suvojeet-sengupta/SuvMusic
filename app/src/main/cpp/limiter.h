@@ -42,6 +42,7 @@ private:
     float attackMs_;
     float releaseMs_;
     int currentSampleRate;
+    int currentNumChannels;
     float balance; // -1.0 (Left) to 1.0 (Right)
     
     void updateCoefficients(int sampleRate);
