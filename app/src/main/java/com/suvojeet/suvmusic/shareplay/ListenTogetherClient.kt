@@ -785,9 +785,9 @@ class ListenTogetherClient @Inject constructor(
                 
                 MessageTypes.USER_JOINED -> {
                     val payload = payloadObj as UserJoinedPayload
-                    _roomState.value = _roomState.value?.copy(
-                        users = _roomState.value!!.users + UserInfo(payload.userId, payload.username, false)
-                    )
+                    _roomState.value = _roomState.value?.let { state ->
+                        state.copy(users = state.users + UserInfo(payload.userId, payload.username, false))
+                    }
                     _pendingJoinRequests.value = _pendingJoinRequests.value.filter { it.userId != payload.userId }
                     
                     joinRequestNotifications.remove(payload.userId)?.let { notifId ->
@@ -800,9 +800,9 @@ class ListenTogetherClient @Inject constructor(
                 
                 MessageTypes.USER_LEFT -> {
                     val payload = payloadObj as UserLeftPayload
-                    _roomState.value = _roomState.value?.copy(
-                        users = _roomState.value!!.users.filter { it.userId != payload.userId }
-                    )
+                    _roomState.value = _roomState.value?.let { state ->
+                        state.copy(users = state.users.filter { it.userId != payload.userId })
+                    }
                     log(LogLevel.INFO, "User left", payload.username)
                     scope.launch { _events.emit(ListenTogetherEvent.UserLeft(payload.userId, payload.username)) }
                 }
@@ -839,56 +839,59 @@ class ListenTogetherClient @Inject constructor(
                     val payload = payloadObj as PlaybackActionPayload
                     log(LogLevel.DEBUG, "Playback sync", "Action: ${payload.action}")
                     
-                    when (payload.action) {
-                        PlaybackActions.PLAY -> {
-                            _roomState.value = _roomState.value?.copy(
-                                isPlaying = true,
-                                position = payload.position ?: _roomState.value!!.position
-                            )
-                        }
-                        PlaybackActions.PAUSE -> {
-                            _roomState.value = _roomState.value?.copy(
-                                isPlaying = false,
-                                position = payload.position ?: _roomState.value!!.position
-                            )
-                        }
-                        PlaybackActions.SEEK -> {
-                            _roomState.value = _roomState.value?.copy(
-                                position = payload.position ?: _roomState.value!!.position
-                            )
-                        }
-                        PlaybackActions.CHANGE_TRACK -> {
-                            _roomState.value = _roomState.value?.copy(
-                                currentTrack = payload.trackInfo,
-                                isPlaying = false,
-                                position = 0
-                            )
-                        }
-                        PlaybackActions.QUEUE_ADD -> {
-                            val ti = payload.trackInfo
-                            if (ti != null) {
-                                val currentQueue = _roomState.value?.queue ?: emptyList()
-                                _roomState.value = _roomState.value?.copy(
-                                    queue = if (payload.insertNext == true) listOf(ti) + currentQueue else currentQueue + ti
+                    val currentState = _roomState.value
+                    if (currentState != null) {
+                        when (payload.action) {
+                            PlaybackActions.PLAY -> {
+                                _roomState.value = currentState.copy(
+                                    isPlaying = true,
+                                    position = payload.position ?: currentState.position
                                 )
                             }
-                        }
-                        PlaybackActions.QUEUE_REMOVE -> {
-                            val id = payload.trackId
-                            if (!id.isNullOrEmpty()) {
-                                val currentQueue = _roomState.value?.queue ?: emptyList()
-                                _roomState.value = _roomState.value?.copy(
-                                    queue = currentQueue.filter { it.id != id }
+                            PlaybackActions.PAUSE -> {
+                                _roomState.value = currentState.copy(
+                                    isPlaying = false,
+                                    position = payload.position ?: currentState.position
                                 )
                             }
-                        }
-                        PlaybackActions.QUEUE_CLEAR -> {
-                            _roomState.value = _roomState.value?.copy(queue = emptyList())
-                        }
-                        PlaybackActions.SET_VOLUME -> {
-                            val vol = payload.volume
-                            if (vol != null) {
-                                _roomState.value = _roomState.value?.copy(volume = vol.coerceIn(0f, 1f))
+                            PlaybackActions.SEEK -> {
+                                _roomState.value = currentState.copy(
+                                    position = payload.position ?: currentState.position
+                                )
+                            }
+                            PlaybackActions.CHANGE_TRACK -> {
+                                _roomState.value = currentState.copy(
+                                    currentTrack = payload.trackInfo,
+                                    isPlaying = false,
+                                    position = 0
+                                )
+                            }
+                            PlaybackActions.QUEUE_ADD -> {
+                                val ti = payload.trackInfo
+                                if (ti != null) {
+                                    val currentQueue = currentState.queue
+                                    _roomState.value = currentState.copy(
+                                        queue = if (payload.insertNext == true) listOf(ti) + currentQueue else currentQueue + ti
+                                    )
+                                }
+                            }
+                            PlaybackActions.QUEUE_REMOVE -> {
+                                val id = payload.trackId
+                                if (!id.isNullOrEmpty()) {
+                                    val currentQueue = currentState.queue
+                                    _roomState.value = currentState.copy(
+                                        queue = currentQueue.filter { it.id != id }
+                                    )
+                                }
+                            }
+                            PlaybackActions.QUEUE_CLEAR -> {
+                                _roomState.value = currentState.copy(queue = emptyList())
+                            }
+                            PlaybackActions.SET_VOLUME -> {
+                                val vol = payload.volume
+                                if (vol != null) {
+                                    _roomState.value = currentState.copy(volume = vol.coerceIn(0f, 1f))
+                                }
                             }
                         }
                     }
@@ -987,22 +990,26 @@ class ListenTogetherClient @Inject constructor(
                 
                 MessageTypes.USER_RECONNECTED -> {
                     val payload = payloadObj as UserReconnectedPayload
-                    _roomState.value = _roomState.value?.copy(
-                        users = _roomState.value!!.users.map { user ->
-                            if (user.userId == payload.userId) user.copy(isConnected = true) else user
-                        }
-                    )
+                    _roomState.value = _roomState.value?.let { state ->
+                        state.copy(
+                            users = state.users.map { user ->
+                                if (user.userId == payload.userId) user.copy(isConnected = true) else user
+                            }
+                        )
+                    }
                     log(LogLevel.INFO, "User reconnected", payload.username)
                     scope.launch { _events.emit(ListenTogetherEvent.UserReconnected(payload.userId, payload.username)) }
                 }
                 
                 MessageTypes.USER_DISCONNECTED -> {
                     val payload = payloadObj as UserDisconnectedPayload
-                    _roomState.value = _roomState.value?.copy(
-                        users = _roomState.value!!.users.map { user ->
-                            if (user.userId == payload.userId) user.copy(isConnected = false) else user
-                        }
-                    )
+                    _roomState.value = _roomState.value?.let { state ->
+                        state.copy(
+                            users = state.users.map { user ->
+                                if (user.userId == payload.userId) user.copy(isConnected = false) else user
+                            }
+                        )
+                    }
                     log(LogLevel.INFO, "User temporarily disconnected", payload.username)
                     scope.launch { _events.emit(ListenTogetherEvent.UserDisconnected(payload.userId, payload.username)) }
                 }

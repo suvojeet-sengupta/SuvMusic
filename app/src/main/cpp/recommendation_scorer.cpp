@@ -374,6 +374,19 @@ Java_com_suvojeet_suvmusic_recommendation_NativeRecommendationScorer_nScoreCandi
         return env->NewIntArray(0);
     }
 
+    // Verify array lengths to prevent OOB reads
+    jsize featuresLen = env->GetArrayLength(jFeatures);
+    if (featuresLen < (jsize)(numCandidates * numFeatures)) {
+        LOGE("Features array too small: expected %d, got %d", numCandidates * numFeatures, featuresLen);
+        return env->NewIntArray(0);
+    }
+
+    jsize weightsLen = env->GetArrayLength(jWeights);
+    if (weightsLen < NUM_WEIGHTS) {
+        LOGE("Weights array too small: expected %d, got %d", NUM_WEIGHTS, weightsLen);
+        return env->NewIntArray(0);
+    }
+
     // Get feature and weight arrays
     jfloat* features = env->GetFloatArrayElements(jFeatures, nullptr);
     jfloat* weights = env->GetFloatArrayElements(jWeights, nullptr);
