@@ -99,6 +99,8 @@ class MusicPlayerService : MediaLibraryService() {
     private val LIBRARY_ID = "library"
     private val DOWNLOADS_ID = "downloads"
     private val LOCAL_ID = "local_music"
+    private val ARTISTS_ID = "artists"
+    private val ALBUMS_ID = "albums"
     private val LIKED_SONGS_ID = "liked_songs"
     private val PLAYLISTS_ID = "playlists"
     
@@ -524,7 +526,7 @@ class MusicPlayerService : MediaLibraryService() {
                     .setMediaId(ROOT_ID)
                     .setMediaMetadata(
                         MediaMetadata.Builder()
-                            .setIsBrowsable(true)
+                            .setIsBrowsable(false)
                             .setIsPlayable(false)
                             .setTitle("SuvMusic")
                             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
@@ -534,6 +536,31 @@ class MusicPlayerService : MediaLibraryService() {
                 return com.google.common.util.concurrent.Futures.immediateFuture(LibraryResult.ofItem(rootItem, params))
             }
 
+            override fun onGetItem(
+                session: MediaLibrarySession,
+                browser: MediaSession.ControllerInfo,
+                mediaId: String
+            ): com.google.common.util.concurrent.ListenableFuture<LibraryResult<MediaItem>> {
+                val song = cachedSearchResults.find { it.id == mediaId }
+                return if (song != null) {
+                    com.google.common.util.concurrent.Futures.immediateFuture(LibraryResult.ofItem(createPlayableMediaItem(song), null))
+                } else {
+                    com.google.common.util.concurrent.Futures.immediateFuture(LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN))
+                }
+            }
+
+            override fun onSetMediaItems(
+                session: MediaSession,
+                controller: MediaSession.ControllerInfo,
+                mediaItems: MutableList<MediaItem>,
+                startIndex: Int,
+                startPositionMs: Long
+            ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaSession.MediaItemsWithIndex> {
+                return com.google.common.util.concurrent.Futures.immediateFuture(
+                    androidx.media3.session.MediaSession.MediaItemsWithIndex(mediaItems, startIndex, startPositionMs)
+                )
+            }
+
             override fun onGetChildren(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, parentId: String, page: Int, pageSize: Int, params: LibraryParams?): com.google.common.util.concurrent.ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
                 val future = com.google.common.util.concurrent.SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
                 serviceScope.launch {
@@ -541,21 +568,33 @@ class MusicPlayerService : MediaLibraryService() {
                         val children = mutableListOf<MediaItem>()
                         when (parentId) {
                             ROOT_ID -> {
-                                children.add(createBrowsableMediaItem(HOME_ID, "Home"))
-                                children.add(createBrowsableMediaItem(LIBRARY_ID, "Library"))
-                                children.add(createBrowsableMediaItem(DOWNLOADS_ID, "Downloads"))
-                                children.add(createBrowsableMediaItem(LOCAL_ID, "Local Music"))
+                                children.add(createBrowsableMediaItem(HOME_ID, "Home", iconResId = com.suvojeet.suvmusic.R.drawable.ic_music_note))
+                                children.add(createBrowsableMediaItem(LIBRARY_ID, "Library", iconResId = com.suvojeet.suvmusic.R.drawable.ic_heart_outline))
+                                children.add(createBrowsableMediaItem(ARTISTS_ID, "Artists", iconResId = com.suvojeet.suvmusic.R.drawable.ic_music_note, mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_ARTISTS))
+                                children.add(createBrowsableMediaItem(ALBUMS_ID, "Albums", iconResId = com.suvojeet.suvmusic.R.drawable.ic_music_note, mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_ALBUMS))
+                                children.add(createBrowsableMediaItem(DOWNLOADS_ID, "Downloads", iconResId = com.suvojeet.suvmusic.R.drawable.ic_music_note))
+                                children.add(createBrowsableMediaItem(LOCAL_ID, "Local Music", iconResId = com.suvojeet.suvmusic.R.drawable.ic_music_note))
                             }
                             HOME_ID -> {
                                 val sections = youTubeRepository.getHomeSections()
                                 cachedHomeSections = sections
                                 sections.forEachIndexed { index, section ->
-                                    children.add(createBrowsableMediaItem("section_$index", section.title))
+                                    children.add(createBrowsableMediaItem("section_$index", section.title, mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED))
                                 }
                             }
                             LIBRARY_ID -> {
-                                children.add(createBrowsableMediaItem(LIKED_SONGS_ID, "Liked Songs"))
-                                children.add(createBrowsableMediaItem(PLAYLISTS_ID, "Your Playlists"))
+                                children.add(createBrowsableMediaItem(LIKED_SONGS_ID, "Liked Songs", iconResId = com.suvojeet.suvmusic.R.drawable.ic_heart, mediaType = MediaMetadata.MEDIA_TYPE_PLAYLIST))
+                                children.add(createBrowsableMediaItem(PLAYLISTS_ID, "Your Playlists", iconResId = com.suvojeet.suvmusic.R.drawable.ic_music_note, mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS))
+                            }
+                            ARTISTS_ID -> {
+                                youTubeRepository.getLibraryArtists().forEach { artist ->
+                                    children.add(createBrowsableMediaItem("artist_${artist.id}", artist.name, artist.subscribers, mediaType = MediaMetadata.MEDIA_TYPE_ARTIST))
+                                }
+                            }
+                            ALBUMS_ID -> {
+                                youTubeRepository.getLibraryAlbums().forEach { album ->
+                                    children.add(createBrowsableMediaItem("album_${album.id}", album.title, album.artist, mediaType = MediaMetadata.MEDIA_TYPE_ALBUM))
+                                }
                             }
                             DOWNLOADS_ID -> {
                                 downloadRepository.downloadedSongs.first().forEach { children.add(createPlayableMediaItem(it)) }
@@ -568,7 +607,7 @@ class MusicPlayerService : MediaLibraryService() {
                             }
                             PLAYLISTS_ID -> {
                                 youTubeRepository.getUserPlaylists().forEach { playlist ->
-                                    children.add(createBrowsableMediaItem("playlist_${playlist.id}", playlist.name))
+                                    children.add(createBrowsableMediaItem("playlist_${playlist.id}", playlist.name, playlist.uploaderName, mediaType = MediaMetadata.MEDIA_TYPE_PLAYLIST))
                                 }
                             }
                             else -> {
@@ -579,18 +618,36 @@ class MusicPlayerService : MediaLibraryService() {
                                              if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.SongItem) {
                                                  children.add(createPlayableMediaItem(homeItem.song))
                                              } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem) {
-                                                 children.add(createBrowsableMediaItem("playlist_${homeItem.playlist.id}", homeItem.playlist.name))
+                                                 children.add(createBrowsableMediaItem("playlist_${homeItem.playlist.id}", homeItem.playlist.name, homeItem.playlist.uploaderName, mediaType = MediaMetadata.MEDIA_TYPE_PLAYLIST))
                                              } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem) {
-                                                 children.add(createBrowsableMediaItem("album_${homeItem.album.id}", homeItem.album.title))
+                                                 children.add(createBrowsableMediaItem("album_${homeItem.album.id}", homeItem.album.title, homeItem.album.artist, mediaType = MediaMetadata.MEDIA_TYPE_ALBUM))
                                              }
                                         }
                                     }
                                 } else if (parentId.startsWith("playlist_")) {
                                     val playlistId = parentId.removePrefix("playlist_")
-                                    youTubeRepository.getPlaylist(playlistId).songs.forEach { children.add(createPlayableMediaItem(it)) }
+                                    val playlist = youTubeRepository.getPlaylist(playlistId)
+                                    // Add Shuffle item
+                                    if (playlist.songs.isNotEmpty()) {
+                                        children.add(MediaItem.Builder()
+                                            .setMediaId("shuffle_$playlistId")
+                                            .setMediaMetadata(MediaMetadata.Builder()
+                                                .setTitle("🔀 Shuffle")
+                                                .setIsBrowsable(false)
+                                                .setIsPlayable(true)
+                                                .setMediaType(MediaMetadata.MEDIA_TYPE_PLAYLIST)
+                                                .build())
+                                            .build())
+                                    }
+                                    playlist.songs.forEach { children.add(createPlayableMediaItem(it)) }
                                 } else if (parentId.startsWith("album_")) {
                                     val albumId = parentId.removePrefix("album_")
                                     youTubeRepository.getAlbum(albumId)?.songs?.forEach { children.add(createPlayableMediaItem(it)) }
+                                } else if (parentId.startsWith("artist_")) {
+                                    val artistId = parentId.removePrefix("artist_")
+                                    val artist = youTubeRepository.getArtist(artistId)
+                                    artist?.songs?.forEach { children.add(createPlayableMediaItem(it)) }
+                                    artist?.albums?.forEach { children.add(createBrowsableMediaItem("album_${it.id}", it.title, it.artist, mediaType = MediaMetadata.MEDIA_TYPE_ALBUM)) }
                                 }
                             }
                         }
@@ -643,10 +700,23 @@ class MusicPlayerService : MediaLibraryService() {
             override fun onAddMediaItems(mediaSession: MediaSession, controller: MediaSession.ControllerInfo, mediaItems: MutableList<MediaItem>): com.google.common.util.concurrent.ListenableFuture<MutableList<MediaItem>> {
                  val updatedMediaItemsFuture = com.google.common.util.concurrent.SettableFuture.create<MutableList<MediaItem>>()
                  serviceScope.launch {
-                     val updatedList = mediaItems.mapNotNull { item ->
+                     val finalItems = mutableListOf<MediaItem>()
+                     for (item in mediaItems) {
+                         if (item.mediaId.startsWith("shuffle_")) {
+                             val playlistId = item.mediaId.removePrefix("shuffle_")
+                             try {
+                                 val playlist = youTubeRepository.getPlaylist(playlistId)
+                                 val shuffledSongs = playlist.songs.shuffled()
+                                 shuffledSongs.forEach { finalItems.add(createPlayableMediaItem(it)) }
+                             } catch (e: Exception) {
+                                 android.util.Log.e("MusicPlayerService", "Shuffle failed for $playlistId", e)
+                             }
+                             continue
+                         }
+
                          // Android Auto voice search: "Play <song>" → searchQuery is set
                          val searchQuery = item.requestMetadata.searchQuery
-                         if (!searchQuery.isNullOrEmpty() && item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
+                         val resolvedItem = if (!searchQuery.isNullOrEmpty() && item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
                              try {
                                  val results = youTubeRepository.search(searchQuery)
                                  if (results.isNotEmpty()) {
@@ -705,8 +775,9 @@ class MusicPlayerService : MediaLibraryService() {
                          } else {
                              item
                          }
-                     }.toMutableList()
-                     updatedMediaItemsFuture.set(updatedList)
+                         resolvedItem?.let { finalItems.add(it) }
+                     }
+                     updatedMediaItemsFuture.set(finalItems)
                  }
                  return updatedMediaItemsFuture
             }
@@ -820,7 +891,28 @@ class MusicPlayerService : MediaLibraryService() {
             mediaNotification.notification.flags = mediaNotification.notification.flags or android.app.Notification.FLAG_ONGOING_EVENT
             return mediaNotification
         }
-        override fun handleCustomCommand(session: MediaSession, action: String, extras: android.os.Bundle): Boolean = false
+        override fun handleCustomCommand(session: MediaSession, action: String, extras: android.os.Bundle): Boolean {
+            return when (action) {
+                COMMAND_LIKE -> {
+                    updateLikedState()
+                    true
+                }
+                COMMAND_SHUFFLE -> {
+                    session.player.shuffleModeEnabled = !session.player.shuffleModeEnabled
+                    true
+                }
+                COMMAND_REPEAT -> {
+                    val currentMode = session.player.repeatMode
+                    session.player.repeatMode = when (currentMode) {
+                        Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                        Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                        else -> Player.REPEAT_MODE_OFF
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
     }
     
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
@@ -923,7 +1015,14 @@ class MusicPlayerService : MediaLibraryService() {
         return streamUrl
     }
 
-    private fun createBrowsableMediaItem(mediaId: String, title: String): MediaItem {
+    private fun createBrowsableMediaItem(
+        mediaId: String, 
+        title: String, 
+        subtitle: String? = null,
+        iconResId: Int? = null, 
+        mediaType: Int = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED
+    ): MediaItem {
+        val iconUri = iconResId?.let { drawableUri(it) }
         return MediaItem.Builder()
             .setMediaId(mediaId)
             .setMediaMetadata(
@@ -931,11 +1030,20 @@ class MusicPlayerService : MediaLibraryService() {
                     .setIsBrowsable(true)
                     .setIsPlayable(false)
                     .setTitle(title)
-                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                    .setSubtitle(subtitle)
+                    .setArtworkUri(iconUri)
+                    .setMediaType(mediaType)
                     .build()
             )
             .build()
     }
+
+    private fun drawableUri(id: Int) = Uri.Builder()
+        .scheme(android.content.ContentResolver.SCHEME_ANDROID_RESOURCE)
+        .authority(resources.getResourcePackageName(id))
+        .appendPath(resources.getResourceTypeName(id))
+        .appendPath(resources.getResourceEntryName(id))
+        .build()
 
     private fun createPlayableMediaItem(song: com.suvojeet.suvmusic.core.model.Song): MediaItem {
         val artworkUri = if (!song.thumbnailUrl.isNullOrEmpty()) Uri.parse(song.thumbnailUrl) else null
