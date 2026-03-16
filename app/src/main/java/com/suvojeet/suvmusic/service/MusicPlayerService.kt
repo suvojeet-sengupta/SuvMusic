@@ -92,6 +92,7 @@ class MusicPlayerService : MediaLibraryService() {
     private val COMMAND_LIKE = "COMMAND_LIKE"
     private val COMMAND_REPEAT = "COMMAND_REPEAT"
     private val COMMAND_SHUFFLE = "COMMAND_SHUFFLE"
+    private val COMMAND_START_RADIO = "COMMAND_START_RADIO"
     
     // Constants for Android Auto browsing
     private val ROOT_ID = "root"
@@ -434,6 +435,7 @@ class MusicPlayerService : MediaLibraryService() {
                     .add(SessionCommand(COMMAND_LIKE, android.os.Bundle.EMPTY))
                     .add(SessionCommand(COMMAND_REPEAT, android.os.Bundle.EMPTY))
                     .add(SessionCommand(COMMAND_SHUFFLE, android.os.Bundle.EMPTY))
+                    .add(SessionCommand(COMMAND_START_RADIO, android.os.Bundle.EMPTY))
                     .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
                     .build()
                 
@@ -919,9 +921,19 @@ class MusicPlayerService : MediaLibraryService() {
                 .setIconResId(shuffleIcon)
                 .build(),
             CommandButton.Builder()
+                .setDisplayName("Skip")
+                .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                .setIconResId(com.suvojeet.suvmusic.R.drawable.ic_skip_next)
+                .build(),
+            CommandButton.Builder()
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_like))
                 .setSessionCommand(SessionCommand(COMMAND_LIKE, android.os.Bundle.EMPTY))
                 .setIconResId(likeIcon)
+                .build(),
+            CommandButton.Builder()
+                .setDisplayName("Start Radio")
+                .setSessionCommand(SessionCommand(COMMAND_START_RADIO, android.os.Bundle.EMPTY))
+                .setIconResId(com.suvojeet.suvmusic.R.drawable.ic_music_note)
                 .build(),
             CommandButton.Builder()
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_repeat))
@@ -953,6 +965,26 @@ class MusicPlayerService : MediaLibraryService() {
                 }
                 COMMAND_SHUFFLE -> {
                     session.player.shuffleModeEnabled = !session.player.shuffleModeEnabled
+                    true
+                }
+                COMMAND_START_RADIO -> {
+                    val currentId = session.player.currentMediaItem?.mediaId
+                    if (currentId != null) {
+                        serviceScope.launch {
+                            try {
+                                val radioId = "RDTMAK5y2HbDmSu3-$currentId"
+                                val playlist = youTubeRepository.getPlaylist(radioId)
+                                if (playlist.songs.isNotEmpty()) {
+                                    val mediaItems = playlist.songs.map { createPlayableMediaItem(it) }
+                                    session.player.setMediaItems(mediaItems)
+                                    session.player.prepare()
+                                    session.player.play()
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("MusicPlayerService", "Start radio failed", e)
+                            }
+                        }
+                    }
                     true
                 }
                 COMMAND_REPEAT -> {
@@ -1105,11 +1137,14 @@ class MusicPlayerService : MediaLibraryService() {
 
         val artworkUri = if (!song.thumbnailUrl.isNullOrEmpty()) Uri.parse(song.thumbnailUrl) else null
         val contentUri = song.localUri ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else null
+        
+        val artistText = song.artist.ifBlank { song.album ?: "YouTube Music" }
+        
         val metadata = MediaMetadata.Builder()
             .setTitle(song.title)
             .setDisplayTitle(song.title)
-            .setArtist(song.artist)
-            .setSubtitle(song.artist)
+            .setArtist(artistText)
+            .setSubtitle(artistText)
             .setAlbumTitle(song.album ?: "")
             .setArtworkUri(artworkUri)
             .setIsBrowsable(false)
