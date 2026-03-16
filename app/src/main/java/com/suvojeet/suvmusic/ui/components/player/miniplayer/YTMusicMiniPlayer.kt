@@ -81,17 +81,6 @@ fun YTMusicMiniPlayer(
                     thickness = 0.5.dp,
                     color = dominantColors.onBackground.copy(alpha = 0.1f)
                 )
-                
-                // Progress bar at the VERY top of the mini player (classic YT Music)
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp),
-                    trackColor = Color.Transparent,
-                    color = dominantColors.accent,
-                    strokeCap = StrokeCap.Butt
-                )
 
                 // Fixed height container for controls (64dp - 2dp progress bar approx)
                 Row(
@@ -195,6 +184,17 @@ fun YTMusicMiniPlayer(
                         }
                     }
                 }
+                
+                // Progress bar at the bottom of the mini player
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp),
+                    trackColor = Color.Transparent,
+                    color = dominantColors.accent,
+                    strokeCap = StrokeCap.Butt
+                )
                 
                 // Bottom Divider for navbar separation
                 HorizontalDivider(
