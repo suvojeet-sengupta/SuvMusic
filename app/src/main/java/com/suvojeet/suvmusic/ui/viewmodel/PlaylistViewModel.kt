@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.SortOrder
+import com.suvojeet.suvmusic.core.model.SortType
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
@@ -19,6 +21,9 @@ import javax.inject.Inject
 
 data class PlaylistUiState(
     val playlist: Playlist? = null,
+    val originalSongs: List<Song> = emptyList(),
+    val sortType: SortType = SortType.CUSTOM,
+    val sortOrder: SortOrder = SortOrder.ASCENDING,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
@@ -219,9 +224,12 @@ class PlaylistViewModel @Inject constructor(
             _uiState.update { 
                 it.copy(
                     playlist = finalPlaylist,
+                    originalSongs = finalPlaylist.songs,
                     isLoading = false
                 )
             }
+            // Re-apply current sort if any
+            applySort()
         } catch (e: Exception) {
             _uiState.update { 
                 it.copy(
@@ -229,6 +237,50 @@ class PlaylistViewModel @Inject constructor(
                     isLoading = false
                 )
             }
+        }
+    }
+
+    fun setSort(sortType: SortType) {
+        _uiState.update { it.copy(sortType = sortType) }
+        applySort()
+    }
+
+    fun toggleSortOrder() {
+        _uiState.update { 
+            it.copy(sortOrder = if (it.sortOrder == SortOrder.ASCENDING) SortOrder.DESCENDING else SortOrder.ASCENDING)
+        }
+        applySort()
+    }
+
+    private fun applySort() {
+        val state = _uiState.value
+        val currentPlaylist = state.playlist ?: return
+        val originalSongs = state.originalSongs
+        
+        if (state.sortType == SortType.CUSTOM) {
+            _uiState.update { 
+                it.copy(playlist = currentPlaylist.copy(songs = originalSongs))
+            }
+            return
+        }
+
+        val sortedSongs = when (state.sortType) {
+            SortType.TRACK_NAME -> originalSongs.sortedBy { it.title.lowercase() }
+            SortType.ARTIST_NAME -> originalSongs.sortedBy { it.artist.lowercase() }
+            SortType.ALBUM_NAME -> originalSongs.sortedBy { it.album.lowercase() }
+            SortType.PLAY_TIME -> originalSongs.sortedBy { it.duration }
+            SortType.DATE_ADDED -> originalSongs // We don't have real dateAdded, so treat as custom/original for now
+            else -> originalSongs
+        }
+
+        val finalSortedSongs = if (state.sortOrder == SortOrder.DESCENDING) {
+            sortedSongs.reversed()
+        } else {
+            sortedSongs
+        }
+
+        _uiState.update { 
+            it.copy(playlist = currentPlaylist.copy(songs = finalSortedSongs))
         }
     }
 
@@ -482,6 +534,46 @@ class PlaylistViewModel @Inject constructor(
                 isSelectionMode = false
             )
         }
+    }
+
+    fun moveSelectedSongs(toIndex: Int) {
+        val selectedIds = _uiState.value.selectedSongIds
+        if (selectedIds.isEmpty()) return
+        
+        val currentPlaylist = _uiState.value.playlist ?: return
+        val songs = currentPlaylist.songs.toMutableList()
+        
+        // Find songs to move
+        val songsToMove = songs.filter { (it.setVideoId ?: it.id) in selectedIds }
+        
+        // Remove them from current positions
+        songs.removeAll(songsToMove)
+        
+        // Insert at target index
+        val safeToIndex = toIndex.coerceIn(0, songs.size)
+        songs.addAll(safeToIndex, songsToMove)
+        
+        _uiState.update { 
+            it.copy(
+                playlist = currentPlaylist.copy(songs = songs),
+                originalSongs = songs // Update original as well for CUSTOM sort
+            )
+        }
+        
+        // If it's a remote playlist, we might need multiple API calls or a batch reorder
+        // For now, let's at least update local state and clear selection
+        viewModelScope.launch {
+            // Note: Implementing batch move for YouTube might be complex, 
+            // but for local playlists it's straightforward (already updated originalSongs)
+            if (playlistId.startsWith("local_") || playlistId == "LM") {
+                libraryRepository.replacePlaylistSongs(playlistId, songs)
+            } else {
+                // For YT, we might need to sync the whole order or use move multiple times
+                // Simplest is to reload for now to ensure consistency with server
+                // loadPlaylist() 
+            }
+        }
+        clearSelection()
     }
 
     fun removeSelectedSongs() {
