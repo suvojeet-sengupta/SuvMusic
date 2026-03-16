@@ -16,7 +16,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -39,6 +40,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.SortOrder
+import com.suvojeet.suvmusic.core.model.SortType
 import com.suvojeet.suvmusic.ui.components.BounceButton
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
@@ -225,6 +228,10 @@ fun PlaylistScreen(
                         playlist = playlist,
                         batchProgress = batchProgress,
                         isSaved = uiState.isSaved,
+                        sortType = uiState.sortType,
+                        sortOrder = uiState.sortOrder,
+                        onSortChange = viewModel::setSort,
+                        onToggleSortOrder = viewModel::toggleSortOrder,
                         onPlayAll = { onPlayAll(playlist.songs) },
                         onShufflePlay = { onShufflePlay(playlist.songs) },
                         onToggleSave = { 
@@ -351,6 +358,7 @@ fun PlaylistScreen(
                         selectedCount = uiState.selectedSongIds.size,
                         onCloseClick = { viewModel.clearSelection() },
                         onDeleteClick = { viewModel.removeSelectedSongs() },
+                        onMoveToTopClick = { viewModel.moveSelectedSongs(0) },
                         contentColor = contentColor,
                         isDarkTheme = isDarkTheme
                     )
@@ -559,6 +567,10 @@ private fun PlaylistHeader(
     playlist: Playlist,
     batchProgress: Pair<Int, Int>,
     isSaved: Boolean,
+    sortType: SortType,
+    sortOrder: SortOrder,
+    onSortChange: (SortType) -> Unit,
+    onToggleSortOrder: () -> Unit,
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
     onToggleSave: () -> Unit,
@@ -571,6 +583,8 @@ private fun PlaylistHeader(
 ) {
     val (current, total) = batchProgress
     val isDownloading = total > 0 && current < total
+    var showSortMenu by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -625,14 +639,87 @@ private fun PlaylistHeader(
             )
         }
         
-        // Updated info (if you have it, otherwise show song count)
-        Text(
-            text = com.suvojeet.suvmusic.util.TimeUtil.formatSongCountAndDuration(playlist.songs),
-            style = MaterialTheme.typography.bodySmall,
-            color = secondaryContentColor.copy(alpha = 0.5f),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+        // Sort and Info Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = com.suvojeet.suvmusic.util.TimeUtil.formatSongCountAndDuration(playlist.songs),
+                style = MaterialTheme.typography.bodySmall,
+                color = secondaryContentColor.copy(alpha = 0.5f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showSortMenu = true }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sort,
+                        contentDescription = "Sort",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = sortType.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showSortMenu,
+                    onDismissRequest = { showSortMenu = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
+                ) {
+                    SortType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    text = type.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                                    fontWeight = if (sortType == type) FontWeight.Bold else FontWeight.Normal
+                                ) 
+                            },
+                            onClick = {
+                                onSortChange(type)
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (sortType == type) {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (sortType != SortType.CUSTOM) {
+                IconButton(
+                    onClick = onToggleSortOrder,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = if (sortOrder == SortOrder.ASCENDING) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                        contentDescription = "Toggle sort order",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
 
         // Batch Download Progress
         if (isDownloading) {
@@ -756,31 +843,6 @@ private fun PlaylistHeader(
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        
-        // Sort Option (Date Added)
-        if (playlist.id == "LM") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Date added",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = contentColor,
-                    fontWeight = FontWeight.Medium
-                )
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowDownward, // Or Sort icon
-                    contentDescription = null, // decorative
-                    tint = contentColor,
-                    modifier = Modifier.size(16.dp).padding(start = 4.dp)
-                )
-            }
-        }
-        
-        if (playlist.id != "LM") Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -789,6 +851,7 @@ private fun SelectionTopBar(
     selectedCount: Int,
     onCloseClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onMoveToTopClick: () -> Unit = {},
     contentColor: Color,
     isDarkTheme: Boolean
 ) {
@@ -816,6 +879,14 @@ private fun SelectionTopBar(
             color = contentColor,
             modifier = Modifier.weight(1f)
         )
+
+        IconButton(onClick = onMoveToTopClick) {
+            Icon(
+                imageVector = Icons.Default.VerticalAlignTop,
+                contentDescription = "Move to top",
+                tint = contentColor
+            )
+        }
         
         IconButton(onClick = onDeleteClick) {
             Icon(
