@@ -2,6 +2,8 @@ package com.suvojeet.suvmusic.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,11 +19,16 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -39,19 +46,29 @@ fun CreditsScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("Credits & Contributors", fontWeight = FontWeight.Bold) },
+            LargeTopAppBar(
+                title = { 
+                    Text(
+                        "Credits & Contributors", 
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-0.5).sp
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                )
             )
         }
     ) { paddingValues ->
@@ -59,18 +76,18 @@ fun CreditsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // --- Lead Developer ---
             item {
-                SectionHeader("Lead Developer")
+                SectionHeader("LEAD DEVELOPER")
                 DeveloperCard()
             }
 
             // --- Core Engine ---
             item {
-                SectionHeader("Core Engine")
+                SectionHeader("CORE ENGINE")
                 LibraryCard(
                     name = "NewPipe Extractor",
                     description = "The powerful engine that parses YouTube data and streams without using official APIs.",
@@ -84,13 +101,12 @@ fun CreditsScreen(
 
             // --- Native Performance ---
             item {
-                SectionHeader("Native Performance")
+                SectionHeader("NATIVE PERFORMANCE")
                 LibraryCard(
                     name = "C++ Audio Processing",
                     description = "High-performance native code used for spatial audio processing and ultra-fast waveform extraction via mmap.",
                     isSpecial = true,
                     onClick = {
-                        // Internal reference or general C++ NDK link
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://developer.android.com/ndk"))
                         context.startActivity(intent)
                     }
@@ -99,69 +115,67 @@ fun CreditsScreen(
 
             // --- Special Thanks ---
             item {
-                SectionHeader("Special Thanks")
-                LibraryCard(
-                    name = "SponsorBlock",
-                    description = "For providing the segments that help users skip annoying sponsors automatically.",
-                    isSpecial = true,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://sponsor.ajay.app/"))
-                        context.startActivity(intent)
-                    }
-                )
+                SectionHeader("SPECIAL THANKS")
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LibraryCard(
+                        name = "SponsorBlock",
+                        description = "For providing the segments that help users skip annoying sponsors automatically.",
+                        isSpecial = true,
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://sponsor.ajay.app/"))
+                            context.startActivity(intent)
+                        }
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LibraryCard(
-                    name = "NYX / Listen Together",
-                    description = "Owner of the Listen Together infrastructure (metroserver.meowery.eu). Special thanks for the server support.",
-                    isSpecial = true,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://nyx.meowery.eu/"))
-                        context.startActivity(intent)
-                    }
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LibraryCard(
-                    name = "Discord integration",
-                    description = "For the Rich Presence support allowing users to share what they are listening to on their profile.",
-                    isSpecial = true,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.com/developers"))
-                        context.startActivity(intent)
-                    }
-                )
+                    LibraryCard(
+                        name = "NYX / Listen Together",
+                        description = "Owner of the Listen Together infrastructure (metroserver.meowery.eu). Special thanks for the server support.",
+                        isSpecial = true,
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://nyx.meowery.eu/"))
+                            context.startActivity(intent)
+                        }
+                    )
+                    
+                    LibraryCard(
+                        name = "Discord integration",
+                        description = "For the Rich Presence support allowing users to share what they are listening to on their profile.",
+                        isSpecial = true,
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.com/developers"))
+                            context.startActivity(intent)
+                        }
+                    )
+                }
             }
 
             // --- Third-Party Services ---
             item {
-                SectionHeader("External Services")
-                LibraryCard(
-                    name = "Last.fm",
-                    description = "Used for scrobbling support and providing high-quality personalized recommendations.",
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.last.fm/"))
-                        context.startActivity(intent)
-                    }
-                )
+                SectionHeader("EXTERNAL SERVICES")
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LibraryCard(
+                        name = "Last.fm",
+                        description = "Used for scrobbling support and providing high-quality personalized recommendations.",
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.last.fm/"))
+                            context.startActivity(intent)
+                        }
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LibraryCard(
-                    name = "YouTube Music Auth",
-                    description = "Custom implementation for secure authentication to access user libraries and history.",
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/"))
-                        context.startActivity(intent)
-                    }
-                )
+                    LibraryCard(
+                        name = "YouTube Music Auth",
+                        description = "Custom implementation for secure authentication to access user libraries and history.",
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/"))
+                            context.startActivity(intent)
+                        }
+                    )
+                }
             }
 
             // --- Lyrics Providers ---
             item {
-                SectionHeader("Lyrics Ecosystem")
+                SectionHeader("LYRICS ECOSYSTEM")
             }
             
             items(getLyricsProviders()) { provider ->
@@ -179,7 +193,7 @@ fun CreditsScreen(
 
             // --- Open Source Libraries ---
             item {
-                SectionHeader("Key Libraries")
+                SectionHeader("KEY LIBRARIES")
             }
 
             items(getLibraries()) { lib ->
@@ -197,13 +211,25 @@ fun CreditsScreen(
             
             item {
                 Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "SuvMusic is built with passion and respect for the open-source community.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    textAlign = TextAlign.Center
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                    )
+                ) {
+                    Text(
+                        text = "SuvMusic is built with passion and respect for the open-source community.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 16.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Spacer(modifier = Modifier.height(48.dp))
             }
         }
     }
@@ -212,74 +238,114 @@ fun CreditsScreen(
 @Composable
 private fun DeveloperCard() {
     val context = LocalContext.current
-    Card(
+    
+    // Pulse animation for avatar border
+    val infiniteTransition = rememberInfiniteTransition(label = "avatarPulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+    
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+        tonalElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AsyncImage(
-                model = "https://avatars.githubusercontent.com/u/suvojeet-sengupta",
-                contentDescription = "Suvojeet Sengupta",
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
-                contentScale = ContentScale.Crop
+            Box(contentAlignment = Alignment.Center) {
+                // Animated pulse ring
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .scale(pulseScale)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+                
+                AsyncImage(
+                    model = "https://avatars.githubusercontent.com/u/suvojeet-sengupta",
+                    contentDescription = "Suvojeet Sengupta",
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .border(
+                            BorderStroke(3.dp, MaterialTheme.colorScheme.primary),
+                            CircleShape
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            Text(
+                text = "Suvojeet Sengupta",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface
             )
             
-            Spacer(modifier = Modifier.width(20.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Suvojeet Sengupta",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
                 Text(
                     text = "Main Developer & Maintainer",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    modifier = Modifier.clickable {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta"))
-                        context.startActivity(intent)
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Code,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "GitHub",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            Button(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta"))
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.onSurface,
+                    contentColor = MaterialTheme.colorScheme.surface
+                ),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Code,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Visit GitHub Profile",
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -289,10 +355,12 @@ private fun DeveloperCard() {
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp, start = 4.dp)
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontWeight = FontWeight.Black,
+            letterSpacing = 2.sp
+        ),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 8.dp)
     )
 }
 
@@ -303,18 +371,20 @@ private fun LibraryCard(
     isSpecial: Boolean = false,
     onClick: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSpecial) 
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
-            else 
-                MaterialTheme.colorScheme.surfaceContainer
-        ),
-        border = if (isSpecial) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) else null
+        shape = RoundedCornerShape(24.dp),
+        color = if (isSpecial) 
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) 
+        else 
+            MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+        tonalElevation = if (isSpecial) 0.dp else 1.dp,
+        border = if (isSpecial) 
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) 
+        else 
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
     ) {
         Row(
             modifier = Modifier
@@ -324,18 +394,18 @@ private fun LibraryCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(
-                        if (isSpecial) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+                        if (isSpecial) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (isSpecial) Icons.Default.Favorite else Icons.Default.Terminal,
+                    imageVector = if (isSpecial) Icons.Rounded.Favorite else Icons.Rounded.Terminal,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(22.dp),
                     tint = if (isSpecial) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -345,14 +415,17 @@ private fun LibraryCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        lineHeight = 16.sp
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -360,10 +433,10 @@ private fun LibraryCard(
             }
             
             Icon(
-                imageVector = Icons.Default.OpenInNew,
+                imageVector = Icons.Rounded.OpenInNew,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
         }
     }
