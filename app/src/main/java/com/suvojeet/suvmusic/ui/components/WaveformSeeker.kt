@@ -66,8 +66,15 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicatorDefaults
 import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlin.random.Random
+import kotlin.math.sin
 
 /**
  * Seekbar style options
@@ -78,13 +85,15 @@ enum class SeekbarStyle {
     CLASSIC,       // Simple progress bar
     DOTS,          // Animated dots
     GRADIENT_BAR,  // Gradient progress bar with glow
-    MATERIAL       // Standard Material 3 Slider
+    MATERIAL,      // Standard Material 3 Slider
+    M3E_WAVY       // Material 3 Expressive LinearWavyProgressIndicator
 }
 
 /**
  * Animated waveform seeker with multiple style options.
  * Long-press to change style.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WaveformSeeker(
     progressProvider: () -> Float,
@@ -110,7 +119,8 @@ fun WaveformSeeker(
     val shouldAnimateWave = isPlaying && (
         currentStyle == SeekbarStyle.WAVEFORM ||
             currentStyle == SeekbarStyle.WAVE_LINE ||
-            currentStyle == SeekbarStyle.DOTS
+            currentStyle == SeekbarStyle.DOTS ||
+            currentStyle == SeekbarStyle.M3E_WAVY
     )
     
     // Animation for wave movement only when needed
@@ -129,6 +139,16 @@ fun WaveformSeeker(
     } else {
         0f
     }
+
+    // M3E Wavy: spring-animated amplitude (1f when playing, 0f when paused)
+    val wavyAmplitude by animateFloatAsState(
+        targetValue = if (isPlaying && currentStyle == SeekbarStyle.M3E_WAVY) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "wavyAmplitude"
+    )
     
     // Generate random wave amplitudes (simulating audio waveform)
     val waveAmplitudes = remember {
@@ -309,6 +329,9 @@ fun WaveformSeeker(
                                 SeekbarStyle.MATERIAL -> {
                                     // Handled outside canvas via Slider
                                 }
+                                SeekbarStyle.M3E_WAVY -> {
+                                    // Handled outside canvas via LinearWavyProgressIndicator
+                                }
                             }
 
                             // Draw Sponsor segments overlay (inside the waveform/bar)
@@ -370,6 +393,67 @@ fun WaveformSeeker(
                             inactiveTrackColor = inactiveColor.copy(alpha = 0.5f)
                         )
                     )
+                }
+            }
+
+            // M3E Wavy Progress Overlay
+            if (currentStyle == SeekbarStyle.M3E_WAVY) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Seek-interactive layer — tap & drag handled here
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onTap = { offset ->
+                                        val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                                        currentProgress = newProgress
+                                        onSeek(newProgress)
+                                    },
+                                    onLongPress = {
+                                        showStyleMenu = true
+                                    }
+                                )
+                            }
+                            .pointerInput(Unit) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = { offset ->
+                                        isDragging = true
+                                        dragX = offset.x
+                                    },
+                                    onDragEnd = {
+                                        onSeek(currentProgress)
+                                        isDragging = false
+                                    },
+                                    onHorizontalDrag = { change, _ ->
+                                        val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
+                                        currentProgress = newProgress
+                                        dragX = change.position.x
+                                    }
+                                )
+                            }
+                    ) {
+                        LinearWavyProgressIndicator(
+                            progress = { currentProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.Center),
+                            color = activeColor,
+                            trackColor = inactiveColor.copy(alpha = 0.3f),
+                            amplitude = { wavyAmplitude },
+                            wavelength = LinearWavyProgressIndicatorDefaults.WaveLength,
+                            waveSpeed = if (isPlaying)
+                                LinearWavyProgressIndicatorDefaults.WaveSpeed
+                            else
+                                0.dp
+                        )
+                    }
                 }
             }
         }
@@ -474,6 +558,7 @@ private fun StylePreviewItem(
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
         SeekbarStyle.MATERIAL -> "Material 3"
+        SeekbarStyle.M3E_WAVY -> "M3 Expressive"
     }
     
     // Preview amplitudes
@@ -536,6 +621,45 @@ private fun StylePreviewItem(
                         color = activeColor,
                         radius = 8.dp.toPx(),
                         center = Offset(previewProgress * size.width, centerY)
+                    )
+                }
+                SeekbarStyle.M3E_WAVY -> {
+                    // Draw a mini wavy line as static preview using sine path
+                    val centerY = size.height / 2
+                    val amplitude = size.height * 0.25f
+                    val frequency = 0.12f
+                    val strokePx = 3.dp.toPx()
+
+                    // Inactive track — full width sine
+                    val inactivePath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(0f, centerY)
+                        var x = 0f
+                        while (x <= size.width) {
+                            val y = centerY + sin(x * frequency) * amplitude
+                            lineTo(x, y)
+                            x += 2f
+                        }
+                    }
+                    drawPath(
+                        path = inactivePath,
+                        color = inactiveColor.copy(alpha = 0.3f),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokePx, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    )
+
+                    // Active track — progress width sine
+                    val activePath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(0f, centerY)
+                        var x = 0f
+                        while (x <= previewProgress * size.width) {
+                            val y = centerY + sin(x * frequency) * amplitude
+                            lineTo(x, y)
+                            x += 2f
+                        }
+                    }
+                    drawPath(
+                        path = activePath,
+                        color = activeColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokePx, cap = androidx.compose.ui.graphics.StrokeCap.Round)
                     )
                 }
             }
