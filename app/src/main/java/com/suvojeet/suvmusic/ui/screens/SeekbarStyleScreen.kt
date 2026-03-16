@@ -166,6 +166,7 @@ private fun SeekbarStylePreviewCard(
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
         SeekbarStyle.MATERIAL -> "Material 3"
+        SeekbarStyle.M3E_WAVY -> "M3 Expressive"
     }
     
     val previewAmplitudes = remember { List(25) { Random.nextFloat() * 0.6f + 0.4f } }
@@ -198,6 +199,7 @@ private fun SeekbarStylePreviewCard(
                     SeekbarStyle.DOTS -> drawDotsPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.GRADIENT_BAR -> drawGradientPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.MATERIAL -> drawClassicPreview(progress, primaryColor, surfaceColor)
+                    SeekbarStyle.M3E_WAVY -> drawM3EWavyPreview(progress, primaryColor, surfaceColor)
                 }
             }
             
@@ -359,5 +361,48 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawGradientPreview
         topLeft = Offset(0f, centerY - trackHeight / 2),
         size = Size(progress * width, trackHeight),
         cornerRadius = CornerRadius(trackHeight / 2)
+    )
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawM3EWavyPreview(
+    progress: Float,
+    activeColor: Color,
+    inactiveColor: Color
+) {
+    val centerY = size.height / 2
+    val amplitude = size.height * 0.22f
+    val frequency = 0.10f
+    val strokePx = 3.dp.toPx()
+
+    // Full inactive wave
+    val inactivePath = Path().apply {
+        moveTo(0f, centerY)
+        var x = 0f
+        while (x <= size.width) {
+            val y = centerY + sin(x * frequency) * amplitude
+            lineTo(x, y)
+            x += 2f
+        }
+    }
+    drawPath(
+        path = inactivePath,
+        color = inactiveColor.copy(alpha = 0.25f),
+        style = Stroke(width = strokePx, cap = StrokeCap.Round)
+    )
+
+    // Active progress wave
+    val activePath = Path().apply {
+        moveTo(0f, centerY)
+        var x = 0f
+        while (x <= progress * size.width) {
+            val y = centerY + sin(x * frequency) * amplitude
+            lineTo(x, y)
+            x += 2f
+        }
+    }
+    drawPath(
+        path = activePath,
+        color = activeColor,
+        style = Stroke(width = strokePx, cap = StrokeCap.Round)
     )
 }
