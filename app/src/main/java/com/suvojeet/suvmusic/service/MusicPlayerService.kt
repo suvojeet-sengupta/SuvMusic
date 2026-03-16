@@ -555,9 +555,9 @@ class MusicPlayerService : MediaLibraryService() {
                 mediaItems: MutableList<MediaItem>,
                 startIndex: Int,
                 startPositionMs: Long
-            ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaSession.MediaItemsWithIndex> {
+            ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaSession.MediaItemsWithStartPosition> {
                 return com.google.common.util.concurrent.Futures.immediateFuture(
-                    androidx.media3.session.MediaSession.MediaItemsWithIndex(mediaItems, startIndex, startPositionMs)
+                    androidx.media3.session.MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs)
                 )
             }
 
