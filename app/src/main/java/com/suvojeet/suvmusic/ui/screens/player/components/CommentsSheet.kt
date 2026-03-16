@@ -1,29 +1,35 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.ThumbUp
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -50,106 +56,163 @@ fun CommentsSheet(
         ModalBottomSheet(
             sheetState = sheetState,
             onDismissRequest = onDismiss,
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrimColor = Color.Black.copy(alpha = 0.5f),
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) },
-            dragHandle = { BottomSheetDefaults.DragHandle() }
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            scrimColor = Color.Black.copy(alpha = 0.6f),
+            contentWindowInsets = { WindowInsets(0) },
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 20.dp)
             ) {
-                // Header
+                // Header - Material 3 Expressive Style
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Bottom
                 ) {
-                    Text(
-                        text = "Comments",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    
-                    if (comments != null) {
+                    Column {
                         Text(
-                            text = "${comments.size}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Comments",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        
+                        if (comments != null) {
+                            Text(
+                                text = "${comments.size} responses",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.ChatBubbleOutline,
+                            contentDescription = null,
+                            modifier = Modifier.padding(8.dp).size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
                 
                 // Comments list
                 Box(modifier = Modifier.weight(1f)) {
-                    if (isLoading) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            PulseLoadingIndicator(modifier = Modifier.size(48.dp), color = accentColor)
-                        }
-                    } else if (comments.isNullOrEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "No comments available",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-                        
-                        // Check for infinite scroll — track totalItemsCount so that
-                        // after new comments load, if still at bottom, it re-triggers.
-                        val scrollInfo by remember {
-                            derivedStateOf {
-                                val layoutInfo = listState.layoutInfo
-                                val visibleItemsInfo = layoutInfo.visibleItemsInfo
-                                val totalItems = layoutInfo.totalItemsCount
-                                val isAtBottom = if (totalItems == 0 || visibleItemsInfo.isEmpty()) {
-                                    false
-                                } else {
-                                    val lastVisibleItem = visibleItemsInfo.last()
-                                    val viewportHeight = layoutInfo.viewportEndOffset + layoutInfo.viewportStartOffset
-                                    (lastVisibleItem.index + 1 == totalItems) &&
-                                    (lastVisibleItem.offset + lastVisibleItem.size <= viewportHeight)
+                    AnimatedContent(
+                        targetState = isLoading,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(400)) togetherWith 
+                            fadeOut(animationSpec = tween(400))
+                        },
+                        label = "loadingState"
+                    ) { loading ->
+                        if (loading) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    PulseLoadingIndicator(modifier = Modifier.size(56.dp), color = accentColor)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "Fetching conversation...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
-                                Pair(isAtBottom, totalItems)
                             }
-                        }
-                        
-                        LaunchedEffect(scrollInfo) {
-                            if (scrollInfo.first && !isLoadingMore && !isLoading) {
-                                onLoadMore()
+                        } else if (comments.isNullOrEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ChatBubbleOutline,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(64.dp),
+                                        tint = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "No comments yet. Start the conversation!",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 32.dp),
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
                             }
-                        }
-                        
-                        // Scroll to top when a new comment is posted (optimistic)
-                        LaunchedEffect(comments.size) {
-                            if (comments.isNotEmpty() && comments.first().id.startsWith("temp_")) {
-                                listState.animateScrollToItem(0)
-                            }
-                        }
-
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            state = listState,
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(bottom = 16.dp)
-                        ) {
-                            itemsIndexed(
-                                items = comments,
-                                key = { index, comment -> "${comment.id}_$index" }
-                            ) { index, comment ->
-                                val isHighlighted = comment.id.startsWith("temp_")
-                                CommentItem(comment = comment, accentColor = accentColor, isHighlighted = isHighlighted)
+                        } else {
+                            val listState = rememberLazyListState()
+                            
+                            // Infinite scroll logic
+                            val scrollInfo by remember {
+                                derivedStateOf {
+                                    val layoutInfo = listState.layoutInfo
+                                    val visibleItemsInfo = layoutInfo.visibleItemsInfo
+                                    val totalItems = layoutInfo.totalItemsCount
+                                    val isAtBottom = if (totalItems == 0 || visibleItemsInfo.isEmpty()) {
+                                        false
+                                    } else {
+                                        val lastVisibleItem = visibleItemsInfo.last()
+                                        lastVisibleItem.index + 1 == totalItems
+                                    }
+                                    Pair(isAtBottom, totalItems)
+                                }
                             }
                             
-                            if (isLoadingMore) {
-                                item {
-                                    Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                                        LoadingIndicator(modifier = Modifier.size(24.dp), color = accentColor)
+                            LaunchedEffect(scrollInfo) {
+                                if (scrollInfo.first && !isLoadingMore && !isLoading) {
+                                    onLoadMore()
+                                }
+                            }
+                            
+                            // Scroll to top when a new comment is posted (optimistic)
+                            LaunchedEffect(comments.size) {
+                                if (comments.isNotEmpty() && comments.first().id.startsWith("temp_")) {
+                                    listState.animateScrollToItem(0)
+                                }
+                            }
+
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                state = listState,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(bottom = 24.dp, top = 4.dp)
+                            ) {
+                                itemsIndexed(
+                                    items = comments,
+                                    key = { index, comment -> "${comment.id}_$index" }
+                                ) { index, comment ->
+                                    val isHighlighted = comment.id.startsWith("temp_")
+                                    CommentItem(
+                                        comment = comment, 
+                                        accentColor = accentColor, 
+                                        isHighlighted = isHighlighted,
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
+                                
+                                if (isLoadingMore) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(16.dp), 
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(28.dp), 
+                                                color = accentColor,
+                                                strokeWidth = 3.dp,
+                                                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -179,51 +242,67 @@ private fun CommentInputSection(
     var commentText by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
     
+    // Focus state for animation
+    var isFocused by remember { mutableStateOf(false) }
+    
+    val containerColor by animateColorAsState(
+        targetValue = if (isFocused) MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp)
+                      else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
+        label = "inputContainerColor"
+    )
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(24.dp)
+            .padding(vertical = 16.dp)
+            .imePadding(),
+        color = containerColor,
+        shape = RoundedCornerShape(28.dp),
+        tonalElevation = if (isFocused) 4.dp else 0.dp
     ) {
         if (!isLoggedIn) {
-            // Not logged in message
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(20.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Sign in to add a comment",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "Sign in to join the discussion",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
         } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Comment input field
                 TextField(
                     value = commentText,
                     onValueChange = { commentText = it },
                     placeholder = {
-                        Text("Add a comment...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Add a comment...", 
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { isFocused = it.isFocused },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = accentColor,
+                        disabledContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = accentColor
                     ),
+                    textStyle = MaterialTheme.typography.bodyLarge,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(
                         onSend = {
@@ -234,34 +313,47 @@ private fun CommentInputSection(
                             }
                         }
                     ),
-                    singleLine = true,
+                    singleLine = false,
+                    maxLines = 4,
                     enabled = !isPosting
                 )
                 
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                // Send button
-                IconButton(
-                    onClick = {
-                        if (commentText.isNotBlank() && !isPosting) {
-                            onPostComment(commentText)
-                            commentText = ""
-                            keyboardController?.hide()
+                // Post Button with M3E animation
+                Box(contentAlignment = Alignment.Center) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = commentText.isNotBlank() || isPosting,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        FilledIconButton(
+                            onClick = {
+                                if (commentText.isNotBlank() && !isPosting) {
+                                    onPostComment(commentText)
+                                    commentText = ""
+                                    keyboardController?.hide()
+                                }
+                            },
+                            enabled = !isPosting,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = accentColor,
+                                contentColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            if (isPosting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.Send,
+                                    contentDescription = "Post",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
-                    },
-                    enabled = commentText.isNotBlank() && !isPosting
-                ) {
-                    if (isPosting) {
-                        LoadingIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = accentColor
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Post comment",
-                            tint = if (commentText.isNotBlank()) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }
@@ -273,82 +365,135 @@ private fun CommentInputSection(
 fun CommentItem(
     comment: Comment,
     accentColor: Color,
-    isHighlighted: Boolean = false
+    isHighlighted: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (isHighlighted) accentColor.copy(alpha = 0.1f) else Color.Transparent,
-                RoundedCornerShape(12.dp)
-            )
-            .padding(8.dp)
+    
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = if (isHighlighted) accentColor.copy(alpha = 0.12f) else Color.Transparent,
+        shape = RoundedCornerShape(20.dp)
     ) {
-        // Avatar
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(comment.authorThumbnailUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = null,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentScale = ContentScale.Crop
-        )
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        Column {
-            // Author and Time
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = comment.authorName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+        Row(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            // Avatar with expressive border
+            Box(contentAlignment = Alignment.Center) {
+                if (isHighlighted) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.sweepGradient(
+                                    listOf(accentColor, accentColor.copy(alpha = 0.2f), accentColor)
+                                )
+                            )
+                    )
+                }
                 
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                Text(
-                    text = comment.timestamp,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(comment.authorThumbnailUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    contentScale = ContentScale.Crop
                 )
             }
             
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             
-            // Text
-            Text(
-                text = comment.text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Actions (Likes)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.ThumbUp,
-                    contentDescription = "Likes",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                // Author and Time
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = comment.authorName,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.Black
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    
+                    Text(
+                        text = comment.timestamp,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
                 
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 
+                // Text with improved readability
                 Text(
-                    text = comment.likeCount,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = comment.text,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        lineHeight = 20.sp,
+                        letterSpacing = 0.1.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                
+                Spacer(modifier = Modifier.height(10.dp))
+                
+                // Actions (Likes & Replies)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Like Count
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.ThumbUp,
+                            contentDescription = "Likes",
+                            tint = if (comment.likeCount.toIntOrNull() ?: 0 > 0) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        
+                        if (comment.likeCount != "0" && comment.likeCount.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = comment.likeCount,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    // Reply Count (if available)
+                    if (comment.replyCount > 0) {
+                        Text(
+                            text = "${comment.replyCount} replies",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.ExtraBold
+                            ),
+                            color = accentColor
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+// Helper for focus change since it's used in the input section
+@Composable
+private fun Modifier.onFocusChanged(onFocusChanged: (androidx.compose.ui.focus.FocusState) -> Unit): Modifier {
+    return this.then(
+        androidx.compose.ui.focus.onFocusChanged { onFocusChanged(it) }
+    )
+}
