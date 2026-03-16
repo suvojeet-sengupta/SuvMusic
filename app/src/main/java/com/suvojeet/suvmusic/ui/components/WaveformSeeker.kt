@@ -71,7 +71,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.LinearWavyProgressIndicatorDefaults
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlin.random.Random
 import kotlin.math.sin
@@ -447,9 +447,9 @@ fun WaveformSeeker(
                             color = activeColor,
                             trackColor = inactiveColor.copy(alpha = 0.3f),
                             amplitude = { wavyAmplitude },
-                            wavelength = LinearWavyProgressIndicatorDefaults.WaveLength,
+                            wavelength = WavyProgressIndicatorDefaults.LinearDeterminateWavelength,
                             waveSpeed = if (isPlaying)
-                                LinearWavyProgressIndicatorDefaults.WaveSpeed
+                                WavyProgressIndicatorDefaults.LinearDeterminateWavelength
                             else
                                 0.dp
                         )
