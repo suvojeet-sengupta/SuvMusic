@@ -918,6 +918,25 @@ class YouTubeRepository @Inject constructor(
 
         try {
             // Try internal API first for better metadata
+            
+            // RD* = My Mix / Radio mixes — use "next" API, not browse
+            if (playlistId.startsWith("RD") && playlistId != "RDTMAK") {
+                try {
+                    val json = fetchInternalApi("next", extraBody = mapOf("playlistId" to playlistId))
+                    val songs = parseSongsFromInternalJson(json)
+                    if (songs.isNotEmpty()) {
+                        return@withContext Playlist(
+                            id = playlistId,
+                            title = "My Mix",
+                            author = "YouTube Music",
+                            thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
+                            songs = songs
+                        )
+                    }
+                } catch (e: Exception) { }
+                return@withContext Playlist(playlistId, "My Mix", "YouTube Music", null, emptyList())
+            }
+
             val browseId = if (playlistId.startsWith("VL")) playlistId else "VL$playlistId"
             val json = fetchInternalApi(browseId)
             val playlist = parsePlaylistFromInternalJson(json, playlistId)
