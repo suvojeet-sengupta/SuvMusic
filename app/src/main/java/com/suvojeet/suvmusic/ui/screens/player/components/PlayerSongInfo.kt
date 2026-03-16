@@ -32,6 +32,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -115,8 +116,10 @@ fun SongInfoSection(
                                 )
                             },
                             color = dominantColors.onBackground,
-                            maxLines = if (compact) 1 else 2,
-                            overflow = TextOverflow.Ellipsis
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee(
+                                iterations = Int.MAX_VALUE
+                            )
                         )
                     }
 
@@ -131,10 +134,12 @@ fun SongInfoSection(
                         color = dominantColors.onBackground.copy(alpha = 0.65f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.clickable {
-                            val target = song?.artistId ?: song?.artist
-                            target?.let { onArtistClick(it) }
-                        }
+                        modifier = Modifier
+                            .basicMarquee(iterations = Int.MAX_VALUE)
+                            .clickable {
+                                val target = song?.artistId ?: song?.artist
+                                target?.let { onArtistClick(it) }
+                            }
                     )
                 }
             }
