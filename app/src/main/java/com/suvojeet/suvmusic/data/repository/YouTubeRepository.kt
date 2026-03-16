@@ -922,7 +922,7 @@ class YouTubeRepository @Inject constructor(
             // RD* = My Mix / Radio mixes — use "next" API, not browse
             if (playlistId.startsWith("RD") && playlistId != "RDTMAK") {
                 try {
-                    val json = fetchInternalApi("next", extraBody = mapOf("playlistId" to playlistId))
+                    val json = fetchInternalApiWithBody("next", "{ \"playlistId\": \"$playlistId\" }")
                     val songs = parseSongsFromInternalJson(json)
                     if (songs.isNotEmpty()) {
                         return@withContext Playlist(
@@ -2302,6 +2302,7 @@ class YouTubeRepository @Inject constructor(
     // ============================================================================================
 
     private suspend fun fetchInternalApi(endpoint: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchInternalApi(endpoint, hl = hl, gl = gl)
+    private suspend fun fetchInternalApiWithBody(endpoint: String, bodyJson: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchInternalApiWithBody(endpoint, bodyJson, hl = hl, gl = gl)
 
     private suspend fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchPublicApi(browseId, hl = hl, gl = gl)
 

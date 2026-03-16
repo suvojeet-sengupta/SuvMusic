@@ -110,6 +110,53 @@ class YouTubeApiClient @Inject constructor(
     }
 
     /**
+     * Fetch authenticated YouTube Music internal API with a custom body.
+     */
+    suspend fun fetchInternalApiWithBody(endpoint: String, bodyJson: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
+        val cookies = sessionManager.getCookies() ?: return ""
+        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+        
+        val url = "${YouTubeConfig.BASE_URL}/$endpoint"
+        
+        val cleanedBody = bodyJson.trim()
+        val processedBody = if (cleanedBody.startsWith("{") && cleanedBody.endsWith("}")) {
+            cleanedBody.substring(1, cleanedBody.length - 1)
+        } else {
+            cleanedBody
+        }
+
+        val fullBody = """
+            {
+                "context": {
+                    "client": {
+                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
+                        "hl": "$hl",
+                        "gl": "$gl"
+                    }
+                },
+                $processedBody
+            }
+        """.trimIndent()
+
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .post(fullBody.toRequestBody("application/json".toMediaType()))
+            .addHeader("Cookie", cookies)
+            .addHeader("Authorization", authHeader)
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .addHeader("Origin", "https://music.youtube.com")
+            .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
+            .build()
+
+        return try {
+            okHttpClient.newCall(request).execute().body.string()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    /**
      * Fetch with browse parameters (for category browsing).
      */
     suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
