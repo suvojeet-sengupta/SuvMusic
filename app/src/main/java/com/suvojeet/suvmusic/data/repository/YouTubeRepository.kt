@@ -1046,7 +1046,7 @@ class YouTubeRepository @Inject constructor(
             val songs = parseAutoMixQueue(json)
 
             if (songs.isNotEmpty()) {
-                return @withContext com.suvojeet.suvmusic.core.model.Playlist(
+                return@withContext com.suvojeet.suvmusic.core.model.Playlist(
                     id = playlistId,
                     title = resolveAutoMixTitle(playlistId),
                     author = "YouTube Music",
