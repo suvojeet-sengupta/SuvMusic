@@ -112,6 +112,7 @@ class YouTubeJsonParser @Inject constructor() {
                 ?.optJSONObject("musicThumbnailRenderer")
                 ?.optJSONObject("thumbnail")
                 ?.optJSONArray("thumbnails")
+            ?: item.optJSONObject("thumbnail")?.optJSONArray("thumbnails") // Bug 4 fix: for playlistPanelVideoRenderer
             ?: item.optJSONArray("thumbnails") // For header thumbnail
 
         return thumbnails?.let { it.optJSONObject(it.length() - 1)?.optString("url") }

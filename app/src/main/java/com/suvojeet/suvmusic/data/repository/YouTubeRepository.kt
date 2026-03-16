@@ -934,7 +934,7 @@ class YouTubeRepository @Inject constructor(
                         )
                     }
                 } catch (e: Exception) { }
-                return@withContext Playlist(playlistId, "My Mix", "YouTube Music", null, emptyList())
+                // Bug 3 fix: remove blocking return here to let it fall through
             }
 
             val browseId = if (playlistId.startsWith("VL")) playlistId else "VL$playlistId"
@@ -2395,6 +2395,7 @@ class YouTubeRepository @Inject constructor(
             findAllObjects(root, "musicResponsiveListItemRenderer", items)
             findAllObjects(root, "musicTwoRowItemRenderer", items)
             findAllObjects(root, "videoRenderer", items) // Support for main YouTube history
+            findAllObjects(root, "playlistPanelVideoRenderer", items) // Bug 1 fix
 
             items.forEach { item ->
                 try {
@@ -2411,7 +2412,10 @@ class YouTubeRepository @Inject constructor(
                         val title = extractTitle(item)
                         val artist = extractArtist(item)
                         val thumbnailUrl = extractThumbnail(item)
+                        
+                        // Bug 2 fix: check both playlistItemData and direct playlistSetVideoId
                         val setVideoId = item.optJSONObject("playlistItemData")?.optString("videoId")
+                            ?: item.optString("playlistSetVideoId").takeIf { it.isNotEmpty() }
                         
                         Song.fromYouTube(
                             videoId = videoId,
