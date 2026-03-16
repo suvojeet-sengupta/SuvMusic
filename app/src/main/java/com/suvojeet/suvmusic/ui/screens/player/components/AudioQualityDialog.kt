@@ -108,7 +108,7 @@ fun AudioQualityDialog(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Opus • HQ Audio",
+                                text = "Opus • 160kbps VBR",
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
@@ -121,7 +121,7 @@ fun AudioQualityDialog(
                         
                         // Description
                         Text(
-                            text = "SuvMusic streams audio using the Opus codec, a superior modern format used by YouTube Music.",
+                            text = "SuvMusic uses YouTube's DASH (Dynamic Adaptive Streaming over HTTP) infrastructure to fetch the highest fidelity audio streams.",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 lineHeight = 26.sp
                             ),
@@ -136,13 +136,13 @@ fun AudioQualityDialog(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             QualityBenefitItem(
-                                title = "Better than MP3",
-                                description = "160kbps Opus matches or beats 320kbps MP3 in quality.",
+                                title = "High Fidelity (itag 251)",
+                                description = "Standard HQ Opus at ~160kbps. Matches or beats legacy 320kbps MP3 in clarity and frequency range.",
                                 dominantColors = dominantColors
                             )
                             QualityBenefitItem(
-                                title = "Superior to AAC",
-                                description = "Wider frequency range for better bass and crisper highs.",
+                                title = "DASH Optimization",
+                                description = "Dynamic adaptive streaming ensures seamless playback while maintaining 128kbps (itag 140) as a high-quality fallback.",
                                 dominantColors = dominantColors
                             )
                         }

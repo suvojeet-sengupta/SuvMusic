@@ -93,9 +93,9 @@ class YouTubeStreamingService @Inject constructor(
             if (audioStreams.isEmpty()) return@retryWithBackoff null
 
             val targetBitrate = when (audioQuality) {
-                com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 64
-                com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 128
-                com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 256
+                com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 70
+                com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 160
+                com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 512
             }
             
             val bestAudioStream = audioStreams
