@@ -27,9 +27,14 @@ public:
 
     void process(float* buffer, int numFrames, int numChannels) {
         if (!enabled.load(std::memory_order_acquire)) return;
-        if (numChannels > 2) return; // Simplified for Mono/Stereo
+        if (numChannels <= 0 || numChannels > 2) return; // Simplified for Mono/Stereo
 
         std::lock_guard<std::mutex> lock(mtx);
+
+        if (numChannels != currentNumChannels) {
+            currentNumChannels = numChannels;
+            reset(); // writeIndex = 0, clears buffer
+        }
 
         float rate = 1.0f - pitchRatio;
         int bufferSize = delayBuffer.size() / numChannels;
@@ -78,6 +83,7 @@ private:
     std::atomic<bool> enabled;
     float pitchRatio;
     int sampleRate;
+    int currentNumChannels = 2;
     
     std::vector<float> delayBuffer;
     int writeIndex = 0;

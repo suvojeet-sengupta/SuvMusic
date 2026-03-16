@@ -25,6 +25,7 @@ class DiscordManager @Inject constructor(
     private var isPrivacyMode: Boolean = false
     
     private val scope = CoroutineScope(Dispatchers.IO)
+    private var initializationJob: Job? = null
     
     private val _connectionStatus = MutableStateFlow("Disconnected")
     val connectionStatus: StateFlow<String> = _connectionStatus.asStateFlow()
@@ -40,18 +41,11 @@ class DiscordManager @Inject constructor(
             disconnect()
         }
         
-        scope.launch {
+        initializationJob?.cancel()
+        initializationJob = scope.launch {
             sessionManager.privacyModeEnabledFlow.collect { enabled ->
                 isPrivacyMode = enabled
                 if (enabled) {
-                    // Start Privacy Mode: Clear presence but keep connection? 
-                    // Or maybe just show "Listening to Music" without details?
-                    // "Stealth Listening" implies hiding completely.
-                    // Discord RPC doesn't have a "Hide" method other than clearing, 
-                    // but usually we just stop sending updates.
-                    // If we want to hide "Playing SuvMusic", we should probably disconnect or send empty.
-                    // Let's just stop sending updates for now.
-                    // Optionally, we can clear the activity:
                     discordRPC?.updateActivity(name = "SuvMusic", state = null, details = null)
                 }
             }
