@@ -37,6 +37,8 @@ import coil3.request.crossfade
 import com.suvojeet.suvmusic.data.model.Comment
 import com.suvojeet.suvmusic.ui.components.PulseLoadingIndicator
 
+import com.suvojeet.suvmusic.ui.components.DominantColors
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommentsSheet(
@@ -49,15 +51,21 @@ fun CommentsSheet(
     isPostingComment: Boolean = false,
     onPostComment: (String) -> Unit = {},
     isLoadingMore: Boolean = false,
-    onLoadMore: () -> Unit = {}
+    onLoadMore: () -> Unit = {},
+    dominantColors: DominantColors? = null
 ) {
     if (isVisible) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         
+        // Use provided dominant colors or fall back to MaterialTheme
+        val backgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surfaceContainerHigh
+        val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+        val finalAccentColor = dominantColors?.accent ?: accentColor
+        
         ModalBottomSheet(
             sheetState = sheetState,
             onDismissRequest = onDismiss,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = backgroundColor,
             scrimColor = Color.Black.copy(alpha = 0.6f),
             contentWindowInsets = { WindowInsets(0) },
             dragHandle = { BottomSheetDefaults.DragHandle() },
@@ -83,28 +91,28 @@ fun CommentsSheet(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = (-0.5).sp
                             ),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = contentColor
                         )
                         
                         if (comments != null) {
                             Text(
                                 text = "${comments.size} responses",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                color = finalAccentColor.copy(alpha = 0.8f),
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
                     
                     Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                        color = finalAccentColor.copy(alpha = 0.15f),
                         shape = CircleShape
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.ChatBubbleOutline,
                             contentDescription = null,
                             modifier = Modifier.padding(8.dp).size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            tint = finalAccentColor
                         )
                     }
                 }
@@ -122,12 +130,12 @@ fun CommentsSheet(
                         if (loading) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    PulseLoadingIndicator(modifier = Modifier.size(56.dp), color = accentColor)
+                                    PulseLoadingIndicator(modifier = Modifier.size(56.dp), color = finalAccentColor)
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         "Fetching conversation...",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = contentColor.copy(alpha = 0.7f)
                                     )
                                 }
                             }
@@ -138,13 +146,13 @@ fun CommentsSheet(
                                         imageVector = Icons.Rounded.ChatBubbleOutline,
                                         contentDescription = null,
                                         modifier = Modifier.size(64.dp),
-                                        tint = MaterialTheme.colorScheme.surfaceVariant
+                                        tint = contentColor.copy(alpha = 0.15f)
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         text = "No comments yet. Start the conversation!",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = contentColor.copy(alpha = 0.6f),
                                         modifier = Modifier.padding(horizontal = 32.dp),
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                     )
@@ -195,7 +203,8 @@ fun CommentsSheet(
                                     val isHighlighted = comment.id.startsWith("temp_")
                                     CommentItem(
                                         comment = comment, 
-                                        accentColor = accentColor, 
+                                        accentColor = finalAccentColor,
+                                        contentColor = contentColor,
                                         isHighlighted = isHighlighted,
                                         modifier = Modifier.animateItem()
                                     )
@@ -209,7 +218,7 @@ fun CommentsSheet(
                                         ) {
                                             CircularProgressIndicator(
                                                 modifier = Modifier.size(28.dp), 
-                                                color = accentColor,
+                                                color = finalAccentColor,
                                                 strokeWidth = 3.dp,
                                                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                                             )
@@ -226,7 +235,9 @@ fun CommentsSheet(
                     isLoggedIn = isLoggedIn,
                     isPosting = isPostingComment,
                     onPostComment = onPostComment,
-                    accentColor = accentColor
+                    accentColor = finalAccentColor,
+                    backgroundColor = backgroundColor,
+                    contentColor = contentColor
                 )
             }
         }
@@ -238,7 +249,9 @@ private fun CommentInputSection(
     isLoggedIn: Boolean,
     isPosting: Boolean,
     onPostComment: (String) -> Unit,
-    accentColor: Color
+    accentColor: Color,
+    backgroundColor: Color,
+    contentColor: Color
 ) {
     var commentText by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -247,8 +260,8 @@ private fun CommentInputSection(
     var isFocused by remember { mutableStateOf(false) }
     
     val containerColor by animateColorAsState(
-        targetValue = if (isFocused) MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp)
-                      else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
+        targetValue = if (isFocused) contentColor.copy(alpha = 0.15f)
+                      else contentColor.copy(alpha = 0.08f),
         label = "inputContainerColor"
     )
 
@@ -270,7 +283,7 @@ private fun CommentInputSection(
             ) {
                 Text(
                     text = "Sign in to join the discussion",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = accentColor,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -289,7 +302,7 @@ private fun CommentInputSection(
                         Text(
                             "Add a comment...", 
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = contentColor.copy(alpha = 0.5f)
                         )
                     },
                     modifier = Modifier
@@ -301,7 +314,9 @@ private fun CommentInputSection(
                         disabledContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = accentColor
+                        cursorColor = accentColor,
+                        focusedTextColor = contentColor,
+                        unfocusedTextColor = contentColor
                     ),
                     textStyle = MaterialTheme.typography.bodyLarge,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -337,14 +352,14 @@ private fun CommentInputSection(
                             enabled = !isPosting,
                             colors = IconButtonDefaults.filledIconButtonColors(
                                 containerColor = accentColor,
-                                contentColor = MaterialTheme.colorScheme.surface
+                                contentColor = backgroundColor
                             ),
                             modifier = Modifier.size(44.dp)
                         ) {
                             if (isPosting) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    color = backgroundColor,
                                     strokeWidth = 2.dp
                                 )
                             } else {
@@ -366,6 +381,7 @@ private fun CommentInputSection(
 fun CommentItem(
     comment: Comment,
     accentColor: Color,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
     isHighlighted: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -403,7 +419,7 @@ fun CommentItem(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                        .background(contentColor.copy(alpha = 0.1f)),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -422,7 +438,7 @@ fun CommentItem(
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = FontWeight.Black
                         ),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = contentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -431,7 +447,7 @@ fun CommentItem(
                     Text(
                         text = comment.timestamp,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = contentColor.copy(alpha = 0.5f)
                     )
                 }
                 
@@ -444,7 +460,7 @@ fun CommentItem(
                         lineHeight = 20.sp,
                         letterSpacing = 0.1.sp
                     ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = contentColor
                 )
                 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -459,7 +475,7 @@ fun CommentItem(
                         Icon(
                             imageVector = Icons.Rounded.ThumbUp,
                             contentDescription = "Likes",
-                            tint = if (comment.likeCount.toIntOrNull() ?: 0 > 0) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            tint = if (comment.likeCount.toIntOrNull() ?: 0 > 0) accentColor else contentColor.copy(alpha = 0.4f),
                             modifier = Modifier.size(16.dp)
                         )
                         
@@ -470,7 +486,7 @@ fun CommentItem(
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.Bold
                                 ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = contentColor.copy(alpha = 0.7f)
                             )
                         }
                     }

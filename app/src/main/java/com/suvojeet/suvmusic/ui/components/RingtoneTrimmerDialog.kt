@@ -5,17 +5,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.util.TimeUtil
+import com.suvojeet.suvmusic.ui.components.DominantColors
 
 /**
  * Dialog for trimming a song before setting it as a ringtone
@@ -26,11 +28,17 @@ fun RingtoneTrimmerDialog(
     song: Song,
     onDismiss: () -> Unit,
     onResolveStreamUrl: suspend (String) -> String?,
-    onConfirm: (Long, Long) -> Unit
+    onConfirm: (Long, Long) -> Unit,
+    dominantColors: DominantColors? = null
 ) {
     if (!isVisible) return
 
     val context = LocalContext.current
+    
+    // Determine colors
+    val backgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
+    val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val accentColor = dominantColors?.accent ?: MaterialTheme.colorScheme.primary
     
     // ExoPlayer for preview
     val exoPlayer = remember { 
@@ -98,13 +106,23 @@ fun RingtoneTrimmerDialog(
             exoPlayer.stop()
             onDismiss()
         },
-        title = { Text("Trim Ringtone") },
+        containerColor = backgroundColor,
+        titleContentColor = contentColor,
+        textContentColor = contentColor,
+        title = { 
+            Text(
+                "Trim Ringtone",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = contentColor
+            ) 
+        },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Select the part of \"${song.title}\" to use as ringtone. (Max 30s recommended)",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor.copy(alpha = 0.7f)
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -115,9 +133,9 @@ fun RingtoneTrimmerDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isLoading) {
-                        LoadingIndicator(
+                        CircularProgressIndicator(
                             modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary
+                            color = accentColor
                         )
                     } else {
                         IconButton(
@@ -135,7 +153,7 @@ fun RingtoneTrimmerDialog(
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (isPlaying) "Pause Preview" else "Play Preview",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = accentColor,
                                 modifier = Modifier.size(48.dp)
                             )
                         }
@@ -151,27 +169,32 @@ fun RingtoneTrimmerDialog(
                     Text(
                         text = TimeUtil.formatTime(range.start.toLong()),
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
+                        color = accentColor
                     )
                     Text(
                         text = TimeUtil.formatTime(range.endInclusive.toLong()),
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
+                        color = accentColor
                     )
                 }
                 
+                @OptIn(ExperimentalMaterial3Api::class)
                 RangeSlider(
                     value = range,
                     onValueChange = { 
                         range = it 
-                        // If user moves range while playing, maybe stop or seek
                         if (isPlaying) {
                             exoPlayer.pause()
                             isPlaying = false
                         }
                     },
                     valueRange = 0f..duration,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = accentColor,
+                        activeTrackColor = accentColor,
+                        inactiveTrackColor = contentColor.copy(alpha = 0.2f)
+                    )
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -181,7 +204,7 @@ fun RingtoneTrimmerDialog(
                     text = "Selected duration: ${TimeUtil.formatTime(selectedDuration)}",
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                    color = if (selectedDuration > 40000) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (selectedDuration > 40000) MaterialTheme.colorScheme.error else contentColor.copy(alpha = 0.6f)
                 )
             }
         },
@@ -190,9 +213,13 @@ fun RingtoneTrimmerDialog(
                 onClick = {
                     exoPlayer.stop()
                     onConfirm(range.start.toLong(), range.endInclusive.toLong())
-                }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor,
+                    contentColor = backgroundColor
+                )
             ) {
-                Text("Set as Ringtone")
+                Text("Set as Ringtone", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -200,7 +227,7 @@ fun RingtoneTrimmerDialog(
                 exoPlayer.stop()
                 onDismiss()
             }) {
-                Text("Cancel")
+                Text("Cancel", color = accentColor)
             }
         }
     )
