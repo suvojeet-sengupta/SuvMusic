@@ -295,6 +295,56 @@ class MusicPlayerService : MediaLibraryService() {
             addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     super.onMediaItemTransition(mediaItem, reason)
+                    
+                    // Lazy URI resolution for the current item if it's missing
+                    if (mediaItem != null && mediaItem.localConfiguration?.uri == null) {
+                        val videoId = mediaItem.mediaId
+                        serviceScope.launch {
+                            val streamUrl = resolveStreamUrlWithRetry(videoId)
+                            if (streamUrl != null) {
+                                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    val player = mediaLibrarySession?.player ?: return@withContext
+                                    val currentIndex = player.currentMediaItemIndex
+                                    if (currentIndex >= 0 && currentIndex < player.mediaItemCount && player.getMediaItemAt(currentIndex).mediaId == videoId) {
+                                        val updatedItem = mediaItem.buildUpon()
+                                            .setUri(Uri.parse(streamUrl))
+                                            .build()
+                                        player.replaceMediaItem(currentIndex, updatedItem)
+                                        // Ensure playback starts if it was stalled due to missing URI
+                                        if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
+                                            player.prepare()
+                                            player.play()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Proactively resolve the next item in the queue for gapless-like transition
+                    serviceScope.launch {
+                        val player = mediaLibrarySession?.player ?: return@launch
+                        val nextIndex = player.currentMediaItemIndex + 1
+                        if (nextIndex < player.mediaItemCount) {
+                            val nextItem = player.getMediaItemAt(nextIndex)
+                            if (nextItem.localConfiguration?.uri == null) {
+                                val nextVideoId = nextItem.mediaId
+                                val nextStreamUrl = resolveStreamUrlWithRetry(nextVideoId)
+                                if (nextStreamUrl != null) {
+                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        val p = mediaLibrarySession?.player ?: return@withContext
+                                        if (nextIndex < p.mediaItemCount && p.getMediaItemAt(nextIndex).mediaId == nextVideoId) {
+                                            val updatedNextItem = nextItem.buildUpon()
+                                                .setUri(Uri.parse(nextStreamUrl))
+                                                .build()
+                                            p.replaceMediaItem(nextIndex, updatedNextItem)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     mediaItem?.mediaId?.let { videoId ->
                         if (videoId.isNotEmpty()) {
                             sponsorBlockRepository.loadSegments(videoId)
@@ -609,56 +659,50 @@ class MusicPlayerService : MediaLibraryService() {
                 startIndex: Int,
                 startPositionMs: Long
             ): com.google.common.util.concurrent.ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+                // BUG FIX (Skip): If the list is a single item and it's in our context cache, expand it to the full playlist.
+                // This ensures the player queue has more than one item, which makes the Next/Previous buttons appear in AA.
+                var finalMediaItems = mediaItems.toMutableList()
+                var finalStartIndex = startIndex
+
+                if (mediaItems.size == 1) {
+                    val mediaId = mediaItems[0].mediaId
+                    val context = playlistContextCache[mediaId]
+                    if (context != null) {
+                        finalMediaItems = context.map { createPlayableMediaItem(it) }.toMutableList()
+                        finalStartIndex = context.indexOfFirst { it.id == mediaId }.coerceAtLeast(0)
+                    }
+                }
+
                 // Phone-side items typically already have URIs — pass through immediately
-                val allHaveUris = mediaItems.all { it.localConfiguration?.uri != null }
+                val allHaveUris = finalMediaItems.all { it.localConfiguration?.uri != null }
                 if (allHaveUris) {
                     return com.google.common.util.concurrent.Futures.immediateFuture(
-                        MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs)
+                        MediaSession.MediaItemsWithStartPosition(finalMediaItems, finalStartIndex, startPositionMs)
                     )
                 }
 
-                // Android Auto browse items need async URI resolution
+                // For Android Auto browse items, we'll resolve the first item's URI now to ensure 
+                // immediate playback, and let onMediaItemTransition handle the rest lazily.
                 val future = com.google.common.util.concurrent.SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
                 serviceScope.launch {
                     try {
-                        val resolved = mediaItems.mapIndexed { index, item ->
-                            if (item.localConfiguration?.uri != null) return@mapIndexed item
-
-                            val videoId = item.mediaId
-                            val song = cachedBrowseSongs[videoId] ?: cachedSearchResults.find { it.id == videoId }
-                            val streamUrl = resolveStreamUrlWithRetry(videoId)
-
+                        val firstItem = finalMediaItems[finalStartIndex]
+                        if (firstItem.localConfiguration?.uri == null) {
+                            val streamUrl = resolveStreamUrlWithRetry(firstItem.mediaId)
                             if (streamUrl != null) {
-                                if (song != null) {
-                                    createPlayableMediaItem(song).buildUpon()
-                                        .setUri(Uri.parse(streamUrl))
-                                        .build()
+                                val song = cachedBrowseSongs[firstItem.mediaId] ?: cachedSearchResults.find { it.id == firstItem.mediaId }
+                                val resolvedFirstItem = if (song != null) {
+                                    createPlayableMediaItem(song).buildUpon().setUri(Uri.parse(streamUrl)).build()
                                 } else {
-                                    item.buildUpon()
-                                        .setUri(Uri.parse(streamUrl))
-                                        .setMediaMetadata(
-                                            item.mediaMetadata.buildUpon()
-                                                .setIsPlayable(true)
-                                                .setIsBrowsable(false)
-                                                .build()
-                                        )
-                                        .build()
+                                    firstItem.buildUpon().setUri(Uri.parse(streamUrl)).build()
                                 }
-                            } else {
-                                android.util.Log.e("MusicPlayerService", "onSetMediaItems: failed to resolve URI for $videoId")
-                                null
+                                finalMediaItems[finalStartIndex] = resolvedFirstItem
                             }
-                        }.filterNotNull().toMutableList()
-
-                        if (resolved.isEmpty()) {
-                            future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
-                        } else {
-                            val safeIndex = startIndex.coerceIn(0, (resolved.size - 1).coerceAtLeast(0))
-                            future.set(MediaSession.MediaItemsWithStartPosition(resolved, safeIndex, startPositionMs))
                         }
+                        future.set(MediaSession.MediaItemsWithStartPosition(finalMediaItems, finalStartIndex, startPositionMs))
                     } catch (e: Exception) {
-                        android.util.Log.e("MusicPlayerService", "onSetMediaItems async resolution failed", e)
-                        future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
+                        android.util.Log.e("MusicPlayerService", "onSetMediaItems resolution failed", e)
+                        future.set(MediaSession.MediaItemsWithStartPosition(finalMediaItems, finalStartIndex, startPositionMs))
                     }
                 }
                 return future
@@ -838,7 +882,23 @@ class MusicPlayerService : MediaLibraryService() {
                  val updatedMediaItemsFuture = com.google.common.util.concurrent.SettableFuture.create<MutableList<MediaItem>>()
                  serviceScope.launch {
                      val finalItems = mutableListOf<MediaItem>()
-                     for (item in mediaItems) {
+                     
+                     // BUG FIX (Skip): If it's a single item tap from browse or search, expand it to the full playlist context.
+                     val inputItems = if (mediaItems.size == 1) {
+                         val mediaId = mediaItems[0].mediaId
+                         val context = playlistContextCache[mediaId]
+                         if (context != null) {
+                             val index = context.indexOfFirst { it.id == mediaId }.coerceAtLeast(0)
+                             // Add the tapped song and all subsequent songs in that context
+                             context.subList(index, context.size).map { createPlayableMediaItem(it) }
+                         } else {
+                             mediaItems
+                         }
+                     } else {
+                         mediaItems
+                     }
+
+                     for (item in inputItems) {
                          if (item.mediaId.startsWith("shuffle_")) {
                              val playlistId = item.mediaId.removePrefix("shuffle_")
                              try {
@@ -851,92 +911,29 @@ class MusicPlayerService : MediaLibraryService() {
                              continue
                          }
 
-                         // Android Auto voice search: "Play <song>" → searchQuery is set
+                         // Voice search or other items without URIs
                          val searchQuery = item.requestMetadata.searchQuery
-                         val resolvedItem = if (!searchQuery.isNullOrEmpty() && item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
+                         if (!searchQuery.isNullOrEmpty() && item.localConfiguration?.uri == null) {
                              try {
                                  val results = youTubeRepository.search(searchQuery)
                                  if (results.isNotEmpty()) {
                                      val song = results.first()
-                                     val streamUrl = resolveStreamUrlWithRetry(song.id)
-                                     if (streamUrl != null) {
-                                         createPlayableMediaItem(song).buildUpon()
-                                             .setUri(Uri.parse(streamUrl))
-                                             .build()
-                                     } else {
-                                         createPlayableMediaItem(song)
-                                     }
-                                 } else {
-                                     null
+                                     // We add it without URI; onMediaItemTransition will resolve it lazily.
+                                     finalItems.add(createPlayableMediaItem(song))
                                  }
                              } catch (e: Exception) {
                                  android.util.Log.e("MusicPlayerService", "Voice search failed for '$searchQuery'", e)
-                                 null
                              }
-                         } else if (item.localConfiguration?.uri?.toString().isNullOrEmpty()) {
-                             // Item from Android Auto browse tree or search results — needs URI resolution.
-                             val videoId = item.mediaId
-                             try {
-                                 // Try to find the full Song object from cached search results
-                                 val cachedSong = cachedSearchResults.find { it.id == videoId }
-
-                                 val streamUrl = resolveStreamUrlWithRetry(videoId)
-                                 if (streamUrl != null) {
-                                     if (cachedSong != null) {
-                                         // Rebuild with full metadata from cached Song object
-                                         createPlayableMediaItem(cachedSong).buildUpon()
-                                             .setUri(Uri.parse(streamUrl))
-                                             .build()
-                                     } else {
-                                         // Rebuild with metadata from the item itself + resolved URI
-                                         val metadata = item.mediaMetadata
-                                         MediaItem.Builder()
-                                             .setMediaId(videoId)
-                                             .setUri(Uri.parse(streamUrl))
-                                             .setMediaMetadata(
-                                                 metadata.buildUpon()
-                                                     .setIsPlayable(true)
-                                                     .setIsBrowsable(false)
-                                                     .build()
-                                             )
-                                             .build()
-                                     }
-                                 } else {
-                                     android.util.Log.e("MusicPlayerService", "Failed to resolve stream for: $videoId")
-                                     null
-                                 }
-                             } catch (e: Exception) {
-                                 android.util.Log.e("MusicPlayerService", "onAddMediaItems resolution failed for: $videoId", e)
-                                 null
+                         } else if (item.localConfiguration?.uri == null) {
+                             // Regular browse item without URI - just ensure we have full metadata
+                             val song = cachedBrowseSongs[item.mediaId] ?: cachedSearchResults.find { it.id == item.mediaId }
+                             if (song != null) {
+                                 finalItems.add(createPlayableMediaItem(song))
+                             } else {
+                                 finalItems.add(item)
                              }
                          } else {
-                             item
-                         }
-                         resolvedItem?.let { finalItems.add(it) }
-                     }
-                     // BUG FIX (Skip): After resolving the tapped song, asynchronously
-                     // append the rest of its playlist to the player queue.
-                     // This allows AA skip to work. Items have no stream URLs yet —
-                     // MusicPlayer's onMediaItemTransition will resolve them lazily.
-                     if (finalItems.isNotEmpty()) {
-                         val firstId = finalItems.first().mediaId
-                         val context = playlistContextCache[firstId]
-                         if (context != null) {
-                             val startIndex = context.indexOfFirst { it.id == firstId }
-                             if (startIndex >= 0 && startIndex < context.size - 1) {
-                                 val remaining = context.subList(startIndex + 1, context.size)
-                                 serviceScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                                     try {
-                                         val player = mediaLibrarySession?.player ?: return@launch
-                                         remaining.forEach { song ->
-                                             player.addMediaItem(createPlayableMediaItem(song))
-                                         }
-                                         android.util.Log.d("MusicPlayerService", "Skip fix: queued ${remaining.size} songs after ${firstId}")
-                                     } catch (e: Exception) {
-                                         android.util.Log.e("MusicPlayerService", "Skip fix queue append failed", e)
-                                     }
-                                 }
-                             }
+                             finalItems.add(item)
                          }
                      }
                      updatedMediaItemsFuture.set(finalItems)
