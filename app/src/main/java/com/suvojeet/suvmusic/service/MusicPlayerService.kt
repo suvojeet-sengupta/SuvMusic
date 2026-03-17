@@ -373,16 +373,23 @@ class MusicPlayerService : MediaLibraryService() {
                         }
                     }
 
-                    // Fix for Auto-Advance: If playback ended but we have more items, 
-                    // it might be due to a failed placeholder resolution.
+                    // Only auto-skip if this was a REAL end, not a failed placeholder
+                    // If it's a placeholder, the resolution coroutine will handle it
                     if (playbackState == Player.STATE_ENDED) {
                         val p = mediaLibrarySession?.player ?: return
-                        if (p.hasNextMediaItem()) {
+                        val currentUri = p.currentMediaItem?.localConfiguration?.uri?.toString()
+                        val isPlaceholder = currentUri.isNullOrBlank() ||
+                            currentUri.contains("placeholder.invalid") ||
+                            currentUri.contains("youtube.com/watch") ||
+                            currentUri.contains("youtu.be/")
+
+                        if (!isPlaceholder && p.hasNextMediaItem()) {
                             p.seekToNext()
                             p.prepare()
                             p.play()
                         }
                     }
+
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
