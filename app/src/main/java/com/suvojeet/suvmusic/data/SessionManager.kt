@@ -166,6 +166,7 @@ class SessionManager @Inject constructor(
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
         private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
         private val IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY = booleanPreferencesKey("ignore_audio_focus_during_calls")
+        private val AUTORESUME_AFTER_CALL_KEY = booleanPreferencesKey("autoresume_after_call")
         
         private val BLUETOOTH_AUTOPLAY_ENABLED_KEY = booleanPreferencesKey("bluetooth_autoplay_enabled")
         private val SPEAK_SONG_DETAILS_ENABLED_KEY = booleanPreferencesKey("speak_song_details_enabled")
@@ -931,6 +932,18 @@ class SessionManager @Inject constructor(
         }
     }
 
+    suspend fun isAutoResumeAfterCallEnabled(): Boolean =
+        context.dataStore.data.first()[AUTORESUME_AFTER_CALL_KEY] ?: true // Default to true
+
+    val autoresumeAfterCallFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[AUTORESUME_AFTER_CALL_KEY] ?: true
+    }
+
+    suspend fun setAutoResumeAfterCallEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[AUTORESUME_AFTER_CALL_KEY] = enabled
+        }
+    }
     // --- Bluetooth & Hands-Free ---
 
     suspend fun isBluetoothAutoplayEnabled(): Boolean =
