@@ -131,7 +131,11 @@ class MusicPlayerService : MediaLibraryService() {
         exceptionHandler
     )
     
+    private val serviceResolutionInProgress = java.util.concurrent.atomic.AtomicBoolean(false)
+    
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
+    
+    private var audioSinkKickstartDone = false
     
     // Audio AR & Effects state
     private var isSpatialAudioActive = false
@@ -178,13 +182,13 @@ class MusicPlayerService : MediaLibraryService() {
         
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                5_000,   // minBufferMs (was 2,000)
-                25_000,  // maxBufferMs (was 15_000)
-                2_500,   // bufferForPlaybackMs (was 1,500)
-                5_000    // bufferForPlaybackAfterRebufferMs (was 2,000)
+                15_000,  // minBufferMs — keep healthy buffer to prevent rebuffering
+                50_000,  // maxBufferMs — larger max for gapless + preload
+                500,     // bufferForPlaybackMs ← WAS 2500, now starts playing after 0.5s
+                1_500    // bufferForPlaybackAfterRebufferMs ← WAS 5000
             )
             .setPrioritizeTimeOverSizeThresholds(true)
-            .setBackBuffer(5_000, true)
+            .setBackBuffer(10_000, true) // Increase back buffer slightly for seeking back
             .build()
             
         val audioSink = androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(this)
@@ -312,32 +316,36 @@ class MusicPlayerService : MediaLibraryService() {
                         val needsResolution = isYouTubePlaceholder || isInvalidPlaceholder || isEmptyOrInvalid
 
                         if (needsResolution && videoId.isNotEmpty()) {
-                            serviceScope.launch {
-                                try {
-                                    val streamUrl = resolveStreamUrlWithRetry(videoId)
-                                    if (streamUrl != null) {
-                                        val updatedItem = item.buildUpon()
-                                            .setUri(Uri.parse(streamUrl))
-                                            .setMediaMetadata(
-                                                item.mediaMetadata.buildUpon()
-                                                    .setIsPlayable(true)
-                                                    .setIsBrowsable(false)
-                                                    .build()
-                                            )
-                                            .build()
+                            if (serviceResolutionInProgress.compareAndSet(false, true)) {
+                                serviceScope.launch {
+                                    try {
+                                        val streamUrl = resolveStreamUrlWithRetry(videoId)
+                                        if (streamUrl != null) {
+                                            val updatedItem = item.buildUpon()
+                                                .setUri(Uri.parse(streamUrl))
+                                                .setMediaMetadata(
+                                                    item.mediaMetadata.buildUpon()
+                                                        .setIsPlayable(true)
+                                                        .setIsBrowsable(false)
+                                                        .build()
+                                                )
+                                                .build()
 
-                                        withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                            val p = mediaLibrarySession?.player ?: return@withContext
-                                            val index = p.currentMediaItemIndex
-                                            if (index != -1 && p.getMediaItemAt(index).mediaId == videoId) {
-                                                p.replaceMediaItem(index, updatedItem)
-                                                p.prepare()
-                                                if (p.playWhenReady) p.play()
+                                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                val p = mediaLibrarySession?.player ?: return@withContext
+                                                val index = p.currentMediaItemIndex
+                                                if (index != -1 && p.getMediaItemAt(index).mediaId == videoId) {
+                                                    p.replaceMediaItem(index, updatedItem)
+                                                    p.prepare()
+                                                    if (p.playWhenReady) p.play()
+                                                }
                                             }
                                         }
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("MusicPlayerService", "Transition resolution failed for $videoId", e)
+                                    } finally {
+                                        serviceResolutionInProgress.set(false)
                                     }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("MusicPlayerService", "Transition resolution failed for $videoId", e)
                                 }
                             }
                         }
@@ -361,14 +369,17 @@ class MusicPlayerService : MediaLibraryService() {
                     // Bug Fix: Some devices have a "Silent Handshake" issue where AudioTrack 
                     // is ready but doesn't produce sound until gain is updated.
                     if (playbackState == Player.STATE_READY) {
-                        serviceScope.launch {
-                            val p = mediaLibrarySession?.player ?: return@launch
-                            if (p.playWhenReady) {
-                                val currentVol = p.volume
-                                // Micro-toggle volume to "kickstart" the AudioSink
-                                p.volume = 0.99f * currentVol
-                                delay(50)
-                                p.volume = currentVol
+                        if (!audioSinkKickstartDone) {
+                            audioSinkKickstartDone = true
+                            serviceScope.launch {
+                                val p = mediaLibrarySession?.player ?: return@launch
+                                if (p.playWhenReady) {
+                                    val currentVol = p.volume
+                                    // Micro-toggle volume to "kickstart" the AudioSink
+                                    p.volume = 0.99f * currentVol
+                                    delay(50)
+                                    p.volume = currentVol
+                                }
                             }
                         }
                     }
