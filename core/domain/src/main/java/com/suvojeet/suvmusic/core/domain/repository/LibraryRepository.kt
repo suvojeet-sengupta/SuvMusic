@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface LibraryRepository {
     suspend fun savePlaylist(playlist: Playlist)
+    suspend fun cachePlaylist(playlist: Playlist)
+    suspend fun clearOldCache()
     suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>)
     suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int)
     suspend fun getCachedPlaylistSongs(playlistId: String): List<Song>

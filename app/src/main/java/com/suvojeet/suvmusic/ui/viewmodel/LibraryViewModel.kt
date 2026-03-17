@@ -197,6 +197,9 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
+                // Clear old playlist cache (older than 1 day)
+                libraryRepository.clearOldCache()
+
                 // Load local audio
                 val local = localAudioRepository.getAllLocalSongs()
                 val localAlbums = localAudioRepository.getAllLocalAlbums()
