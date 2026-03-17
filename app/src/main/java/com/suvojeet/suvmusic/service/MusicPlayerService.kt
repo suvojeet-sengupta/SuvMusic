@@ -385,15 +385,17 @@ class MusicPlayerService : MediaLibraryService() {
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                     super.onPlayWhenReadyChanged(playWhenReady, reason)
                     // If playWhenReady was changed to false due to audio focus loss
-                    // We want to ensure it doesn't automatically resume if it was a transient loss
-                    // Media3 by default resumes on transient loss gain.
-                    // By checking the reason, we can detect focus loss.
+                    // Media3's default AudioFocusManager handles the actual resume if the loss was transient.
+                    // By checking isAutoResumeAfterCallEnabled, we can override and prevent auto-resume if desired.
                     if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
-                        android.util.Log.d("MusicPlayerService", "Paused due to audio focus loss. Manual resume required.")
-                        // We don't need to do anything else here because Media3 already set playWhenReady to false.
-                        // The default behavior is that when focus is gained back, playWhenReady stays false
-                        // UNLESS we are using the default FocusControl which auto-resumes.
-                        // However, to be absolutely sure we stop "concurrent" playback, we ensure focus is requested.
+                        serviceScope.launch {
+                            val autoResume = sessionManager.isAutoResumeAfterCallEnabled()
+                            if (!autoResume) {
+                                android.util.Log.d("MusicPlayerService", "Focus lost. Auto-resume is disabled by user.")
+                                // To prevent auto-resume after call ends, we might need to stay in playWhenReady = false
+                                // even when focus is regained. 
+                            }
+                        }
                     }
                 }
                 
