@@ -149,12 +149,35 @@ class PlaylistViewModel @Inject constructor(
     }
 
     private suspend fun loadPlaylistInternal() {
+        // Fast Load Strategy: Show cached version first
+        val cached = if (playlistId != "CACHED_ALL" && playlistId != "DEVICE_SONGS" && playlistId != "TOP_50") {
+             try {
+                 if (playlistId == "LM") {
+                     val songs = libraryRepository.getCachedPlaylistSongs("LM")
+                     Playlist("LM", "Liked", "You", initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl, songs)
+                 } else {
+                     youTubeRepository.getCachedPlaylist(playlistId)
+                 }
+             } catch (e: Exception) { null }
+        } else null
+
+        if (cached != null && cached.songs.isNotEmpty()) {
+            _uiState.update { 
+                it.copy(
+                    playlist = cached,
+                    originalSongs = cached.songs,
+                    isLoading = false // Hide loader since we have some content
+                )
+            }
+            applySort()
+        }
+
         try {
             val currentSource = sessionManager.getMusicSource()
             
             // Smart loading based on source preference
             val playlist = if (playlistId == "LM") {
-                // Liked Songs - Load from local library
+                // Liked Songs - Load from local library (already handled above but for consistency)
                 val songs = libraryRepository.getCachedPlaylistSongs("LM")
                 Playlist(
                     id = "LM",
@@ -231,11 +254,14 @@ class PlaylistViewModel @Inject constructor(
             // Re-apply current sort if any
             applySort()
         } catch (e: Exception) {
-            _uiState.update { 
-                it.copy(
-                    error = e.message,
-                    isLoading = false
-                )
+            // Only show error if we don't even have cached content
+            if (_uiState.value.playlist == null || _uiState.value.playlist?.songs?.isEmpty() == true) {
+                _uiState.update { 
+                    it.copy(
+                        error = e.message,
+                        isLoading = false
+                    )
+                }
             }
         }
     }
