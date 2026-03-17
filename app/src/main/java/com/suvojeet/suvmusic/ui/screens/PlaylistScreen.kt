@@ -58,6 +58,7 @@ fun PlaylistScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
+    currentSong: Song? = null,
     viewModel: PlaylistViewModel = hiltViewModel(),
     playlistMgmtViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
 ) {
@@ -409,6 +410,7 @@ fun PlaylistScreen(
                 isVisible = showSongMenu,
                 onDismiss = { showSongMenu = false },
                 song = song,
+                isCurrentlyPlaying = song.id == currentSong?.id,
                 onPlayNext = { viewModel.playNext(song) },
                 onAddToQueue = { viewModel.addToQueue(song) },
                 onAddToPlaylist = { playlistMgmtViewModel.showAddToPlaylistSheet(song) },
