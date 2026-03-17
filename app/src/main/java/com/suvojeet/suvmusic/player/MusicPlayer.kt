@@ -580,22 +580,22 @@ class MusicPlayer @Inject constructor(
                         false
                     }
                     
-                    // Check if service is already resolving this — avoid double resolution
-                    // We check by re-reading the URI after a brief yield
-                    if (needsResolution) {
-                        kotlinx.coroutines.yield()
-                        val freshUri = controller.currentMediaItem?.localConfiguration?.uri?.toString()
-                        val stillNeedsResolution = freshUri.isNullOrBlank() ||
-                            freshUri.contains("youtube.com/watch") ||
-                            freshUri.contains("placeholder.invalid")
-                        if (!stillNeedsResolution) {
-                            _playerState.update { it.copy(isLoading = false) }
-                            return@let
-                        }
-                    }
-
                     currentResolutionJob?.cancel()
                     currentResolutionJob = scope.launch {
+                        // Check if service is already resolving this — avoid double resolution
+                        // We check by re-reading the URI after a brief yield
+                        if (needsResolution) {
+                            kotlinx.coroutines.yield()
+                            val freshUri = controller.currentMediaItem?.localConfiguration?.uri?.toString()
+                            val stillNeedsResolution = freshUri.isNullOrBlank() ||
+                                freshUri.contains("youtube.com/watch") ||
+                                freshUri.contains("placeholder.invalid")
+                            if (!stillNeedsResolution) {
+                                _playerState.update { it.copy(isLoading = false) }
+                                return@launch
+                            }
+                        }
+                        
                         resolveAndPlayCurrentItem(song, index, shouldPlay = !timerTriggered)
                     }
                 }
