@@ -573,7 +573,9 @@ fun PortraitPlayerContent(
         SongInfoSection(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
-            dominantColors = dominantColors, isLoading = combinedLoading, compact = isCompactHeight
+            dominantColors = dominantColors, isLoading = combinedLoading, compact = isCompactHeight,
+            sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+            sleepTimerOption = state.sleepTimerOption
         )
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
@@ -701,7 +703,13 @@ fun LandscapePlayerContent(
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
             Spacer(modifier = Modifier.height(8.dp))
-            SongInfoSection(song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked, onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick, dominantColors = dominantColors, isLoading = combinedLoading)
+            SongInfoSection(
+                song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
+                onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
+                dominantColors = dominantColors, isLoading = combinedLoading,
+                sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                sleepTimerOption = state.sleepTimerOption
+            )
             Spacer(modifier = Modifier.height(16.dp))
             
             if (combinedLoading) {
