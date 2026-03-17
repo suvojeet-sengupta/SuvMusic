@@ -295,7 +295,7 @@ fun NavGraph(
         
         composable<Destination.Search> {
             SearchScreen(
-                onSongClick = { songs, index -> 
+                onSongClick = { songs, index ->
                     // Don't pass search results as queue — fetch recommendations instead
                     onStartRadio(songs[index], null)
                 },
@@ -319,10 +319,10 @@ fun NavGraph(
                             thumbnailUrl = album.thumbnailUrl
                         )
                     )
-                }
+                },
+                currentSong = playbackInfo.currentSong
             )
-        }
-        
+        }        
         composable<Destination.Library> {
             LibraryScreen(
                 onSongClick = { songs, index -> 
@@ -587,7 +587,7 @@ fun NavGraph(
             PlaylistScreen(
                 onBackClick = { navController.popBackStack() },
                 onSongClick = { songs, index -> onPlaySong(songs, index) },
-                onPlayAll = { songs -> 
+                onPlayAll = { songs ->
                     if (songs.isNotEmpty()) {
                          onPlaySong(songs, 0)
                     }
@@ -597,10 +597,10 @@ fun NavGraph(
                          val shuffled = songs.shuffled()
                          onPlaySong(shuffled, 0)
                      }
-                }
+                },
+                currentSong = playbackInfo.currentSong
             )
         }
-
         composable<Destination.Artist> { backStackEntry ->
             com.suvojeet.suvmusic.ui.screens.ArtistScreen(
                 onBackClick = { navController.popBackStack() },
@@ -684,7 +684,8 @@ fun NavGraph(
                         val shuffled = songs.shuffled()
                         onPlaySong(shuffled, 0)
                     }
-                }
+                },
+                currentSong = playbackInfo.currentSong
             )
         }
     }

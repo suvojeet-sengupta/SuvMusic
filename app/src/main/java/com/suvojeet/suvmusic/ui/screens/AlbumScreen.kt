@@ -45,6 +45,7 @@ fun AlbumScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
+    currentSong: Song? = null,
     viewModel: AlbumViewModel = hiltViewModel(),
     playlistViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
 ) {
@@ -251,6 +252,7 @@ fun AlbumScreen(
                             isVisible = showSongMenu,
                             onDismiss = { showSongMenu = false },
                             song = song,
+                            isCurrentlyPlaying = song.id == currentSong?.id,
                             onPlayNext = { viewModel.playNext(listOf(song)) },
                             onAddToQueue = { viewModel.addToQueue(listOf(song)) },
                             onAddToPlaylist = { playlistViewModel.showAddToPlaylistSheet(song) },

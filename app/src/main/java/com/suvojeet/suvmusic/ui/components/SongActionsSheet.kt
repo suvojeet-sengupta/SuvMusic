@@ -95,6 +95,7 @@ fun SongActionsSheet(
     onMoveDown: (() -> Unit)? = null,
     onRemoveFromQueue: (() -> Unit)? = null,
     isFromQueue: Boolean = false,
+    isCurrentlyPlaying: Boolean = false,
     showShare: Boolean = true,
     dominantColors: DominantColors? = null
 ) {
@@ -290,7 +291,7 @@ fun SongActionsSheet(
                     )
                 }
 
-                if (!isFromQueue) {
+                if (!isFromQueue && !isCurrentlyPlaying) {
                     ActionItem(
                         icon = Icons.Default.AddToQueue,
                         title = "Add to Queue",
