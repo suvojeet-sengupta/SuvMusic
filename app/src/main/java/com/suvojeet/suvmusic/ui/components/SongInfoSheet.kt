@@ -1,10 +1,6 @@
 package com.suvojeet.suvmusic.ui.components
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -102,10 +98,20 @@ fun SongInfoSheet(
     onArtistClick: (String) -> Unit = {},
     audioCodec: String? = null,
     audioBitrate: Int? = null,
+    dominantColors: DominantColors? = null,
     viewModel: SongInfoViewModel = hiltViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
+    val isDarkTheme = isSystemInDarkTheme()
+    
+    // Get high resolution thumbnail URL
+    val highResThumbnail = remember(song.thumbnailUrl, song.id) {
+        getHighResThumbnailUrl(song.thumbnailUrl, song.id)
+    }
+    
+    // Extract dominant colors from artwork or use provided ones
+    val finalDominantColors = dominantColors ?: rememberDominantColors(highResThumbnail, isDarkTheme)
     
     // Fetch artist thumbnails when sheet becomes visible
     LaunchedEffect(isVisible, song.artist) {
@@ -125,11 +131,8 @@ fun SongInfoSheet(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
+                    .background(finalDominantColors.primary)
             ) {
-                // Get high resolution thumbnail URL
-                val highResThumbnail = getHighResThumbnailUrl(song.thumbnailUrl, song.id)
-                
                 // Blurred background artwork
                 AsyncImage(
                     model = highResThumbnail,
@@ -149,9 +152,9 @@ fun SongInfoSheet(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.2f),
-                                    MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.7f),
-                                    MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                                    finalDominantColors.primary.copy(alpha = 0.2f),
+                                    finalDominantColors.primary.copy(alpha = 0.7f),
+                                    finalDominantColors.primary
                                 )
                             )
                         )
@@ -172,7 +175,7 @@ fun SongInfoSheet(
                     ) {
                         Surface(
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            color = finalDominantColors.secondary.copy(alpha = 0.4f),
                             modifier = Modifier.size(40.dp),
                             onClick = onDismiss
                         ) {
@@ -180,7 +183,7 @@ fun SongInfoSheet(
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
                                     contentDescription = "Close",
-                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    tint = finalDominantColors.onBackground,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -215,7 +218,7 @@ fun SongInfoSheet(
                             letterSpacing = (-0.5).sp,
                             lineHeight = 32.sp
                         ),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = finalDominantColors.onBackground,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -233,7 +236,7 @@ fun SongInfoSheet(
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = if (mainArtistId != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (mainArtistId != null) finalDominantColors.accent else finalDominantColors.onBackground.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -258,14 +261,21 @@ fun SongInfoSheet(
                             else -> "UNKNOWN"
                         }
                         
-                        InfoBadge(text = sourceBadge, isPrimary = true)
+                        InfoBadge(
+                            text = sourceBadge, 
+                            isPrimary = true,
+                            backgroundColor = finalDominantColors.accent,
+                            contentColor = if (isDarkTheme) Color.Black else Color.White
+                        )
                         
                         // Show actual codec from player
                         if (audioCodec != null) {
                             Spacer(modifier = Modifier.width(8.dp))
                             InfoBadge(
                                 text = audioCodec.uppercase(),
-                                isPrimary = false
+                                isPrimary = false,
+                                backgroundColor = finalDominantColors.secondary.copy(alpha = 0.6f),
+                                contentColor = finalDominantColors.onBackground
                             )
                         }
                     }
@@ -273,31 +283,35 @@ fun SongInfoSheet(
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     // --- AUDIO INFORMATION Section ---
-                    ExpressiveSectionHeader("AUDIO INFORMATION")
+                    ExpressiveSectionHeader("AUDIO INFORMATION", finalDominantColors.accent)
                     
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        color = finalDominantColors.secondary.copy(alpha = 0.4f),
                         shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        border = BorderStroke(1.dp, finalDominantColors.onBackground.copy(alpha = 0.1f))
                     ) {
                         Column {
                             val bitrateDisplay = audioBitrate?.let { "${it}kbps" } ?: "Unknown"
                             CreditItem(
                                 icon = Icons.Default.MusicNote,
                                 label = "Bitrate",
-                                value = bitrateDisplay
+                                value = bitrateDisplay,
+                                tint = finalDominantColors.accent,
+                                onSurface = finalDominantColors.onBackground
                             )
                             
-                            CreditDivider()
+                            CreditDivider(finalDominantColors.onBackground.copy(alpha = 0.1f))
                             
                             val codecDisplay = audioCodec?.uppercase() ?: "Unknown"
                             CreditItem(
                                 icon = Icons.Default.Headphones,
                                 label = "Codec",
-                                value = codecDisplay
+                                value = codecDisplay,
+                                tint = finalDominantColors.accent,
+                                onSurface = finalDominantColors.onBackground
                             )
                         }
                     }
@@ -305,15 +319,15 @@ fun SongInfoSheet(
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     // --- PERFORMING ARTISTS Section ---
-                    ExpressiveSectionHeader("PERFORMING ARTISTS")
+                    ExpressiveSectionHeader("PERFORMING ARTISTS", finalDominantColors.accent)
                     
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        color = finalDominantColors.secondary.copy(alpha = 0.4f),
                         shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        border = BorderStroke(1.dp, finalDominantColors.onBackground.copy(alpha = 0.1f))
                     ) {
                         Column {
                             artistCredits.forEachIndexed { index, artistInfo ->
@@ -322,6 +336,7 @@ fun SongInfoSheet(
                                     role = artistInfo.role,
                                     thumbnailUrl = artistInfo.thumbnailUrl,
                                     artistId = artistInfo.artistId,
+                                    onSurface = finalDominantColors.onBackground,
                                     onClick = { 
                                         artistInfo.artistId?.let { onArtistClick(it) }
                                     }
@@ -329,7 +344,7 @@ fun SongInfoSheet(
                                 if (index < artistCredits.lastIndex) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(start = 76.dp, end = 16.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                        color = finalDominantColors.onBackground.copy(alpha = 0.1f)
                                     )
                                 }
                             }
@@ -339,38 +354,44 @@ fun SongInfoSheet(
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     // --- CREDITS section ---
-                    ExpressiveSectionHeader("CREDITS")
+                    ExpressiveSectionHeader("CREDITS", finalDominantColors.accent)
                     
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        color = finalDominantColors.secondary.copy(alpha = 0.4f),
                         shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        border = BorderStroke(1.dp, finalDominantColors.onBackground.copy(alpha = 0.1f))
                     ) {
                         Column {
                             CreditItem(
                                 icon = Icons.Default.Person,
                                 label = "Artist",
-                                value = song.artist
+                                value = song.artist,
+                                tint = finalDominantColors.accent,
+                                onSurface = finalDominantColors.onBackground
                             )
                             
-                            CreditDivider()
+                            CreditDivider(finalDominantColors.onBackground.copy(alpha = 0.1f))
                             
                             if (!song.album.isNullOrBlank()) {
                                 CreditItem(
                                     icon = Icons.Default.Album,
                                     label = "Album",
-                                    value = song.album
+                                    value = song.album,
+                                    tint = finalDominantColors.accent,
+                                    onSurface = finalDominantColors.onBackground
                                 )
-                                CreditDivider()
+                                CreditDivider(finalDominantColors.onBackground.copy(alpha = 0.1f))
                             }
                             
                             CreditItem(
                                 icon = Icons.Default.Timer,
                                 label = "Duration",
-                                value = formatDurationForCredits(song.duration)
+                                value = formatDurationForCredits(song.duration),
+                                tint = finalDominantColors.accent,
+                                onSurface = finalDominantColors.onBackground
                             )
                         }
                     }
@@ -378,15 +399,15 @@ fun SongInfoSheet(
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     // --- ABOUT Section ---
-                    ExpressiveSectionHeader("ABOUT")
+                    ExpressiveSectionHeader("ABOUT", finalDominantColors.accent)
                     
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                        color = finalDominantColors.secondary.copy(alpha = 0.4f),
                         shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        border = BorderStroke(1.dp, finalDominantColors.onBackground.copy(alpha = 0.1f))
                     ) {
                         Column {
                             CreditItem(
@@ -404,24 +425,30 @@ fun SongInfoSheet(
                                     song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ Audio (Streaming)"
                                     song.source == com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "Local Storage"
                                     else -> "Unknown"
-                                }
+                                },
+                                tint = finalDominantColors.accent,
+                                onSurface = finalDominantColors.onBackground
                             )
                             
-                            CreditDivider()
+                            CreditDivider(finalDominantColors.onBackground.copy(alpha = 0.1f))
                             
                             CreditItem(
                                 icon = Icons.Default.RecordVoiceOver,
                                 label = "Content ID",
                                 value = song.id,
-                                canCopy = true
+                                canCopy = true,
+                                tint = finalDominantColors.accent,
+                                onSurface = finalDominantColors.onBackground
                             )
                             
-                            CreditDivider()
+                            CreditDivider(finalDominantColors.onBackground.copy(alpha = 0.1f))
                             
                             CreditItem(
                                 icon = Icons.Default.Copyright,
                                 label = "Copyright",
-                                value = "© ${song.artist}"
+                                value = "© ${song.artist}",
+                                tint = finalDominantColors.accent,
+                                onSurface = finalDominantColors.onBackground
                             )
                         }
                     }
@@ -435,7 +462,7 @@ fun SongInfoSheet(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         ),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                        color = finalDominantColors.accent.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -448,14 +475,14 @@ fun SongInfoSheet(
 }
 
 @Composable
-private fun ExpressiveSectionHeader(text: String) {
+private fun ExpressiveSectionHeader(text: String, tint: Color = MaterialTheme.colorScheme.primary) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium.copy(
             fontWeight = FontWeight.Black,
             letterSpacing = 2.sp
         ),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+        color = tint.copy(alpha = 0.7f),
         modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp)
     )
 }
@@ -463,11 +490,13 @@ private fun ExpressiveSectionHeader(text: String) {
 @Composable
 private fun InfoBadge(
     text: String,
-    isPrimary: Boolean = false
+    isPrimary: Boolean = false,
+    backgroundColor: Color? = null,
+    contentColor: Color? = null
 ) {
     Surface(
-        color = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        color = backgroundColor ?: (if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
+        contentColor = contentColor ?: (if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant),
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier.height(24.dp)
     ) {
@@ -492,7 +521,9 @@ private fun CreditItem(
     icon: ImageVector,
     label: String,
     value: String,
-    canCopy: Boolean = false
+    canCopy: Boolean = false,
+    tint: Color = MaterialTheme.colorScheme.primary,
+    onSurface: Color = MaterialTheme.colorScheme.onSurface
 ) {
     val context = LocalContext.current
     val clipboard = androidx.compose.ui.platform.LocalClipboard.current
@@ -515,13 +546,13 @@ private fun CreditItem(
         Surface(
             modifier = Modifier.size(40.dp),
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            color = onSurface.copy(alpha = 0.1f)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = tint,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -536,7 +567,7 @@ private fun CreditItem(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                color = onSurface.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -544,7 +575,7 @@ private fun CreditItem(
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Bold
                 ),
-                color = MaterialTheme.colorScheme.onSurface,
+                color = onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -554,7 +585,7 @@ private fun CreditItem(
             Icon(
                 imageVector = Icons.Rounded.ContentCopy,
                 contentDescription = "Copy",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                tint = onSurface.copy(alpha = 0.4f),
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -562,10 +593,10 @@ private fun CreditItem(
 }
 
 @Composable
-private fun CreditDivider() {
+private fun CreditDivider(color: Color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)) {
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 20.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        color = color
     )
 }
 
@@ -613,6 +644,7 @@ private fun ArtistCreditRow(
     role: String,
     thumbnailUrl: String?,
     artistId: String?,
+    onSurface: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -629,7 +661,7 @@ private fun ArtistCreditRow(
             modifier = Modifier
                 .size(52.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(onSurface.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             if (thumbnailUrl != null) {
@@ -657,7 +689,7 @@ private fun ArtistCreditRow(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Black
                     ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = onSurface
                 )
             }
         }
@@ -671,14 +703,14 @@ private fun ArtistCreditRow(
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Bold
                 ),
-                color = MaterialTheme.colorScheme.onSurface,
+                color = onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = role,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                color = onSurface.copy(alpha = 0.7f)
             )
         }
         
@@ -687,7 +719,7 @@ private fun ArtistCreditRow(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp).rotate(180f),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                tint = onSurface.copy(alpha = 0.4f)
             )
         }
     }
