@@ -309,7 +309,7 @@ class YouTubeStreamingService @Inject constructor(
                 thumbnailUrl = streamExtractor.thumbnails.maxByOrNull { it.width * it.height }?.url,
                 duration = streamExtractor.length * 1000,
                 source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-                releaseDate = streamExtractor.uploadDate?.asISO8601String()
+                releaseDate = streamExtractor.textualUploadDate
             )
         }
     }
