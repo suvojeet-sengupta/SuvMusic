@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.player.SleepTimerOption
 
+import com.suvojeet.suvmusic.ui.components.DominantColors
+
 /**
  * Apple Music-style sleep timer bottom sheet with dynamic colors.
  */
@@ -63,10 +65,16 @@ fun SleepTimerSheet(
     onSelectOption: (SleepTimerOption, Int?) -> Unit,
     onDismiss: () -> Unit,
     accentColor: Color = MaterialTheme.colorScheme.primary,
-    backgroundColor: Color = MaterialTheme.colorScheme.surface
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    dominantColors: DominantColors? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
+    // Determine colors
+    val finalBackgroundColor = dominantColors?.secondary ?: backgroundColor
+    val finalContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val finalAccentColor = dominantColors?.accent ?: accentColor
+
     // State for custom timer dialog
     var showCustomTimerDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     
@@ -77,7 +85,9 @@ fun SleepTimerSheet(
                 showCustomTimerDialog = false
                 onSelectOption(SleepTimerOption.CUSTOM, minutes)
             },
-            accentColor = accentColor
+            accentColor = finalAccentColor,
+            backgroundColor = finalBackgroundColor,
+            contentColor = finalContentColor
         )
     }
     
@@ -85,7 +95,7 @@ fun SleepTimerSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = backgroundColor,
+            containerColor = finalBackgroundColor,
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) },
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
@@ -100,7 +110,7 @@ fun SleepTimerSheet(
                 Icon(
                     imageVector = Icons.Default.Bedtime,
                     contentDescription = null,
-                    tint = accentColor,
+                    tint = finalAccentColor,
                     modifier = Modifier.size(40.dp)
                 )
                 
@@ -110,7 +120,7 @@ fun SleepTimerSheet(
                     text = "Sleep Timer",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = finalContentColor
                 )
                 
                 // Show countdown if active
@@ -120,7 +130,7 @@ fun SleepTimerSheet(
                     Box(
                         modifier = Modifier
                             .background(
-                                color = accentColor.copy(alpha = 0.2f),
+                                color = finalAccentColor.copy(alpha = 0.2f),
                                 shape = RoundedCornerShape(20.dp)
                             )
                             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -129,7 +139,7 @@ fun SleepTimerSheet(
                             text = remainingTimeFormatted,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = accentColor,
+                            color = finalAccentColor,
                             letterSpacing = 2.sp
                         )
                     }
@@ -138,7 +148,7 @@ fun SleepTimerSheet(
                     Text(
                         text = "Stops after this song",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = accentColor
+                        color = finalAccentColor
                     )
                 }
                 
@@ -160,21 +170,24 @@ fun SleepTimerSheet(
                             label = "Off",
                             icon = Icons.Default.TimerOff,
                             isSelected = currentOption == SleepTimerOption.OFF,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.OFF, null) }, // Don't dismiss
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "5 min",
                             isSelected = currentOption == SleepTimerOption.FIVE_MIN,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.FIVE_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "10 min",
                             isSelected = currentOption == SleepTimerOption.TEN_MIN,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.TEN_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
@@ -188,21 +201,24 @@ fun SleepTimerSheet(
                         TimerChip(
                             label = "15 min",
                             isSelected = currentOption == SleepTimerOption.FIFTEEN_MIN,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.FIFTEEN_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "30 min",
                             isSelected = currentOption == SleepTimerOption.THIRTY_MIN,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.THIRTY_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "45 min",
                             isSelected = currentOption == SleepTimerOption.FORTY_FIVE_MIN,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.FORTY_FIVE_MIN, null) },
                             modifier = Modifier.weight(1f)
                         )
@@ -216,14 +232,16 @@ fun SleepTimerSheet(
                         TimerChip(
                             label = "1 hour",
                             isSelected = currentOption == SleepTimerOption.ONE_HOUR,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.ONE_HOUR, null) },
                             modifier = Modifier.weight(1f)
                         )
                         TimerChip(
                             label = "2 hours",
                             isSelected = currentOption == SleepTimerOption.TWO_HOURS,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.TWO_HOURS, null) },
                             modifier = Modifier.weight(1f)
                         )
@@ -238,7 +256,8 @@ fun SleepTimerSheet(
                             label = "Custom",
                             icon = Icons.Default.Edit,
                             isSelected = currentOption == SleepTimerOption.CUSTOM,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { showCustomTimerDialog = true },
                             modifier = Modifier.weight(1f)
                         )
@@ -247,7 +266,8 @@ fun SleepTimerSheet(
                             label = "End of song",
                             icon = Icons.Default.MusicNote,
                             isSelected = currentOption == SleepTimerOption.END_OF_SONG,
-                            accentColor = accentColor,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.END_OF_SONG, null) },
                             modifier = Modifier.weight(1f)
                         )
@@ -267,7 +287,8 @@ fun TimerChip(
     accentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    contentColorOnBackground: Color = MaterialTheme.colorScheme.onSurface
 ) {
     val scale by animateFloatAsState(
         targetValue = if (isSelected) 1.02f else 1f,
@@ -276,13 +297,13 @@ fun TimerChip(
     )
     
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor else MaterialTheme.colorScheme.surfaceContainerHigh,
+        targetValue = if (isSelected) accentColor else contentColorOnBackground.copy(alpha = 0.08f),
         animationSpec = tween(200),
         label = "bg"
     )
     
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        targetValue = if (isSelected) Color.White else contentColorOnBackground,
         animationSpec = tween(200),
         label = "content"
     )
@@ -297,7 +318,7 @@ fun TimerChip(
             .then(
                 if (!isSelected) Modifier.border(
                     width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant,
+                    color = contentColorOnBackground.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(16.dp)
                 ) else Modifier
             ),
@@ -341,14 +362,16 @@ fun TimerChip(
 fun CustomTimerDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit,
-    accentColor: Color
+    accentColor: Color,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     var text by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
     
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         androidx.compose.material3.Surface(
             shape = RoundedCornerShape(26.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
+            color = backgroundColor,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -358,7 +381,7 @@ fun CustomTimerDialog(
                 Text(
                     text = "Custom Timer",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = contentColor,
                     fontWeight = FontWeight.Bold
                 )
                 
@@ -367,7 +390,7 @@ fun CustomTimerDialog(
                 Text(
                     text = "Enter duration in minutes",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor.copy(alpha = 0.6f)
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -380,9 +403,9 @@ fun CustomTimerDialog(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = accentColor,
-                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        unfocusedIndicatorColor = contentColor.copy(alpha = 0.3f),
+                        focusedTextColor = contentColor,
+                        unfocusedTextColor = contentColor
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -403,7 +426,7 @@ fun CustomTimerDialog(
                             .weight(1f)
                             .height(50.dp)
                     ) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.primary)
+                        Text("Cancel", color = accentColor)
                     }
                     
                     androidx.compose.material3.Button(
