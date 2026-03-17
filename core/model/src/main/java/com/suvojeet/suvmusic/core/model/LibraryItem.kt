@@ -13,6 +13,5 @@ enum class LibraryItemType {
     PLAYLIST,
     ALBUM,
     ARTIST,
-    CACHED_PLAYLIST,
     UNKNOWN
 }

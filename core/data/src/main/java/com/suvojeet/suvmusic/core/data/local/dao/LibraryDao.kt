@@ -49,16 +49,8 @@ interface LibraryDao {
     fun getPlaylistSongCountFlow(playlistId: String): Flow<Int>
 
     @Transaction
-    suspend fun clearOldCache(expireTime: Long) {
-        // Clear songs from cached playlists that have expired
-        deleteSongsFromExpiredCachedPlaylists(expireTime)
-        // Clear the expired cached playlists themselves
-        deleteExpiredCachedPlaylists(expireTime)
+    suspend fun replacePlaylistSongs(playlistId: String, songs: List<PlaylistSongEntity>) {
+        deletePlaylistSongs(playlistId)
+        insertPlaylistSongs(songs)
     }
-
-    @Query("DELETE FROM playlist_songs WHERE playlistId IN (SELECT id FROM library_items WHERE type = 'CACHED_PLAYLIST' AND timestamp < :expireTime)")
-    suspend fun deleteSongsFromExpiredCachedPlaylists(expireTime: Long)
-
-    @Query("DELETE FROM library_items WHERE type = 'CACHED_PLAYLIST' AND timestamp < :expireTime")
-    suspend fun deleteExpiredCachedPlaylists(expireTime: Long)
 }
