@@ -407,6 +407,17 @@ class MusicPlayerService : MediaLibraryService() {
                     super.onPlayerError(error)
                     android.util.Log.e("MusicPlayerService", "Playback error: ${error.message}", error)
                     
+                    // Only auto-skip on REAL errors, not placeholder URI failures.
+                    // Placeholder failures are handled by the resolution coroutine in MusicPlayer.
+                    val currentUri = mediaLibrarySession?.player
+                        ?.currentMediaItem?.localConfiguration?.uri?.toString()
+                    val isPlaceholder = currentUri.isNullOrBlank() ||
+                        currentUri.contains("placeholder.invalid") ||
+                        currentUri.contains("youtube.com/watch") ||
+                        currentUri.contains("youtu.be/")
+
+                    if (isPlaceholder) return // Resolution coroutine handles this
+
                     // Basic error recovery: skip to next on failure
                     serviceScope.launch {
                         delay(2000)
