@@ -814,24 +814,14 @@ class YouTubeRepository @Inject constructor(
     }
     
     suspend fun getCachedPlaylist(playlistId: String): Playlist? = withContext(Dispatchers.IO) {
-        val cachedPlaylist = libraryRepository.getPlaylistById(playlistId) ?: return@withContext null
-        
-        // Cache Policy: Auto-cleared after 1 day
-        // Check if playlist is a temporary cache (not explicitly saved to library)
-        if (cachedPlaylist.type == com.suvojeet.suvmusic.core.model.LibraryItemType.CACHED_PLAYLIST) {
-            val oneDayMs = 24 * 60 * 60 * 1000L
-            if (System.currentTimeMillis() - cachedPlaylist.timestamp > oneDayMs) {
-                return@withContext null // Cache expired
-            }
-        }
-
         val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
         if (cachedSongs.isNotEmpty()) {
+            val cachedPlaylist = libraryRepository.getPlaylistById(playlistId)
             Playlist(
                 id = playlistId,
-                title = cachedPlaylist.title,
-                author = cachedPlaylist.subtitle,
-                thumbnailUrl = cachedPlaylist.thumbnailUrl,
+                title = cachedPlaylist?.title ?: "Cached Playlist",
+                author = cachedPlaylist?.subtitle ?: "",
+                thumbnailUrl = cachedPlaylist?.thumbnailUrl,
                 songs = cachedSongs
             )
         } else {
@@ -961,8 +951,7 @@ class YouTubeRepository @Inject constructor(
             if (songs.isNotEmpty()) {
                 val finalPlaylist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
                 // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
-                // Use cachePlaylist (CACHED_PLAYLIST type) so it doesn't clutter Library screen
-                libraryRepository.cachePlaylist(finalPlaylist)
+                libraryRepository.savePlaylist(finalPlaylist)
                 return@withContext finalPlaylist
             }
         } catch(e: Exception) { }
@@ -1028,8 +1017,7 @@ class YouTubeRepository @Inject constructor(
                     description = description
                 )
                 // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
-                // Use cachePlaylist (CACHED_PLAYLIST type) so it doesn't clutter Library screen
-                libraryRepository.cachePlaylist(playlist)
+                libraryRepository.savePlaylist(playlist)
                 return@withContext playlist
             }
             return@withContext Playlist(
@@ -1042,9 +1030,10 @@ class YouTubeRepository @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
              // Final fallback: try cache one last time
-            val cached = getCachedPlaylist(playlistId)
-            if (cached != null) return@withContext cached
-            
+            val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+            if (cachedSongs.isNotEmpty()) {
+                return@withContext Playlist(playlistId, "Cached Playlist", "", null, cachedSongs)
+            }
             Playlist(playlistId, "Error loading playlist", "", null, emptyList())
         }
     }
