@@ -830,7 +830,15 @@ fun BoxScope.OverlaysContent(
     )
 
     if (song != null) {
-        SongInfoSheet(song = song, isVisible = activeOverlay is PlayerOverlay.SongInfo, onDismiss = { if (currentOverlay is PlayerOverlay.SongInfo) onOverlayChange(PlayerOverlay.None) }, onArtistClick = actions.onArtistClick, audioCodec = playerState.audioCodec, audioBitrate = playerState.audioBitrate)
+        SongInfoSheet(
+            song = song, 
+            isVisible = activeOverlay is PlayerOverlay.SongInfo, 
+            onDismiss = { if (currentOverlay is PlayerOverlay.SongInfo) onOverlayChange(PlayerOverlay.None) }, 
+            onArtistClick = actions.onArtistClick, 
+            audioCodec = playerState.audioCodec, 
+            audioBitrate = playerState.audioBitrate,
+            dominantColors = dominantColors
+        )
     }
 
     if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {
