@@ -387,7 +387,9 @@ fun PlayerScreen(
                             player = player,
                             isFullScreen = isFullScreen,
                             onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                            isSwitchingMode = isSwitchingMode
+                            isSwitchingMode = isSwitchingMode,
+                            sleepTimerOption = state.sleepTimerOption,
+                            sleepTimerRemainingMs = state.sleepTimerRemainingMs
                         )
                     } else {
                         val isCompactHeight = maxHeight < 600.dp
@@ -409,7 +411,9 @@ fun PlayerScreen(
                             onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
                             onRecenterAr = { playerViewModel.calibrateAudioAr() },
                             onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                            isSwitchingMode = isSwitchingMode
+                            isSwitchingMode = isSwitchingMode,
+                            sleepTimerOption = state.sleepTimerOption,
+                            sleepTimerRemainingMs = state.sleepTimerRemainingMs
                         )
                     }
                 }
@@ -477,7 +481,9 @@ fun PortraitPlayerContent(
     onSeekbarStyleChange: (SeekbarStyle) -> Unit,
     onRecenterAr: () -> Unit,
     onSetFullScreen: (Boolean) -> Unit,
-    isSwitchingMode: Boolean = false
+    isSwitchingMode: Boolean = false,
+    sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
+    sleepTimerRemainingMs: Long? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
@@ -574,8 +580,8 @@ fun PortraitPlayerContent(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
             dominantColors = dominantColors, isLoading = combinedLoading, compact = isCompactHeight,
-            sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-            sleepTimerOption = state.sleepTimerOption
+            sleepTimerRemainingMs = sleepTimerRemainingMs,
+            sleepTimerOption = sleepTimerOption
         )
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
@@ -626,7 +632,9 @@ fun LandscapePlayerContent(
     isVideoMode: Boolean, onToggleVideoMode: () -> Unit, handleDoubleTapSeek: (Boolean) -> Unit, onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
     player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit,
-    isSwitchingMode: Boolean = false
+    isSwitchingMode: Boolean = false,
+    sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
+    sleepTimerRemainingMs: Long? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
@@ -707,8 +715,8 @@ fun LandscapePlayerContent(
                 song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
                 onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
                 dominantColors = dominantColors, isLoading = combinedLoading,
-                sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                sleepTimerOption = state.sleepTimerOption
+                sleepTimerRemainingMs = sleepTimerRemainingMs,
+                sleepTimerOption = sleepTimerOption
             )
             Spacer(modifier = Modifier.height(16.dp))
             
