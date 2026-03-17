@@ -358,12 +358,6 @@ class MusicPlayer @Inject constructor(
             // finished or failed to play (e.g. unresolved placeholder URI).
             // Without this, playback silently dies when songs have placeholder URIs.
             if (playbackState == Player.STATE_ENDED) {
-                // Check sleep timer (only for "End of Song" mode)
-                // This covers cases where auto-transition didn't happen or it's the last song
-                if (sleepTimerManager.onSongEnded()) {
-                    return
-                }
-
                 val controller = mediaController ?: return
                 val state = _playerState.value
                 val nextIndex = controller.nextMediaItemIndex
@@ -520,14 +514,6 @@ class MusicPlayer @Inject constructor(
                                    reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
                 
                 if (shouldResolve && song != null) {
-                    // Check sleep timer (only for auto transitions)
-                    // We check this EARLY before returning for preloaded items
-                    val timerTriggered = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-                        sleepTimerManager.onSongEnded()
-                    } else {
-                        false
-                    }
-
                     // Check if current item already has a resolved stream URL (from preloading)
                     val currentItem = controller.currentMediaItem
                     val currentUri = currentItem?.localConfiguration?.uri?.toString()
@@ -565,14 +551,18 @@ class MusicPlayer @Inject constructor(
                             // Ensure playback continues for SEEK transitions (notification controls)
                             if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
                                 controller.play()
-                            } else if (timerTriggered) {
-                                // For auto transitions with sleep timer, ensure we stay paused
-                                controller.pause()
                             }
                             return@let
                         }
                         // Mode mismatch — fall through to re-resolve with correct mode
                         android.util.Log.d("MusicPlayer", "Preloaded mode mismatch: preloaded=$preloadedIsVideoMode, current=${_playerState.value.isVideoMode}")
+                    }
+                    
+                    // Check sleep timer (only for auto transitions)
+                    val timerTriggered = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+                        sleepTimerManager.onSongEnded()
+                    } else {
+                        false
                     }
                     
                     scope.launch {
