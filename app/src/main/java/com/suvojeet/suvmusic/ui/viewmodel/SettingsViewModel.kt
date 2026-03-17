@@ -98,6 +98,7 @@ data class SettingsUiState(
     val preferredLanguages: Set<String> = emptySet(),
     val youtubeHistorySyncEnabled: Boolean = false,
     val ignoreAudioFocusDuringCalls: Boolean = false,
+    val autoResumeAfterCall: Boolean = true,
     // Bluetooth
     val bluetoothAutoplayEnabled: Boolean = false,
     val speakSongDetailsEnabled: Boolean = false,
@@ -376,11 +377,17 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sessionManager.ignoreAudioFocusDuringCallsFlow.collect { enabled ->
-                _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
+            launch {
+                sessionManager.ignoreAudioFocusDuringCallsFlow.collect { enabled ->
+                    _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
+                }
             }
-        }
 
+            launch {
+                sessionManager.autoresumeAfterCallFlow.collect { enabled ->
+                    _uiState.update { it.copy(autoResumeAfterCall = enabled) }
+                }
+            }
         viewModelScope.launch {
             sessionManager.bluetoothAutoplayEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(bluetoothAutoplayEnabled = enabled) }
@@ -780,6 +787,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setIgnoreAudioFocusDuringCallsEnabled(enabled)
             _uiState.update { it.copy(ignoreAudioFocusDuringCalls = enabled) }
+        }
+    }
+
+    fun setAutoResumeAfterCall(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setAutoResumeAfterCallEnabled(enabled)
+            _uiState.update { it.copy(autoResumeAfterCall = enabled) }
         }
     }
 
