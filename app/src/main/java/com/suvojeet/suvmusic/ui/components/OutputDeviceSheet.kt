@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
+import com.suvojeet.suvmusic.ui.components.DominantColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +36,15 @@ fun OutputDeviceSheet(
     onDeviceSelected: (OutputDevice) -> Unit,
     onDismiss: () -> Unit,
     onRefreshDevices: () -> Unit = {},
-    accentColor: Color = MaterialTheme.colorScheme.primary
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    dominantColors: DominantColors? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Determine colors
+    val finalBackgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surfaceContainerHigh
+    val finalContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val finalAccentColor = dominantColors?.accent ?: accentColor
 
     // Refresh devices when sheet becomes visible
     LaunchedEffect(isVisible) {
@@ -50,7 +57,7 @@ fun OutputDeviceSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = finalBackgroundColor,
             dragHandle = { BottomSheetDefaults.DragHandle() },
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             contentWindowInsets = { WindowInsets(0) }
@@ -73,14 +80,15 @@ fun OutputDeviceSheet(
                             fontWeight = FontWeight.Black,
                             letterSpacing = (-0.5).sp
                         ),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = finalContentColor
                     )
                     
                     FilledTonalIconButton(
                         onClick = onRefreshDevices,
                         modifier = Modifier.size(40.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                            containerColor = finalAccentColor.copy(alpha = 0.15f),
+                            contentColor = finalAccentColor
                         )
                     ) {
                         Icon(
@@ -105,14 +113,14 @@ fun OutputDeviceSheet(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(48.dp),
                                 strokeWidth = 4.dp,
-                                color = accentColor,
+                                color = finalAccentColor,
                                 strokeCap = StrokeCap.Round
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
                                 text = "Scanning for devices...",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                color = finalContentColor.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -132,7 +140,8 @@ fun OutputDeviceSheet(
                                 onClick = {
                                     onDeviceSelected(device)
                                 },
-                                accentColor = accentColor
+                                accentColor = finalAccentColor,
+                                contentColorOnBackground = finalContentColor
                             )
                         }
                     }
@@ -146,7 +155,7 @@ fun OutputDeviceSheet(
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        containerColor = finalContentColor.copy(alpha = 0.05f)
                     )
                 ) {
                     Row(
@@ -156,14 +165,14 @@ fun OutputDeviceSheet(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = finalAccentColor,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Switch between connected audio outputs like Bluetooth, Cast, or Phone speakers.",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = finalContentColor.copy(alpha = 0.7f),
                             lineHeight = 18.sp
                         )
                     }
@@ -177,7 +186,8 @@ fun OutputDeviceSheet(
 private fun DeviceItem(
     device: OutputDevice,
     onClick: () -> Unit,
-    accentColor: Color
+    accentColor: Color,
+    contentColorOnBackground: Color = MaterialTheme.colorScheme.onSurface
 ) {
     val isSelected = device.isSelected
     
@@ -190,14 +200,14 @@ private fun DeviceItem(
     
     val contentColor by animateColorAsState(
         targetValue = if (isSelected) accentColor 
-                      else MaterialTheme.colorScheme.onSurface,
+                      else contentColorOnBackground,
         animationSpec = tween(durationMillis = 400),
         label = "contentColor"
     )
 
     val iconContainerColor by animateColorAsState(
         targetValue = if (isSelected) accentColor.copy(alpha = 0.25f)
-                      else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                      else contentColorOnBackground.copy(alpha = 0.08f),
         animationSpec = tween(durationMillis = 400),
         label = "iconContainerColor"
     )
@@ -306,7 +316,7 @@ private fun DeviceItem(
                     Text(
                         text = device.type.name.lowercase().replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = contentColorOnBackground.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -320,7 +330,7 @@ private fun DeviceItem(
                     Icon(
                         imageVector = Icons.Rounded.Check,
                         contentDescription = "Selected",
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = Color.White,
                         modifier = Modifier.padding(6.dp)
                     )
                 }
@@ -328,7 +338,7 @@ private fun DeviceItem(
                 Icon(
                     imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    tint = contentColorOnBackground.copy(alpha = 0.3f),
                     modifier = Modifier.size(24.dp)
                 )
             }

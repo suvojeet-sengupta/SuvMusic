@@ -31,6 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import com.suvojeet.suvmusic.ui.components.DominantColors
+import androidx.compose.material3.SliderDefaults
+
 /**
  * Bottom sheet for adjusting Playback Speed and Pitch.
  */
@@ -41,19 +44,25 @@ fun PlaybackSpeedSheet(
     currentSpeed: Float,
     currentPitch: Float,
     onDismiss: () -> Unit,
-    onApply: (speed: Float, pitch: Float) -> Unit
+    onApply: (speed: Float, pitch: Float) -> Unit,
+    dominantColors: DominantColors? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
     // Local state for smooth slider interaction
     var sliderSpeed by remember(currentSpeed) { mutableFloatStateOf(currentSpeed) }
     var sliderPitch by remember(currentPitch) { mutableFloatStateOf(currentPitch) }
+    
+    // Determine colors
+    val backgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
+    val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val accentColor = dominantColors?.accent ?: MaterialTheme.colorScheme.primary
 
     if (isVisible) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = backgroundColor,
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
         ) {
             Column(
@@ -71,7 +80,7 @@ fun PlaybackSpeedSheet(
                     Icon(
                         imageVector = Icons.Default.Speed,
                         contentDescription = "Playback Controls",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = accentColor,
                         modifier = Modifier.size(28.dp)
                     )
                     
@@ -80,6 +89,7 @@ fun PlaybackSpeedSheet(
                     Text(
                         text = "Speed & Tempo",
                         style = MaterialTheme.typography.titleLarge,
+                        color = contentColor,
                         modifier = Modifier.weight(1f)
                     )
                     
@@ -94,12 +104,12 @@ fun PlaybackSpeedSheet(
                         Icon(
                             imageVector = Icons.Default.RestartAlt,
                             contentDescription = "Reset",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = contentColor.copy(alpha = 0.6f)
                         )
                     }
                 }
                 
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = contentColor.copy(alpha = 0.1f))
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
@@ -115,12 +125,13 @@ fun PlaybackSpeedSheet(
                             text = "Speed",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
+                            color = contentColor,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = String.format("%.2fx", sliderSpeed),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = accentColor,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -129,14 +140,16 @@ fun PlaybackSpeedSheet(
                         value = sliderSpeed,
                         onValueChange = { 
                             sliderSpeed = it 
-                            // Apply changes live? Or postpone? 
-                            // Usually better to apply live for feedback, but debounce might be needed.
-                            // For local playback, live is usually fine.
                             onApply(it, sliderPitch)
                         },
                         valueRange = 0.25f..3.0f,
                         steps = 0, // Continuous
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = accentColor,
+                            activeTrackColor = accentColor,
+                            inactiveTrackColor = contentColor.copy(alpha = 0.2f)
+                        )
                     )
                 }
                 
@@ -154,7 +167,7 @@ fun PlaybackSpeedSheet(
                              imageVector = Icons.Default.GraphicEq,
                              contentDescription = null,
                              modifier = Modifier.size(18.dp),
-                             tint = MaterialTheme.colorScheme.onSurfaceVariant
+                             tint = contentColor.copy(alpha = 0.6f)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         
@@ -162,12 +175,13 @@ fun PlaybackSpeedSheet(
                             text = "Pitch",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
+                            color = contentColor,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = String.format("%.2fx", sliderPitch),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = accentColor,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -180,7 +194,12 @@ fun PlaybackSpeedSheet(
                         },
                         valueRange = 0.5f..2.0f,
                         steps = 0,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = accentColor,
+                            activeTrackColor = accentColor,
+                            inactiveTrackColor = contentColor.copy(alpha = 0.2f)
+                        )
                     )
                 }
                 
