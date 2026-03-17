@@ -388,6 +388,8 @@ class SettingsViewModel @Inject constructor(
                     _uiState.update { it.copy(autoResumeAfterCall = enabled) }
                 }
             }
+        }
+
         viewModelScope.launch {
             sessionManager.bluetoothAutoplayEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(bluetoothAutoplayEnabled = enabled) }
