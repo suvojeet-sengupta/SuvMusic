@@ -55,7 +55,8 @@ class ListeningHistoryRepository @Inject constructor(
                 thumbnailUrl = song.thumbnailUrl,
                 album = song.album,
                 duration = song.duration,
-                localUri = song.localUri?.toString()
+                localUri = song.localUri?.toString(),
+                releaseDate = song.releaseDate
             )
         } else {
             // Create new record
@@ -85,7 +86,8 @@ class ListeningHistoryRepository @Inject constructor(
                 },
                 album = song.album,
                 duration = song.duration,
-                localUri = song.localUri?.toString()
+                localUri = song.localUri?.toString(),
+                releaseDate = song.releaseDate
             )
         }
         

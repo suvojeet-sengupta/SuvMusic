@@ -18,5 +18,6 @@ data class PlaylistSongEntity(
     val duration: Long,
     val source: String,
     val localUri: String? = null,
+    val releaseDate: String? = null,
     val order: Int
 )

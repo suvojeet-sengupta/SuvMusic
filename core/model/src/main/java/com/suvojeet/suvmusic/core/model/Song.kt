@@ -23,7 +23,8 @@ data class Song(
     val customFolderPath: String? = null, // Subfolder path for downloads (e.g. "My Playlist")
     val collectionId: String? = null, // ID of the collection (album/playlist) this download belongs to
     val collectionName: String? = null, // Name of the collection
-    val isMembersOnly: Boolean = false // Whether this song is exclusive to channel members
+    val isMembersOnly: Boolean = false, // Whether this song is exclusive to channel members
+    val releaseDate: String? = null // Release date of the song
 ) {
     companion object {
         /**
@@ -39,7 +40,8 @@ data class Song(
             setVideoId: String? = null,
             artistId: String? = null,
             isVideo: Boolean = false,
-            isMembersOnly: Boolean = false
+            isMembersOnly: Boolean = false,
+            releaseDate: String? = null
         ): Song? {
             if (videoId.isBlank()) return null
             return Song(
@@ -53,7 +55,8 @@ data class Song(
                 setVideoId = setVideoId,
                 artistId = artistId,
                 isVideo = isVideo,
-                isMembersOnly = isMembersOnly
+                isMembersOnly = isMembersOnly,
+                releaseDate = releaseDate
             )
         }
         
@@ -67,7 +70,8 @@ data class Song(
             album: String,
             duration: Long,
             albumArtUri: Uri?,
-            contentUri: Uri
+            contentUri: Uri,
+            releaseDate: String? = null
         ): Song {
             return Song(
                 id = id.toString(),
@@ -77,7 +81,8 @@ data class Song(
                 duration = duration,
                 thumbnailUrl = albumArtUri?.toString(),
                 source = SongSource.LOCAL,
-                localUri = contentUri
+                localUri = contentUri,
+                releaseDate = releaseDate
             )
         }
         
@@ -91,7 +96,8 @@ data class Song(
             album: String,
             duration: Long,
             thumbnailUrl: String?,
-            streamUrl: String? = null
+            streamUrl: String? = null,
+            releaseDate: String? = null
         ): Song? {
             if (songId.isBlank()) return null
             return Song(
@@ -102,7 +108,8 @@ data class Song(
                 duration = duration,
                 thumbnailUrl = thumbnailUrl,
                 source = SongSource.JIOSAAVN,
-                streamUrl = streamUrl
+                streamUrl = streamUrl,
+                releaseDate = releaseDate
             )
         }
     }

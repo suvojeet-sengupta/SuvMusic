@@ -102,6 +102,22 @@ class YouTubeJsonParser @Inject constructor() {
         return fullSubtitle.split(" • ").firstOrNull()?.trim() ?: "Unknown Artist"
     }
 
+    fun extractYear(item: JSONObject): String? {
+        val flexColumns = item.optJSONArray("flexColumns")
+        val subtitleFormatted = flexColumns?.optJSONObject(1)
+            ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
+            ?.optJSONObject("text")
+        
+        val fullSubtitle = getRunText(subtitleFormatted) 
+            ?: getRunText(item.optJSONObject("subtitle"))
+            ?: return null
+            
+        val parts = fullSubtitle.split(" • ")
+        // Usually: Artist • Album • Year or Artist • Year
+        // The year is usually 4 digits
+        return parts.find { it.trim().matches(Regex("\\d{4}")) }?.trim()
+    }
+
     fun extractThumbnail(item: JSONObject?): String? {
         if (item == null) return null
         val thumbnails = item.optJSONObject("thumbnail")

@@ -2484,6 +2484,7 @@ class YouTubeRepository @Inject constructor(
                         val artist = extractArtist(item)
                         val thumbnailUrl = extractThumbnail(item)
                         val setVideoId = item.optJSONObject("playlistItemData")?.optString("videoId")
+                        val year = extractYear(item)
                         
                         Song.fromYouTube(
                             videoId = videoId,
@@ -2492,7 +2493,8 @@ class YouTubeRepository @Inject constructor(
                             album = "",
                             duration = extractDuration(item),
                             thumbnailUrl = thumbnailUrl,
-                            setVideoId = setVideoId
+                            setVideoId = setVideoId,
+                            releaseDate = year
                         )?.let { songs.add(it) }
                     }
                 } catch (e: Exception) { }
@@ -3073,12 +3075,14 @@ class YouTubeRepository @Inject constructor(
     private fun extractTitle(item: JSONObject): String = 
         jsonParser.extractTitle(item)
     
-    private fun extractArtist(item: JSONObject): String = 
+    private fun extractArtist(item: JSONObject): String =
         jsonParser.extractArtist(item)
-    
-    private fun extractThumbnail(item: JSONObject?): String? = 
-        jsonParser.extractThumbnail(item)
-    
+
+    private fun extractYear(item: JSONObject): String? =
+        jsonParser.extractYear(item)
+
+    private fun extractThumbnail(item: JSONObject?): String? =
+        jsonParser.extractThumbnail(item)    
     private fun extractDuration(item: JSONObject): Long = 
         jsonParser.extractDuration(item)
     
