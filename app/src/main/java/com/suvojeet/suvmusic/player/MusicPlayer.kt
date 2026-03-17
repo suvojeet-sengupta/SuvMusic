@@ -619,8 +619,10 @@ class MusicPlayer @Inject constructor(
             val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
                                error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ||
                                error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
-                               error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ||
-                               error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+                               error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED
+            // Parse errors are caused by double-resolution race (two replaceMediaItem calls mid-parse).
+            // They need a simple re-resolve, NOT a mode-switch reset.
+            val isParseError = error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
                                error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
             
             // Placeholder Check: If current URI is a placeholder, it MUST be resolved
@@ -628,7 +630,7 @@ class MusicPlayer @Inject constructor(
             val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
             val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
-            if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isYouTubePlaceholder || isInvalidPlaceholder) {
+            if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isParseError || isYouTubePlaceholder || isInvalidPlaceholder) {
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
@@ -655,6 +657,8 @@ class MusicPlayer @Inject constructor(
                     scope.launch {
                         // If Audio Sink or Decoder error occurred, switching modes often fixes it (Audio <-> Video)
                         // as it forces a complete reset of the decoder and audio track.
+                        // NOTE: isParseError (3003/3004) is excluded — those are race condition artifacts,
+                        // not real decoder failures. A simple re-resolve is all that's needed.
                         if (isAudioSinkError || isDecoderError) {
                             android.util.Log.d("MusicPlayer", "Audio/Decoder error detected, performing mode-switch reset")
                             
