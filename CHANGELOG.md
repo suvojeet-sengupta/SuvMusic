@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.1.1.0] - 2026-03-17
+
+### Added
+- **Wavy Seekbar**: Introduced the Material 3 Expressive wavy seekbar style for a more dynamic playback experience.
+- **Bouncy Animations**: YouTube-style scale and bounce animations for Like and Dislike buttons.
+- **Adaptive UI**: Redesigned Credits and Song Info screens that adapt their background color to the current track's artwork.
+- **Offline Enhancements**: Added folder browsing support and integrated local albums/artists into the search experience.
+- **Embedded Lyrics**: Support for extracting and displaying lyrics directly from local audio files.
+- **Track Sorting**: New sorting options (A-Z, Artist, Date) and mass reordering for playlists.
+- **Playback Options**: Added 'Auto-resume after calls' setting and improved audio focus handling.
+
+### Changed
+- **Modern Infrastructure**: Fully migrated to Navigation 2.9.0 (Type-safe routes) and Coil 3 for improved performance and reliability.
+- **Intelligent UI**: The 'Add to Queue' option is now context-aware and hidden for the currently playing song.
+- **Marquee Effects**: Added smooth marquee scrolling for long song and artist titles in the player.
+- **Optimized Caching**: Implemented a 24-hour auto-clear policy for temporary playlist data to optimize storage.
+
+### Fixed
+- **Android Auto Overhaul**: Comprehensive fixes for car-screen controls, skip buttons, auto-advance, and menu loading.
+- **Sleep Timer Fix**: Resolved a critical issue where 'End of Song' timer wouldn't trigger when tracks were preloaded.
+- **Stream Stability**: Improved fallback and recovery logic for high-latency or unstable network connections.
+- **UI Refinements**: Fixed numerous small bugs in selection modes, loading indicators, and layout overflows.
+
+### Performance
+- **SDK 36**: Updated target SDK to 36 and optimized JNI-based recommendation scoring.
+
 ## [2.1.0.0] - 2026-03-14
 
 ### Added
