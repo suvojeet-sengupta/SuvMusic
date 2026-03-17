@@ -1085,10 +1085,7 @@ class MusicPlayerService : MediaLibraryService() {
     }
     
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
-        // Ensure notification is updated immediately on state changes
         super.onUpdateNotification(session, startInForegroundRequired)
-        // Set custom layout to ensure buttons are always in sync
-        session.setCustomLayout(getCustomLayout())
     }
     
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
