@@ -19,6 +19,11 @@ import javax.inject.Singleton
 class YouTubeStreamingService @Inject constructor(
     private val sessionManager: SessionManager
 ) {
+    private val ytService: org.schabi.newpipe.extractor.StreamingService by lazy {
+        ServiceList.all().find { it.serviceInfo.name == "YouTube" }
+            ?: throw IllegalStateException("YouTube service not found")
+    }
+
     // Cache for stream URLs to avoid re-fetching (max 50 entries, 3 hours expiry)
     private data class CachedStream(val url: String, val extension: String, val timestamp: Long)
     private val streamCache = LruCache<String, CachedStream>(50)
@@ -82,9 +87,6 @@ class YouTubeStreamingService @Inject constructor(
         return retryWithBackoff {
             val startTime = System.currentTimeMillis()
             val audioQuality = sessionManager.getAudioQuality()
-            
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: throw IllegalStateException("YouTube service not found")
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
@@ -162,9 +164,6 @@ class YouTubeStreamingService @Inject constructor(
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
 
         return retryWithBackoff {
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: throw IllegalStateException("YouTube service not found")
-            
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
@@ -241,9 +240,6 @@ class YouTubeStreamingService @Inject constructor(
         retryWithBackoff {
             val downloadQuality = sessionManager.getDownloadQuality()
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: throw IllegalStateException("YouTube service not found")
-            
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
@@ -270,9 +266,6 @@ class YouTubeStreamingService @Inject constructor(
     ): String? = withContext(Dispatchers.IO) {
         retryWithBackoff {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
-                ?: throw IllegalStateException("YouTube service not found")
-
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
 
@@ -295,9 +288,6 @@ class YouTubeStreamingService @Inject constructor(
     suspend fun getSongDetails(videoId: String): Song? = withContext(Dispatchers.IO) {
         retryWithBackoff {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: throw IllegalStateException("YouTube service not found")
-            
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
@@ -317,9 +307,6 @@ class YouTubeStreamingService @Inject constructor(
     suspend fun getRelatedItems(videoId: String): List<Song> = withContext(Dispatchers.IO) {
         retryWithBackoff {
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
-                ?: throw IllegalStateException("YouTube service not found")
-
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
 
