@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.1.1.0",
+      "versionCode": 19,
+      "date": "March 17, 2026",
+      "description": "• Material 3 Expressive UI Polish: Introduced the new Wavy Seekbar style, YouTube-style bouncy animations for Like/Dislike buttons, and completely redesigned Credits & Song Info screens.\n• Android Auto Overhaul: Major stability improvements for car-screen playback, fixing skip buttons, auto-advance, and playlist transition hangs.\n• Advanced Playlist Management: Added track sorting (A-Z, Artist, Date), mass reordering, and multi-select deletion. Improved caching with 24-hour auto-clear for temporary data.\n• Local Library Enhancements: Added support for folder browsing, embedded lyrics extraction from local files, and improved lyrics auto-scrolling smoothness.\n• Intelligent UI: The 'Add to Queue' option is now intelligently hidden for the currently playing song across all menus.\n• Core Stability: Fixed a critical bug where the Sleep Timer 'End of Song' wouldn't trigger for preloaded tracks. Improved stream fallback and recovery logic.\n• Modern Architecture: Migrated to Navigation 2.9.0 (Type-safe) and Coil 3 for better performance.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.1.0.0",
       "versionCode": 18,
       "date": "March 14, 2026",
