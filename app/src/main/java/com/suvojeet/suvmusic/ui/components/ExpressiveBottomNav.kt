@@ -11,15 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -35,9 +27,7 @@ import androidx.compose.material.icons.outlined.ViewWeek
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -54,10 +44,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.navigation.Destination
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import kotlin.random.Random
 
 /**
  * iOS 26-style Liquid Glass Bottom Navigation Bar.
@@ -67,7 +64,7 @@ import com.suvojeet.suvmusic.navigation.Destination
  * - Specular highlight gradient (top-to-bottom light reflection)
  * - Luminous gradient border rim
  * - Soft diffused shadow for depth
- * - Animated selected indicator with spring physics
+ * - Morphing selected indicator with spring physics
  * - Dark/light theme adaptive glass appearance
  *
  * Uses Material You dynamic theming for colors that adapt to wallpaper.
@@ -119,10 +116,11 @@ private fun LiquidGlassNavBar(
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val surfaceColor = MaterialTheme.colorScheme.surface
     val primaryColor = MaterialTheme.colorScheme.primary
-    val glassShape = RoundedCornerShape(26.dp)
+    val glassShape = RoundedCornerShape(28.dp)
+    val density = LocalDensity.current
 
     // Glass material colors – adaptive for dark/light
-    val glassBaseAlpha = if (isDarkTheme) 0.32f else 0.55f
+    val glassBaseAlpha = if (isDarkTheme) 0.45f else 0.65f
     val glassBaseColor = if (isDarkTheme) {
         surfaceColor.copy(alpha = glassBaseAlpha)
     } else {
@@ -131,115 +129,158 @@ private fun LiquidGlassNavBar(
 
     // Specular highlight (simulates light hitting the top of the glass)
     val specularHighlight = Brush.verticalGradient(
-        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.14f else 0.35f),
-        0.35f to Color.White.copy(alpha = if (isDarkTheme) 0.04f else 0.10f),
-        0.55f to Color.Transparent,
-        1.0f to Color.Black.copy(alpha = if (isDarkTheme) 0.06f else 0.02f)
+        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.18f else 0.40f),
+        0.3f to Color.White.copy(alpha = if (isDarkTheme) 0.06f else 0.12f),
+        0.5f to Color.Transparent,
+        1.0f to Color.Black.copy(alpha = if (isDarkTheme) 0.08f else 0.03f)
     )
 
     // Border rim – luminous on top, fading to transparent
     val borderBrush = Brush.verticalGradient(
-        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.28f else 0.50f),
-        0.5f to Color.White.copy(alpha = if (isDarkTheme) 0.08f else 0.18f),
-        1.0f to Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.06f)
+        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.35f else 0.60f),
+        0.4f to Color.White.copy(alpha = if (isDarkTheme) 0.12f else 0.25f),
+        1.0f to Color.White.copy(alpha = if (isDarkTheme) 0.05f else 0.10f)
     )
 
     // Inner tint – subtle color wash from primary/accent
-    val innerTintColor = primaryColor.copy(alpha = if (isDarkTheme) 0.06f else 0.04f)
+    val innerTintColor = primaryColor.copy(alpha = if (isDarkTheme) 0.08f else 0.05f)
+
+    // Track positions for morphing indicator
+    var selectedItemIndex by remember { mutableIntStateOf(0) }
+    var itemWidths by remember { mutableStateOf(FloatArray(navItems.size)) }
+    var itemPositions by remember { mutableStateOf(FloatArray(navItems.size)) }
+    
+    selectedItemIndex = navItems.indexOfFirst { it.destination == currentDestination }.coerceAtLeast(0)
+
+    val indicatorX by animateFloatAsState(
+        targetValue = if (itemPositions.isNotEmpty()) itemPositions[selectedItemIndex] else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "indicatorX"
+    )
+    
+    val indicatorWidth by animateFloatAsState(
+        targetValue = if (itemWidths.isNotEmpty()) itemWidths[selectedItemIndex] else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "indicatorWidth"
+    )
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .height(72.dp)
     ) {
-        // Layer 1: Soft shadow for depth and floating feel
+        // Layer 1: Enhanced shadow
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .shadow(
-                    elevation = if (isDarkTheme) 24.dp else 16.dp,
+                    elevation = if (isDarkTheme) 32.dp else 20.dp,
                     shape = glassShape,
                     clip = false,
-                    ambientColor = Color.Black.copy(alpha = if (isDarkTheme) 0.35f else 0.12f),
-                    spotColor = Color.Black.copy(alpha = if (isDarkTheme) 0.25f else 0.08f)
+                    ambientColor = Color.Black.copy(alpha = if (isDarkTheme) 0.45f else 0.15f),
+                    spotColor = Color.Black.copy(alpha = if (isDarkTheme) 0.35f else 0.10f)
                 )
         )
 
-        // Layer 2: Frosted glass base – blurred semi-transparent fill
+        // Layer 2: Glass material stack
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .clip(glassShape)
-                .background(glassBaseColor)
+                .drawWithContent {
+                    // Draw frosted background
+                    drawRect(color = glassBaseColor)
+                    
+                    // Draw noise/grain texture for realistic glass
+                    drawIntoCanvas { canvas ->
+                        val paint = android.graphics.Paint().apply {
+                            alpha = (if (isDarkTheme) 8 else 5)
+                        }
+                        val random = Random(42)
+                        for (i in 0 until 1000) {
+                            val x = random.nextFloat() * size.width
+                            val y = random.nextFloat() * size.height
+                            canvas.nativeCanvas.drawPoint(x, y, paint)
+                        }
+                    }
+                    
+                    drawContent()
+                }
                 .then(
                     if (Build.VERSION.SDK_INT >= 31) {
-                        Modifier.blur(40.dp)
+                        Modifier.blur(45.dp)
                     } else {
-                        Modifier.blur(20.dp)
+                        Modifier.blur(22.dp)
                     }
                 )
         )
 
-        // Layer 3: Glass tint overlay – subtle color from theme
+        // Layer 3: Color tint & Specular highlight
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .clip(glassShape)
                 .background(innerTintColor)
-        )
-
-        // Layer 4: Specular highlight – light reflection gradient
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clip(glassShape)
                 .background(specularHighlight)
         )
 
-        // Layer 5: Inner edge glow – faint top highlight line
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clip(glassShape)
-                .drawBehind {
-                    // Top inner glow line
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.10f else 0.18f),
-                            0.08f to Color.Transparent
-                        ),
-                        size = Size(size.width, size.height * 0.15f)
+        // Layer 4: Morphing Indicator
+        if (indicatorWidth > 0) {
+            Box(
+                modifier = Modifier
+                    .offset(x = with(density) { indicatorX.toDp() })
+                    .width(with(density) { indicatorWidth.toDp() })
+                    .fillMaxHeight()
+                    .padding(vertical = 6.dp, horizontal = 4.dp)
+                    .background(
+                        color = primaryColor.copy(alpha = if (isDarkTheme) 0.15f else 0.12f),
+                        shape = RoundedCornerShape(22.dp)
                     )
-                }
-        )
+                    .border(
+                        width = 0.5.dp,
+                        color = primaryColor.copy(alpha = if (isDarkTheme) 0.25f else 0.18f),
+                        shape = RoundedCornerShape(22.dp)
+                    )
+            )
+        }
 
-        // Layer 6: Border rim
+        // Layer 5: Luminous rim
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .border(
-                    width = 0.5.dp,
+                    width = 0.8.dp,
                     brush = borderBrush,
                     shape = glassShape
                 )
         )
 
-        // Layer 7: Content – nav items
+        // Layer 6: Items
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+            modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            navItems.forEach { item ->
+            navItems.forEachIndexed { index, item ->
                 val isSelected = currentDestination == item.destination
                 LiquidGlassNavItem(
                     item = item,
                     isSelected = isSelected,
                     onClick = { onDestinationChange(item.destination) },
-                    isDarkTheme = isDarkTheme
+                    isDarkTheme = isDarkTheme,
+                    modifier = Modifier
+                        .weight(1f)
+                        .onGloballyPositioned { coords ->
+                            val newWidths = itemWidths.copyOf()
+                            newWidths[index] = coords.size.width.toFloat()
+                            itemWidths = newWidths
+                            
+                            val newPositions = itemPositions.copyOf()
+                            newPositions[index] = coords.positionInParent().x
+                            itemPositions = newPositions
+                        }
                 )
             }
         }
@@ -251,52 +292,26 @@ private fun LiquidGlassNavItem(
     item: BottomNavItem,
     isSelected: Boolean,
     onClick: () -> Unit,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    // Animated content color
-    val selectedTextColor = MaterialTheme.colorScheme.onSurface
-    val unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) selectedTextColor else unselectedTextColor,
-        animationSpec = tween(280, easing = FastOutSlowInEasing),
-        label = "glassNavColor"
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface 
+                      else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        animationSpec = tween(300),
+        label = "itemColor"
     )
 
-    // Animated scale – subtle bounce on selection
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.06f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "glassNavScale"
+        targetValue = if (isSelected) 1.08f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "itemScale"
     )
-
-    // Animated indicator background alpha
-    val indicatorAlpha by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "glassIndicatorAlpha"
-    )
-
-    // Selected indicator pill colors
-    val indicatorColor = if (isDarkTheme) {
-        primaryColor.copy(alpha = 0.18f * indicatorAlpha)
-    } else {
-        primaryColor.copy(alpha = 0.12f * indicatorAlpha)
-    }
-
-    val indicatorBorderColor = if (isDarkTheme) {
-        primaryColor.copy(alpha = 0.22f * indicatorAlpha)
-    } else {
-        primaryColor.copy(alpha = 0.15f * indicatorAlpha)
-    }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
+            .fillMaxHeight()
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -305,27 +320,12 @@ private fun LiquidGlassNavItem(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-            }
-            // Selected indicator pill
-            .background(
-                color = indicatorColor,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .then(
-                if (isSelected) {
-                    Modifier.border(
-                        width = 0.5.dp,
-                        color = indicatorBorderColor,
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                } else Modifier
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
@@ -333,12 +333,15 @@ private fun LiquidGlassNavItem(
                 modifier = Modifier.size(24.dp),
                 tint = contentColor
             )
-
+            
+            Spacer(modifier = Modifier.height(2.dp))
+            
             Text(
                 text = item.label,
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontSize = 10.sp,
-                    letterSpacing = 0.3.sp
+                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                    letterSpacing = 0.2.sp
                 ),
                 color = contentColor,
                 maxLines = 1

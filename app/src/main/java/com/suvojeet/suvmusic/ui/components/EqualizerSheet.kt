@@ -40,6 +40,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -61,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.suvojeet.suvmusic.ui.components.DominantColors
 import kotlin.math.abs
 
 @Composable
@@ -119,8 +121,6 @@ val EqPresets = mapOf(
     "Electronic" to floatArrayOf(5f, 4f, 1f, 0f, -2f, 2f, 1f, 3f, 4f, 5f)
 )
 
-import com.suvojeet.suvmusic.ui.components.DominantColors
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EqualizerSheet(
@@ -167,17 +167,17 @@ fun EqualizerSheet(
             mutableStateOf(initialBands.copyOf())
         }
         
-        var preampValue by remember { mutableStateOf(initialPreamp) }
+        var preampValue by remember { mutableFloatStateOf(initialPreamp) }
         androidx.compose.runtime.LaunchedEffect(initialPreamp) {
             preampValue = initialPreamp
         }
         
-        var bassBoostValue by remember { mutableStateOf(initialBassBoost) }
+        var bassBoostValue by remember { mutableFloatStateOf(initialBassBoost) }
         androidx.compose.runtime.LaunchedEffect(initialBassBoost) {
             bassBoostValue = initialBassBoost
         }
         
-        var virtualizerValue by remember { mutableStateOf(initialVirtualizer) }
+        var virtualizerValue by remember { mutableFloatStateOf(initialVirtualizer) }
         androidx.compose.runtime.LaunchedEffect(initialVirtualizer) {
             virtualizerValue = initialVirtualizer
         }
@@ -382,9 +382,9 @@ fun EqualizerSheet(
                 ControlKnob(
                     label = "Bass Boost",
                     value = bassBoostValue,
-                    onValueChange = {
-                        bassBoostValue = it
-                        onBassBoostChange(it)
+                    onValueChange = { newValue ->
+                        bassBoostValue = newValue
+                        onBassBoostChange(newValue)
                     },
                     modifier = Modifier.weight(1f),
                     dominantColor = finalAccentColor,
@@ -396,9 +396,9 @@ fun EqualizerSheet(
                 ControlKnob(
                     label = "Virtualizer",
                     value = virtualizerValue,
-                    onValueChange = {
-                        virtualizerValue = it
-                        onVirtualizerChange(it)
+                    onValueChange = { newValue ->
+                        virtualizerValue = newValue
+                        onVirtualizerChange(newValue)
                     },
                     modifier = Modifier.weight(1f),
                     dominantColor = finalAccentColor,
@@ -494,7 +494,7 @@ fun EqualizerSheet(
                             .width(44.dp)
                             .fillMaxHeight()
                     ) {
-                        var sliderValue by remember { mutableStateOf(preampValue) }
+                        var sliderValue by remember { mutableFloatStateOf(preampValue) }
                         androidx.compose.runtime.LaunchedEffect(preampValue) {
                             sliderValue = preampValue
                         }
@@ -553,7 +553,7 @@ fun EqualizerSheet(
 
                     for (index in localBands.indices) {
                         val gain = localBands[index]
-                        var sliderValue by remember { mutableStateOf(gain) }
+                        var sliderValue by remember { mutableFloatStateOf(gain) }
                         
                         // Sync with localBands (e.g. when preset changes)
                         androidx.compose.runtime.LaunchedEffect(gain) {
@@ -685,47 +685,3 @@ private fun PresetChip(
 private fun Modifier.alpha(alpha: Float): Modifier = this.then(
     Modifier.graphicsLayer { this.alpha = alpha }
 )
-
-@Composable
-private fun ControlKnob(
-    label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-    dominantColor: Color,
-    enabled: Boolean = true,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(contentColor.copy(alpha = 0.08f))
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = 0f..1f,
-            enabled = enabled,
-            colors = SliderDefaults.colors(
-                thumbColor = dominantColor,
-                activeTrackColor = dominantColor,
-                inactiveTrackColor = contentColor.copy(alpha = 0.2f)
-            )
-        )
-        Text(
-            text = "${(value * 100).toInt()}%",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
-            fontWeight = FontWeight.ExtraBold
-        )
-    }
-}
