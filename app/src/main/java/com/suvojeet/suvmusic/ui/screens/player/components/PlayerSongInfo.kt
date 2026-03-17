@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbDown
@@ -157,7 +158,7 @@ fun SongInfoSection(
                     modifier = Modifier.padding(top = if (compact) 2.dp else 4.dp)
                 ) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Rounded.Timer,
+                        imageVector = androidx.compose.material.icons.Icons.Default.Timer,
                         contentDescription = null,
                         modifier = Modifier.size(if (compact) 14.dp else 16.dp),
                         tint = dominantColors.accent.copy(alpha = 0.9f)

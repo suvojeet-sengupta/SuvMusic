@@ -813,20 +813,27 @@ class YouTubeRepository @Inject constructor(
         libraryRepository.removeSongFromPlaylist("LM", songId)
     }
     
+    suspend fun getCachedPlaylist(playlistId: String): Playlist? = withContext(Dispatchers.IO) {
+        val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+        if (cachedSongs.isNotEmpty()) {
+            val cachedPlaylist = libraryRepository.getPlaylistById(playlistId)
+            Playlist(
+                id = playlistId,
+                title = cachedPlaylist?.title ?: "Cached Playlist",
+                author = cachedPlaylist?.subtitle ?: "",
+                thumbnailUrl = cachedPlaylist?.thumbnailUrl,
+                songs = cachedSongs
+            )
+        } else {
+            null
+        }
+    }
+
     suspend fun getPlaylist(playlistId: String): Playlist = withContext(Dispatchers.IO) {
         // Fallback to cache if offline
         if (!networkMonitor.isCurrentlyConnected()) {
-            val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
-            if (cachedSongs.isNotEmpty()) {
-                val cachedPlaylist = libraryRepository.getPlaylistById(playlistId)
-                return@withContext Playlist(
-                    id = playlistId,
-                    title = cachedPlaylist?.title ?: "Offline Playlist",
-                    author = cachedPlaylist?.subtitle ?: "",
-                    thumbnailUrl = cachedPlaylist?.thumbnailUrl,
-                    songs = cachedSongs
-                )
-            }
+            val cachedPlaylist = getCachedPlaylist(playlistId)
+            if (cachedPlaylist != null) return@withContext cachedPlaylist
         }
 
         // Handle special playlists that require authentication
@@ -943,7 +950,8 @@ class YouTubeRepository @Inject constructor(
 
             if (songs.isNotEmpty()) {
                 val finalPlaylist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
-                // libraryRepository.savePlaylist(finalPlaylist)
+                // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
+                libraryRepository.savePlaylist(finalPlaylist)
                 return@withContext finalPlaylist
             }
         } catch(e: Exception) { }
@@ -1008,7 +1016,8 @@ class YouTubeRepository @Inject constructor(
                     songs = songs,
                     description = description
                 )
-                // libraryRepository.savePlaylist(playlist)
+                // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
+                libraryRepository.savePlaylist(playlist)
                 return@withContext playlist
             }
             return@withContext Playlist(
