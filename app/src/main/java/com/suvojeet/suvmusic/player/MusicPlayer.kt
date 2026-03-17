@@ -72,6 +72,7 @@ class MusicPlayer @Inject constructor(
 
     // Caching
     private var cachingJob: Job? = null
+    private var currentResolutionJob: Job? = null
 
     
     private val _playerState = MutableStateFlow(PlayerState())
@@ -565,7 +566,8 @@ class MusicPlayer @Inject constructor(
                         false
                     }
                     
-                    scope.launch {
+                    currentResolutionJob?.cancel()
+                    currentResolutionJob = scope.launch {
                         resolveAndPlayCurrentItem(song, index, shouldPlay = !timerTriggered)
                     }
                 }
@@ -1169,6 +1171,7 @@ class MusicPlayer @Inject constructor(
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true) {
         // Cancel any pending play request
         playJob?.cancel()
+        currentResolutionJob?.cancel()
         
         // IMMEDIATELY pause current playback for instant response
         mediaController?.pause()
@@ -1316,6 +1319,8 @@ class MusicPlayer @Inject constructor(
     }
     
     fun seekToNext() {
+        currentResolutionJob?.cancel()
+        lastPreloadAttemptTime = 0L
         val state = _playerState.value
         val queue = state.queue
         if (queue.isEmpty()) return
@@ -1362,6 +1367,7 @@ class MusicPlayer @Inject constructor(
     }
     
     fun seekToPrevious() {
+        currentResolutionJob?.cancel()
         val state = _playerState.value
         // If played more than 3 seconds, restart current song
         if (state.currentPosition > 3000) {
