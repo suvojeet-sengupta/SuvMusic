@@ -826,7 +826,8 @@ fun BoxScope.OverlaysContent(
     com.suvojeet.suvmusic.ui.screens.player.components.CommentsSheet(
         isVisible = activeOverlay is PlayerOverlay.Comments, comments = state.comments, isLoading = state.isFetchingComments,
         onDismiss = { if (currentOverlay is PlayerOverlay.Comments) onOverlayChange(PlayerOverlay.None) }, accentColor = dominantColors.accent, isLoggedIn = state.isLoggedIn,
-        isPostingComment = state.isPostingComment, onPostComment = actions.onPostComment, isLoadingMore = state.isLoadingMoreComments, onLoadMore = actions.onLoadMoreComments
+        isPostingComment = state.isPostingComment, onPostComment = actions.onPostComment, isLoadingMore = state.isLoadingMoreComments, onLoadMore = actions.onLoadMoreComments,
+        dominantColors = dominantColors
     )
 
     if (song != null) {
@@ -845,10 +846,35 @@ fun BoxScope.OverlaysContent(
         AddToPlaylistSheet(song = playlistUiState.selectedSong!!, isVisible = true, playlists = playlistUiState.userPlaylists, isLoading = playlistUiState.isLoadingPlaylists, onDismiss = { playlistViewModel.hideAddToPlaylistSheet() }, onAddToPlaylist = { playlistViewModel.addSongToPlaylist(it) }, onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() })
     }
 
-    SleepTimerSheet(isVisible = activeOverlay is PlayerOverlay.SleepTimer, currentOption = state.sleepTimerOption, remainingTimeFormatted = state.sleepTimerRemainingMs?.let { String.format("%d:%02d", it/60000, (it/1000)%60) }, onSelectOption = actions.onSetSleepTimer, onDismiss = { if (currentOverlay is PlayerOverlay.SleepTimer) onOverlayChange(PlayerOverlay.None) }, accentColor = dominantColors.accent)
+    SleepTimerSheet(
+        isVisible = activeOverlay is PlayerOverlay.SleepTimer, 
+        currentOption = state.sleepTimerOption, 
+        remainingTimeFormatted = state.sleepTimerRemainingMs?.let { String.format("%d:%02d", it/60000, (it/1000)%60) }, 
+        onSelectOption = actions.onSetSleepTimer, 
+        onDismiss = { if (currentOverlay is PlayerOverlay.SleepTimer) onOverlayChange(PlayerOverlay.None) }, 
+        accentColor = dominantColors.accent,
+        dominantColors = dominantColors
+    )
 
     if (activeOverlay is PlayerOverlay.Equalizer) {
-        com.suvojeet.suvmusic.ui.components.EqualizerSheet(isVisible = true, onDismiss = { onOverlayChange(PlayerOverlay.None) }, dominantColor = dominantColors.accent, onEnabledChange = { playerViewModel.setEqEnabled(it) }, onBandChange = { b, g -> playerViewModel.setEqBandGain(b, g) }, onBandsChange = { playerViewModel.setEqBands(it) }, onPreampChange = { playerViewModel.setEqPreamp(it) }, onBassBoostChange = { playerViewModel.setBassBoost(it) }, onVirtualizerChange = { playerViewModel.setVirtualizer(it) }, onReset = { playerViewModel.resetEqBands() }, initialEnabled = eqEnabled, initialBands = eqBands, initialPreamp = eqPreamp, initialBassBoost = bassBoost, initialVirtualizer = virtualizer)
+        com.suvojeet.suvmusic.ui.components.EqualizerSheet(
+            isVisible = true, 
+            onDismiss = { onOverlayChange(PlayerOverlay.None) }, 
+            dominantColor = dominantColors.accent, 
+            onEnabledChange = { playerViewModel.setEqEnabled(it) }, 
+            onBandChange = { b, g -> playerViewModel.setEqBandGain(b, g) }, 
+            onBandsChange = { playerViewModel.setEqBands(it) }, 
+            onPreampChange = { playerViewModel.setEqPreamp(it) }, 
+            onBassBoostChange = { playerViewModel.setBassBoost(it) }, 
+            onVirtualizerChange = { playerViewModel.setVirtualizer(it) }, 
+            onReset = { playerViewModel.resetEqBands() }, 
+            initialEnabled = eqEnabled, 
+            initialBands = eqBands, 
+            initialPreamp = eqPreamp, 
+            initialBassBoost = bassBoost, 
+            initialVirtualizer = virtualizer,
+            dominantColors = dominantColors
+        )
     }
 
     PlaybackSpeedSheet(
@@ -856,7 +882,8 @@ fun BoxScope.OverlaysContent(
         currentSpeed = playerState.playbackSpeed,
         currentPitch = playerState.pitch,
         onDismiss = { if (currentOverlay is PlayerOverlay.PlaybackSpeed) onOverlayChange(PlayerOverlay.None) },
-        onApply = { speed, pitch -> actions.onSetPlaybackParameters(speed, pitch) }
+        onApply = { speed, pitch -> actions.onSetPlaybackParameters(speed, pitch) },
+        dominantColors = dominantColors
     )
 
     OutputDeviceSheet(
@@ -865,7 +892,8 @@ fun BoxScope.OverlaysContent(
         onDeviceSelected = { actions.onSwitchDevice(it) },
         onDismiss = { if (currentOverlay is PlayerOverlay.OutputDevice) onOverlayChange(PlayerOverlay.None) },
         onRefreshDevices = { actions.onRefreshDevices() },
-        accentColor = dominantColors.accent
+        accentColor = dominantColors.accent,
+        dominantColors = dominantColors
     )
 
     // Ringtone Dialogs
@@ -878,7 +906,8 @@ fun BoxScope.OverlaysContent(
             onResolveStreamUrl = { ringtoneViewModel.getStreamUrl(it) },
             onConfirm = { start, end -> 
                 ringtoneViewModel.setAsRingtone(context, ringtoneUiState.targetSong!!, start, end)
-            }
+            },
+            dominantColors = dominantColors
         )
     }
     

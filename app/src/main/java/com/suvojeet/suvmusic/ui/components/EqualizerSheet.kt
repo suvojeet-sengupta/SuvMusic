@@ -70,19 +70,20 @@ private fun ControlKnob(
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     dominantColor: Color,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .background(contentColor.copy(alpha = 0.08f))
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -94,13 +95,13 @@ private fun ControlKnob(
             colors = SliderDefaults.colors(
                 thumbColor = dominantColor,
                 activeTrackColor = dominantColor,
-                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                inactiveTrackColor = contentColor.copy(alpha = 0.2f)
             )
         )
         Text(
             text = "${(value * 100).toInt()}%",
             style = MaterialTheme.typography.labelSmall,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
             fontWeight = FontWeight.ExtraBold
         )
     }
@@ -117,6 +118,8 @@ val EqPresets = mapOf(
     "Vocal" to floatArrayOf(-2f, -1f, 0f, 2f, 4f, 4f, 2f, 0f, -1f, -2f),
     "Electronic" to floatArrayOf(5f, 4f, 1f, 0f, -2f, 2f, 1f, 3f, 4f, 5f)
 )
+
+import com.suvojeet.suvmusic.ui.components.DominantColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,10 +138,16 @@ fun EqualizerSheet(
     initialBands: FloatArray,
     initialPreamp: Float = 0f,
     initialBassBoost: Float = 0f,
-    initialVirtualizer: Float = 0f
+    initialVirtualizer: Float = 0f,
+    dominantColors: DominantColors? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val haptic = LocalHapticFeedback.current
+    
+    // Determine colors
+    val finalBackgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
+    val finalContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val finalAccentColor = dominantColors?.accent ?: dominantColor
     
     if (isVisible) {
         // State management
@@ -181,8 +190,6 @@ fun EqualizerSheet(
         val colorScheme = MaterialTheme.colorScheme
         val typography = MaterialTheme.typography
         
-        val surfaceColor = colorScheme.surface
-        val onSurfaceColor = colorScheme.onSurface
         val onSurfaceVariantColor = colorScheme.onSurfaceVariant
         val surfaceVariantColor = colorScheme.surfaceVariant
         val outlineColor = colorScheme.outline
@@ -191,36 +198,36 @@ fun EqualizerSheet(
         val labelSmallStyle = typography.labelSmall
         val labelLargeStyle = typography.labelLarge
         
-        val resetEnabledColor = dominantColor
+        val resetEnabledColor = finalAccentColor
         val resetDisabledColor = onSurfaceVariantColor.copy(alpha = 0.38f)
         
         val switchColors = SwitchDefaults.colors(
             checkedThumbColor = Color.White,
-            checkedTrackColor = dominantColor,
+            checkedTrackColor = finalAccentColor,
             uncheckedThumbColor = outlineColor,
             uncheckedTrackColor = surfaceVariantColor
         )
         
-        val curveBgColor = onSurfaceVariantColor.copy(alpha = 0.08f)
-        val centerLineColor = onSurfaceColor.copy(alpha = 0.3f)
+        val curveBgColor = finalContentColor.copy(alpha = 0.08f)
+        val centerLineColor = finalContentColor.copy(alpha = 0.2f)
         
-        val dbMarkingColor = onSurfaceVariantColor.copy(alpha = 0.7f)
-        val dividerColor = onSurfaceColor.copy(alpha = 0.15f)
+        val dbMarkingColor = finalContentColor.copy(alpha = 0.5f)
+        val dividerColor = finalContentColor.copy(alpha = 0.1f)
         
         val sliderColors = SliderDefaults.colors(
-            thumbColor = dominantColor,
-            activeTrackColor = dominantColor,
-            inactiveTrackColor = onSurfaceVariantColor.copy(alpha = 0.25f),
-            disabledThumbColor = onSurfaceColor.copy(alpha = 0.38f),
-            disabledActiveTrackColor = onSurfaceColor.copy(alpha = 0.12f),
-            disabledInactiveTrackColor = onSurfaceColor.copy(alpha = 0.12f)
+            thumbColor = finalAccentColor,
+            activeTrackColor = finalAccentColor,
+            inactiveTrackColor = finalContentColor.copy(alpha = 0.2f),
+            disabledThumbColor = finalContentColor.copy(alpha = 0.38f),
+            disabledActiveTrackColor = finalContentColor.copy(alpha = 0.12f),
+            disabledInactiveTrackColor = finalContentColor.copy(alpha = 0.12f)
         )
 
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = surfaceColor,
-            contentColor = onSurfaceColor,
+            containerColor = finalBackgroundColor,
+            contentColor = finalContentColor,
             dragHandle = { BottomSheetDefaults.DragHandle() },
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
         ) {
@@ -242,12 +249,12 @@ fun EqualizerSheet(
                         text = "Equalizer",
                         style = titleLargeStyle,
                         fontWeight = FontWeight.ExtraBold,
-                        color = onSurfaceColor
+                        color = finalContentColor
                     )
                     Text(
                         text = "10-Band Parametric",
                         style = labelSmallStyle,
-                        color = onSurfaceVariantColor
+                        color = finalContentColor.copy(alpha = 0.6f)
                     )
                 }
                 
@@ -337,8 +344,8 @@ fun EqualizerSheet(
                         path = fillPath,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                dominantColor.copy(alpha = 0.5f),
-                                dominantColor.copy(alpha = 0.1f),
+                                finalAccentColor.copy(alpha = 0.5f),
+                                finalAccentColor.copy(alpha = 0.1f),
                                 Color.Transparent
                             )
                         )
@@ -347,7 +354,7 @@ fun EqualizerSheet(
                     // Draw main curve
                     drawPath(
                         path = path,
-                        color = if (isEnabled) dominantColor else onSurfaceVariantColor,
+                        color = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.3f),
                         style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
                         alpha = if (isEnabled) 1f else 0.5f
                     )
@@ -380,8 +387,9 @@ fun EqualizerSheet(
                         onBassBoostChange(it)
                     },
                     modifier = Modifier.weight(1f),
-                    dominantColor = dominantColor,
-                    enabled = isEnabled
+                    dominantColor = finalAccentColor,
+                    enabled = isEnabled,
+                    contentColor = finalContentColor
                 )
 
                 // Virtualizer
@@ -393,8 +401,9 @@ fun EqualizerSheet(
                         onVirtualizerChange(it)
                     },
                     modifier = Modifier.weight(1f),
-                    dominantColor = dominantColor,
-                    enabled = isEnabled
+                    dominantColor = finalAccentColor,
+                    enabled = isEnabled,
+                    contentColor = finalContentColor
                 )
             }
 
@@ -410,7 +419,8 @@ fun EqualizerSheet(
                         name = "Custom",
                         isSelected = selectedPreset == "Custom",
                         onClick = { selectedPreset = "Custom" },
-                        dominantColor = dominantColor
+                        dominantColor = finalAccentColor,
+                        contentColorOnBackground = finalContentColor
                     )
                 }
                 items(EqPresets.keys.toList()) { presetName ->
@@ -424,8 +434,9 @@ fun EqualizerSheet(
                             onBandsChange(presetBands)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         },
-                        dominantColor = dominantColor,
-                        enabled = isEnabled
+                        dominantColor = finalAccentColor,
+                        enabled = isEnabled,
+                        contentColorOnBackground = finalContentColor
                     )
                 }
             }
@@ -531,7 +542,7 @@ fun EqualizerSheet(
                             style = labelSmallStyle,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isEnabled) onSurfaceColor else onSurfaceVariantColor
+                            color = if (isEnabled) finalContentColor else finalContentColor.copy(alpha = 0.4f)
                         )
                     }
 
@@ -630,7 +641,7 @@ fun EqualizerSheet(
                                 style = labelSmallStyle,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isEnabled) onSurfaceColor else onSurfaceVariantColor
+                                color = if (isEnabled) finalContentColor else finalContentColor.copy(alpha = 0.4f)
                             )
                         }
                     }
@@ -648,18 +659,17 @@ private fun PresetChip(
     isSelected: Boolean,
     onClick: () -> Unit,
     dominantColor: Color,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    contentColorOnBackground: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
-    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val labelLarge = MaterialTheme.typography.labelLarge
 
     Surface(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) dominantColor else surfaceVariant.copy(alpha = 0.5f),
-        contentColor = if (isSelected) Color.White else onSurfaceVariant,
+        color = if (isSelected) dominantColor else contentColorOnBackground.copy(alpha = 0.08f),
+        contentColor = if (isSelected) Color.White else contentColorOnBackground,
         modifier = Modifier.alpha(if (enabled || isSelected) 1f else 0.5f)
     ) {
         Text(
@@ -675,3 +685,47 @@ private fun PresetChip(
 private fun Modifier.alpha(alpha: Float): Modifier = this.then(
     Modifier.graphicsLayer { this.alpha = alpha }
 )
+
+@Composable
+private fun ControlKnob(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    dominantColor: Color,
+    enabled: Boolean = true,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(contentColor.copy(alpha = 0.08f))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0f..1f,
+            enabled = enabled,
+            colors = SliderDefaults.colors(
+                thumbColor = dominantColor,
+                activeTrackColor = dominantColor,
+                inactiveTrackColor = contentColor.copy(alpha = 0.2f)
+            )
+        )
+        Text(
+            text = "${(value * 100).toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
+}
