@@ -277,6 +277,16 @@ fun PlaybackSettingsScreen(
                     HorizontalDivider()
 
                     PlaybackSwitchItem(
+                        icon = Icons.Default.PhoneCallback,
+                        title = "Auto-resume After Calls",
+                        subtitle = "Automatically resume playback when a call ends",
+                        checked = uiState.autoResumeAfterCall,
+                        onCheckedChange = { viewModel.setAutoResumeAfterCall(it) }
+                    )
+
+                    HorizontalDivider()
+
+                    PlaybackSwitchItem(
                         icon = Icons.Default.VolumeUp,
                         title = "Volume Boost",
                         subtitle = "Boost volume beyond 100%. Use with caution.",
