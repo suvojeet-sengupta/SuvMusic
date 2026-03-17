@@ -79,6 +79,7 @@ fun SearchScreen(
     onArtistClick: (String) -> Unit = {},
     onPlaylistClick: (String) -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
+    currentSong: Song? = null,
     viewModel: SearchViewModel = hiltViewModel(),
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
 ) {
@@ -525,6 +526,7 @@ fun SearchScreen(
             val song = selectedSong!!
             SongMenuBottomSheet(
                 isVisible = showSongMenu, onDismiss = { showSongMenu = false }, song = song,
+                isCurrentlyPlaying = song.id == currentSong?.id,
                 onPlayNext = { viewModel.playNext(song) }, onAddToQueue = { viewModel.addToQueue(song) },
                 onAddToPlaylist = { viewModel.addToPlaylist(song) }, onDownload = { viewModel.downloadSong(song) },
                 onShare = {

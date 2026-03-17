@@ -827,6 +827,8 @@ fun BoxScope.OverlaysContent(
             }, 
             onPlaybackSpeed = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.PlaybackSpeed) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.Equalizer) },
             currentSpeed = playerState.playbackSpeed,
+            isFromQueue = (activeOverlay as? PlayerOverlay.Actions)?.fromQueue ?: false,
+            isCurrentlyPlaying = menuSong.id == song?.id,
             onSetRingtone = { 
                 if (ringtoneViewModel.ringtoneHelper.hasSettingsPermission(context)) {
                     ringtoneViewModel.showTrimmer(menuSong)
