@@ -888,17 +888,22 @@ class JioSaavnRepository @Inject constructor(
             val duration = (durationStr.toLongOrNull() ?: 0L) * 1000 // Convert to milliseconds
             
             val image = json.get("image")?.asString?.toHighResImage()
-            
+
+            val releaseDate = json.get("release_date")?.asString
+                ?: moreInfo?.get("release_date")?.asString
+                ?: json.get("year")?.asString
+                ?: moreInfo?.get("year")?.asString
+
             Song.fromJioSaavn(
                 songId = id,
                 title = title.decodeHtml(),
                 artist = artistsJson.decodeHtml(),
                 album = album.decodeHtml(),
                 duration = duration,
-                thumbnailUrl = image
+                thumbnailUrl = image,
+                releaseDate = releaseDate
             )
-        } catch (e: Exception) {
-            e.printStackTrace()
+            } catch (e: Exception) {            e.printStackTrace()
             null
         }
     }
