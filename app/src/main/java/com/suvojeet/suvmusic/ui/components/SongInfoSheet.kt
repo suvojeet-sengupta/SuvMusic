@@ -106,6 +106,7 @@ fun SongInfoSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
+    val releaseDate by viewModel.releaseDate.collectAsState()
     val isDarkTheme = isSystemInDarkTheme()
     
     // Get high resolution thumbnail URL
@@ -116,10 +117,13 @@ fun SongInfoSheet(
     // Extract dominant colors from artwork or use provided ones
     val finalDominantColors = dominantColors ?: rememberDominantColors(highResThumbnail, isDarkTheme)
     
-    // Fetch artist thumbnails when sheet becomes visible
-    LaunchedEffect(isVisible, song.artist) {
+    // Fetch artist thumbnails and song details when sheet becomes visible
+    LaunchedEffect(isVisible, song.artist, song.id) {
         if (isVisible) {
             viewModel.fetchArtistCredits(song.artist, song.source)
+            if (song.releaseDate == null) {
+                viewModel.fetchSongDetails(song.id, song.source)
+            }
         }
     }
     
@@ -383,6 +387,18 @@ fun SongInfoSheet(
                                     icon = Icons.Default.Album,
                                     label = "Album",
                                     value = song.album,
+                                    tint = finalDominantColors.accent,
+                                    onSurface = finalDominantColors.onBackground
+                                )
+                                CreditDivider(finalDominantColors.onBackground.copy(alpha = 0.1f))
+                            }
+                            
+                            val displayReleaseDate = song.releaseDate ?: releaseDate
+                            if (!displayReleaseDate.isNullOrBlank()) {
+                                CreditItem(
+                                    icon = Icons.Default.CalendarMonth,
+                                    label = "Released",
+                                    value = displayReleaseDate,
                                     tint = finalDominantColors.accent,
                                     onSurface = finalDominantColors.onBackground
                                 )
@@ -740,7 +756,73 @@ class SongInfoViewModel @Inject constructor(
     private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
     val artistCredits: StateFlow<List<ArtistCreditInfo>> = _artistCredits.asStateFlow()
     
+    private val _releaseDate = MutableStateFlow<String?>(null)
+    val releaseDate: StateFlow<String?> = _releaseDate.asStateFlow()
+    
     private var lastArtistString: String? = null
+    private var lastSongId: String? = null
+    
+    fun fetchSongDetails(songId: String, source: com.suvojeet.suvmusic.core.model.SongSource = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
+        if (songId == lastSongId) return
+        lastSongId = songId
+        _releaseDate.value = null
+        
+        viewModelScope.launch {
+            try {
+                val song = if (source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
+                    youTubeRepository.getSongDetails(songId)
+                } else if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
+                    jioSaavnRepository.getSongDetails(songId)
+                } else {
+                    null
+                }
+                
+                if (song?.releaseDate != null) {
+                    _releaseDate.value = if (song.releaseDate!!.contains("T")) {
+                        formatDateString(song.releaseDate!!)
+                    } else {
+                        song.releaseDate
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+    
+    private fun formatDateString(isoDate: String): String {
+        return try {
+            // ISO8601 is yyyy-MM-ddTHH:mm:ss
+            val parts = isoDate.split("T")[0].split("-")
+            if (parts.size >= 3) {
+                val year = parts[0]
+                val month = parts[1]
+                val day = parts[2]
+                
+                val monthName = when (month) {
+                    "01" -> "Jan"
+                    "02" -> "Feb"
+                    "03" -> "Mar"
+                    "04" -> "Apr"
+                    "05" -> "May"
+                    "06" -> "Jun"
+                    "07" -> "Jul"
+                    "08" -> "Aug"
+                    "09" -> "Sep"
+                    "10" -> "Oct"
+                    "11" -> "Nov"
+                    "12" -> "Dec"
+                    else -> month
+                }
+                
+                "$monthName $day, $year"
+            } else {
+                isoDate
+            }
+        } catch (e: Exception) {
+            isoDate
+        }
+    }
     
     fun fetchArtistCredits(artistString: String, source: com.suvojeet.suvmusic.core.model.SongSource = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
         if (artistString == lastArtistString && _artistCredits.value.isNotEmpty()) return

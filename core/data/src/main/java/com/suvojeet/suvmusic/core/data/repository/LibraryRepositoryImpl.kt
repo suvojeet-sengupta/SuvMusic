@@ -48,6 +48,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 duration = song.duration,
                 source = song.source.name,
                 localUri = song.localUri?.toString(),
+                releaseDate = song.releaseDate,
                 order = index
             )
         }
@@ -67,6 +68,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 duration = song.duration,
                 source = song.source.name,
                 localUri = song.localUri?.toString(),
+                releaseDate = song.releaseDate,
                 order = startOrder + index
             )
         }
@@ -83,7 +85,8 @@ class LibraryRepositoryImpl @Inject constructor(
                 thumbnailUrl = entity.thumbnailUrl,
                 duration = entity.duration,
                 source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
-                localUri = entity.localUri?.let { android.net.Uri.parse(it) }
+                localUri = entity.localUri?.let { android.net.Uri.parse(it) },
+                releaseDate = entity.releaseDate
             )
         }
     }
@@ -99,7 +102,8 @@ class LibraryRepositoryImpl @Inject constructor(
                     thumbnailUrl = entity.thumbnailUrl,
                     duration = entity.duration,
                     source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
-                    localUri = entity.localUri?.let { android.net.Uri.parse(it) }
+                    localUri = entity.localUri?.let { android.net.Uri.parse(it) },
+                    releaseDate = entity.releaseDate
                 )
             }
         }
@@ -121,6 +125,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 duration = song.duration,
                 source = song.source.name,
                 localUri = song.localUri?.toString(),
+                releaseDate = song.releaseDate,
                 order = index
             )
         }
