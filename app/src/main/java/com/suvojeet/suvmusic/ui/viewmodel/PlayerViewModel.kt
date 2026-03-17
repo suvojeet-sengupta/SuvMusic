@@ -15,6 +15,7 @@ import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
@@ -98,8 +99,8 @@ class PlayerViewModel @Inject constructor(
     private val _selectedLyricsProvider = MutableStateFlow(LyricsProviderType.AUTO)
     val selectedLyricsProvider: StateFlow<LyricsProviderType> = _selectedLyricsProvider.asStateFlow()
 
-    private val _artistCredits = MutableStateFlow<List<com.suvojeet.suvmusic.ui.components.ArtistCreditInfo>>(emptyList())
-    val artistCredits: StateFlow<List<com.suvojeet.suvmusic.ui.components.ArtistCreditInfo>> = _artistCredits.asStateFlow()
+    private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
+    val artistCredits: StateFlow<List<ArtistCreditInfo>> = _artistCredits.asStateFlow()
 
     private val _showMultipleArtistsDialog = MutableStateFlow(false)
     val showMultipleArtistsDialog: StateFlow<Boolean> = _showMultipleArtistsDialog.asStateFlow()
@@ -1329,7 +1330,7 @@ class PlayerViewModel @Inject constructor(
             
             // Show placeholders immediately
             _artistCredits.value = artistNames.map { name ->
-                com.suvojeet.suvmusic.ui.components.ArtistCreditInfo(
+                ArtistCreditInfo(
                     name = name,
                     role = "Vocals",
                     thumbnailUrl = null,
@@ -1351,14 +1352,14 @@ class PlayerViewModel @Inject constructor(
                         name.contains(it.name, ignoreCase = true)
                     } ?: searchResults.firstOrNull()
                     
-                    com.suvojeet.suvmusic.ui.components.ArtistCreditInfo(
+                    ArtistCreditInfo(
                         name = name,
                         role = "Vocals",
                         thumbnailUrl = matchingArtist?.thumbnailUrl,
                         artistId = matchingArtist?.id
                     )
                 } catch (e: Exception) {
-                    com.suvojeet.suvmusic.ui.components.ArtistCreditInfo(
+                    ArtistCreditInfo(
                         name = name,
                         role = "Vocals",
                         thumbnailUrl = null,
