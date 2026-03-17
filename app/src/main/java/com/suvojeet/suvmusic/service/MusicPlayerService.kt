@@ -418,6 +418,15 @@ class MusicPlayerService : MediaLibraryService() {
 
                     if (isPlaceholder) return // Resolution coroutine handles this
 
+                    // Format/parse errors on a real URL = double-resolution race condition artifact.
+                    // MusicPlayer's own recovery coroutine will re-resolve and fix it.
+                    // DO NOT skip here — that would cause the auto-slip chain.
+                    val isFormatError = error.errorCode ==
+                        androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+                        error.errorCode ==
+                        androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
+                    if (isFormatError) return
+
                     // Basic error recovery: skip to next on failure
                     serviceScope.launch {
                         delay(2000)
