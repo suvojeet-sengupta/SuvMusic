@@ -67,7 +67,9 @@ fun SongInfoSection(
     onAlbumClick: (String) -> Unit = {},
     dominantColors: DominantColors,
     isLoading: Boolean = false,
-    compact: Boolean = false
+    compact: Boolean = false,
+    sleepTimerRemainingMs: Long? = null,
+    sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
 
@@ -140,6 +142,42 @@ fun SongInfoSection(
                                 val target = song?.artistId ?: song?.artist
                                 target?.let { onArtistClick(it) }
                             }
+                    )
+                }
+            }
+
+            // Sleep Timer indicator - M3 Expressive style
+            androidx.compose.animation.AnimatedVisibility(
+                visible = sleepTimerOption != com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
+                enter = fadeIn() + slideInVertically { -20 },
+                exit = fadeOut() + slideOutVertically { -20 }
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = if (compact) 2.dp else 4.dp)
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Rounded.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (compact) 14.dp else 16.dp),
+                        tint = dominantColors.accent.copy(alpha = 0.9f)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (sleepTimerOption == com.suvojeet.suvmusic.player.SleepTimerOption.END_OF_SONG) {
+                            "Sleep at end of song"
+                        } else {
+                            sleepTimerRemainingMs?.let { ms ->
+                                val minutes = (ms / 60000).toInt()
+                                val seconds = ((ms % 60000) / 1000).toInt()
+                                String.format("Sleep in %d:%02d", minutes, seconds)
+                            } ?: ""
+                        },
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.3.sp
+                        ),
+                        color = dominantColors.accent.copy(alpha = 0.9f)
                     )
                 }
             }
