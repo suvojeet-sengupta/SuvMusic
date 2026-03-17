@@ -66,8 +66,10 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Apple Music-inspired Song Credits screen (Updated to M3 Expressive).
