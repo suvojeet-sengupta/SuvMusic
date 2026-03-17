@@ -227,7 +227,7 @@ fun AboutScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             coil3.compose.AsyncImage(
-                                model = "https://avatars.githubusercontent.com/u/suvojeet-sengupta",
+                                model = "https://avatars.githubusercontent.com/u/107928380?v=4",
                                 contentDescription = "Suvojeet Sengupta",
                                 modifier = Modifier
                                     .size(90.dp)
