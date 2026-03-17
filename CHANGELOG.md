@@ -3,6 +3,7 @@
 ## [2.1.1.0] - 2026-03-17
 
 ### Added
+- **Instant Playback**: Reduced playback startup latency to 500ms for near-instant response.
 - **Wavy Seekbar**: Introduced the Material 3 Expressive wavy seekbar style for a more dynamic playback experience.
 - **Bouncy Animations**: YouTube-style scale and bounce animations for Like and Dislike buttons.
 - **Adaptive UI**: Redesigned Credits and Song Info screens that adapt their background color to the current track's artwork.
@@ -16,8 +17,13 @@
 - **Intelligent UI**: The 'Add to Queue' option is now context-aware and hidden for the currently playing song.
 - **Marquee Effects**: Added smooth marquee scrolling for long song and artist titles in the player.
 - **Optimized Caching**: Implemented a 24-hour auto-clear policy for temporary playlist data to optimize storage.
+- **Performance Optimization**: Offloaded playback state saving to background threads and optimized service lookups.
+- **Resource Management**: Optimized position updates to reduce main-thread CPU usage during playback.
 
 ### Fixed
+- **Skip Stability**: Resolved orphaned resolution coroutines and auto-skip chains to ensure reliable track skipping.
+- **Double Resolution**: Fixed race conditions between service and client when resolving placeholder URIs.
+- **Audio Polish**: Resolved volume micro-toggle clicks and improved TTS ducking/restoration logic.
 - **Android Auto Overhaul**: Comprehensive fixes for car-screen controls, skip buttons, auto-advance, and menu loading.
 - **Sleep Timer Fix**: Resolved a critical issue where 'End of Song' timer wouldn't trigger when tracks were preloaded.
 - **Stream Stability**: Improved fallback and recovery logic for high-latency or unstable network connections.
