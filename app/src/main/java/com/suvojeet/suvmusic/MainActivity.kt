@@ -60,6 +60,7 @@ import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
 import com.suvojeet.suvmusic.ui.components.player.ExpandablePlayerSheet
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
+import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -400,7 +401,7 @@ fun SuvMusicApp(
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
     val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO)
 
-    val artistCredits by playerViewModel.artistCredits.collectAsStateWithLifecycle(initialValue = emptyList())
+    val artistCredits by playerViewModel.artistCredits.collectAsStateWithLifecycle(initialValue = emptyList<ArtistCreditInfo>())
     val showMultipleArtistsDialog by playerViewModel.showMultipleArtistsDialog.collectAsStateWithLifecycle(initialValue = false)
     
     val comments by playerViewModel.commentsState.collectAsStateWithLifecycle(initialValue = null)
