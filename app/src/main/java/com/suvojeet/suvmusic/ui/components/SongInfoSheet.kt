@@ -65,28 +65,9 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.repository.YouTubeRepository
-import javax.inject.Inject
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.suvojeet.suvmusic.core.model.SongSource
+import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
-/**
- * Data class to hold artist credit information with thumbnail
- */
-data class ArtistCreditInfo(
-    val name: String,
-    val role: String,
-    val thumbnailUrl: String?,
-    val artistId: String?
-)
 
 /**
  * Apple Music-inspired Song Credits screen (Updated to M3 Expressive).
@@ -122,7 +103,7 @@ fun SongInfoSheet(
         if (isVisible) {
             viewModel.fetchArtistCredits(song.artist, song.source)
             if (song.releaseDate == null) {
-                viewModel.fetchSongDetails(song.id, song.source)
+                viewModel.fetchSongDetails(song.id, song.source, song.originalSource)
             }
         }
     }
@@ -261,10 +242,10 @@ fun SongInfoSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val sourceBadge = when (song.source) {
-                            com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YOUTUBE"
-                            com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ AUDIO"
-                            com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "LOCAL"
-                            com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> "OFFLINE"
+                            SongSource.YOUTUBE -> "YOUTUBE"
+                            SongSource.JIOSAAVN -> "HQ AUDIO"
+                            SongSource.LOCAL -> "LOCAL"
+                            SongSource.DOWNLOADED -> "OFFLINE"
                             else -> "UNKNOWN"
                         }
                         
@@ -433,16 +414,16 @@ fun SongInfoSheet(
                                 icon = Icons.Default.Language,
                                 label = "Source",
                                 value = when {
-                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> {
+                                    song.source == SongSource.DOWNLOADED -> {
                                         when (song.originalSource) {
-                                            com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ Audio (Downloaded)"
-                                            com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YouTube (Downloaded)"
+                                            SongSource.JIOSAAVN -> "HQ Audio (Downloaded)"
+                                            SongSource.YOUTUBE -> "YouTube (Downloaded)"
                                             else -> "Downloaded"
                                         }
                                     }
-                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YouTube Music"
-                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "HQ Audio (Streaming)"
-                                    song.source == com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "Local Storage"
+                                    song.source == SongSource.YOUTUBE -> "YouTube Music"
+                                    song.source == SongSource.JIOSAAVN -> "HQ Audio (Streaming)"
+                                    song.source == SongSource.LOCAL -> "Local Storage"
                                     else -> "Unknown"
                                 },
                                 tint = finalDominantColors.accent,
@@ -741,143 +722,5 @@ private fun ArtistCreditRow(
                 tint = onSurface.copy(alpha = 0.4f)
             )
         }
-    }
-}
-
-/**
- * ViewModel for fetching artist credits with thumbnails from YouTube Music
- */
-@HiltViewModel
-class SongInfoViewModel @Inject constructor(
-    private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository
-) : ViewModel() {
-    
-    private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
-    val artistCredits: StateFlow<List<ArtistCreditInfo>> = _artistCredits.asStateFlow()
-    
-    private val _releaseDate = MutableStateFlow<String?>(null)
-    val releaseDate: StateFlow<String?> = _releaseDate.asStateFlow()
-    
-    private var lastArtistString: String? = null
-    private var lastSongId: String? = null
-    
-    fun fetchSongDetails(songId: String, source: com.suvojeet.suvmusic.core.model.SongSource = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
-        if (songId == lastSongId) return
-        lastSongId = songId
-        _releaseDate.value = null
-        
-        viewModelScope.launch {
-            try {
-                val song = if (source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
-                    youTubeRepository.getSongDetails(songId)
-                } else if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
-                    jioSaavnRepository.getSongDetails(songId)
-                } else {
-                    null
-                }
-                
-                if (song?.releaseDate != null) {
-                    _releaseDate.value = if (song.releaseDate!!.contains("T")) {
-                        formatDateString(song.releaseDate!!)
-                    } else {
-                        song.releaseDate
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-    
-    private fun formatDateString(isoDate: String): String {
-        return try {
-            // ISO8601 is yyyy-MM-ddTHH:mm:ss
-            val parts = isoDate.split("T")[0].split("-")
-            if (parts.size >= 3) {
-                val year = parts[0]
-                val month = parts[1]
-                val day = parts[2]
-                
-                val monthName = when (month) {
-                    "01" -> "Jan"
-                    "02" -> "Feb"
-                    "03" -> "Mar"
-                    "04" -> "Apr"
-                    "05" -> "May"
-                    "06" -> "Jun"
-                    "07" -> "Jul"
-                    "08" -> "Aug"
-                    "09" -> "Sep"
-                    "10" -> "Oct"
-                    "11" -> "Nov"
-                    "12" -> "Dec"
-                    else -> month
-                }
-                
-                "$monthName $day, $year"
-            } else {
-                isoDate
-            }
-        } catch (e: Exception) {
-            isoDate
-        }
-    }
-    
-    fun fetchArtistCredits(artistString: String, source: com.suvojeet.suvmusic.core.model.SongSource = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE) {
-        if (artistString == lastArtistString && _artistCredits.value.isNotEmpty()) return
-        lastArtistString = artistString
-        
-        viewModelScope.launch {
-            val artistNames = parseArtistNames(artistString)
-            
-            _artistCredits.value = artistNames.map { name ->
-                ArtistCreditInfo(
-                    name = name,
-                    role = "Vocals",
-                    thumbnailUrl = null,
-                    artistId = null
-                )
-            }
-            
-            val updatedCredits = artistNames.map { name ->
-                try {
-                    val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
-                        jioSaavnRepository.searchArtists(name)
-                    } else {
-                        youTubeRepository.searchArtists(name)
-                    }
-                    
-                    val matchingArtist = searchResults.firstOrNull { 
-                        it.name.contains(name, ignoreCase = true) || 
-                        name.contains(it.name, ignoreCase = true)
-                    } ?: searchResults.firstOrNull()
-                    
-                    ArtistCreditInfo(
-                        name = name,
-                        role = "Vocals",
-                        thumbnailUrl = matchingArtist?.thumbnailUrl,
-                        artistId = matchingArtist?.id
-                    )
-                } catch (e: Exception) {
-                    ArtistCreditInfo(
-                        name = name,
-                        role = "Vocals",
-                        thumbnailUrl = null,
-                        artistId = null
-                    )
-                }
-            }
-            
-            _artistCredits.value = updatedCredits
-        }
-    }
-    
-    private fun parseArtistNames(artistString: String): List<String> {
-        if (artistString.isBlank()) return emptyList()
-        val separatorRegex = Regex("[,&]|\\b(feat\\.?|ft\\.?|with|x)\\b", RegexOption.IGNORE_CASE)
-        return artistString.split(separatorRegex)
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
     }
 }
