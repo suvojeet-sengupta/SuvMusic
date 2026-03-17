@@ -73,6 +73,7 @@ class MusicPlayer @Inject constructor(
     // Caching
     private var cachingJob: Job? = null
     private var currentResolutionJob: Job? = null
+    private var ttsVolumeJob: Job? = null
 
     
     private val _playerState = MutableStateFlow(PlayerState())
@@ -499,11 +500,14 @@ class MusicPlayer @Inject constructor(
                             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                             if (audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn) {
                                 // Duck volume
-                                mediaController?.volume = 0.2f
-                                ttsManager.speak("Now playing ${song.title} by ${song.artist}")
-                                // Restore volume after delay (approx 3s)
-                                delay(3000)
-                                mediaController?.volume = 1.0f
+                                ttsVolumeJob?.cancel()
+                                ttsVolumeJob = scope.launch {
+                                    mediaController?.volume = 0.2f
+                                    ttsManager.speak("Now playing ${song.title} by ${song.artist}")
+                                    // Restore volume after delay (approx 3s)
+                                    delay(3000)
+                                    mediaController?.volume = 1.0f
+                                }
                             }
                         }
 
@@ -576,6 +580,20 @@ class MusicPlayer @Inject constructor(
                         false
                     }
                     
+                    // Check if service is already resolving this — avoid double resolution
+                    // We check by re-reading the URI after a brief yield
+                    if (needsResolution) {
+                        kotlinx.coroutines.yield()
+                        val freshUri = controller.currentMediaItem?.localConfiguration?.uri?.toString()
+                        val stillNeedsResolution = freshUri.isNullOrBlank() ||
+                            freshUri.contains("youtube.com/watch") ||
+                            freshUri.contains("placeholder.invalid")
+                        if (!stillNeedsResolution) {
+                            _playerState.update { it.copy(isLoading = false) }
+                            return@let
+                        }
+                    }
+
                     currentResolutionJob?.cancel()
                     currentResolutionJob = scope.launch {
                         resolveAndPlayCurrentItem(song, index, shouldPlay = !timerTriggered)
@@ -963,9 +981,9 @@ class MusicPlayer @Inject constructor(
                         )
                     }
                     
-                    // Save playback state every ~5 seconds (20 iterations * 250ms = 5s)
+                    // Save playback state every ~5 seconds (25 iterations * 200ms = 5s)
                     saveCounter++
-                    if (saveCounter >= 20) {
+                    if (saveCounter >= 25) {
                         saveCounter = 0
                         saveCurrentPlaybackState()
                     }
@@ -995,24 +1013,28 @@ class MusicPlayer @Inject constructor(
                             }
                         }
                     }
-                    
-                    // Music Haptics - simulate amplitude based on progress
-                    // In a real implementation, this would use actual audio analysis
-                    if (_playerState.value.isPlaying) {
-                        // Simulate beat: Spike every 500ms (120 BPM)
-                        // Use a sharp curve: 1.0 near beat, 0.0 otherwise
-                        val beatPeriod = 500
-                        val timeInBeat = currentPos % beatPeriod
-                        val simulatedAmplitude = if (timeInBeat < 100) {
-                            // Sharp decay from 1.0 to 0.0 over 100ms
-                            1f - (timeInBeat / 100f)
-                        } else {
-                            0f
-                        }
-                        musicHapticsManager.processAmplitude(simulatedAmplitude)
-                    }
                 }
-                delay(50) // Faster update for haptics
+                delay(200) // 5 updates/sec is more than enough for seekbar UI
+            }
+        }
+
+        // Separate lightweight haptics coroutine — no StateFlow updates
+        scope.launch {
+            while (true) {
+                val controller = mediaController
+                if (controller != null && _playerState.value.isPlaying) {
+                    val currentPos = controller.currentPosition.coerceAtLeast(0L)
+                    val beatPeriod = 500
+                    val timeInBeat = currentPos % beatPeriod
+                    val simulatedAmplitude = if (timeInBeat < 100) {
+                        // Sharp decay from 1.0 to 0.0 over 100ms
+                        1f - (timeInBeat / 100f)
+                    } else {
+                        0f
+                    }
+                    musicHapticsManager.processAmplitude(simulatedAmplitude)
+                }
+                delay(50) // haptics still at 50ms, but no StateFlow involved
             }
         }
     }
@@ -1027,7 +1049,7 @@ class MusicPlayer @Inject constructor(
         
         if (queue.isEmpty()) return
         
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             try {
                 val queueJson = org.json.JSONArray().apply {
                     queue.forEach { song ->
@@ -1065,8 +1087,8 @@ class MusicPlayer @Inject constructor(
         // Start preloading after configured delay (prevents churn during rapid skipping)
         if (currentPosition < (nextSongPreloadDelay * 1000L)) return
         
-        // Throttle failed attempts (retry every 10 seconds)
-        if (System.currentTimeMillis() - lastPreloadAttemptTime < 10000L) return
+        // Throttle failed attempts (retry every 3 seconds)
+        if (System.currentTimeMillis() - lastPreloadAttemptTime < 3000L) return
         
         val state = _playerState.value
         val isVideoMode = state.isVideoMode
