@@ -36,27 +36,6 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun cachePlaylist(playlist: Playlist) {
-        val entity = LibraryEntity(
-            id = playlist.id,
-            title = playlist.title,
-            subtitle = playlist.author,
-            thumbnailUrl = playlist.thumbnailUrl,
-            type = "CACHED_PLAYLIST"
-        )
-        libraryDao.insertItem(entity)
-        
-        if (playlist.songs.isNotEmpty()) {
-            savePlaylistSongs(playlist.id, playlist.songs)
-        }
-    }
-
-    override suspend fun clearOldCache() {
-        val oneDayMs = 24 * 60 * 60 * 1000L
-        val expireTime = System.currentTimeMillis() - oneDayMs
-        libraryDao.clearOldCache(expireTime)
-    }
-
     override suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>) {
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
