@@ -360,6 +360,16 @@ class MusicPlayer @Inject constructor(
             // Without this, playback silently dies when songs have placeholder URIs.
             if (playbackState == Player.STATE_ENDED) {
                 val controller = mediaController ?: return
+                
+                // Bug Fix: Only auto-skip if this was a REAL end, not a failed placeholder.
+                // If it's a placeholder, the resolution coroutine will handle it.
+                val currentUri = controller.currentMediaItem?.localConfiguration?.uri?.toString()
+                val isPlaceholder = currentUri.isNullOrBlank() ||
+                    currentUri.contains("placeholder.invalid") ||
+                    currentUri.contains("youtube.com/watch") ||
+                    currentUri.contains("youtu.be/")
+                if (isPlaceholder) return
+
                 val state = _playerState.value
                 val nextIndex = controller.nextMediaItemIndex
                 val queueSize = state.queue.size
