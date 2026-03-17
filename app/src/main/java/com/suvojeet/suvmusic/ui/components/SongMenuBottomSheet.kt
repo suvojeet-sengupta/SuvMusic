@@ -67,7 +67,8 @@ fun SongMenuBottomSheet(
     onViewArtist: (() -> Unit)? = null,
     onViewAlbum: (() -> Unit)? = null,
     onListenTogether: () -> Unit = {},
-    showShare: Boolean = true
+    showShare: Boolean = true,
+    isCurrentlyPlaying: Boolean = false
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
@@ -190,16 +191,18 @@ fun SongMenuBottomSheet(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // List Actions
-                MenuActionItem(
-                    icon = Icons.Default.AddToQueue,
-                    title = "Add to queue",
-                    subtitle = "Add to the bottom of your queue",
-                    onClick = { 
-                        onAddToQueue()
-                        Toast.makeText(context, "Added to queue: ${song.title}", Toast.LENGTH_SHORT).show()
-                        onDismiss() 
-                    }
-                )
+                if (!isCurrentlyPlaying) {
+                    MenuActionItem(
+                        icon = Icons.Default.AddToQueue,
+                        title = "Add to queue",
+                        subtitle = "Add to the bottom of your queue",
+                        onClick = { 
+                            onAddToQueue()
+                            Toast.makeText(context, "Added to queue: ${song.title}", Toast.LENGTH_SHORT).show()
+                            onDismiss() 
+                        }
+                    )
+                }
 
                 MenuActionItem(
                     icon = Icons.Default.Download,

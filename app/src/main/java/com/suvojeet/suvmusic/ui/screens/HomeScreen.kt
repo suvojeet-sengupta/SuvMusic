@@ -542,6 +542,7 @@ fun HomeScreen(
                 isVisible = showSongMenu,
                 onDismiss = { showSongMenu = false },
                 song = song,
+                isCurrentlyPlaying = song.id == currentSong?.id,
                 onPlayNext = {
                     viewModel.playNext(song)
                     showSongMenu = false
