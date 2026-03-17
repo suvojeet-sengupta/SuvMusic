@@ -295,16 +295,58 @@ class MusicPlayerService : MediaLibraryService() {
             addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     super.onMediaItemTransition(mediaItem, reason)
-                    mediaItem?.mediaId?.let { videoId ->
+                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    mediaItem?.let { item ->
+                        val videoId = item.mediaId
                         if (videoId.isNotEmpty()) {
                             sponsorBlockRepository.loadSegments(videoId)
                         }
+                        updateLikedState()
+
+                        // Fix for Auto-Advance: Resolve placeholder URIs lazily in the service
+                        // This ensures it works even if the MusicPlayer client is not active.
+                        val currentUri = item.localConfiguration?.uri?.toString()
+                        val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+                        val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
+                        val isEmptyOrInvalid = currentUri.isNullOrBlank()
+                        val needsResolution = isYouTubePlaceholder || isInvalidPlaceholder || isEmptyOrInvalid
+
+                        if (needsResolution && videoId.isNotEmpty()) {
+                            serviceScope.launch {
+                                try {
+                                    val streamUrl = resolveStreamUrlWithRetry(videoId)
+                                    if (streamUrl != null) {
+                                        val updatedItem = item.buildUpon()
+                                            .setUri(Uri.parse(streamUrl))
+                                            .setMediaMetadata(
+                                                item.mediaMetadata.buildUpon()
+                                                    .setIsPlayable(true)
+                                                    .setIsBrowsable(false)
+                                                    .build()
+                                            )
+                                            .build()
+
+                                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            val p = mediaLibrarySession?.player ?: return@withContext
+                                            val index = p.currentMediaItemIndex
+                                            if (index != -1 && p.getMediaItemAt(index).mediaId == videoId) {
+                                                p.replaceMediaItem(index, updatedItem)
+                                                p.prepare()
+                                                if (p.playWhenReady) p.play()
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("MusicPlayerService", "Transition resolution failed for $videoId", e)
+                                }
+                            }
+                        }
                     }
-                    updateLikedState()
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     super.onIsPlayingChanged(isPlaying)
+                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
                     audioARManager.setPlaying(isPlaying)
                     if (isPlaying) {
                         startSponsorBlockMonitoring()
@@ -328,6 +370,33 @@ class MusicPlayerService : MediaLibraryService() {
                                 delay(50)
                                 p.volume = currentVol
                             }
+                        }
+                    }
+
+                    // Fix for Auto-Advance: If playback ended but we have more items, 
+                    // it might be due to a failed placeholder resolution.
+                    if (playbackState == Player.STATE_ENDED) {
+                        val p = mediaLibrarySession?.player ?: return
+                        if (p.hasNextMediaItem()) {
+                            p.seekToNext()
+                            p.prepare()
+                            p.play()
+                        }
+                    }
+                }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    super.onPlayerError(error)
+                    android.util.Log.e("MusicPlayerService", "Playback error: ${error.message}", error)
+                    
+                    // Basic error recovery: skip to next on failure
+                    serviceScope.launch {
+                        delay(2000)
+                        val p = mediaLibrarySession?.player ?: return@launch
+                        if (p.hasNextMediaItem()) {
+                            p.seekToNext()
+                            p.prepare()
+                            p.play()
                         }
                     }
                 }
@@ -623,7 +692,28 @@ class MusicPlayerService : MediaLibraryService() {
                 val future = com.google.common.util.concurrent.SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
                 serviceScope.launch {
                     try {
-                        val resolved = mediaItems.mapIndexed { index, item ->
+                        // Fix for Android Auto (No Skip Button): If only one item is being set (from browse tree),
+                        // but we have context (playlist/section) for it, return the full list immediately.
+                        var finalItems = mediaItems.toMutableList()
+                        var finalStartIndex = startIndex
+
+                        if (mediaItems.size == 1) {
+                            val videoId = mediaItems[0].mediaId
+                            val context = playlistContextCache[videoId]
+                            if (context != null) {
+                                val contextIndex = context.indexOfFirst { it.id == videoId }
+                                if (contextIndex != -1) {
+                                    finalItems = context.map { createPlayableMediaItem(it) }.toMutableList()
+                                    finalStartIndex = contextIndex
+                                    android.util.Log.d("MusicPlayerService", "onSetMediaItems: expanded single item to context of ${finalItems.size} songs")
+                                }
+                            }
+                        }
+
+                        val resolved = finalItems.mapIndexed { index, item ->
+                            // Only resolve URI for the START item to keep latency low.
+                            // The rest will be resolved lazily by onMediaItemTransition in the service.
+                            if (index != finalStartIndex) return@mapIndexed item
                             if (item.localConfiguration?.uri != null) return@mapIndexed item
 
                             val videoId = item.mediaId
@@ -647,15 +737,14 @@ class MusicPlayerService : MediaLibraryService() {
                                         .build()
                                 }
                             } else {
-                                android.util.Log.e("MusicPlayerService", "onSetMediaItems: failed to resolve URI for $videoId")
-                                null
+                                item // Keep as placeholder if resolution fails, onPlayerError might handle it
                             }
-                        }.filterNotNull().toMutableList()
+                        }.toMutableList()
 
                         if (resolved.isEmpty()) {
                             future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
                         } else {
-                            val safeIndex = startIndex.coerceIn(0, (resolved.size - 1).coerceAtLeast(0))
+                            val safeIndex = finalStartIndex.coerceIn(0, (resolved.size - 1).coerceAtLeast(0))
                             future.set(MediaSession.MediaItemsWithStartPosition(resolved, safeIndex, startPositionMs))
                         }
                     } catch (e: Exception) {
@@ -702,17 +791,35 @@ class MusicPlayerService : MediaLibraryService() {
                                 }
                             }
                             DOWNLOADS_ID -> {
-                                downloadRepository.downloadedSongs.first().forEach { children.add(createPlayableMediaItem(it)) }
+                                val downloaded = downloadRepository.downloadedSongs.first()
+                                if (downloaded.isNotEmpty()) {
+                                    downloaded.forEach { song ->
+                                        playlistContextCache[song.id] = downloaded
+                                        children.add(createPlayableMediaItem(song))
+                                    }
+                                }
                             }
                             LOCAL_ID -> {
-                                localAudioRepository.getAllLocalSongs().forEach { children.add(createPlayableMediaItem(it)) }
+                                val locals = localAudioRepository.getAllLocalSongs()
+                                if (locals.isNotEmpty()) {
+                                    locals.forEach { song ->
+                                        playlistContextCache[song.id] = locals
+                                        children.add(createPlayableMediaItem(song))
+                                    }
+                                }
                             }
                             LIKED_SONGS_ID -> {
-                                youTubeRepository.getLikedMusic().forEach { children.add(createPlayableMediaItem(it)) }
+                                val liked = youTubeRepository.getLikedMusic()
+                                if (liked.isNotEmpty()) {
+                                    liked.forEach { song ->
+                                        playlistContextCache[song.id] = liked
+                                        children.add(createPlayableMediaItem(song))
+                                    }
+                                }
                             }
                             PLAYLISTS_ID -> {
                                 youTubeRepository.getUserPlaylists().forEach { playlist ->
-                                    children.add(createBrowsableMediaItem("playlist_${playlist.id}", playlist.name, playlist.uploaderName, mediaType = MediaMetadata.MEDIA_TYPE_PLAYLIST))
+                                    children.add(createBrowsableMediaItem("playlist_${playlist.id}", playlist.name, playlist.uploaderName, mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS))
                                 }
                             }
                             else -> {
@@ -722,7 +829,7 @@ class MusicPlayerService : MediaLibraryService() {
                                         val section = cachedHomeSections[index]
 
                                         // BUG FIX (Skip): Cache song list for this section so
-                                        // onAddMediaItems can populate the queue for skip support
+                                        // onSetMediaItems can populate the queue for skip support
                                         val sectionSongs = section.items
                                             .filterIsInstance<com.suvojeet.suvmusic.data.model.HomeItem.SongItem>()
                                             .map { it.song }
@@ -758,7 +865,7 @@ class MusicPlayerService : MediaLibraryService() {
                                         youTubeRepository.getPlaylist(playlistId)
                                     }
 
-                                    // BUG FIX (Skip): Populate context cache so onAddMediaItems
+                                    // BUG FIX (Skip): Populate context cache so onSetMediaItems
                                     // can append remaining songs for skip support
                                     if (playlist.songs.isNotEmpty()) {
                                         playlist.songs.forEach { song ->
@@ -781,11 +888,22 @@ class MusicPlayerService : MediaLibraryService() {
                                     playlist.songs.forEach { children.add(createPlayableMediaItem(it)) }
                                 } else if (parentId.startsWith("album_")) {
                                     val albumId = parentId.removePrefix("album_")
-                                    youTubeRepository.getAlbum(albumId)?.songs?.forEach { children.add(createPlayableMediaItem(it)) }
+                                    val album = youTubeRepository.getAlbum(albumId)
+                                    album?.songs?.let { songs ->
+                                        songs.forEach { song ->
+                                            playlistContextCache[song.id] = songs
+                                            children.add(createPlayableMediaItem(song))
+                                        }
+                                    }
                                 } else if (parentId.startsWith("artist_")) {
                                     val artistId = parentId.removePrefix("artist_")
                                     val artist = youTubeRepository.getArtist(artistId)
-                                    artist?.songs?.forEach { children.add(createPlayableMediaItem(it)) }
+                                    artist?.songs?.let { songs ->
+                                        songs.forEach { song ->
+                                            playlistContextCache[song.id] = songs
+                                            children.add(createPlayableMediaItem(song))
+                                        }
+                                    }
                                     artist?.albums?.forEach { children.add(createBrowsableMediaItem("album_${it.id}", it.title, it.artist, mediaType = MediaMetadata.MEDIA_TYPE_ALBUM)) }
                                 }
                             }
@@ -806,6 +924,10 @@ class MusicPlayerService : MediaLibraryService() {
                         val results = youTubeRepository.search(query)
                         cachedSearchQuery = query
                         cachedSearchResults = results
+                        // BUG FIX (Skip): Cache results as context for skip support in search
+                        results.forEach { song ->
+                             playlistContextCache[song.id] = results
+                        }
                         mediaLibrarySession?.notifySearchResultChanged(browser, query, results.size, params)
                         future.set(LibraryResult.ofVoid(params))
                     } catch (e: Exception) {
@@ -825,6 +947,10 @@ class MusicPlayerService : MediaLibraryService() {
                              cachedSearchResults
                          } else {
                              youTubeRepository.search(query)
+                         }
+                         // BUG FIX (Skip): Ensure context cache is populated
+                         results.forEach { song ->
+                             playlistContextCache[song.id] = results
                          }
                          val mediaItems = results.map { createPlayableMediaItem(it) }
                          future.set(LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params))
@@ -916,28 +1042,23 @@ class MusicPlayerService : MediaLibraryService() {
                          }
                          resolvedItem?.let { finalItems.add(it) }
                      }
-                     // BUG FIX (Skip): After resolving the tapped song, asynchronously
-                     // append the rest of its playlist to the player queue.
-                     // This allows AA skip to work. Items have no stream URLs yet —
-                     // MusicPlayer's onMediaItemTransition will resolve them lazily.
-                     if (finalItems.isNotEmpty()) {
+                     
+                     // Fix for Android Auto (No Skip Button): If only one item resolved (from browse/search),
+                     // and we have context, return the FULL list here.
+                     if (finalItems.size == 1) {
                          val firstId = finalItems.first().mediaId
                          val context = playlistContextCache[firstId]
                          if (context != null) {
                              val startIndex = context.indexOfFirst { it.id == firstId }
-                             if (startIndex >= 0 && startIndex < context.size - 1) {
-                                 val remaining = context.subList(startIndex + 1, context.size)
-                                 serviceScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                                     try {
-                                         val player = mediaLibrarySession?.player ?: return@launch
-                                         remaining.forEach { song ->
-                                             player.addMediaItem(createPlayableMediaItem(song))
-                                         }
-                                         android.util.Log.d("MusicPlayerService", "Skip fix: queued ${remaining.size} songs after ${firstId}")
-                                     } catch (e: Exception) {
-                                         android.util.Log.e("MusicPlayerService", "Skip fix queue append failed", e)
-                                     }
-                                 }
+                             if (startIndex != -1) {
+                                 val allContextItems = context.map { createPlayableMediaItem(it) }.toMutableList()
+                                 // Replace the placeholder for current item with the resolved one (with URI)
+                                 allContextItems[startIndex] = finalItems[0]
+                                 
+                                 // Replace finalItems with the full context
+                                 finalItems.clear()
+                                 finalItems.addAll(allContextItems)
+                                 android.util.Log.d("MusicPlayerService", "onAddMediaItems: expanded single item to context of ${finalItems.size} songs")
                              }
                          }
                      }
