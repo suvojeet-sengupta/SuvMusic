@@ -379,9 +379,9 @@ fun LibraryScreen(
             ) {
                 Text(
                     text = "Add to Library",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp)
                 )
 
                 // Create Playlist Item
@@ -398,17 +398,17 @@ fun LibraryScreen(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CircleShape)
+                            .clip(com.suvojeet.suvmusic.ui.theme.SquircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("Create playlist", style = MaterialTheme.typography.titleMedium)
+                    Text("Create playlist", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
 
-                // Import Spotify Item
+                // Import Playlist Item
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -422,15 +422,15 @@ fun LibraryScreen(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
+                            .clip(com.suvojeet.suvmusic.ui.theme.SquircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                         Icon(Icons.Outlined.FileDownload, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                         Icon(Icons.Outlined.FileDownload, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text("Import Playlist", style = MaterialTheme.typography.titleMedium)
+                        Text("Import Playlist", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("Spotify, YouTube or .m3u", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
