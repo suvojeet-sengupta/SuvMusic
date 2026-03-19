@@ -14,6 +14,9 @@ interface LibraryRepository {
     suspend fun getCachedPlaylistSongs(playlistId: String): List<Song>
     fun getCachedPlaylistSongsFlow(playlistId: String): Flow<List<Song>>
     fun getPlaylistSongCountFlow(playlistId: String): Flow<Int>
+    suspend fun isSongInPlaylist(playlistId: String, songId: String): Boolean
+    suspend fun updatePlaylistThumbnail(playlistId: String, thumbnailUrl: String?)
+    suspend fun updatePlaylistName(playlistId: String, name: String)
     suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>)
     suspend fun removePlaylist(playlistId: String)
     suspend fun removeSongFromPlaylist(playlistId: String, songId: String)

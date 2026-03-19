@@ -107,6 +107,7 @@ class PlaylistManagementViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingPlaylist = true) }
             
+            val song = _uiState.value.selectedSong
             val playlistId = if (syncWithYt && sessionManager.isLoggedIn()) {
                 val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
                 youTubeRepository.createPlaylist(title, description, privacyStatus)
@@ -118,7 +119,7 @@ class PlaylistManagementViewModel @Inject constructor(
                         id = id, 
                         title = title, 
                         author = "You", 
-                        thumbnailUrl = null, 
+                        thumbnailUrl = song?.thumbnailUrl, // Use song thumb if creating from a song
                         songs = emptyList()
                     )
                     libraryRepository.savePlaylist(playlist)
@@ -130,12 +131,10 @@ class PlaylistManagementViewModel @Inject constructor(
             
             if (playlistId != null) {
                 // If there's a selected song, add it to the new playlist
-                val song = _uiState.value.selectedSong
                 if (song != null) {
                     val added = if (syncWithYt && sessionManager.isLoggedIn()) {
                         youTubeRepository.addSongToPlaylist(playlistId, song.id)
                     } else {
-                         // Local playlist: libraryRepository handles the addition
                          try {
                              libraryRepository.addSongToPlaylist(playlistId, song)
                              true
@@ -179,7 +178,7 @@ class PlaylistManagementViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         isCreatingPlaylist = false,
-                        errorMessage = "Failed to create playlist."
+                        errorMessage = "Failed to create playlist"
                     )
                 }
             }
@@ -187,7 +186,7 @@ class PlaylistManagementViewModel @Inject constructor(
     }
     
     /**
-     * Add a song to an existing playlist.
+     * Add selected song to an existing playlist.
      */
     fun addSongToPlaylist(playlistId: String) {
         val song = _uiState.value.selectedSong ?: return
@@ -195,15 +194,35 @@ class PlaylistManagementViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isAddingSong = true) }
             
-            val success = if (playlistId.startsWith("local_")) {
+            var success = false
+            var message: String? = null
+
+            if (playlistId.startsWith("local_")) {
                 try {
-                    libraryRepository.addSongToPlaylist(playlistId, song)
-                    true
+                    // 1. Check for duplicates
+                    if (libraryRepository.isSongInPlaylist(playlistId, song.id)) {
+                        success = false
+                        message = "${song.title} is already in this playlist"
+                    } else {
+                        // 2. Add song
+                        libraryRepository.addSongToPlaylist(playlistId, song)
+                        
+                        // 3. Auto-update thumbnail if playlist has none
+                        val playlistItem = libraryRepository.getPlaylistById(playlistId)
+                        if (playlistItem != null && playlistItem.thumbnailUrl.isNullOrBlank()) {
+                            libraryRepository.updatePlaylistThumbnail(playlistId, song.thumbnailUrl)
+                        }
+                        
+                        success = true
+                        message = "Added ${song.title} to playlist"
+                    }
                 } catch (e: Exception) {
-                    false
+                    success = false
+                    message = "Failed to add ${song.title}"
                 }
             } else {
-                youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                success = youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                message = if (success) "Added ${song.title} to playlist" else "Failed to add to YouTube playlist"
             }
             
             _uiState.update { 
@@ -211,8 +230,8 @@ class PlaylistManagementViewModel @Inject constructor(
                     isAddingSong = false,
                     showAddToPlaylistSheet = false,
                     selectedSong = null,
-                    successMessage = if (success) "Added ${song.title} to playlist" else null,
-                    errorMessage = if (!success) "Failed to add ${song.title} to playlist" else null
+                    successMessage = if (success) message else null,
+                    errorMessage = if (!success) message else null
                 )
             }
         }
