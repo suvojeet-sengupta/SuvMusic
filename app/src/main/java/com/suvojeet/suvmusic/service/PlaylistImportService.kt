@@ -6,14 +6,13 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.suvojeet.suvmusic.MainActivity
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
-import com.suvojeet.suvmusic.util.SpotifyImportHelper
+import com.suvojeet.suvmusic.util.PlaylistImportHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,10 +37,13 @@ data class ImportStatus(
 }
 
 @AndroidEntryPoint
-class SpotifyImportService : Service() {
+class PlaylistImportService : Service() {
 
     @Inject
-    lateinit var spotifyImportHelper: SpotifyImportHelper
+    lateinit var playlistImportHelper: PlaylistImportHelper
+
+    @Inject
+    lateinit var spotifyImportHelper: com.suvojeet.suvmusic.util.SpotifyImportHelper
 
     @Inject
     lateinit var youTubeRepository: YouTubeRepository
@@ -62,8 +64,11 @@ class SpotifyImportService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 val url = intent.getStringExtra(EXTRA_URL)
+                val m3uUri = intent.getParcelableExtra<Uri>(EXTRA_M3U_URI)
                 if (url != null) {
-                    startImport(url)
+                    startImport(url = url)
+                } else if (m3uUri != null) {
+                    startImport(m3uUri = m3uUri)
                 }
             }
             ACTION_CANCEL -> {
@@ -73,7 +78,7 @@ class SpotifyImportService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startImport(url: String) {
+    private fun startImport(url: String? = null, m3uUri: Uri? = null) {
         if (currentJob?.isActive == true) return
 
         startForeground(NOTIFICATION_ID, buildNotification("Preparing import...", 0, 0, true))
@@ -83,43 +88,45 @@ class SpotifyImportService : Service() {
                 _importState.update { it.copy(state = ImportStatus.State.PREPARING, error = null) }
                 updateNotification("Fetching playlist details...", 0, 0, true)
 
-                val (playlistName, spotifySongs) = spotifyImportHelper.getPlaylistSongs(url) { count ->
-                    _importState.update { it.copy(currentSong = "Fetched $count songs...") }
-                    updateNotification("Fetching tracks: $count", 0, 0, true)
+                val (playlistName, importTracks) = when {
+                    url != null -> {
+                        playlistImportHelper.getPlaylistSongs(url) { count ->
+                            _importState.update { it.copy(currentSong = "Fetched $count songs...") }
+                            updateNotification("Fetching tracks: $count", 0, 0, true)
+                        }
+                    }
+                    m3uUri != null -> {
+                        playlistImportHelper.parseM3U(m3uUri)
+                    }
+                    else -> "Imported Playlist" to emptyList()
                 }
                 
-                if (spotifySongs.isEmpty()) {
+                if (importTracks.isEmpty()) {
                     _importState.update { it.copy(state = ImportStatus.State.ERROR, error = "No songs found") }
+                    stopForeground(true)
                     stopSelf()
                     return@launch
                 }
 
-                // Append timestamp to avoid duplicates if importing same playlist multiple times, 
-                // or just use the name if preferred. User asked for "same name".
-                // We'll stick to the exact name as requested, or maybe append "(Imported)" if really needed, 
-                // but user said "same name as Spotify playlist".
-                // To be safe against duplicates, maybe we should check if it exists? 
-                // But the requirement is "same name".
-                val playlistTitle = playlistName 
-                val playlistId = youTubeRepository.createPlaylist(playlistTitle, "Imported from Spotify via SuvMusic")
+                val playlistId = youTubeRepository.createPlaylist(playlistName, "Imported via SuvMusic")
 
                 if (playlistId == null) {
                     _importState.update { it.copy(state = ImportStatus.State.ERROR, error = "Failed to create playlist") }
+                    stopForeground(true)
                     stopSelf()
                     return@launch
                 }
 
-                val total = spotifySongs.size
+                val total = importTracks.size
                 var successCount = 0
                 val failedSongs = mutableListOf<Pair<String, String>>()
 
                 _importState.update { it.copy(state = ImportStatus.State.PROCESSING, total = total, progress = 0) }
 
-                spotifySongs.forEachIndexed { index, track ->
+                importTracks.forEachIndexed { index, track ->
                     if (!isActive) return@forEachIndexed
                     val title = track.title
                     val artist = track.artist
-                    val duration = track.durationMs
 
                     _importState.update { 
                         it.copy(
@@ -131,8 +138,13 @@ class SpotifyImportService : Service() {
                     }
                     updateNotification("Importing: $title", index + 1, total, false)
 
-                    // Find Match
-                    val match = spotifyImportHelper.findMatch(title, artist, duration)
+                    // Find Match or use direct sourceId
+                    val match = if (track.sourceId != null) {
+                        youTubeRepository.getSongDetails(track.sourceId)
+                    } else {
+                        // Use findMatch from spotifyImportHelper (it's universal search with title, artist and duration check)
+                        spotifyImportHelper.findMatch(title, artist, track.durationMs)
+                    }
                     
                     if (match != null) {
                          _importState.update { it.copy(thumbnail = match.thumbnailUrl) }
@@ -146,7 +158,6 @@ class SpotifyImportService : Service() {
                         failedSongs.add(title to artist)
                     }
                     
-                    // Small artificial delay for very fast loops to allow UI/Notif to update
                     delay(50) 
                 }
 
@@ -165,9 +176,7 @@ class SpotifyImportService : Service() {
                 _importState.update { it.copy(state = ImportStatus.State.ERROR, error = e.message) }
             } finally {
                 stopForeground(true)
-                if (_importState.value.state != ImportStatus.State.PROCESSING) {
-                    stopSelf()
-                }
+                stopSelf()
             }
         }
     }
@@ -180,7 +189,7 @@ class SpotifyImportService : Service() {
     }
 
     private fun buildNotification(title: String, progress: Int, max: Int, indeterminate: Boolean): android.app.Notification {
-        val cancelIntent = Intent(this, SpotifyImportService::class.java).apply {
+        val cancelIntent = Intent(this, PlaylistImportService::class.java).apply {
             action = ACTION_CANCEL
         }
         val pendingCancelIntent = PendingIntent.getService(
@@ -189,7 +198,7 @@ class SpotifyImportService : Service() {
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_music_note)
-            .setContentTitle("Spotify Import")
+            .setContentTitle("Playlist Import")
             .setContentText(title)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
@@ -225,10 +234,10 @@ class SpotifyImportService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Spotify Import",
+                "Playlist Import",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows progress of Spotify playlist import"
+                description = "Shows progress of playlist import"
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
@@ -241,12 +250,13 @@ class SpotifyImportService : Service() {
     }
 
     companion object {
-        const val CHANNEL_ID = "spotify_import_channel"
+        const val CHANNEL_ID = "playlist_import_channel"
         const val NOTIFICATION_ID = 1001
         
         const val ACTION_START = "com.suvojeet.suvmusic.action.START_IMPORT"
         const val ACTION_CANCEL = "com.suvojeet.suvmusic.action.CANCEL_IMPORT"
         const val EXTRA_URL = "com.suvojeet.suvmusic.extra.URL"
+        const val EXTRA_M3U_URI = "com.suvojeet.suvmusic.extra.M3U_URI"
 
         private val _importState = MutableStateFlow(ImportStatus())
         val importState = _importState.asStateFlow()

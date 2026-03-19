@@ -17,8 +17,9 @@ import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.service.ImportStatus
-import com.suvojeet.suvmusic.service.SpotifyImportService
+import com.suvojeet.suvmusic.service.PlaylistImportService
 import com.suvojeet.suvmusic.util.SpotifyImportHelper
+import com.suvojeet.suvmusic.util.PlaylistImportHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -96,6 +97,7 @@ class LibraryViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val sessionManager: SessionManager,
     private val spotifyImportHelper: SpotifyImportHelper,
+    private val playlistImportHelper: PlaylistImportHelper,
     private val libraryRepository: LibraryRepository,
     private val musicPlayer: MusicPlayer,
     private val workManager: androidx.work.WorkManager,
@@ -156,7 +158,7 @@ class LibraryViewModel @Inject constructor(
 
     private fun observeImportService() {
         viewModelScope.launch {
-            SpotifyImportService.importState.collect { status ->
+            PlaylistImportService.importState.collect { status ->
                 val newState = when (status.state) {
                     ImportStatus.State.IDLE -> ImportState.Idle
                     ImportStatus.State.PREPARING -> ImportState.Loading
@@ -331,11 +333,24 @@ class LibraryViewModel @Inject constructor(
     }
 
 
-    fun importSpotifyPlaylist(url: String) {
+    fun importPlaylist(url: String) {
         val context = appContext
-        val intent = Intent(context, SpotifyImportService::class.java).apply {
-            action = SpotifyImportService.ACTION_START
-            putExtra(SpotifyImportService.EXTRA_URL, url)
+        val intent = Intent(context, PlaylistImportService::class.java).apply {
+            action = PlaylistImportService.ACTION_START
+            putExtra(PlaylistImportService.EXTRA_URL, url)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+
+    fun importM3U(uri: Uri) {
+        val context = appContext
+        val intent = Intent(context, PlaylistImportService::class.java).apply {
+            action = PlaylistImportService.ACTION_START
+            putExtra(PlaylistImportService.EXTRA_M3U_URI, uri)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
@@ -346,8 +361,8 @@ class LibraryViewModel @Inject constructor(
 
     fun cancelImport() {
         val context = appContext
-        val intent = Intent(context, SpotifyImportService::class.java).apply {
-            action = SpotifyImportService.ACTION_CANCEL
+        val intent = Intent(context, PlaylistImportService::class.java).apply {
+            action = PlaylistImportService.ACTION_CANCEL
         }
         context.startService(intent)
     }

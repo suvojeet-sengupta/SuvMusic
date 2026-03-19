@@ -200,6 +200,37 @@ class SessionManager @Inject constructor(
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
+        
+        private val ALBUM_ART_DYNAMIC_COLORS_KEY = booleanPreferencesKey("album_art_dynamic_colors")
+        private val ROTATING_VINYL_ANIMATION_KEY = booleanPreferencesKey("rotating_vinyl_animation")
+    }
+
+    // --- Appearance Settings ---
+
+    suspend fun isAlbumArtDynamicColorsEnabled(): Boolean =
+        context.dataStore.data.first()[ALBUM_ART_DYNAMIC_COLORS_KEY] ?: true
+
+    val albumArtDynamicColorsEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ALBUM_ART_DYNAMIC_COLORS_KEY] ?: true
+    }
+
+    suspend fun setAlbumArtDynamicColorsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ALBUM_ART_DYNAMIC_COLORS_KEY] = enabled
+        }
+    }
+
+    suspend fun isRotatingVinylAnimationEnabled(): Boolean =
+        context.dataStore.data.first()[ROTATING_VINYL_ANIMATION_KEY] ?: false
+
+    val rotatingVinylAnimationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ROTATING_VINYL_ANIMATION_KEY] ?: false
+    }
+
+    suspend fun setRotatingVinylAnimationEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ROTATING_VINYL_ANIMATION_KEY] = enabled
+        }
     }
 
     // --- Home Screen Preferences ---

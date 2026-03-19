@@ -172,9 +172,9 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- Spotify Import Service -->
+        <!-- Playlist Import Service -->
         <service
-            android:name=".service.SpotifyImportService"
+            android:name=".service.PlaylistImportService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
         
