@@ -377,6 +377,12 @@ class PlaylistViewModel @Inject constructor(
         }
         
         viewModelScope.launch {
+            if (playlistId.startsWith("local_") || playlistId == "LM") {
+                // Local reorder - just replace the whole list in DB
+                libraryRepository.savePlaylistSongs(playlistId, songs)
+                return@launch
+            }
+
             val setVideoId = movedSong.setVideoId
             
             if (setVideoId != null) {

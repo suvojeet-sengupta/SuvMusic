@@ -217,6 +217,26 @@ fun AppearanceSettingsScreen(
                         checked = uiState.playerAnimatedBackgroundEnabled,
                         onCheckedChange = { viewModel.setPlayerAnimatedBackgroundEnabled(it) }
                     )
+                    
+                    HorizontalDivider()
+                    
+                    AppearanceSwitchItem(
+                        icon = Icons.Default.Palette,
+                        title = "Album Art Dynamic Colors",
+                        subtitle = "Use album art colors for player UI",
+                        checked = uiState.albumArtDynamicColorsEnabled,
+                        onCheckedChange = { viewModel.setAlbumArtDynamicColorsEnabled(it) }
+                    )
+
+                    HorizontalDivider()
+
+                    AppearanceSwitchItem(
+                        icon = Icons.Default.Album,
+                        title = "Rotating Vinyl Animation",
+                        subtitle = "Rotate artwork in vinyl mode",
+                        checked = uiState.rotatingVinylAnimationEnabled,
+                        onCheckedChange = { viewModel.setRotatingVinylAnimationEnabled(it) }
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }

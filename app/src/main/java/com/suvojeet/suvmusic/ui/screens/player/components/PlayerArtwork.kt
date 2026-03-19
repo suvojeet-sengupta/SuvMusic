@@ -101,6 +101,8 @@ fun AlbumArtwork(
     title: String?,
     dominantColors: DominantColors,
     isLoading: Boolean = false,
+    isPlaying: Boolean = false,
+    isRotatingEnabled: Boolean = false,
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
     initialShape: ArtworkShape = ArtworkShape.ROUNDED_SQUARE,
@@ -123,12 +125,24 @@ fun AlbumArtwork(
     }
     
     // Vinyl rotation animation (only for vinyl mode)
-    var vinylRotation by remember { mutableStateOf(0f) }
-    val animatedVinylRotation by animateFloatAsState(
-        targetValue = vinylRotation,
-        animationSpec = tween(durationMillis = 100),
+    var vinylDragRotation by remember { mutableStateOf(0f) }
+    
+    val infiniteTransition = rememberInfiniteTransition(label = "vinyl_infinite")
+    val infiniteRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(8000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
         label = "vinyl_rotation"
     )
+    
+    val currentRotation = when {
+        currentShape == ArtworkShape.VINYL && isRotatingEnabled && isPlaying -> infiniteRotation + vinylDragRotation
+        currentShape == ArtworkShape.VINYL -> vinylDragRotation
+        else -> 0f
+    }
     
     // Animate corner radius based on shape - use coerceAtLeast to prevent negative values
     val targetCornerRadius = when (currentShape) {
@@ -218,7 +232,7 @@ fun AlbumArtwork(
                             offsetX += (dragAmount * resistance)
                             // Rotate vinyl while dragging
                             if (currentShape == ArtworkShape.VINYL) {
-                                vinylRotation += (dragAmount * 0.1f * resistance)
+                                vinylDragRotation += (dragAmount * 0.1f * resistance)
                             }
                         }
                     )
@@ -233,7 +247,7 @@ fun AlbumArtwork(
                         val dynamicScale = (artworkSize.fraction / maxFraction) * scale
                         scaleX = dynamicScale
                         scaleY = dynamicScale
-                        rotationZ = rotation + if (currentShape == ArtworkShape.VINYL) animatedVinylRotation else 0f
+                        rotationZ = rotation + currentRotation
                     }
                     .shadow(
                         elevation = 16.dp,
