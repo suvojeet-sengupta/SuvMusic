@@ -95,7 +95,7 @@ fun MediaMenuBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(com.suvojeet.suvmusic.ui.theme.SquircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         if (thumbnailUrl != null) {
@@ -234,7 +234,7 @@ private fun QuickActionButton(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = com.suvojeet.suvmusic.ui.theme.SquircleShape,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         modifier = modifier.height(64.dp)
     ) {

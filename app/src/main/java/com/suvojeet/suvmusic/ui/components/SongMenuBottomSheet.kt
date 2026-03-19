@@ -97,19 +97,19 @@ fun SongMenuBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(com.suvojeet.suvmusic.ui.theme.SquircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        if (song.thumbnailUrl != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(song.thumbnailUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(song.thumbnailUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                         }
                     }
 
