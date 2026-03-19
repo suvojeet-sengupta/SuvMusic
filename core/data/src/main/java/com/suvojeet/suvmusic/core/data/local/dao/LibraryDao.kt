@@ -48,6 +48,15 @@ interface LibraryDao {
     @Query("SELECT COUNT(*) FROM playlist_songs WHERE playlistId = :playlistId")
     fun getPlaylistSongCountFlow(playlistId: String): Flow<Int>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM playlist_songs WHERE playlistId = :playlistId AND songId = :songId)")
+    suspend fun isSongInPlaylist(playlistId: String, songId: String): Boolean
+
+    @Query("UPDATE library_items SET thumbnailUrl = :thumbnailUrl WHERE id = :id AND type = 'PLAYLIST'")
+    suspend fun updatePlaylistThumbnail(id: String, thumbnailUrl: String?)
+
+    @Query("UPDATE library_items SET title = :name WHERE id = :id AND type = 'PLAYLIST'")
+    suspend fun updatePlaylistName(id: String, name: String)
+
     @Transaction
     suspend fun replacePlaylistSongs(playlistId: String, songs: List<PlaylistSongEntity>) {
         deletePlaylistSongs(playlistId)
