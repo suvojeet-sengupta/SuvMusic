@@ -384,7 +384,8 @@ fun PlayerScreen(
                         LandscapePlayerContent(
                             song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
                             currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
-                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, actions = actions,
+                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
+                            actions = actions,
                             onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
                             onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
                             onShowQueue = { activeOverlay = PlayerOverlay.Queue },
@@ -411,7 +412,8 @@ fun PlayerScreen(
                         PortraitPlayerContent(
                             song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
                             currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
-                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, player = player, isFullScreen = isFullScreen,
+                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
+                            player = player, isFullScreen = isFullScreen,
                             isCompactHeight = isCompactHeight, actions = actions,
                             onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
                             onShowQueue = { activeOverlay = PlayerOverlay.Queue },
@@ -479,6 +481,7 @@ fun PortraitPlayerContent(
     currentSeekbarStyle: SeekbarStyle,
     sponsorSegments: List<SponsorSegment>,
     audioArEnabled: Boolean,
+    isRotatingEnabled: Boolean,
     player: Player?,
     isFullScreen: Boolean,
     isCompactHeight: Boolean,
@@ -582,7 +585,7 @@ fun PortraitPlayerContent(
                 } else {
                     AlbumArtwork(
                         imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
-                        isPlaying = playerState.isPlaying, isRotatingEnabled = rotatingVinylAnimationEnabled,
+                        isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
                         onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                         onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
                     )
@@ -643,7 +646,7 @@ fun PortraitPlayerContent(
 fun LandscapePlayerContent(
     song: com.suvojeet.suvmusic.core.model.Song?, playerState: PlayerState, playbackInfo: PlayerState, dominantColors: DominantColors,
     currentArtworkShape: ArtworkShape, currentArtworkSize: ArtworkSize, currentSeekbarStyle: SeekbarStyle, sponsorSegments: List<SponsorSegment>,
-    audioArEnabled: Boolean, actions: PlayerScreenActions, onShowActions: () -> Unit, onShowLyrics: () -> Unit, onShowQueue: () -> Unit,
+    audioArEnabled: Boolean, isRotatingEnabled: Boolean, actions: PlayerScreenActions, onShowActions: () -> Unit, onShowLyrics: () -> Unit, onShowQueue: () -> Unit,
     onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit,
     isVideoMode: Boolean, onToggleVideoMode: () -> Unit, handleDoubleTapSeek: (Boolean) -> Unit, onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
@@ -718,7 +721,7 @@ fun LandscapePlayerContent(
                 } else {
                     AlbumArtwork(
                         imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
-                        isPlaying = playerState.isPlaying, isRotatingEnabled = rotatingVinylAnimationEnabled,
+                        isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
                         onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                         onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
                     )
