@@ -113,6 +113,18 @@ class LibraryRepositoryImpl @Inject constructor(
         return libraryDao.getPlaylistSongCountFlow(playlistId)
     }
 
+    override suspend fun isSongInPlaylist(playlistId: String, songId: String): Boolean {
+        return libraryDao.isSongInPlaylist(playlistId, songId)
+    }
+
+    override suspend fun updatePlaylistThumbnail(playlistId: String, thumbnailUrl: String?) {
+        libraryDao.updatePlaylistThumbnail(playlistId, thumbnailUrl)
+    }
+
+    override suspend fun updatePlaylistName(playlistId: String, name: String) {
+        libraryDao.updatePlaylistName(playlistId, name)
+    }
+
     override suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>) {
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
