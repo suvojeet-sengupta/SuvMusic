@@ -1032,7 +1032,14 @@ class YouTubeRepository @Inject constructor(
              // Final fallback: try cache one last time
             val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
             if (cachedSongs.isNotEmpty()) {
-                return@withContext Playlist(playlistId, "Cached Playlist", "", null, cachedSongs)
+                val cachedPlaylist = libraryRepository.getPlaylistById(playlistId)
+                return@withContext Playlist(
+                    id = playlistId, 
+                    title = cachedPlaylist?.title ?: "Cached Playlist", 
+                    author = cachedPlaylist?.subtitle ?: "", 
+                    thumbnailUrl = cachedPlaylist?.thumbnailUrl, 
+                    songs = cachedSongs
+                )
             }
             Playlist(playlistId, "Error loading playlist", "", null, emptyList())
         }

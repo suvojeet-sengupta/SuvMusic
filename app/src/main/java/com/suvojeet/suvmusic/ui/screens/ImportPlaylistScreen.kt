@@ -42,6 +42,7 @@ fun ImportPlaylistScreen(
     importState: ImportState,
     onDismiss: () -> Unit,
     onImport: (url: String) -> Unit,
+    onImportM3U: (android.net.Uri) -> Unit,
     onCancel: () -> Unit,
     onReset: () -> Unit
 ) {
@@ -63,7 +64,9 @@ fun ImportPlaylistScreen(
             topBar = {
                 if (canDismiss) {
                     TopAppBar(
-                        title = {},
+                        title = {
+                             Text("Import Playlist", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        },
                         navigationIcon = {
                             IconButton(onClick = {
                                 onReset()
@@ -94,7 +97,7 @@ fun ImportPlaylistScreen(
                     label = "ImportState"
                 ) { state ->
                     when (state) {
-                        is ImportState.Idle -> InputView(onImport)
+                        is ImportState.Idle -> InputView(onImport, onImportM3U)
                         is ImportState.Loading -> LoadingView(onCancel)
                         is ImportState.Processing -> ProcessingView(state, onCancel)
                         is ImportState.Success -> SuccessView(
@@ -106,7 +109,7 @@ fun ImportPlaylistScreen(
                             onShare = {
                                 val sendIntent = Intent().apply {
                                     action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, "I just imported ${state.successCount} songs from Spotify to YouTube Music using SuvMusic! 🎵")
+                                    putExtra(Intent.EXTRA_TEXT, "I just imported ${state.successCount} songs to SuvMusic! 🎵")
                                     type = "text/plain"
                                 }
                                 val shareIntent = Intent.createChooser(sendIntent, "Share Import Stats")
@@ -122,15 +125,23 @@ fun ImportPlaylistScreen(
 }
 
 @Composable
-private fun InputView(onImport: (String) -> Unit) {
+private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri) -> Unit) {
     var url by remember { mutableStateOf("") }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     
+    val m3uPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            onImportM3U(uri)
+        }
+    }
+
     // Auto-paste if valid link in clipboard (only once on appearing)
     LaunchedEffect(Unit) {
         val clipText = clipboard.getClipEntry()?.clipData?.getItemAt(0)?.text?.toString()
-        if (clipText != null && isValidSpotifyUrl(clipText) && url.isEmpty()) {
+        if (clipText != null && isValidUrl(clipText) && url.isEmpty()) {
             url = clipText
         }
     }
@@ -140,29 +151,41 @@ private fun InputView(onImport: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .imePadding() // Handle keyboard
+            .imePadding()
     ) {
-        Icon(
-            imageVector = Icons.Default.MusicNote, 
-            contentDescription = null,
-            tint = Color(0xFF1DB954), 
-            modifier = Modifier
-                .size(64.dp)
-                .background(Color(0xFF1DB954).copy(alpha = 0.1f), CircleShape)
-                .padding(16.dp)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.MusicNote, 
+                contentDescription = null,
+                tint = Color(0xFF1DB954), 
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFF1DB954).copy(alpha = 0.1f), CircleShape)
+                    .padding(8.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Icon(
+                imageVector = Icons.Default.Share, 
+                contentDescription = null,
+                tint = Color(0xFFFF0000), 
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFFFF0000).copy(alpha = 0.1f), CircleShape)
+                    .padding(8.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Import from Spotify",
+            text = "Import Your Music",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
         Text(
-            text = "Paste your Spotify playlist link below to start transferring.",
+            text = "Paste a Spotify or YouTube Music link, or upload an .m3u file.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -173,7 +196,7 @@ private fun InputView(onImport: (String) -> Unit) {
             value = url,
             onValueChange = { url = it },
             label = { Text("Playlist Link") },
-            placeholder = { Text("https://open.spotify.com/playlist/...") },
+            placeholder = { Text("Spotify or YouTube Music URL") },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth(),
@@ -199,32 +222,41 @@ private fun InputView(onImport: (String) -> Unit) {
             )
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = { onImport(url) },
-            enabled = isValidSpotifyUrl(url),
+            enabled = isValidUrl(url),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-            )
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Text(
-                "Continue",
-                style = MaterialTheme.typography.labelLarge
-            )
+            Text("Continue with Link", style = MaterialTheme.typography.labelLarge)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        OutlinedButton(
+            onClick = { m3uPicker.launch("audio/x-mpegurl") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Import .m3u File", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
-private fun isValidSpotifyUrl(url: String): Boolean {
+private fun isValidUrl(url: String): Boolean {
     val cleanUrl = url.trim()
     return cleanUrl.contains("spotify.com/") || 
-           cleanUrl.contains("spotify.link")
+           cleanUrl.contains("spotify.link") ||
+           cleanUrl.contains("youtube.com/") ||
+           cleanUrl.contains("youtu.be/")
 }
 
 @Composable

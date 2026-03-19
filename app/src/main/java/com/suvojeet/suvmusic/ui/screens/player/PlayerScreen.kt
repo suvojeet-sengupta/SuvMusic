@@ -220,6 +220,8 @@ fun PlayerScreen(
     val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsStateWithLifecycle(initialValue = 1.5f)
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 26f)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val albumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     
     val pendingIntent by playerViewModel.pendingIntent.collectAsStateWithLifecycle()
     val deleteLauncher = rememberLauncherForActivityResult(
@@ -261,24 +263,37 @@ fun PlayerScreen(
 
     val extractedColors = rememberDominantColors(imageUrl = song?.thumbnailUrl, isDarkTheme = isAppInDarkTheme)
     
+    // Apply dynamic colors only if enabled
+    val colorScheme = MaterialTheme.colorScheme
+    val finalColors = if (albumArtDynamicColorsEnabled) {
+        extractedColors
+    } else {
+        DominantColors(
+            primary = colorScheme.primary,
+            secondary = colorScheme.secondary,
+            accent = colorScheme.tertiary,
+            onBackground = colorScheme.onBackground
+        )
+    }
+
     // M3E Spring-based color transitions
     val animatedPrimary by animateColorAsState(
-        targetValue = extractedColors.primary,
+        targetValue = finalColors.primary,
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
         label = "primary"
     )
     val animatedSecondary by animateColorAsState(
-        targetValue = extractedColors.secondary,
+        targetValue = finalColors.secondary,
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
         label = "secondary"
     )
     val animatedAccent by animateColorAsState(
-        targetValue = extractedColors.accent,
+        targetValue = finalColors.accent,
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
         label = "accent"
     )
     val animatedOnBg by animateColorAsState(
-        targetValue = extractedColors.onBackground,
+        targetValue = finalColors.onBackground,
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
         label = "onBg"
     )
@@ -567,6 +582,7 @@ fun PortraitPlayerContent(
                 } else {
                     AlbumArtwork(
                         imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
+                        isPlaying = playerState.isPlaying, isRotatingEnabled = rotatingVinylAnimationEnabled,
                         onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                         onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
                     )
@@ -702,6 +718,7 @@ fun LandscapePlayerContent(
                 } else {
                     AlbumArtwork(
                         imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
+                        isPlaying = playerState.isPlaying, isRotatingEnabled = rotatingVinylAnimationEnabled,
                         onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                         onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
                     )
