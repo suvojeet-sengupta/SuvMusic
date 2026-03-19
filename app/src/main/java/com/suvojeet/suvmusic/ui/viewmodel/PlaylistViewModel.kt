@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
+import java.util.UUID
 import javax.inject.Inject
 
 data class PlaylistUiState(
@@ -324,36 +325,35 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
-    fun renamePlaylist(newName: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isRenaming = true) }
-            val success = youTubeRepository.renamePlaylist(playlistId, newName)
-            if (success) {
-                // Refresh
-                loadPlaylist()
-            }
-            _uiState.update { it.copy(isRenaming = false) }
-        }
-    }
-    
     fun createPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean) {
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingPlaylist = true) }
+            
+            val song = _uiState.value.selectedSong
             try {
-                if (syncWithYt && sessionManager.isLoggedIn()) {
+                val playlistId = if (syncWithYt && sessionManager.isLoggedIn()) {
                     val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
                     youTubeRepository.createPlaylist(title, description, privacyStatus)
                 } else {
                     // Create Local Playlist
-                    val id = "local_" + java.util.UUID.randomUUID().toString()
-                    val playlist = com.suvojeet.suvmusic.core.model.Playlist(
+                    val id = "local_" + UUID.randomUUID().toString()
+                    val playlist = Playlist(
                         id = id, 
                         title = title, 
                         author = "You", 
-                        thumbnailUrl = null, 
+                        thumbnailUrl = song?.thumbnailUrl, 
                         songs = emptyList()
                     )
                     libraryRepository.savePlaylist(playlist)
+                    id
+                }
+
+                if (playlistId != null && song != null) {
+                    if (syncWithYt && sessionManager.isLoggedIn()) {
+                        youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                    } else {
+                        libraryRepository.addSongToPlaylist(playlistId, song)
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to create playlist: ${e.message}") }
