@@ -423,16 +423,15 @@ fun LibraryScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF1DB954)), // Spotify Green
+                            .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                         // Use generic icon or download generic one, for now Add is fine or specific import
-                         Icon(Icons.Outlined.FileDownload, null, tint = Color.White)
+                         Icon(Icons.Outlined.FileDownload, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text("Import from Spotify", style = MaterialTheme.typography.titleMedium)
-                        Text("Transfer your playlists", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Import Playlist", style = MaterialTheme.typography.titleMedium)
+                        Text("Spotify, YouTube or .m3u", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
