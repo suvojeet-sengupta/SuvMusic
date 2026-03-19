@@ -29,7 +29,8 @@ class PlaylistImportHelper @Inject constructor(
         val title: String,
         val artist: String,
         val durationMs: Long = 0,
-        val sourceId: String? = null // For direct YTM imports
+        val sourceId: String? = null, // For direct YTM imports
+        val song: Song? = null // For direct native imports
     )
 
     /**
@@ -60,12 +61,17 @@ class PlaylistImportHelper @Inject constructor(
     ): Pair<String, List<ImportTrack>> = withContext(Dispatchers.IO) {
         try {
             val uri = Uri.parse(url)
-            val playlistId = uri.getQueryParameter("list") ?: url.substringAfter("list=", "").substringBefore("&")
+            var playlistId = uri.getQueryParameter("list") ?: url.substringAfter("list=", "").substringBefore("&")
             
+            // Handle album browse IDs too if they are provided
+            if (playlistId.isBlank() && (url.contains("browse/") || url.contains("channel/"))) {
+                playlistId = url.substringAfter("browse/").substringAfter("channel/").substringBefore("?").substringBefore("/")
+            }
+
             if (playlistId.isNotBlank()) {
                 val playlist = youTubeRepository.getPlaylist(playlistId)
                 val tracks = playlist.songs.map { 
-                    ImportTrack(it.title, it.artist, it.duration, it.id)
+                    ImportTrack(it.title, it.artist, it.duration, it.id, it)
                 }
                 onTrackFetch(tracks.size)
                 return@withContext playlist.title to tracks
