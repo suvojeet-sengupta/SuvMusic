@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.suvojeet.suvmusic.R
+import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.util.PlaylistImportHelper
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,6 +49,9 @@ class PlaylistImportService : Service() {
 
     @Inject
     lateinit var youTubeRepository: YouTubeRepository
+
+    @Inject
+    lateinit var libraryRepository: com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -108,13 +113,23 @@ class PlaylistImportService : Service() {
                     return@launch
                 }
 
-                val playlistId = youTubeRepository.createPlaylist(playlistName, "Imported via SuvMusic")
+                var finalPlaylistId = youTubeRepository.createPlaylist(playlistName, "Imported via SuvMusic")
+                var isLocal = false
 
-                if (playlistId == null) {
-                    _importState.update { it.copy(state = ImportStatus.State.ERROR, error = "Failed to create playlist") }
-                    stopForeground(true)
-                    stopSelf()
-                    return@launch
+                if (finalPlaylistId == null) {
+                    // Fallback to local playlist
+                    finalPlaylistId = "local_" + java.util.UUID.randomUUID().toString()
+                    val firstSongThumb = importTracks.firstOrNull { it.song != null }?.song?.thumbnailUrl
+                    libraryRepository.savePlaylist(
+                        Playlist(
+                            id = finalPlaylistId, 
+                            title = playlistName, 
+                            author = "You", 
+                            thumbnailUrl = firstSongThumb, 
+                            songs = emptyList()
+                        )
+                    )
+                    isLocal = true
                 }
 
                 val total = importTracks.size
@@ -138,17 +153,21 @@ class PlaylistImportService : Service() {
                     }
                     updateNotification("Importing: $title", index + 1, total, false)
 
-                    // Find Match or use direct sourceId
-                    val match = if (track.sourceId != null) {
-                        youTubeRepository.getSongDetails(track.sourceId)
-                    } else {
-                        // Use findMatch from spotifyImportHelper (it's universal search with title, artist and duration check)
-                        spotifyImportHelper.findMatch(title, artist, track.durationMs)
+                    // Find Match or use direct song/sourceId
+                    val match = when {
+                        track.song != null -> track.song
+                        track.sourceId != null -> youTubeRepository.getSongDetails(track.sourceId)
+                        else -> spotifyImportHelper.findMatch(title, artist, track.durationMs)
                     }
                     
                     if (match != null) {
                          _importState.update { it.copy(thumbnail = match.thumbnailUrl) }
-                         val added = youTubeRepository.addSongToPlaylist(playlistId, match.id)
+                         val added = if (isLocal) {
+                             libraryRepository.addSongToPlaylist(finalPlaylistId!!, match)
+                             true
+                         } else {
+                             youTubeRepository.addSongToPlaylist(finalPlaylistId!!, match.id)
+                         }
                          if (added) {
                              successCount++
                          } else {
