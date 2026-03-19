@@ -30,9 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.ImportState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,7 +67,7 @@ fun ImportPlaylistScreen(
                 if (canDismiss) {
                     TopAppBar(
                         title = {
-                             Text("Import Playlist", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                             Text("Import Playlist", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                         },
                         navigationIcon = {
                             IconButton(onClick = {
@@ -159,9 +161,9 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
                 contentDescription = null,
                 tint = Color(0xFF1DB954), 
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(Color(0xFF1DB954).copy(alpha = 0.1f), CircleShape)
-                    .padding(8.dp)
+                    .size(56.dp)
+                    .background(Color(0xFF1DB954).copy(alpha = 0.1f), SquircleShape)
+                    .padding(12.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Icon(
@@ -169,9 +171,9 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
                 contentDescription = null,
                 tint = Color(0xFFFF0000), 
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(Color(0xFFFF0000).copy(alpha = 0.1f), CircleShape)
-                    .padding(8.dp)
+                    .size(56.dp)
+                    .background(Color(0xFFFF0000).copy(alpha = 0.1f), SquircleShape)
+                    .padding(12.dp)
             )
         }
 
@@ -180,7 +182,7 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
         Text(
             text = "Import Your Music",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -189,7 +191,7 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 12.dp, bottom = 32.dp)
         )
 
         OutlinedTextField(
@@ -198,8 +200,9 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
             label = { Text("Playlist Link") },
             placeholder = { Text("Spotify or YouTube Music URL") },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = SquircleShape,
             modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             trailingIcon = {
                 if (url.isNotEmpty()) {
                     IconButton(onClick = { url = "" }) {
@@ -222,17 +225,21 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
             )
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Button(
             onClick = { onImport(url) },
             enabled = isValidUrl(url),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+                .height(56.dp),
+            shape = SquircleShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
-            Text("Continue with Link", style = MaterialTheme.typography.labelLarge)
+            Text("Continue with Link", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold)
         }
         
         Spacer(modifier = Modifier.height(16.dp))
@@ -241,12 +248,12 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
             onClick = { m3uPicker.launch("audio/x-mpegurl") },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+                .height(56.dp),
+            shape = SquircleShape
         ) {
-            Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Import .m3u File", style = MaterialTheme.typography.labelLarge)
+            Text("Import .m3u File", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -269,7 +276,7 @@ private fun ProcessingView(state: ImportState.Processing, onCancel: () -> Unit) 
     ) {
         // Song Artwork
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = SquircleShape,
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier.size(180.dp)
         ) {
@@ -360,7 +367,7 @@ private fun ProcessingView(state: ImportState.Processing, onCancel: () -> Unit) 
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
-                .clip(RoundedCornerShape(3.dp)),
+                .clip(CircleShape),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -371,9 +378,10 @@ private fun ProcessingView(state: ImportState.Processing, onCancel: () -> Unit) 
             onClick = onCancel,
             colors = ButtonDefaults.textButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
-            )
+            ),
+            shape = SquircleShape
         ) {
-            Text("Cancel Import")
+            Text("Cancel Import", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -402,7 +410,7 @@ private fun SuccessView(
         Text(
             text = "All Done!",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface
         )
         
@@ -419,7 +427,7 @@ private fun SuccessView(
             
             Surface(
                 color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp),
+                shape = SquircleShape,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -459,26 +467,26 @@ private fun SuccessView(
         
         Button(
             onClick = onShare,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = SquircleShape
         ) {
              Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp))
              Spacer(modifier = Modifier.width(8.dp))
-             Text("Share Statistics")
+             Text("Share Statistics", fontWeight = FontWeight.Bold)
         }
         
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = onDone,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = SquircleShape
         ) {
-            Text("Go to Library")
+            Text("Go to Library", fontWeight = FontWeight.ExtraBold)
         }
     }
 }
@@ -497,6 +505,7 @@ private fun LoadingView(onCancel: () -> Unit) {
         Text(
             text = "Fetching Playlist Information...",
             style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -504,9 +513,10 @@ private fun LoadingView(onCancel: () -> Unit) {
             onClick = onCancel,
             colors = ButtonDefaults.textButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
-            )
+            ),
+            shape = SquircleShape
         ) {
-            Text("Cancel")
+            Text("Cancel", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -531,7 +541,7 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
         Text(
             text = "Import Failed",
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface
         )
         
@@ -540,15 +550,15 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 12.dp, bottom = 32.dp)
         )
 
         Button(
             onClick = onRetry,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = SquircleShape
         ) {
-            Text("Try Again")
+            Text("Try Again", fontWeight = FontWeight.ExtraBold)
         }
     }
 }

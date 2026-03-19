@@ -60,22 +60,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
-import com.suvojeet.suvmusic.data.model.ImportResult
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.ImportState
-
-// Library UI Colors (Apple Music Dark Theme)
-private val DarkBackground = Color(0xFF1C1C1E)
-private val DarkSurface = Color(0xFF2C2C2E)
-private val AccentRed = Color(0xFFFA2D48)
-private val AccentGradient = listOf(Color(0xFFFA2D48), Color(0xFFFF6B6B))
-private val TextPrimary = Color.White
-private val TextSecondary = Color.White.copy(alpha = 0.5f)
 
 /**
  * Bottom sheet to add a song to an existing playlist or create a new one.
- * Styled to match Apple Music dark theme.
+ * Styled with Material 3 Expressive aesthetics.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,8 +86,8 @@ fun AddToPlaylistSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = DarkBackground,
-            contentColor = TextPrimary,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) },
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
@@ -109,14 +101,14 @@ fun AddToPlaylistSheet(
                     text = "Add to Playlist",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                 )
                 
                 // Song info - Compact Preview
                 Surface(
-                    color = DarkSurface.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = SquircleShape,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 12.dp)
@@ -130,7 +122,7 @@ fun AddToPlaylistSheet(
                             contentDescription = song.title,
                             modifier = Modifier
                                 .size(56.dp)
-                                .clip(RoundedCornerShape(8.dp)),
+                                .clip(SquircleShape),
                             contentScale = ContentScale.Crop
                         )
                         
@@ -141,14 +133,14 @@ fun AddToPlaylistSheet(
                                 text = song.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = song.artist,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -156,11 +148,11 @@ fun AddToPlaylistSheet(
                     }
                 }
                 
-                // New Playlist Button - Gradient Accent
+                // New Playlist Button
                 Surface(
                     onClick = onCreateNewPlaylist,
-                    shape = RoundedCornerShape(16.dp),
-                    color = DarkSurface,
+                    shape = SquircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp)
@@ -172,14 +164,14 @@ fun AddToPlaylistSheet(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Brush.linearGradient(AccentGradient)),
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -190,14 +182,14 @@ fun AddToPlaylistSheet(
                             text = "New Playlist...",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = AccentRed
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
 
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                    color = TextSecondary.copy(alpha = 0.1f)
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
                 
                 // Playlists list
@@ -210,7 +202,7 @@ fun AddToPlaylistSheet(
                     ) {
                         LoadingIndicator(
                             modifier = Modifier.size(32.dp),
-                            color = AccentRed
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 } else if (playlists.isEmpty()) {
@@ -223,14 +215,14 @@ fun AddToPlaylistSheet(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                             contentDescription = null,
-                            tint = TextSecondary.copy(alpha = 0.3f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "You don't have any playlists yet",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -238,7 +230,7 @@ fun AddToPlaylistSheet(
                     Text(
                         text = "CHOOSE A PLAYLIST",
                         style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp,
                         modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
@@ -264,8 +256,8 @@ fun AddToPlaylistSheet(
                                 Box(
                                     modifier = Modifier
                                         .size(52.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(DarkSurface)
+                                        .clip(SquircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 ) {
                                     if (!playlist.thumbnailUrl.isNullOrEmpty()) {
                                         AsyncImage(
@@ -278,7 +270,7 @@ fun AddToPlaylistSheet(
                                         Icon(
                                             imageVector = Icons.Default.MusicNote,
                                             contentDescription = null,
-                                            tint = TextSecondary.copy(alpha = 0.5f),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                             modifier = Modifier
                                                 .align(Alignment.Center)
                                                 .size(24.dp)
@@ -293,7 +285,7 @@ fun AddToPlaylistSheet(
                                         text = playlist.name,
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = TextPrimary,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -301,13 +293,13 @@ fun AddToPlaylistSheet(
                                         Text(
                                             text = playlist.uploaderName,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = TextSecondary
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         if (playlist.songCount > 0) {
                                             Text(
                                                 text = " • ${playlist.songCount} songs",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = TextSecondary
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -316,7 +308,7 @@ fun AddToPlaylistSheet(
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = null,
-                                    tint = TextSecondary.copy(alpha = 0.5f),
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -329,12 +321,8 @@ fun AddToPlaylistSheet(
 }
 
 /**
- * Full-screen dialog to create a new playlist on YouTube Music.
- * Supports light/dark mode with MaterialTheme colors.
- */
-/**
- * Full-screen dialog to create a new playlist on YouTube Music.
- * Supports light/dark mode with MaterialTheme colors and premium styling.
+ * Full-screen dialog to create a new playlist.
+ * Styled with Material 3 Expressive aesthetics.
  */
 @Composable
 fun CreatePlaylistDialog(
@@ -350,10 +338,6 @@ fun CreatePlaylistDialog(
         var syncWithYt by remember { mutableStateOf(isLoggedIn) }
         var isPrivate by remember { mutableStateOf(true) }
         
-        // Theme-aware colors
-        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-        val backgroundColor = MaterialTheme.colorScheme.surface
-        val primaryColor = MaterialTheme.colorScheme.primary
         val onSurface = MaterialTheme.colorScheme.onSurface
         val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
         
@@ -367,7 +351,7 @@ fun CreatePlaylistDialog(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background) // Main background
+                    .background(MaterialTheme.colorScheme.surface)
                     .statusBarsPadding()
                     .navigationBarsPadding()
             ) {
@@ -390,8 +374,8 @@ fun CreatePlaylistDialog(
                         
                         Text(
                             text = "New Playlist",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
                             color = onSurface,
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center
@@ -405,18 +389,15 @@ fun CreatePlaylistDialog(
                                 }
                             },
                             enabled = title.isNotBlank() && !isCreating,
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = primaryColor,
-                                disabledContentColor = secondaryText.copy(alpha = 0.4f)
-                            )
+                            shape = SquircleShape
                         ) {
                             if (isCreating) {
                                 LoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = primaryColor
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
-                                Text("Create", fontWeight = FontWeight.Bold)
+                                Text("Create", fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
                             }
                         }
                     }
@@ -433,7 +414,7 @@ fun CreatePlaylistDialog(
                         
                         // Artwork Placeholder
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = SquircleShape,
                             color = MaterialTheme.colorScheme.surfaceContainerHighest,
                             modifier = Modifier.size(160.dp)
                         ) {
@@ -457,7 +438,8 @@ fun CreatePlaylistDialog(
                             singleLine = true,
                             enabled = !isCreating,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = SquircleShape,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
                         )
                         
                         Spacer(modifier = Modifier.height(16.dp))
@@ -470,22 +452,24 @@ fun CreatePlaylistDialog(
                             maxLines = 4,
                             enabled = !isCreating,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = SquircleShape
                         )
                         
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                         
                         // Options Section
                         Text(
                             text = "OPTIONS",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = secondaryText,
-                            modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.1.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.align(Alignment.Start).padding(bottom = 12.dp, start = 4.dp)
                         )
                         
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            shape = SquircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column {
@@ -494,14 +478,16 @@ fun CreatePlaylistDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable(enabled = !isCreating && isLoggedIn) { syncWithYt = !syncWithYt }
-                                        .padding(16.dp),
+                                        .padding(20.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("Sync with YouTube Music", style = MaterialTheme.typography.bodyMedium, color = onSurface)
+                                        Text("Sync with YouTube Music", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = onSurface)
                                         if (!isLoggedIn) {
                                             Text("Login required", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                        } else {
+                                            Text("Changes will reflect on YT Music", style = MaterialTheme.typography.bodySmall, color = secondaryText)
                                         }
                                     }
                                     androidx.compose.material3.Switch(
@@ -512,18 +498,18 @@ fun CreatePlaylistDialog(
                                 }
                                 
                                 if (syncWithYt) {
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                                     // Privacy Toggle (Only for YT playlists)
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable(enabled = !isCreating) { isPrivate = !isPrivate }
-                                            .padding(16.dp),
+                                            .padding(20.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text("Private Playlist", style = MaterialTheme.typography.bodyMedium, color = onSurface)
+                                            Text("Private Playlist", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = onSurface)
                                             Text("Only you can view this", style = MaterialTheme.typography.bodySmall, color = secondaryText)
                                         }
                                         androidx.compose.material3.Switch(
@@ -535,6 +521,7 @@ fun CreatePlaylistDialog(
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.height(40.dp))
                     }
                 }
             }
@@ -544,7 +531,7 @@ fun CreatePlaylistDialog(
 
 /**
  * Dialog to rename a playlist.
- * Styled to match Apple Music dark theme.
+ * Styled with Material 3 Expressive aesthetics.
  */
 @Composable
 fun RenamePlaylistDialog(
@@ -561,8 +548,8 @@ fun RenamePlaylistDialog(
             onDismissRequest = { if (!isRenaming) onDismiss() }
         ) {
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = DarkBackground,
+                shape = SquircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -573,9 +560,9 @@ fun RenamePlaylistDialog(
                 ) {
                     Text(
                         text = "Rename Playlist",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
 
@@ -584,8 +571,8 @@ fun RenamePlaylistDialog(
                         value = title,
                         onValueChange = { title = it },
                         textStyle = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         ),
                         singleLine = true,
@@ -595,7 +582,7 @@ fun RenamePlaylistDialog(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(DarkSurface, RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, SquircleShape)
                                     .padding(16.dp)
                             ) {
                                 innerTextField()
@@ -609,17 +596,19 @@ fun RenamePlaylistDialog(
                     // Action Buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(
                             onClick = onDismiss,
-                            enabled = !isRenaming
+                            enabled = !isRenaming,
+                            modifier = Modifier.weight(1f),
+                            shape = SquircleShape
                         ) {
                             Text(
                                 "Cancel",
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
                             )
                         }
 
@@ -632,24 +621,24 @@ fun RenamePlaylistDialog(
                                 }
                             },
                             enabled = title.isNotBlank() && !isRenaming,
+                            modifier = Modifier.weight(1f),
+                            shape = SquircleShape,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentRed,
-                                disabledContainerColor = AccentRed.copy(alpha = 0.5f)
-                            ),
-                            shape = RoundedCornerShape(8.dp)
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
                         ) {
                             if (isRenaming) {
                                 LoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = TextPrimary
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                            } else {
+                                Text(
+                                    "Rename",
+                                    fontWeight = FontWeight.ExtraBold
+                                )
                             }
-                            Text(
-                                if (isRenaming) "Renaming..." else "Rename",
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
                         }
                     }
                 }
@@ -661,7 +650,7 @@ fun RenamePlaylistDialog(
 
 /**
  * Dialog to delete a playlist.
- * Styled to match Apple Music dark theme.
+ * Styled with Material 3 Expressive aesthetics.
  */
 @Composable
 fun DeletePlaylistDialog(
@@ -676,8 +665,8 @@ fun DeletePlaylistDialog(
             onDismissRequest = { if (!isDeleting) onDismiss() }
         ) {
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = DarkBackground,
+                shape = SquircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -689,7 +678,7 @@ fun DeletePlaylistDialog(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete",
-                        tint = AccentRed,
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier
                             .size(48.dp)
                             .padding(bottom = 16.dp)
@@ -697,16 +686,16 @@ fun DeletePlaylistDialog(
 
                     Text(
                         text = "Delete Playlist?",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
 
                     Text(
                         text = "Are you sure you want to delete \"$playlistTitle\"? This action cannot be undone.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
@@ -714,37 +703,40 @@ fun DeletePlaylistDialog(
                     // Action Buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(
                             onClick = onDismiss,
-                            enabled = !isDeleting
+                            enabled = !isDeleting,
+                            modifier = Modifier.weight(1f),
+                            shape = SquircleShape
                         ) {
                             Text(
                                 "Cancel", 
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
                             )
                         }
 
                         Button(
                             onClick = onDelete,
                             enabled = !isDeleting,
+                            modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentRed,
-                                disabledContainerColor = AccentRed.copy(alpha = 0.5f)
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = SquircleShape
                         ) {
                             if (isDeleting) {
                                 LoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = TextPrimary
+                                    color = MaterialTheme.colorScheme.onError
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                            } else {
+                                Text("Delete", fontWeight = FontWeight.ExtraBold)
                             }
-                            Text("Delete", fontWeight = FontWeight.Bold, color = TextPrimary)
                         }
                     }
                 }
