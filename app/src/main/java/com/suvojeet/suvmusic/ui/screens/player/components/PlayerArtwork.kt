@@ -105,6 +105,7 @@ fun AlbumArtwork(
     onDoubleTapLeft: () -> Unit = {},
     onDoubleTapRight: () -> Unit = {},
     songId: String? = null,
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -125,6 +126,15 @@ fun AlbumArtwork(
         animationSpec = tween(durationMillis = 100),
         label = "vinyl_rotation"
     )
+
+    LaunchedEffect(currentShape, isPlaying) {
+        if (currentShape == ArtworkShape.VINYL && isPlaying) {
+            while (true) {
+                kotlinx.coroutines.delay(16)
+                vinylRotation = (vinylRotation + 0.6f) % 360f
+            }
+        }
+    }
     
     // Animate corner radius based on shape - use coerceAtLeast to prevent negative values
     val targetCornerRadius = when (currentShape) {

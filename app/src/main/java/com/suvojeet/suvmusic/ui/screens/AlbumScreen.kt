@@ -266,6 +266,18 @@ fun AlbumScreen(
 
                 // Global Add to Playlist Sheet
                 val playlistMgmtState by playlistViewModel.uiState.collectAsState()
+                LaunchedEffect(playlistMgmtState.successMessage) {
+                    playlistMgmtState.successMessage?.let {
+                        android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                        playlistViewModel.clearMessages()
+                    }
+                }
+                LaunchedEffect(playlistMgmtState.errorMessage) {
+                    playlistMgmtState.errorMessage?.let {
+                        android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                        playlistViewModel.clearMessages()
+                    }
+                }
                 if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
                     com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
                         song = playlistMgmtState.selectedSong!!,

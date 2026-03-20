@@ -266,7 +266,7 @@ class LibraryViewModel @Inject constructor(
                         url = "https://music.youtube.com/playlist?list=${entity.id}",
                         uploaderName = entity.subtitle ?: "",
                         thumbnailUrl = entity.thumbnailUrl,
-                        songCount = 0
+                        songCount = libraryRepository.getCachedPlaylistSongs(entity.id).size
                     )
                 }
                 _uiState.update { state ->

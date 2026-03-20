@@ -565,6 +565,7 @@ fun PlayerScreen(
                                         handleDoubleTapSeek(true)
                                     },
                                     songId = song?.id,
+                                    isPlaying = playerState.isPlaying,
                                     modifier = artworkModifier
                                 )
                             }
@@ -814,6 +815,7 @@ fun PlayerScreen(
                                             handleDoubleTapSeek(true)
                                         },
                                         songId = song?.id,
+                                        isPlaying = playerState.isPlaying,
                                         modifier = artworkModifier
                                     )
                                     Spacer(modifier = Modifier.weight(1f))

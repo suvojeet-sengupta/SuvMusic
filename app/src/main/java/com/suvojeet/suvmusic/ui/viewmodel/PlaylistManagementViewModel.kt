@@ -197,6 +197,12 @@ class PlaylistManagementViewModel @Inject constructor(
             _uiState.update { it.copy(isAddingSong = true) }
             
             val success = youTubeRepository.addSongToPlaylist(playlistId, song.id)
+            if (success) {
+                val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+                if (cachedSongs.none { it.id == song.id }) {
+                    libraryRepository.addSongToPlaylist(playlistId, song)
+                }
+            }
             
             _uiState.update { 
                 it.copy(

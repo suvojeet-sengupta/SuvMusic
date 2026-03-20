@@ -126,6 +126,22 @@ fun PlaylistScreen(
     }
 
     val context = LocalContext.current
+    val playlistMgmtState by playlistMgmtViewModel.uiState.collectAsState()
+
+    androidx.compose.runtime.LaunchedEffect(playlistMgmtState.successMessage) {
+        playlistMgmtState.successMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.refreshPlaylist()
+            playlistMgmtViewModel.clearMessages()
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(playlistMgmtState.errorMessage) {
+        playlistMgmtState.errorMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            playlistMgmtViewModel.clearMessages()
+        }
+    }
     val sharePlaylist: (Playlist) -> Unit = { playlistToShare ->
         val shareText = "Check out this playlist: ${playlistToShare.title} by ${playlistToShare.author}\n\nhttps://music.youtube.com/playlist?list=${playlistToShare.id}"
         val sendIntent = Intent().apply {
@@ -367,7 +383,6 @@ fun PlaylistScreen(
         }
 
         // Global Add to Playlist Sheet
-        val playlistMgmtState by playlistMgmtViewModel.uiState.collectAsState()
         if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
             com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
                 song = playlistMgmtState.selectedSong!!,

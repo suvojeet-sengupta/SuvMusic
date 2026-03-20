@@ -374,9 +374,19 @@ class PlaylistViewModel @Inject constructor(
     fun addSongToPlaylist(playlistId: String) {
         val song = _uiState.value.selectedSong ?: return
         viewModelScope.launch {
-            youTubeRepository.addSongToPlaylist(playlistId, song.id)
+            val added = youTubeRepository.addSongToPlaylist(playlistId, song.id)
+            if (added) {
+                val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+                if (cachedSongs.none { it.id == song.id }) {
+                    libraryRepository.addSongToPlaylist(playlistId, song)
+                }
+            }
             hideAddToPlaylistSheet()
         }
+    }
+
+    fun refreshPlaylist() {
+        loadPlaylist()
     }
 
     fun showCreatePlaylistDialog() {
@@ -435,4 +445,3 @@ class PlaylistViewModel @Inject constructor(
         cachedSongs.sortedByDescending { historyMap[it.id]?.lastPlayed ?: 0L }
     }
 }
-

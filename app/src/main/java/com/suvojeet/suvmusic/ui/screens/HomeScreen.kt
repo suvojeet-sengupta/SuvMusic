@@ -104,7 +104,7 @@ fun HomeScreen(
     
     // Dynamic Background Colors
     val dominantColors = com.suvojeet.suvmusic.ui.components.rememberDominantColors(
-        imageUrl = currentSong?.thumbnailUrl ?: uiState.recommendations.firstOrNull()?.thumbnailUrl
+        imageUrl = uiState.recommendations.firstOrNull()?.thumbnailUrl
     )
 
     Box(
@@ -365,6 +365,18 @@ fun HomeScreen(
 
         // Add to Playlist Sheet
         val playlistUiState by playlistViewModel.uiState.collectAsState()
+        LaunchedEffect(playlistUiState.successMessage) {
+            playlistUiState.successMessage?.let {
+                android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                playlistViewModel.clearMessages()
+            }
+        }
+        LaunchedEffect(playlistUiState.errorMessage) {
+            playlistUiState.errorMessage?.let {
+                android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                playlistViewModel.clearMessages()
+            }
+        }
         
         AddToPlaylistSheet(
             song = playlistUiState.selectedSong ?: Song("", "", "", "", 0L, null, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
@@ -898,4 +910,3 @@ fun TrackCard(
         )
     }
 }
-

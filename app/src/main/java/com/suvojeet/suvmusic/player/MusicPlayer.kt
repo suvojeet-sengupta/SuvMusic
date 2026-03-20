@@ -1471,6 +1471,49 @@ class MusicPlayer @Inject constructor(
     }
 
     /**
+     * Replace the upcoming queue while keeping the currently playing item uninterrupted.
+     * The current song remains at index 0 in state after replacement.
+     */
+    fun replaceQueuePreserveCurrent(upcomingSongs: List<Song>) {
+        scope.launch {
+            val state = _playerState.value
+            val currentSong = state.currentSong ?: return@launch
+            val uniqueUpcoming = upcomingSongs
+                .filter { it.id != currentSong.id }
+                .distinctBy { it.id }
+
+            mediaController?.let { controller ->
+                val currentIndex = controller.currentMediaItemIndex
+                val mediaCount = controller.mediaItemCount
+
+                if (currentIndex in 0 until mediaCount) {
+                    if (currentIndex + 1 < mediaCount) {
+                        controller.removeMediaItems(currentIndex + 1, mediaCount)
+                    }
+                    if (currentIndex > 0) {
+                        controller.removeMediaItems(0, currentIndex)
+                    }
+                } else {
+                    controller.clearMediaItems()
+                    controller.addMediaItem(createMediaItem(currentSong, resolveStream = false))
+                }
+
+                uniqueUpcoming.forEach { song ->
+                    controller.addMediaItem(createMediaItem(song, resolveStream = false))
+                }
+            }
+
+            _playerState.update {
+                it.copy(
+                    queue = listOf(currentSong) + uniqueUpcoming,
+                    currentIndex = 0,
+                    currentSong = currentSong
+                )
+            }
+        }
+    }
+
+    /**
      * Move an item within the queue.
      */
     fun moveInQueue(fromIndex: Int, toIndex: Int) {

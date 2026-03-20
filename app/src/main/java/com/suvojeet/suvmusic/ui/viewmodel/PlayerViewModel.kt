@@ -557,11 +557,17 @@ class PlayerViewModel @Inject constructor(
             _isRadioMode.value = true
             musicPlayer.updateRadioMode(true)
             radioBaseSongId = song.id
-            
-            // Play immediately with provided queue or just the selected song
+
+            val state = playerState.value
+            val isCurrentSongAlreadyPlaying = state.currentSong?.id == song.id && state.isPlaying
+
+            // Play immediately with provided queue.
             if (initialQueue != null && initialQueue.isNotEmpty()) {
                 val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
                 musicPlayer.playSong(song, initialQueue, index)
+            } else if (isCurrentSongAlreadyPlaying) {
+                // Keep current playback uninterrupted, but clear upcoming queue for radio refill.
+                musicPlayer.replaceQueuePreserveCurrent(emptyList())
             } else {
                 musicPlayer.playSong(song)
             }
