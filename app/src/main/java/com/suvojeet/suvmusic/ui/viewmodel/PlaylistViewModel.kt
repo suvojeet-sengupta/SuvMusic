@@ -187,6 +187,17 @@ class PlaylistViewModel @Inject constructor(
                     thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
                     songs = songs
                 )
+            } else if (playlistId.startsWith("local_")) {
+                // Local User Playlist - Load from database
+                val item = libraryRepository.getPlaylistById(playlistId)
+                val songs = libraryRepository.getCachedPlaylistSongs(playlistId)
+                Playlist(
+                    id = playlistId,
+                    title = item?.title ?: "Local Playlist",
+                    author = item?.subtitle ?: "You",
+                    thumbnailUrl = item?.thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
+                    songs = songs
+                )
             } else if (playlistId == "CACHED_ALL") {
                 // Cached Songs - Now including ALL cached items from player cache
                 val songs = loadAllCachedSongs()
