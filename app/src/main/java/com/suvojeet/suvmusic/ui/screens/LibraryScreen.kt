@@ -134,7 +134,7 @@ fun LibraryScreen(
                 onClick = { showAddMenu = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(bottom = 90.dp)
+                modifier = Modifier.padding(bottom = 150.dp)
             ) {
                  Icon(Icons.Default.Add, "Add")
             }
@@ -600,7 +600,7 @@ fun PlaylistsGrid(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(gridColumns),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 160.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -833,7 +833,7 @@ fun PlaylistsList(
     controlBar: @Composable () -> Unit
 ) {
     LazyColumn(
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(bottom = 160.dp)
     ) {
          item { topBar() }
          item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
@@ -936,7 +936,7 @@ fun OtherContentList(
     val albums = if (filter == LibraryFilter.ALBUMS) (uiState.libraryAlbums + uiState.localAlbums).distinctBy { it.id } else emptyList()
     val artists = if (filter == LibraryFilter.ARTISTS) (uiState.libraryArtists + uiState.localArtists).distinctBy { it.id } else emptyList()
     
-    LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
+    LazyColumn(contentPadding = PaddingValues(bottom = 160.dp)) {
         item { topBar() }
         item { Box(modifier = Modifier.padding(bottom = 16.dp)) { filterChips() } }
 

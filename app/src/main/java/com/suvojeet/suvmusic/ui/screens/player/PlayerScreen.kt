@@ -268,12 +268,21 @@ fun PlayerScreen(
     val finalColors = if (albumArtDynamicColorsEnabled) {
         extractedColors
     } else {
-        DominantColors(
-            primary = colorScheme.primary,
-            secondary = colorScheme.secondary,
-            accent = colorScheme.tertiary,
-            onBackground = colorScheme.onBackground
-        )
+        if (isAppInDarkTheme) {
+            DominantColors(
+                primary = MaterialTheme.colorScheme.surfaceContainerHigh,
+                secondary = MaterialTheme.colorScheme.surfaceContainerHighest,
+                accent = MaterialTheme.colorScheme.primary,
+                onBackground = MaterialTheme.colorScheme.onSurface
+            )
+        } else {
+            DominantColors(
+                primary = MaterialTheme.colorScheme.surfaceContainerLow,
+                secondary = MaterialTheme.colorScheme.surfaceContainerLowest,
+                accent = MaterialTheme.colorScheme.primary,
+                onBackground = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 
     // M3E Spring-based color transitions
