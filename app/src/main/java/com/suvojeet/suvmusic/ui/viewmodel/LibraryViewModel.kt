@@ -24,7 +24,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 data class LibraryUiState(
@@ -259,15 +262,19 @@ class LibraryViewModel @Inject constructor(
     private fun observeLibraryPlaylists() {
         viewModelScope.launch {
             libraryRepository.getSavedPlaylists().collect { savedItems ->
-                val displayItems = savedItems.map { entity ->
-                    PlaylistDisplayItem(
-                        id = entity.id,
-                        name = entity.title,
-                        url = "https://music.youtube.com/playlist?list=${entity.id}",
-                        uploaderName = entity.subtitle ?: "",
-                        thumbnailUrl = entity.thumbnailUrl,
-                        songCount = libraryRepository.getCachedPlaylistSongs(entity.id).size
-                    )
+                val displayItems = withContext(Dispatchers.IO) {
+                    savedItems.map { entity ->
+                        async {
+                            PlaylistDisplayItem(
+                                id = entity.id,
+                                name = entity.title,
+                                url = "https://music.youtube.com/playlist?list=${entity.id}",
+                                uploaderName = entity.subtitle ?: "",
+                                thumbnailUrl = entity.thumbnailUrl,
+                                songCount = libraryRepository.getCachedPlaylistSongs(entity.id).size
+                            )
+                        }
+                    }.map { it.await() }
                 }
                 _uiState.update { state ->
                     val combined = (state.playlists + displayItems).distinctBy { it.id }
