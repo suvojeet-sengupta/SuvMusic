@@ -113,24 +113,19 @@ class PlaylistImportService : Service() {
                     return@launch
                 }
 
-                var finalPlaylistId = youTubeRepository.createPlaylist(playlistName, "Imported via SuvMusic")
-                var isLocal = false
-
-                if (finalPlaylistId == null) {
-                    // Fallback to local playlist
-                    finalPlaylistId = "local_" + java.util.UUID.randomUUID().toString()
-                    val firstSongThumb = importTracks.firstOrNull { it.song != null }?.song?.thumbnailUrl
-                    libraryRepository.savePlaylist(
-                        Playlist(
-                            id = finalPlaylistId, 
-                            title = playlistName, 
-                            author = "You", 
-                            thumbnailUrl = firstSongThumb, 
-                            songs = emptyList()
-                        )
+                // Always create a local playlist for imports as requested in Issue #52
+                val finalPlaylistId = "local_" + java.util.UUID.randomUUID().toString()
+                val isLocal = true
+                val firstSongThumb = importTracks.firstOrNull { it.song != null }?.song?.thumbnailUrl
+                libraryRepository.savePlaylist(
+                    Playlist(
+                        id = finalPlaylistId, 
+                        title = playlistName, 
+                        author = "You", 
+                        thumbnailUrl = firstSongThumb, 
+                        songs = emptyList()
                     )
-                    isLocal = true
-                }
+                )
 
                 val total = importTracks.size
                 var successCount = 0

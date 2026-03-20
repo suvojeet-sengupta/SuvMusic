@@ -295,7 +295,9 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
                 _uiState.update { state ->
-                    val combined = (state.playlists + displayItems).distinctBy { it.id }
+                    // Filter out local playlists from current state to prevent duplicates or stale items after deletion/rename
+                    val nonLocalPlaylists = state.playlists.filterNot { it.id.startsWith("local_") }
+                    val combined = (nonLocalPlaylists + displayItems).distinctBy { it.id }
                     state.copy(playlists = combined)
                 }
             }
@@ -387,10 +389,22 @@ class LibraryViewModel @Inject constructor(
     fun deletePlaylist(playlistId: String) {
         viewModelScope.launch {
             try {
-                val success = youTubeRepository.deletePlaylist(playlistId)
+                val isLocal = playlistId.startsWith("local_")
+                val success = if (isLocal) {
+                    libraryRepository.removePlaylist(playlistId)
+                    true
+                } else {
+                    val ytSuccess = youTubeRepository.deletePlaylist(playlistId)
+                    if (ytSuccess) {
+                        libraryRepository.removePlaylist(playlistId)
+                    }
+                    ytSuccess
+                }
+
                 if (success) {
                     refresh()
-                    libraryRepository.removePlaylist(playlistId)
+                } else if (!isLocal) {
+                     _uiState.update { it.copy(error = "Failed to delete from YouTube") }
                 }
             } catch (e: Exception) {
                  _uiState.update { it.copy(error = "Failed to delete: ${e.message}") }
