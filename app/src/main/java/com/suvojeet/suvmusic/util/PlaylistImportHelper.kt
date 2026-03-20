@@ -69,7 +69,7 @@ class PlaylistImportHelper @Inject constructor(
             }
 
             if (playlistId.isNotBlank()) {
-                val playlist = youTubeRepository.getPlaylist(playlistId)
+                val playlist = youTubeRepository.getPlaylist(playlistId, autoSave = false)
                 val tracks = playlist.songs.map { 
                     ImportTrack(it.title, it.artist, it.duration, it.id, it)
                 }

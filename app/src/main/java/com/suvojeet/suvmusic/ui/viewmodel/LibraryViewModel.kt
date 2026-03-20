@@ -229,7 +229,7 @@ class LibraryViewModel @Inject constructor(
                     }
 
                     // Then fetch fresh data from network
-                    val playlists = youTubeRepository.getUserPlaylists()
+                    val playlists = youTubeRepository.getUserPlaylists(autoSave = false)
                     _uiState.update { it.copy(playlists = playlists) }
 
                     val artists = youTubeRepository.getLibraryArtists()
@@ -240,7 +240,7 @@ class LibraryViewModel @Inject constructor(
 
                     // Fetch Top 50 (RTM) Count
                     try {
-                        val top50 = youTubeRepository.getPlaylist("RTM")
+                        val top50 = youTubeRepository.getPlaylist("RTM", autoSave = false)
                         _uiState.update { it.copy(top50SongCount = top50.songs.size) }
                     } catch (e: Exception) {
                         // Ignore failure for optional smart playlist
@@ -266,7 +266,7 @@ class LibraryViewModel @Inject constructor(
             try {
                 if (sessionManager.isLoggedIn()) {
                     syncLikedSongs() // Trigger background sync
-                    youTubeRepository.getUserPlaylists()
+                    youTubeRepository.getUserPlaylists(autoSave = false)
                     youTubeRepository.getLibraryArtists()
                     youTubeRepository.getLibraryAlbums()
                 }
@@ -389,7 +389,9 @@ class LibraryViewModel @Inject constructor(
     fun deletePlaylist(playlistId: String) {
         viewModelScope.launch {
             try {
-                val isLocal = playlistId.startsWith("local_")
+                // Check if it exists locally in the library repository
+                val isLocal = libraryRepository.getPlaylistById(playlistId) != null || playlistId.startsWith("local_")
+                
                 val success = if (isLocal) {
                     libraryRepository.removePlaylist(playlistId)
                     true
@@ -415,7 +417,21 @@ class LibraryViewModel @Inject constructor(
     fun shufflePlay(playlistId: String) {
         viewModelScope.launch {
             try {
-                val playlist = youTubeRepository.getPlaylist(playlistId)
+                // Prioritize local playlist data
+                val localSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+                val playlist = if (localSongs.isNotEmpty()) {
+                    val item = libraryRepository.getPlaylistById(playlistId)
+                    com.suvojeet.suvmusic.core.model.Playlist(
+                        id = playlistId,
+                        title = item?.title ?: "Playlist",
+                        author = item?.subtitle ?: "You",
+                        thumbnailUrl = item?.thumbnailUrl,
+                        songs = localSongs
+                    )
+                } else {
+                    youTubeRepository.getPlaylist(playlistId)
+                }
+
                 if (playlist.songs.isNotEmpty()) {
                     val shuffled = playlist.songs.shuffled()
                     musicPlayer.playSong(shuffled.first(), shuffled, 0, true)
@@ -427,8 +443,9 @@ class LibraryViewModel @Inject constructor(
     fun playNext(playlistId: String) {
          viewModelScope.launch {
             try {
-                val playlist = youTubeRepository.getPlaylist(playlistId)
-                musicPlayer.playNext(playlist.songs)
+                val localSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+                val songs = if (localSongs.isNotEmpty()) localSongs else youTubeRepository.getPlaylist(playlistId).songs
+                musicPlayer.playNext(songs)
             } catch (e: Exception) { }
         }
     }
@@ -436,8 +453,9 @@ class LibraryViewModel @Inject constructor(
     fun addToQueue(playlistId: String) {
          viewModelScope.launch {
             try {
-                val playlist = youTubeRepository.getPlaylist(playlistId)
-                musicPlayer.addToQueue(playlist.songs)
+                val localSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
+                val songs = if (localSongs.isNotEmpty()) localSongs else youTubeRepository.getPlaylist(playlistId).songs
+                musicPlayer.addToQueue(songs)
             } catch (e: Exception) { }
         }
     }
