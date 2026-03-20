@@ -150,23 +150,30 @@ class PlaylistViewModel @Inject constructor(
     }
 
     private suspend fun loadPlaylistInternal() {
-        // Fast Load Strategy: Show cached version first
-        val cached = if (playlistId != "CACHED_ALL" && playlistId != "DEVICE_SONGS" && playlistId != "TOP_50") {
+        // Fast Load Strategy: Show local version from database first (if it exists)
+        val localVersion = if (playlistId != "CACHED_ALL" && playlistId != "DEVICE_SONGS" && playlistId != "TOP_50") {
              try {
-                 if (playlistId == "LM") {
-                     val songs = libraryRepository.getCachedPlaylistSongs("LM")
-                     Playlist("LM", "Liked", "You", initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl, songs)
+                 val item = libraryRepository.getPlaylistById(playlistId)
+                 val songs = libraryRepository.getCachedPlaylistSongs(playlistId)
+                 if (songs.isNotEmpty() || item != null) {
+                    Playlist(
+                        id = playlistId,
+                        title = item?.title ?: (if (playlistId == "LM") "Liked" else "Local Playlist"),
+                        author = item?.subtitle ?: (if (playlistId == "LM") "You" else "You"),
+                        thumbnailUrl = initialThumbnail ?: item?.thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
+                        songs = songs
+                    )
                  } else {
-                     youTubeRepository.getCachedPlaylist(playlistId)
+                     null
                  }
              } catch (e: Exception) { null }
         } else null
 
-        if (cached != null && cached.songs.isNotEmpty()) {
+        if (localVersion != null) {
             _uiState.update { 
                 it.copy(
-                    playlist = cached,
-                    originalSongs = cached.songs,
+                    playlist = localVersion,
+                    originalSongs = localVersion.songs,
                     isLoading = false // Hide loader since we have some content
                 )
             }
@@ -187,17 +194,11 @@ class PlaylistViewModel @Inject constructor(
                     thumbnailUrl = initialThumbnail ?: songs.firstOrNull()?.thumbnailUrl,
                     songs = songs
                 )
-            } else if (playlistId.startsWith("local_")) {
-                // Local User Playlist - Load from database
-                val item = libraryRepository.getPlaylistById(playlistId)
+            } else if (localVersion != null) {
+                // We already have a local version, which means this is an imported or local playlist.
+                // Re-fetch songs to ensure they are up to date, but keep it as a local playlist.
                 val songs = libraryRepository.getCachedPlaylistSongs(playlistId)
-                Playlist(
-                    id = playlistId,
-                    title = item?.title ?: "Local Playlist",
-                    author = item?.subtitle ?: "You",
-                    thumbnailUrl = item?.thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
-                    songs = songs
-                )
+                localVersion.copy(songs = songs)
             } else if (playlistId == "CACHED_ALL") {
                 // Cached Songs - Now including ALL cached items from player cache
                 val songs = loadAllCachedSongs()
@@ -326,10 +327,11 @@ class PlaylistViewModel @Inject constructor(
     private fun checkEditable() {
         viewModelScope.launch {
             try {
+                val isLocal = libraryRepository.getPlaylistById(playlistId) != null
                 val userPlaylists = youTubeRepository.getUserEditablePlaylists()
-                val isEditable = userPlaylists.any { it.id == playlistId } || playlistId.startsWith("PL") 
+                val isYtEditable = userPlaylists.any { it.id == playlistId }
                 
-                _uiState.update { it.copy(isEditable = isEditable || playlistId == "LM") }
+                _uiState.update { it.copy(isEditable = isLocal || isYtEditable || playlistId == "LM") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isEditable = false) }
             }
@@ -381,7 +383,8 @@ class PlaylistViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isRenaming = true) }
             
-            val success = if (playlistId.startsWith("local_")) {
+            val isLocal = libraryRepository.getPlaylistById(playlistId) != null
+            val success = if (isLocal) {
                 try {
                     libraryRepository.updatePlaylistName(playlistId, newName)
                     true
@@ -415,7 +418,8 @@ class PlaylistViewModel @Inject constructor(
         }
         
         viewModelScope.launch {
-            if (playlistId.startsWith("local_") || playlistId == "LM") {
+            val isLocal = libraryRepository.getPlaylistById(playlistId) != null || playlistId == "LM"
+            if (isLocal) {
                 // Local reorder - just replace the whole list in DB
                 libraryRepository.savePlaylistSongs(playlistId, songs)
                 return@launch
@@ -441,7 +445,7 @@ class PlaylistViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isDeleting = true) }
             
-            val isLocal = playlistId.startsWith("local_") || playlistId == "LM"
+            val isLocal = libraryRepository.getPlaylistById(playlistId) != null || playlistId == "LM"
             val success = if (isLocal) {
                 try {
                     libraryRepository.removePlaylist(playlistId)

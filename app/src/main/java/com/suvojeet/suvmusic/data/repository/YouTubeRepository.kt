@@ -685,7 +685,7 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-    suspend fun getUserPlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+    suspend fun getUserPlaylists(autoSave: Boolean = true): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         if (!networkMonitor.isCurrentlyConnected()) {
             return@withContext sessionManager.getCachedLibraryPlaylistsSync()
         }
@@ -700,21 +700,25 @@ class YouTubeRepository @Inject constructor(
                 val ytPlaylists = parsePlaylistsFromInternalJson(jsonResponse)
                 playlists.addAll(ytPlaylists)
                 
-                // Cache the playlists for offline use
+                // Cache the playlists for offline metadata use (Session Cache)
                 if (ytPlaylists.isNotEmpty()) {
                     sessionManager.saveLibraryPlaylistsCache(ytPlaylists)
                     
-                    // Also save to Room for persistent storage
-                    ytPlaylists.forEach { item ->
-                        libraryRepository.savePlaylist(
-                            Playlist(
-                                id = item.id,
-                                title = item.name,
-                                author = item.uploaderName,
-                                thumbnailUrl = item.thumbnailUrl,
-                                songs = emptyList() // We don't have songs here, but savePlaylist will save metadata
+                    // DO NOT automatically save to LibraryRepository here as it creates duplicates
+                    // with local playlists and makes them uneditable.
+                    // Only save if explicitly requested (default true for backward compat, but we'll set to false in ViewModel)
+                    if (autoSave) {
+                        ytPlaylists.forEach { item ->
+                            libraryRepository.savePlaylist(
+                                Playlist(
+                                    id = item.id,
+                                    title = item.name,
+                                    author = item.uploaderName,
+                                    thumbnailUrl = item.thumbnailUrl,
+                                    songs = emptyList()
+                                )
                             )
-                        )
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -829,7 +833,7 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-    suspend fun getPlaylist(playlistId: String): Playlist = withContext(Dispatchers.IO) {
+    suspend fun getPlaylist(playlistId: String, autoSave: Boolean = true): Playlist = withContext(Dispatchers.IO) {
         // Fallback to cache if offline
         if (!networkMonitor.isCurrentlyConnected()) {
             val cachedPlaylist = getCachedPlaylist(playlistId)
@@ -871,7 +875,7 @@ class YouTubeRepository @Inject constructor(
                             thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
                             songs = songs
                         )
-                        libraryRepository.savePlaylist(playlist)
+                        if (autoSave) libraryRepository.savePlaylist(playlist)
                         return@withContext playlist
                     }
                 } catch (e: Exception) {
@@ -951,7 +955,7 @@ class YouTubeRepository @Inject constructor(
             if (songs.isNotEmpty()) {
                 val finalPlaylist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
                 // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
-                libraryRepository.savePlaylist(finalPlaylist)
+                if (autoSave) libraryRepository.savePlaylist(finalPlaylist)
                 return@withContext finalPlaylist
             }
         } catch(e: Exception) { }
@@ -1017,7 +1021,7 @@ class YouTubeRepository @Inject constructor(
                     description = description
                 )
                 // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
-                libraryRepository.savePlaylist(playlist)
+                if (autoSave) libraryRepository.savePlaylist(playlist)
                 return@withContext playlist
             }
             return@withContext Playlist(
