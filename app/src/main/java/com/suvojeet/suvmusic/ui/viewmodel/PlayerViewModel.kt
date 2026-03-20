@@ -663,23 +663,13 @@ class PlayerViewModel @Inject constructor(
             // Notify recommendation engine of the new context
             recommendationEngine.onSongPlayed(song)
             
-            val currentSong = playerState.value.currentSong
-            val isAlreadyPlaying = currentSong?.id == song.id
-
-            // Play immediately with provided queue or just the selected song
-            // BUG FIX: Don't call playSong if it's already playing, just update queue later
-            if (!isAlreadyPlaying) {
-                if (initialQueue != null && initialQueue.isNotEmpty()) {
-                    val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-                    musicPlayer.playSong(song, initialQueue, index)
-                } else {
-                    musicPlayer.playSong(song)
-                }
-            } else if (initialQueue != null && initialQueue.isNotEmpty()) {
-                // If already playing but a new queue is provided, update the player's queue
-                // but keep current position. For now, let's keep it simple: 
-                // if it's already playing, we just append radio recommendations to whatever is currently there.
-                // This is less disruptive.
+            // ALWAYS play the song with its (potentially new) radio queue to clear the current queue
+            // and start a fresh radio session based on the selected song.
+            if (initialQueue != null && initialQueue.isNotEmpty()) {
+                val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                musicPlayer.playSong(song, initialQueue, index)
+            } else {
+                musicPlayer.playSong(song)
             }
             
             try {
