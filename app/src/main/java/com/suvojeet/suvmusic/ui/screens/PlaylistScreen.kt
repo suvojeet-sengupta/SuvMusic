@@ -64,6 +64,7 @@ fun PlaylistScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
+    val context = LocalContext.current
     val playlist = uiState.playlist
 
     // Check if we are in dark theme based on background luminance (consistent with PlayerScreen)
@@ -132,6 +133,18 @@ fun PlaylistScreen(
         viewModel.clearSelection()
     }
 
+    // Handle messages from ViewModel
+    androidx.compose.runtime.LaunchedEffect(uiState.successMessage, uiState.errorMessage) {
+        uiState.successMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+        uiState.errorMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+    }
+
     // Handle delete success
     androidx.compose.runtime.LaunchedEffect(uiState.deleteSuccess) {
         if (uiState.deleteSuccess) {
@@ -139,7 +152,6 @@ fun PlaylistScreen(
         }
     }
 
-    val context = LocalContext.current
     val sharePlaylist: (Playlist) -> Unit = { playlistToShare ->
         val shareText = "Check out this playlist: ${playlistToShare.title} by ${playlistToShare.author}\n\nhttps://music.youtube.com/playlist?list=${playlistToShare.id}"
         val sendIntent = Intent().apply {

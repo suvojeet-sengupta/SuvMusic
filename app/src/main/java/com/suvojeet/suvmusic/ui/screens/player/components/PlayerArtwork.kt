@@ -129,20 +129,26 @@ fun AlbumArtwork(
     // Vinyl rotation animation (only for vinyl mode)
     var vinylDragRotation by remember { mutableStateOf(0f) }
     
-    val infiniteTransition = rememberInfiniteTransition(label = "vinyl_infinite")
-    val infiniteRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "vinyl_rotation"
-    )
+    // Use Animatable to maintain rotation even when paused
+    val rotationAnimatable = remember { androidx.compose.animation.core.Animatable(0f) }
+    
+    LaunchedEffect(isPlaying, currentShape, isRotatingEnabled) {
+        if (isPlaying && currentShape == ArtworkShape.VINYL && isRotatingEnabled) {
+            // Continuously animate. 
+            // We use a simple loop to keep it rotating.
+            while (true) {
+                rotationAnimatable.animateTo(
+                    targetValue = rotationAnimatable.value + 360f,
+                    animationSpec = tween(8000, easing = LinearEasing)
+                )
+            }
+        } else {
+            rotationAnimatable.stop()
+        }
+    }
     
     val currentRotation = when {
-        currentShape == ArtworkShape.VINYL && isRotatingEnabled && isPlaying -> infiniteRotation + vinylDragRotation
-        currentShape == ArtworkShape.VINYL -> vinylDragRotation
+        currentShape == ArtworkShape.VINYL -> rotationAnimatable.value + vinylDragRotation
         else -> 0f
     }
     

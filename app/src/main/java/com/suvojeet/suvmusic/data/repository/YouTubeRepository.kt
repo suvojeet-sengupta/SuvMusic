@@ -2267,11 +2267,11 @@ class YouTubeRepository @Inject constructor(
                     playlists.add(
                         PlaylistDisplayItem(
                             id = item.id,
-                            name = item.title,
-                            url = "",
-                            uploaderName = item.subtitle ?: "You",
+                            name = item.name,
+                            url = item.url,
+                            uploaderName = item.uploaderName,
                             thumbnailUrl = item.thumbnailUrl,
-                            songCount = 0 // Will be updated by flow or if we fetch songs
+                            songCount = item.songCount
                         )
                     )
                 }

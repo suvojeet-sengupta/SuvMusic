@@ -4,6 +4,7 @@ import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.LibraryItem
 import com.suvojeet.suvmusic.core.model.Playlist
+import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.flow.Flow
 
@@ -26,7 +27,7 @@ interface LibraryRepository {
     fun isPlaylistSaved(playlistId: String): Flow<Boolean>
     fun isAlbumSaved(albumId: String): Flow<Boolean>
     suspend fun getPlaylistById(id: String): LibraryItem?
-    fun getSavedPlaylists(): Flow<List<LibraryItem>>
+    fun getSavedPlaylists(): Flow<List<PlaylistDisplayItem>>
     fun getSavedAlbums(): Flow<List<LibraryItem>>
     suspend fun saveArtist(artist: Artist)
     suspend fun removeArtist(artistId: String)
