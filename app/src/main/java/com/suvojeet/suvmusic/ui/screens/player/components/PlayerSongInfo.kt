@@ -13,6 +13,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -101,11 +102,16 @@ fun SongInfoSection(
             ) { _ ->
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isLoading) {
-                            LoadingIndicator(
-                                modifier = Modifier.size(if (compact) 18.dp else 22.dp).padding(end = 8.dp),
-                                color = dominantColors.accent
-                            )
+                        Box(
+                            modifier = Modifier.width(if (isLoading) (if (compact) 26.dp else 30.dp) else 0.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (isLoading) {
+                                LoadingIndicator(
+                                    modifier = Modifier.size(if (compact) 18.dp else 22.dp),
+                                    color = dominantColors.accent
+                                )
+                            }
                         }
                         Text(
                             text = song?.title ?: "No song playing",
