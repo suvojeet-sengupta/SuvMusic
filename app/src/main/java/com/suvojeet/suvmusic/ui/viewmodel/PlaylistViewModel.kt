@@ -345,7 +345,7 @@ class PlaylistViewModel @Inject constructor(
             SortType.ARTIST_NAME -> originalSongs.sortedBy { it.artist.lowercase() }
             SortType.ALBUM_NAME -> originalSongs.sortedBy { it.album.lowercase() }
             SortType.PLAY_TIME -> originalSongs.sortedBy { it.duration }
-            SortType.DATE_ADDED -> originalSongs 
+            SortType.DATE_ADDED -> originalSongs.sortedBy { it.addedAt } 
             else -> originalSongs
         }
 

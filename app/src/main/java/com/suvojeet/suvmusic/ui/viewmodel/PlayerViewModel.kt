@@ -679,6 +679,9 @@ class PlayerViewModel @Inject constructor(
                 if (initialQueue != null && initialQueue.isNotEmpty()) {
                     // Filter out the current song as it's already playing, then add the rest
                     musicPlayer.replaceQueue(initialQueue)
+                } else {
+                    // Clear the current queue except for the playing song to start a fresh radio session
+                    musicPlayer.replaceQueue(listOf(song))
                 }
             }
             
