@@ -25,7 +25,7 @@ import com.suvojeet.suvmusic.core.data.local.entity.SongGenre
         DislikedArtist::class,
         SongGenre::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
