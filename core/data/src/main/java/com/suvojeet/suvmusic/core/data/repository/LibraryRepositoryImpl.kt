@@ -37,6 +37,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>) {
+        val currentTime = System.currentTimeMillis()
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
                 playlistId = playlistId,
@@ -49,6 +50,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 source = song.source.name,
                 localUri = song.localUri?.toString(),
                 releaseDate = song.releaseDate,
+                addedAt = if (song.addedAt > 0) song.addedAt else currentTime + index,
                 order = index
             )
         }
@@ -57,6 +59,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) {
+        val currentTime = System.currentTimeMillis()
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
                 playlistId = playlistId,
@@ -69,6 +72,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 source = song.source.name,
                 localUri = song.localUri?.toString(),
                 releaseDate = song.releaseDate,
+                addedAt = if (song.addedAt > 0) song.addedAt else currentTime + index,
                 order = startOrder + index
             )
         }
@@ -86,7 +90,8 @@ class LibraryRepositoryImpl @Inject constructor(
                 duration = entity.duration,
                 source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
                 localUri = entity.localUri?.let { android.net.Uri.parse(it) },
-                releaseDate = entity.releaseDate
+                releaseDate = entity.releaseDate,
+                addedAt = entity.addedAt
             )
         }
     }
@@ -103,7 +108,8 @@ class LibraryRepositoryImpl @Inject constructor(
                     duration = entity.duration,
                     source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
                     localUri = entity.localUri?.let { android.net.Uri.parse(it) },
-                    releaseDate = entity.releaseDate
+                    releaseDate = entity.releaseDate,
+                    addedAt = entity.addedAt
                 )
             }
         }
@@ -126,6 +132,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>) {
+        val currentTime = System.currentTimeMillis()
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
                 playlistId = playlistId,
@@ -138,6 +145,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 source = song.source.name,
                 localUri = song.localUri?.toString(),
                 releaseDate = song.releaseDate,
+                addedAt = if (song.addedAt > 0) song.addedAt else currentTime + index,
                 order = index
             )
         }

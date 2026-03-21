@@ -24,7 +24,8 @@ data class Song(
     val collectionId: String? = null, // ID of the collection (album/playlist) this download belongs to
     val collectionName: String? = null, // Name of the collection
     val isMembersOnly: Boolean = false, // Whether this song is exclusive to channel members
-    val releaseDate: String? = null // Release date of the song
+    val releaseDate: String? = null, // Release date of the song
+    val addedAt: Long = 0L // Timestamp when added to playlist/library
 ) {
     companion object {
         /**
