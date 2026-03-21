@@ -89,6 +89,7 @@ class LocalAudioRepository @Inject constructor(
                 val duration = cursor.getLong(durationColumn)
                 val albumId = cursor.getLong(albumIdColumn)
                 val path = cursor.getString(dataColumn)
+                val dateAdded = try { cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)) * 1000L } catch(e: Exception) { 0L }
                 
                 val contentUri = ContentUris.withAppendedId(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -109,7 +110,10 @@ class LocalAudioRepository @Inject constructor(
                         duration = duration,
                         albumArtUri = albumArtUri,
                         contentUri = contentUri
-                    ).copy(customFolderPath = path?.substringBeforeLast("/"))
+                    ).copy(
+                        customFolderPath = path?.substringBeforeLast("/"),
+                        addedAt = dateAdded
+                    )
                 )
             }
         }
