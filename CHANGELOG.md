@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.1.2.0] - 2026-03-21
+
+### Added
+- **Modernized Credits**: Completely redesigned the Credits screen with expressive styling and developer profile consistency.
+- **Native Playlist Import**: Direct native support for importing YouTube Music sources.
+- **MediaButtonReceiver**: Added support for better media hardware key control handling.
+
+### Changed
+- **UI Consistency**: Expanded the use of the 28.dp Squircle shape across all remaining components for brand uniformity.
+- **TopAppBar Behavior**: Enabled dynamic scroll behavior for TopAppBars on all major screens, including the Credits screen.
+- **Playlist Experience**: Refined the PlaylistScreen header and sort menu with Material 3 Expressive styling.
+
+### Fixed
+- **Database Integrity**: Incremented database version to 9 to resolve critical Room data integrity crashes.
+- **Playlist Management**: Resolved duplicate and uneditable imported playlists.
+- **Player Stability**: Stabilized player layout during loading by using fixed-height seekbar containers.
+- **Library Sorting**: Fixed an issue where the 'Date Added' sorting was not applying correctly.
+- **Radio Logic**: Corrected an edge-case bug in the Radio queue logic.
+- **Auto-Skip Stability**: Stopped auto-skip chains caused by parse errors during stream resolution.
+
 ## [2.1.1.0] - 2026-03-17
 
 ### Added

@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.1.2.0",
+      "versionCode": 20,
+      "date": "March 21, 2026",
+      "description": "• Modernized Credits: Completely redesigned the Credits screen with expressive styling and developer profile consistency.\n• Native Playlist Import: Added native support for direct YTM source playlist imports.\n• Database Fix: Incremented database version to 9 to resolve critical data integrity issues.\n• Stability Fixes: Improved player layout, fixed duplicated playlists, and optimized library sorting.\n• UI Polish: Added TopAppBar scroll behavior and expanded use of Squircle shapes across the app.\n• Hardware Control: Enhanced MediaButtonReceiver for more reliable peripheral control.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.1.1.0",
       "versionCode": 19,
       "date": "March 17, 2026",
