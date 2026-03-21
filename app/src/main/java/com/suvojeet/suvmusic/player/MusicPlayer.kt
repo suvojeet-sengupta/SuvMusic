@@ -1678,6 +1678,51 @@ class MusicPlayer @Inject constructor(
     /**
      * Clear the current queue.
      */
+    fun replaceQueue(songs: List<Song>) {
+        val controller = mediaController ?: return
+        val currentMediaItem = controller.currentMediaItem ?: return
+        val currentIndex = controller.currentMediaItemIndex
+        val currentPosition = controller.currentPosition
+        
+        scope.launch {
+            // Find current song in new queue
+            val newIndexInSongs = songs.indexOfFirst { it.id == currentMediaItem.mediaId }.coerceAtLeast(0)
+            
+            _playerState.update { 
+                it.copy(
+                    queue = songs,
+                    currentIndex = newIndexInSongs
+                ) 
+            }
+            
+            // 1. Clear everything after the current item
+            if (controller.mediaItemCount > currentIndex + 1) {
+                controller.removeMediaItems(currentIndex + 1, controller.mediaItemCount)
+            }
+            
+            // 2. Clear everything before the current item
+            if (currentIndex > 0) {
+                controller.removeMediaItems(0, currentIndex)
+            }
+            
+            // Now only the current item is in the player at index 0.
+            
+            // 3. Add items before the current one in the new queue
+            if (newIndexInSongs > 0) {
+                val songsBefore = songs.subList(0, newIndexInSongs)
+                val mediaItemsBefore = songsBefore.map { createMediaItem(it, resolveStream = false) }
+                controller.addMediaItems(0, mediaItemsBefore)
+            }
+            
+            // 4. Add items after the current one in the new queue
+            if (newIndexInSongs < songs.size - 1) {
+                val songsAfter = songs.subList(newIndexInSongs + 1, songs.size)
+                val mediaItemsAfter = songsAfter.map { createMediaItem(it, resolveStream = false) }
+                controller.addMediaItems(newIndexInSongs + 1, mediaItemsAfter)
+            }
+        }
+    }
+    
     fun clearQueue() {
         mediaController?.clearMediaItems()
         _playerState.update { 

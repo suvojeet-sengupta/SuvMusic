@@ -542,12 +542,14 @@ fun CommunityPlaylistCard(
     onSave: () -> Unit
 ) {
     var isSaved by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     
     Box(
         modifier = Modifier
             .width(320.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF2A2020)) // Dark reddish brown placeholder
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable { onPlaylistClick(item.playlist) }
             .padding(16.dp)
     ) {
@@ -570,21 +572,21 @@ fun CommunityPlaylistCard(
                         text = item.playlist.name,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = item.playlist.uploaderName,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                      Text(
                         text = "${item.playlist.songCount} songs",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -597,6 +599,7 @@ fun CommunityPlaylistCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
                             .clickable {
                                 // Play this song within the preview context
                                 onSongClick(item.previewSongs, index)
@@ -617,14 +620,14 @@ fun CommunityPlaylistCard(
                             Text(
                                 text = song.title,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
+                                color = onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = song.artist, 
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -633,7 +636,7 @@ fun CommunityPlaylistCard(
                         Icon(
                             imageVector = Icons.Rounded.MoreVert,
                             contentDescription = "More",
-                            tint = Color.White.copy(alpha = 0.6f),
+                            tint = onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -655,13 +658,15 @@ fun CommunityPlaylistCard(
                              onPlaylistClick(item.playlist)
                          }
                     },
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = "Play",
-                        tint = Color.Black
+                        contentDescription = "Play"
                     )
                 }
                 
@@ -670,8 +675,8 @@ fun CommunityPlaylistCard(
                     onClick = { onStartRadio() },
                     modifier = Modifier
                         .size(48.dp)
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50)),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(50)),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = onSurface)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Radio,
@@ -687,13 +692,12 @@ fun CommunityPlaylistCard(
                     },
                     modifier = Modifier
                         .size(48.dp)
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(50)),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(50)),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = if (isSaved) MaterialTheme.colorScheme.primary else onSurface)
                 ) {
                     Icon(
                         imageVector = if (isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                        contentDescription = "Save",
-                        tint = if (isSaved) Color.White else Color.White
+                        contentDescription = "Save"
                     )
                 }
             }
@@ -753,7 +757,7 @@ fun ExploreItemCard(
         modifier = modifier
             .height(80.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1E1E1E)) // Dark grey
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
@@ -766,7 +770,7 @@ fun ExploreItemCard(
              Icon(
                  painter = painterResource(id = item.iconRes),
                  contentDescription = null,
-                 tint = Color.White,
+                 tint = MaterialTheme.colorScheme.onSurface,
                  modifier = Modifier.size(24.dp)
              )
              
@@ -774,7 +778,7 @@ fun ExploreItemCard(
                  text = item.title,
                  style = MaterialTheme.typography.titleSmall,
                  fontWeight = FontWeight.Bold,
-                 color = Color.White
+                 color = MaterialTheme.colorScheme.onSurface
              )
         }
     }

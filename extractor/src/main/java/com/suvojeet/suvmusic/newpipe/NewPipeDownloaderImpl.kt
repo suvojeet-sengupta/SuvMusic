@@ -67,31 +67,31 @@ class NewPipeDownloaderImpl(
         }
 
         try {
-            val response = client.newCall(requestBuilder.build()).execute()
-            
+        val response = client.newCall(requestBuilder.build()).execute()
+        response.use {
             if (response.code == 429) {
-                response.close()
                 throw ReCaptchaException("Rate limited", url)
             }
 
             // Prevent OOM by limiting response size (e.g., 10MB limit for metadata)
-            val responseBodyString = response.body?.let { body ->
-                 val limit = 10 * 1024 * 1024L // 10MB
-                 val contentLength = body.contentLength()
-                 if (contentLength > limit) {
-                     "" // Return empty for too large files (likely streams not metadata)
-                 } else {
-                     try {
-                         // Peek or read conservatively
-                         val source = body.source()
-                         source.request(limit) // Request up to limit
-                         if (source.buffer.size > limit) "" else body.string()
-                     } catch (e: Exception) {
-                         ""
-                     }
-                 }
-            } ?: ""
-            
+            val body = response.body
+            val responseBodyString = if (body != null) {
+                val limit = 10 * 1024 * 1024L // 10MB
+                val contentLength = body.contentLength()
+                if (contentLength > limit) {
+                    "" // Return empty for too large files (likely streams not metadata)
+                } else {
+                    try {
+                        // Peek or read conservatively
+                        val source = body.source()
+                        source.request(limit) // Request up to limit
+                        if (source.buffer.size > limit) "" else body.string()
+                    } catch (e: Exception) {
+                        ""
+                    }
+                }
+            } else ""
+
             val responseHeaders = mutableMapOf<String, MutableList<String>>()
             response.headers.forEach { (name, value) ->
                 responseHeaders.getOrPut(name) { mutableListOf() }.add(value)
@@ -104,6 +104,7 @@ class NewPipeDownloaderImpl(
                 responseBodyString,
                 url
             )
+        }
         } catch (e: IOException) {
             throw e
         }

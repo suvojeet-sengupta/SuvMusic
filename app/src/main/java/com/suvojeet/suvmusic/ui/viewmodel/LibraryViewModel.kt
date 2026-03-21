@@ -31,6 +31,7 @@ import javax.inject.Inject
 
 data class LibraryUiState(
     val playlists: List<PlaylistDisplayItem> = emptyList(),
+    val userPlaylists: List<PlaylistDisplayItem> = emptyList(),
     val localSongs: List<Song> = emptyList(),
     val downloadedSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
@@ -280,25 +281,14 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-
     private fun observeLibraryPlaylists() {
         viewModelScope.launch {
-            libraryRepository.getSavedPlaylists().collect { savedItems ->
-                val displayItems = savedItems.map { entity ->
-                    PlaylistDisplayItem(
-                        id = entity.id,
-                        name = entity.title,
-                        url = "https://music.youtube.com/playlist?list=${entity.id}",
-                        uploaderName = entity.subtitle ?: "",
-                        thumbnailUrl = entity.thumbnailUrl,
-                        songCount = 0
-                    )
-                }
+            libraryRepository.getSavedPlaylists().collect { displayItems ->
                 _uiState.update { state ->
                     // Filter out local playlists from current state to prevent duplicates or stale items after deletion/rename
                     val nonLocalPlaylists = state.playlists.filterNot { it.id.startsWith("local_") }
                     val combined = (nonLocalPlaylists + displayItems).distinctBy { it.id }
-                    state.copy(playlists = combined)
+                    state.copy(playlists = combined, userPlaylists = displayItems)
                 }
             }
         }

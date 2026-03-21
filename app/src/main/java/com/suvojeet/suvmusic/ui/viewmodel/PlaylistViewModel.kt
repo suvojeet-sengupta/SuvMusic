@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.viewmodel
 
+import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,7 +43,9 @@ data class PlaylistUiState(
     val isCreatingPlaylist: Boolean = false,
     val selectedSong: Song? = null,
     val selectedSongIds: Set<String> = emptySet(),
-    val isSelectionMode: Boolean = false
+    val isSelectionMode: Boolean = false,
+    val successMessage: String? = null,
+    val errorMessage: String? = null
 ) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
@@ -76,26 +79,55 @@ class PlaylistViewModel @Inject constructor(
     val batchProgress = downloadRepository.batchProgress
 
     init {
-        // Set initial login state
-        _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
-        
-        // Show initial data from navigation immediately
-        if (initialName != null || initialThumbnail != null) {
-            _uiState.update {
-                it.copy(
-                    playlist = Playlist(
-                        id = playlistId,
-                        title = initialName ?: "Loading...",
-                        author = "",
-                        thumbnailUrl = initialThumbnail,
-                        songs = emptyList()
-                    ),
-                    isLoading = true
-                )
+        viewModelScope.launch {
+            // Load saved sort settings
+            val sortTypeStr = sessionManager.getPlaylistSortType()
+            val sortOrderAsc = sessionManager.getPlaylistSortOrder()
+            val savedSortType = try { SortType.valueOf(sortTypeStr) } catch (e: Exception) { SortType.CUSTOM }
+            val savedSortOrder = if (sortOrderAsc) SortOrder.ASCENDING else SortOrder.DESCENDING
+            
+            _uiState.update { it.copy(
+                isLoggedIn = sessionManager.isLoggedIn(),
+                sortType = savedSortType,
+                sortOrder = savedSortOrder
+            ) }
+
+            // Show initial data from navigation immediately
+            if (initialName != null || initialThumbnail != null) {
+                _uiState.update {
+                    it.copy(
+                        playlist = Playlist(
+                            id = playlistId,
+                            title = initialName ?: "Loading...",
+                            author = "",
+                            thumbnailUrl = initialThumbnail,
+                            songs = emptyList()
+                        ),
+                        isLoading = true
+                    )
+                }
+            }
+            loadPlaylist()
+            observePlaylistChanges()
+        }
+        checkLibraryStatus()
+    }
+
+    private fun observePlaylistChanges() {
+        if (playlistId.startsWith("local_") || playlistId == "LM" || playlistId == "CACHED_ALL") {
+            viewModelScope.launch {
+                libraryRepository.getCachedPlaylistSongsFlow(playlistId).collect { songs ->
+                    _uiState.update { state ->
+                        val updatedPlaylist = state.playlist?.copy(songs = songs)
+                        state.copy(
+                            playlist = updatedPlaylist,
+                            originalSongs = songs
+                        )
+                    }
+                    applySort()
+                }
             }
         }
-        loadPlaylist()
-        checkLibraryStatus()
     }
 
     private fun checkLibraryStatus() {
@@ -281,12 +313,17 @@ class PlaylistViewModel @Inject constructor(
 
     fun setSort(sortType: SortType) {
         _uiState.update { it.copy(sortType = sortType) }
+        viewModelScope.launch {
+            sessionManager.setPlaylistSortType(sortType.name)
+        }
         applySort()
     }
 
     fun toggleSortOrder() {
-        _uiState.update { 
-            it.copy(sortOrder = if (it.sortOrder == SortOrder.ASCENDING) SortOrder.DESCENDING else SortOrder.ASCENDING)
+        val nextOrder = if (_uiState.value.sortOrder == SortOrder.ASCENDING) SortOrder.DESCENDING else SortOrder.ASCENDING
+        _uiState.update { it.copy(sortOrder = nextOrder) }
+        viewModelScope.launch {
+            sessionManager.setPlaylistSortOrder(nextOrder == SortOrder.ASCENDING)
         }
         applySort()
     }
@@ -308,18 +345,14 @@ class PlaylistViewModel @Inject constructor(
             SortType.ARTIST_NAME -> originalSongs.sortedBy { it.artist.lowercase() }
             SortType.ALBUM_NAME -> originalSongs.sortedBy { it.album.lowercase() }
             SortType.PLAY_TIME -> originalSongs.sortedBy { it.duration }
-            SortType.DATE_ADDED -> originalSongs // We don't have real dateAdded, so treat as custom/original for now
+            SortType.DATE_ADDED -> originalSongs 
             else -> originalSongs
         }
 
-        val finalSortedSongs = if (state.sortOrder == SortOrder.DESCENDING) {
-            sortedSongs.reversed()
-        } else {
-            sortedSongs
-        }
+        val finalSongs = if (state.sortOrder == SortOrder.ASCENDING) sortedSongs else sortedSongs.reversed()
 
         _uiState.update { 
-            it.copy(playlist = currentPlaylist.copy(songs = finalSortedSongs))
+            it.copy(playlist = currentPlaylist.copy(songs = finalSongs))
         }
     }
 
@@ -539,18 +572,40 @@ class PlaylistViewModel @Inject constructor(
     fun addSongToPlaylist(targetPlaylistId: String) {
         val song = _uiState.value.selectedSong ?: return
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingPlaylists = true) }
             val isLocal = targetPlaylistId.startsWith("local_") || targetPlaylistId == "LM"
-            val success = if (isLocal) {
+            var success = false
+            var message: String? = null
+
+            if (isLocal) {
                 try {
-                    libraryRepository.addSongToPlaylist(targetPlaylistId, song)
-                    true
+                    if (libraryRepository.isSongInPlaylist(targetPlaylistId, song.id)) {
+                        success = false
+                        message = "${song.title} is already in this playlist"
+                    } else {
+                        libraryRepository.addSongToPlaylist(targetPlaylistId, song)
+                        success = true
+                        message = "Added ${song.title} to playlist"
+                    }
                 } catch (e: Exception) {
-                    false
+                    success = false
+                    message = "Failed to add ${song.title}"
                 }
             } else {
-                youTubeRepository.addSongToPlaylist(targetPlaylistId, song.id)
+                success = youTubeRepository.addSongToPlaylist(targetPlaylistId, song.id)
+                message = if (success) "Added ${song.title} to playlist" else "Failed to add to YouTube playlist"
             }
-            hideAddToPlaylistSheet()
+            
+            _uiState.update { 
+                it.copy(
+                    isLoadingPlaylists = false,
+                    showAddToPlaylistSheet = false,
+                    selectedSong = null,
+                    successMessage = if (success) message else null,
+                    errorMessage = if (!success) message else null
+                )
+            }
+            
             // Reload if the song was added to the currently viewed playlist
             if (success && targetPlaylistId == playlistId) {
                 refreshPlaylist()
@@ -561,26 +616,44 @@ class PlaylistViewModel @Inject constructor(
     fun removeSongFromPlaylist(song: Song) {
         viewModelScope.launch {
             val isLocal = playlistId.startsWith("local_") || playlistId == "LM"
-            val success = if (isLocal) {
+            var success = false
+            var message: String? = null
+
+            if (isLocal) {
                 try {
                     libraryRepository.removeSongFromPlaylist(playlistId, song.id)
-                    true
+                    success = true
+                    message = "Removed ${song.title} from playlist"
                 } catch (e: Exception) {
-                    false
+                    success = false
+                    message = "Failed to remove ${song.title}"
                 }
             } else {
                 val setVideoId = song.setVideoId
                 if (setVideoId != null) {
-                    youTubeRepository.removeSongFromPlaylist(playlistId, setVideoId)
+                    success = youTubeRepository.removeSongFromPlaylist(playlistId, setVideoId)
+                    message = if (success) "Removed ${song.title} from playlist" else "Failed to remove from YouTube playlist"
                 } else {
-                    false
+                    success = false
+                    message = "Cannot remove this song from YouTube playlist"
                 }
             }
             
             if (success) {
                 refreshPlaylist()
             }
+
+            _uiState.update { 
+                it.copy(
+                    successMessage = if (success) message else null,
+                    errorMessage = if (!success) message else null
+                )
+            }
         }
+    }
+
+    fun clearMessages() {
+        _uiState.update { it.copy(successMessage = null, errorMessage = null) }
     }
 
     fun toggleSongSelection(song: Song) {
