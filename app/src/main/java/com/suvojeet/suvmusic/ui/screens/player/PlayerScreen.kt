@@ -614,18 +614,32 @@ fun PortraitPlayerContent(
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
-        if (combinedLoading) {
-            M3ESeekbarShimmer(
-                isVisible = true,
-                dominantColors = dominantColors,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).height(4.dp)
-            )
-        } else {
-            WaveformSeeker(
-                progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
-                modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent, inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange, duration = playerState.duration, sponsorSegments = sponsorSegments
-            )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (combinedLoading) {
+                M3ESeekbarShimmer(
+                    isVisible = true,
+                    dominantColors = dominantColors,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                WaveformSeeker(
+                    progressProvider = { playerState.progress },
+                    isPlaying = playbackInfo.isPlaying,
+                    onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
+                    modifier = Modifier.fillMaxWidth(),
+                    activeColor = dominantColors.accent,
+                    inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                    initialStyle = currentSeekbarStyle,
+                    onStyleChange = onSeekbarStyleChange,
+                    duration = playerState.duration,
+                    sponsorSegments = sponsorSegments
+                )
+            }
         }
 
         TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
@@ -749,14 +763,32 @@ fun LandscapePlayerContent(
             )
             Spacer(modifier = Modifier.height(16.dp))
             
-            if (combinedLoading) {
-                M3ESeekbarShimmer(
-                    isVisible = true,
-                    dominantColors = dominantColors,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).height(4.dp)
-                )
-            } else {
-                WaveformSeeker(progressProvider = { playerState.progress }, isPlaying = playbackInfo.isPlaying, onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) }, modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent, inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f), initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange, duration = playerState.duration, sponsorSegments = sponsorSegments)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (combinedLoading) {
+                    M3ESeekbarShimmer(
+                        isVisible = true,
+                        dominantColors = dominantColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    WaveformSeeker(
+                        progressProvider = { playerState.progress },
+                        isPlaying = playbackInfo.isPlaying,
+                        onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
+                        modifier = Modifier.fillMaxWidth(),
+                        activeColor = dominantColors.accent,
+                        inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                        initialStyle = currentSeekbarStyle,
+                        onStyleChange = onSeekbarStyleChange,
+                        duration = playerState.duration,
+                        sponsorSegments = sponsorSegments
+                    )
+                }
             }
             
             TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
