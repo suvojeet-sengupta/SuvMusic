@@ -123,10 +123,37 @@ fun HomeScreen(
         }
     }
     
-    // Dynamic Background Colors
-    val dominantColors = com.suvojeet.suvmusic.ui.components.rememberDominantColors(
+    val playlistMgmtState by playlistViewModel.uiState.collectAsState()
+    val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsState(initial = true)
+
+    // Handle messages from PlaylistManagement
+    androidx.compose.runtime.LaunchedEffect(playlistMgmtState.successMessage, playlistMgmtState.errorMessage) {
+        playlistMgmtState.successMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            playlistViewModel.clearMessages()
+        }
+        playlistMgmtState.errorMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            playlistViewModel.clearMessages()
+        }
+    }
+
+    // Dynamic Background Colors - Respect user preference for dynamic colors
+    val actualDominantColors = com.suvojeet.suvmusic.ui.components.rememberDominantColors(
         imageUrl = currentSong?.thumbnailUrl ?: uiState.recommendations.firstOrNull()?.thumbnailUrl
     )
+    
+    val dominantColors = if (isAlbumArtDynamicColorsEnabled) {
+        actualDominantColors
+    } else {
+        // Fallback to Material You theme colors when dynamic colors are disabled
+        com.suvojeet.suvmusic.ui.components.DominantColors(
+            primary = MaterialTheme.colorScheme.primaryContainer,
+            secondary = MaterialTheme.colorScheme.secondaryContainer,
+            accent = MaterialTheme.colorScheme.tertiaryContainer,
+            onBackground = MaterialTheme.colorScheme.onBackground
+        )
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()

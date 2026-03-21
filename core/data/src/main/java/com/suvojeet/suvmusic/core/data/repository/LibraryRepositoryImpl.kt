@@ -185,9 +185,18 @@ class LibraryRepositoryImpl @Inject constructor(
         return libraryDao.getItem(id)?.toDomainModel()
     }
 
-    override fun getSavedPlaylists(): Flow<List<LibraryItem>> {
-        return libraryDao.getItemsByType("PLAYLIST").map { list ->
-            list.map { it.toDomainModel() }
+    override fun getSavedPlaylists(): Flow<List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem>> {
+        return libraryDao.getItemsWithTypeAndCount("PLAYLIST").map { list ->
+            list.map { entity ->
+                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(
+                    id = entity.id,
+                    name = entity.title,
+                    url = "https://music.youtube.com/playlist?list=${entity.id}",
+                    uploaderName = entity.subtitle ?: "",
+                    thumbnailUrl = entity.thumbnailUrl,
+                    songCount = entity.songCount
+                )
+            }
         }
     }
 
@@ -226,7 +235,7 @@ class LibraryRepositoryImpl @Inject constructor(
         return LibraryItem(
             id = id,
             title = title,
-            subtitle = subtitle,
+            subtitle = subtitle ?: "",
             thumbnailUrl = thumbnailUrl,
             type = try { LibraryItemType.valueOf(type) } catch(e: IllegalArgumentException) { LibraryItemType.UNKNOWN },
             timestamp = timestamp

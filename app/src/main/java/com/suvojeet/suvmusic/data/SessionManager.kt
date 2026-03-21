@@ -203,6 +203,9 @@ class SessionManager @Inject constructor(
         
         private val ALBUM_ART_DYNAMIC_COLORS_KEY = booleanPreferencesKey("album_art_dynamic_colors")
         private val ROTATING_VINYL_ANIMATION_KEY = booleanPreferencesKey("rotating_vinyl_animation")
+        
+        private val PLAYLIST_SORT_TYPE_KEY = stringPreferencesKey("playlist_sort_type")
+        private val PLAYLIST_SORT_ORDER_KEY = booleanPreferencesKey("playlist_sort_order")
     }
 
     // --- Appearance Settings ---
@@ -230,6 +233,24 @@ class SessionManager @Inject constructor(
     suspend fun setRotatingVinylAnimationEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ROTATING_VINYL_ANIMATION_KEY] = enabled
+        }
+    }
+
+    suspend fun getPlaylistSortType(): String =
+        context.dataStore.data.first()[PLAYLIST_SORT_TYPE_KEY] ?: "CUSTOM"
+
+    suspend fun setPlaylistSortType(type: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYLIST_SORT_TYPE_KEY] = type
+        }
+    }
+
+    suspend fun getPlaylistSortOrder(): Boolean =
+        context.dataStore.data.first()[PLAYLIST_SORT_ORDER_KEY] ?: true
+
+    suspend fun setPlaylistSortOrder(ascending: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYLIST_SORT_ORDER_KEY] = ascending
         }
     }
 
