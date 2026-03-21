@@ -64,30 +64,42 @@ jobs:
         
         # Create the release body file
         cat > release_body.md << EOF
-        # 🚀 SuvMusic v$VERSION
+        # SuvMusic v$VERSION
 
-        📅 **Release Date:** $DATE
+        [![Release](https://img.shields.io/github/v/release/suvojeet-sengupta/SuvMusic?style=flat-square&color=0078D4)](https://github.com/suvojeet-sengupta/SuvMusic/releases/latest)
+        [![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=flat-square&logo=android&logoColor=white)](https://developer.android.com)
+        [![License](https://img.shields.io/github/license/suvojeet-sengupta/SuvMusic?style=flat-square&color=404040)](LICENSE)
 
         ---
 
-        ### ✨ What's New
+        ### Release Overview
+        - **Version:** $VERSION
+        - **Build Date:** $DATE
+        - **Target SDK:** 36 (Android 15+)
+        - **Status:** Stable Release
+
+        ---
+
+        ### Implementation Details
         $FORMATTED_DESC
 
         ---
 
-        ### 🛠️ Developer
-        **Suvojeet Sengupta**
+        ### Contribution & Support
+        The development of SuvMusic is maintained through community support. If you find value in this project, consider supporting through the following channels:
 
-        ---
-
-        ### 💖 Support the Project
-        If you love using SuvMusic and want to support its development, consider donating:
-
-        - ☕ **Buy Me a Coffee:** [Support here](https://buymeacoffee.com/suvojeet_sengupta)
-        - 💳 **UPI ID:** \`suvojitsengupta21-3@okicici\`
+        - **Support via Buy Me a Coffee:** [https://buymeacoffee.com/suvojeet_sengupta](https://buymeacoffee.com/suvojeet_sengupta)
+        - **Direct Support (UPI):** \`suvojitsengupta21-3@okicici\`
         
         ---
-        *Thank you for being part of the SuvMusic community!*
+
+        ### Maintainer
+        **Suvojeet Sengupta**  
+        Lead Android Developer  
+        [GitHub Profile](https://github.com/suvojeet-sengupta)
+
+        ---
+        *This release was automatically generated as part of the SuvMusic continuous integration pipeline.*
         EOF
         
         echo "version=$VERSION" >> $GITHUB_OUTPUT
