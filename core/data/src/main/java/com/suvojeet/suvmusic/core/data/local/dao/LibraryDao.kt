@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.suvojeet.suvmusic.core.data.local.entity.LibraryEntity
+import com.suvojeet.suvmusic.core.data.local.entity.LibraryItemWithCount
 import com.suvojeet.suvmusic.core.data.local.entity.PlaylistSongEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -25,6 +26,14 @@ interface LibraryDao {
 
     @Query("SELECT * FROM library_items WHERE type = :type ORDER BY timestamp DESC")
     fun getItemsByType(type: String): Flow<List<LibraryEntity>>
+
+    @Query("""
+        SELECT *, (SELECT COUNT(*) FROM playlist_songs WHERE playlistId = library_items.id) as songCount 
+        FROM library_items 
+        WHERE type = :type 
+        ORDER BY timestamp DESC
+    """)
+    fun getItemsWithTypeAndCount(type: String): Flow<List<LibraryItemWithCount>>
 
     @Query("SELECT * FROM library_items ORDER BY timestamp DESC")
     fun getAllItems(): Flow<List<LibraryEntity>>
