@@ -3,22 +3,25 @@
 ## [2.1.2.0] - 2026-03-21
 
 ### Added
-- **Modernized Credits**: Completely redesigned the Credits screen with expressive styling and developer profile consistency.
-- **Native Playlist Import**: Direct native support for importing YouTube Music sources.
-- **MediaButtonReceiver**: Added support for better media hardware key control handling.
+- **Modernized Credits**: Completely redesigned the Credits screen with expressive styling, TopAppBar scroll behavior, and unified developer profile visuals matching the About screen.
+- **Universal Playlist Import**: Added direct native support for importing YouTube Music sources and universal support for `.m3u` playlist files.
+- **MediaButtonReceiver**: Integrated support for better media hardware key control handling and peripheral stability.
+- **Playlist Renaming**: Added the ability to rename local playlists directly from the app.
 
 ### Changed
-- **UI Consistency**: Expanded the use of the 28.dp Squircle shape across all remaining components for brand uniformity.
+- **Expressive UI Overhaul**: Redesigned Playlist and Import screens with Material 3 Expressive UI, including enhanced headers and sort menus.
+- **UI Consistency**: Expanded the use of the 28.dp Squircle shape across all remaining components for complete brand uniformity.
 - **TopAppBar Behavior**: Enabled dynamic scroll behavior for TopAppBars on all major screens, including the Credits screen.
-- **Playlist Experience**: Refined the PlaylistScreen header and sort menu with Material 3 Expressive styling.
+- **Fab Menu Polish**: Renamed 'Import from Spotify' to 'Import Playlist' in the FAB menu to reflect universal import support.
 
 ### Fixed
-- **Database Integrity**: Incremented database version to 9 to resolve critical Room data integrity crashes.
-- **Playlist Management**: Resolved duplicate and uneditable imported playlists.
-- **Player Stability**: Stabilized player layout during loading by using fixed-height seekbar containers.
-- **Library Sorting**: Fixed an issue where the 'Date Added' sorting was not applying correctly.
-- **Radio Logic**: Corrected an edge-case bug in the Radio queue logic.
-- **Auto-Skip Stability**: Stopped auto-skip chains caused by parse errors during stream resolution.
+- **Database Stability**: Incremented database version to 9 to resolve critical Room migration and data integrity crashes.
+- **Playlist Management**: Resolved an issue where imported playlists would occasionally be duplicated or uneditable.
+- **Player Layout**: Stabilized player layout during loading by using fixed-height seekbar containers to prevent UI jank.
+- **Library Sorting**: Fixed an issue where the 'Date Added' sorting was not correctly applied in some library views.
+- **Radio Logic**: Corrected an edge-case bug where the Radio queue logic would fail to trigger under specific conditions.
+- **Auto-Skip Stability**: Eliminated auto-skip chains caused by parse errors during stream resolution.
+- **Resolution Performance**: Optimized playback latency and fixed resolution race conditions during rapid track skipping.
 
 ## [2.1.1.0] - 2026-03-17
 
