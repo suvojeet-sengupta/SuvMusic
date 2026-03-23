@@ -45,6 +45,7 @@ fun ImportPlaylistScreen(
     onDismiss: () -> Unit,
     onImport: (url: String) -> Unit,
     onImportM3U: (android.net.Uri) -> Unit,
+    onImportSUV: (android.net.Uri) -> Unit,
     onCancel: () -> Unit,
     onReset: () -> Unit
 ) {
@@ -99,7 +100,7 @@ fun ImportPlaylistScreen(
                     label = "ImportState"
                 ) { state ->
                     when (state) {
-                        is ImportState.Idle -> InputView(onImport, onImportM3U)
+                        is ImportState.Idle -> InputView(onImport, onImportM3U, onImportSUV)
                         is ImportState.Loading -> LoadingView(onCancel)
                         is ImportState.Processing -> ProcessingView(state, onCancel)
                         is ImportState.Success -> SuccessView(
@@ -127,7 +128,11 @@ fun ImportPlaylistScreen(
 }
 
 @Composable
-private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri) -> Unit) {
+private fun InputView(
+    onImport: (String) -> Unit, 
+    onImportM3U: (android.net.Uri) -> Unit,
+    onImportSUV: (android.net.Uri) -> Unit
+) {
     var url by remember { mutableStateOf("") }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -137,6 +142,14 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
     ) { uri ->
         if (uri != null) {
             onImportM3U(uri)
+        }
+    }
+    
+    val suvPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            onImportSUV(uri)
         }
     }
 
@@ -187,7 +200,7 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
         )
 
         Text(
-            text = "Paste a Spotify or YouTube Music link, or upload an .m3u file.",
+            text = "Paste a link, or upload an .m3u or .suv file.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -225,7 +238,7 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
             )
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = { onImport(url) },
@@ -242,18 +255,30 @@ private fun InputView(onImport: (String) -> Unit, onImportM3U: (android.net.Uri)
             Text("Continue with Link", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold)
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         
-        OutlinedButton(
-            onClick = { m3uPicker.launch("audio/x-mpegurl") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = SquircleShape
-        ) {
-            Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Import .m3u File", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Row(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { m3uPicker.launch("*/*") },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = SquircleShape
+            ) {
+                Text("Import .m3u", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            OutlinedButton(
+                onClick = { suvPicker.launch("*/*") },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = SquircleShape
+            ) {
+                Text("Import .suv", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

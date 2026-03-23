@@ -21,6 +21,7 @@ import com.suvojeet.suvmusic.service.ImportStatus
 import com.suvojeet.suvmusic.service.PlaylistImportService
 import com.suvojeet.suvmusic.util.SpotifyImportHelper
 import com.suvojeet.suvmusic.util.PlaylistImportHelper
+import com.suvojeet.suvmusic.util.PlaylistExportHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -352,12 +353,47 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun importSUV(uri: Uri) {
+        val context = appContext
+        val intent = Intent(context, PlaylistImportService::class.java).apply {
+            action = PlaylistImportService.ACTION_START
+            putExtra(PlaylistImportService.EXTRA_SUV_URI, uri)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+
     fun cancelImport() {
         val context = appContext
         val intent = Intent(context, PlaylistImportService::class.java).apply {
             action = PlaylistImportService.ACTION_CANCEL
         }
         context.startService(intent)
+    }
+
+    fun exportPlaylistToM3U(context: Context, playlistItem: com.suvojeet.suvmusic.core.model.PlaylistDisplayItem) {
+        viewModelScope.launch {
+            try {
+                val fullPlaylist = youTubeRepository.getPlaylist(playlistItem.id)
+                PlaylistExportHelper.exportPlaylistToM3U(context, fullPlaylist)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to export: ${e.message}") }
+            }
+        }
+    }
+
+    fun exportPlaylistToSUV(context: Context, playlistItem: com.suvojeet.suvmusic.core.model.PlaylistDisplayItem) {
+        viewModelScope.launch {
+            try {
+                val fullPlaylist = youTubeRepository.getPlaylist(playlistItem.id)
+                PlaylistExportHelper.exportPlaylistToSUV(context, fullPlaylist)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to export: ${e.message}") }
+            }
+        }
     }
 
     fun resetImportState() {
