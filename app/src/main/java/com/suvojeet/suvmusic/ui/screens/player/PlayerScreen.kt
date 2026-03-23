@@ -843,6 +843,7 @@ fun BoxScope.OverlaysContent(
             onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
             onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
             onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show() } },
+            onAddToPlaylistClick = { playlistViewModel.showAddToPlaylistSheet(it) },
             onClearQueue = actions.onClearQueue,
             dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
         )
@@ -921,8 +922,8 @@ fun BoxScope.OverlaysContent(
         )
     }
 
-    if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSong != null) {
-        AddToPlaylistSheet(song = playlistUiState.selectedSong!!, isVisible = true, playlists = playlistUiState.userPlaylists, isLoading = playlistUiState.isLoadingPlaylists, onDismiss = { playlistViewModel.hideAddToPlaylistSheet() }, onAddToPlaylist = { playlistViewModel.addSongToPlaylist(it) }, onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() })
+    if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSongs.isNotEmpty()) {
+        AddToPlaylistSheet(songs = playlistUiState.selectedSongs, isVisible = true, playlists = playlistUiState.userPlaylists, isLoading = playlistUiState.isLoadingPlaylists, onDismiss = { playlistViewModel.hideAddToPlaylistSheet() }, onAddToPlaylist = { playlistViewModel.addSongsToPlaylist(it) }, onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() })
     }
 
     SleepTimerSheet(

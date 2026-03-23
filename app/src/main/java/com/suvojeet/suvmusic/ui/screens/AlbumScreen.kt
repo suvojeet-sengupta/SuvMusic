@@ -273,18 +273,16 @@ fun AlbumScreen(
 
                 // Global Add to Playlist Sheet
                 val playlistMgmtState by playlistViewModel.uiState.collectAsState()
-                playlistMgmtState.selectedSong?.let { selectedPlaylistSong ->
-                    if (playlistMgmtState.showAddToPlaylistSheet) {
-                        com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
-                            song = selectedPlaylistSong,
-                        isVisible = playlistMgmtState.showAddToPlaylistSheet,
+                if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSongs.isNotEmpty()) {
+                    com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
+                        songs = playlistMgmtState.selectedSongs,
+                        isVisible = true,
                         playlists = playlistMgmtState.userPlaylists,
-                        isLoading = playlistMgmtState.isLoadingPlaylists,
+                        isLoading = playlistMgmtState.isLoadingPlaylists || playlistMgmtState.isAddingSong,
                         onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
-                        onAddToPlaylist = { playlistId -> playlistViewModel.addSongToPlaylist(playlistId) },
+                        onAddToPlaylist = { playlistId -> playlistViewModel.addSongsToPlaylist(playlistId) },
                         onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() }
                     )
-                    }
                 }
 
                 // Create Playlist Dialog

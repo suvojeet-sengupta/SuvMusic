@@ -603,19 +603,21 @@ fun HomeScreen(
         // Add to Playlist Sheet
         val playlistUiState by playlistViewModel.uiState.collectAsState()
         
-        AddToPlaylistSheet(
-            song = playlistUiState.selectedSong ?: Song("", "", "", "", 0L, null, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
-            isVisible = playlistUiState.showAddToPlaylistSheet,
-            playlists = playlistUiState.userPlaylists,
-            isLoading = playlistUiState.isLoadingPlaylists,
-            onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
-            onAddToPlaylist = { playlistId ->
-                playlistViewModel.addSongToPlaylist(playlistId)
-            },
-            onCreateNewPlaylist = {
-                playlistViewModel.showCreatePlaylistDialog()
-            }
-        )
+        if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSongs.isNotEmpty()) {
+            AddToPlaylistSheet(
+                songs = playlistUiState.selectedSongs,
+                isVisible = true,
+                playlists = playlistUiState.userPlaylists,
+                isLoading = playlistUiState.isLoadingPlaylists || playlistUiState.isAddingSong,
+                onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+                onAddToPlaylist = { playlistId ->
+                    playlistViewModel.addSongsToPlaylist(playlistId)
+                },
+                onCreateNewPlaylist = {
+                    playlistViewModel.showCreatePlaylistDialog()
+                }
+            )
+        }
     }
 }
 

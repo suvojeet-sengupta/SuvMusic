@@ -541,11 +541,17 @@ fun SearchScreen(
         }
         
         val playlistMgmtState by playlistViewModel.uiState.collectAsState()
-        if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
-            val song = playlistMgmtState.selectedSong!!
-            AddToPlaylistSheet(song = song, isVisible = playlistMgmtState.showAddToPlaylistSheet, playlists = playlistMgmtState.userPlaylists, isLoading = playlistMgmtState.isLoadingPlaylists, onDismiss = { playlistViewModel.hideAddToPlaylistSheet() }, onAddToPlaylist = { playlistId -> playlistViewModel.addSongToPlaylist(playlistId) }, onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() })
-        }
-        
+        if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSongs.isNotEmpty()) {
+            AddToPlaylistSheet(
+                songs = playlistMgmtState.selectedSongs,
+                isVisible = true,
+                playlists = playlistMgmtState.userPlaylists,
+                isLoading = playlistMgmtState.isLoadingPlaylists || playlistMgmtState.isAddingSong,
+                onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+                onAddToPlaylist = { playlistId -> playlistViewModel.addSongsToPlaylist(playlistId) },
+                onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() }
+            )
+        }        
         if (playlistMgmtState.showCreatePlaylistDialog) {
              CreatePlaylistDialog(isVisible = playlistMgmtState.showCreatePlaylistDialog, isCreating = playlistMgmtState.isCreatingPlaylist, onDismiss = { playlistViewModel.hideCreatePlaylistDialog() }, onCreate = { title, description, isPrivate, syncWithYt -> playlistViewModel.createPlaylist(title, description, isPrivate, syncWithYt) }, isLoggedIn = true)
         }
