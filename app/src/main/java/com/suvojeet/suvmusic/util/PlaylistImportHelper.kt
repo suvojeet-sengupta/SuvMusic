@@ -134,4 +134,87 @@ class PlaylistImportHelper @Inject constructor(
         
         playlistName to tracks
     }
+
+    /**
+     * Parse an .suv file from a Uri.
+     */
+    suspend fun parseSUV(uri: Uri): Pair<String, List<ImportTrack>> = withContext(Dispatchers.IO) {
+        val tracksMap = mutableMapOf<String, ImportTrack>()
+        var playlistName = uri.lastPathSegment?.substringBeforeLast(".") ?: "SUV Import"
+        var sequence = emptyList<String>()
+        
+        try {
+            val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+            if (content != null) {
+                // 1. Read Sequence
+                val seqStart = content.indexOf("[SEQUENCE]")
+                val seqEnd = content.indexOf("[/SEQUENCE]")
+                if (seqStart != -1 && seqEnd != -1 && seqStart < seqEnd) {
+                    val sequenceStr = content.substring(seqStart + 10, seqEnd).trim()
+                    sequence = sequenceStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                }
+
+                // 2. Parse Songs
+                val songBlocks = content.split("[SONG]").drop(1).map { it.substringBefore("[/SONG]") }
+                for (block in songBlocks) {
+                    var currentId = ""
+                    var currentTitle = ""
+                    var currentArtist = ""
+                    var currentAlbum = ""
+                    var currentDuration = 0L
+                    var currentSourceStr = ""
+                    
+                    block.lines().forEach { line ->
+                        val trimmed = line.trim()
+                        when {
+                            trimmed.startsWith("id:") -> currentId = trimmed.substringAfter("id:").trim()
+                            trimmed.startsWith("title:") -> currentTitle = trimmed.substringAfter("title:").trim()
+                            trimmed.startsWith("artist:") -> currentArtist = trimmed.substringAfter("artist:").trim()
+                            trimmed.startsWith("album:") -> currentAlbum = trimmed.substringAfter("album:").trim()
+                            trimmed.startsWith("duration:") -> currentDuration = trimmed.substringAfter("duration:").trim().toLongOrNull() ?: 0L
+                            trimmed.startsWith("source:") -> currentSourceStr = trimmed.substringAfter("source:").trim()
+                        }
+                    }
+
+                    if (currentId.isNotBlank()) {
+                        val source = try {
+                            com.suvojeet.suvmusic.core.model.SongSource.valueOf(currentSourceStr)
+                        } catch (e: Exception) {
+                            com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
+                        }
+
+                        val song = com.suvojeet.suvmusic.core.model.Song(
+                            id = currentId,
+                            title = currentTitle,
+                            artist = currentArtist,
+                            album = currentAlbum.ifBlank { currentTitle },
+                            duration = currentDuration,
+                            thumbnailUrl = if (source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE || source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE_MUSIC) {
+                                "https://img.youtube.com/vi/$currentId/maxresdefault.jpg"
+                            } else null,
+                            source = source
+                        )
+                        
+                        tracksMap[currentId] = ImportTrack(
+                            title = currentTitle,
+                            artist = currentArtist,
+                            durationMs = currentDuration,
+                            sourceId = currentId,
+                            song = song
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("PlaylistImportHelper", "SUV parse failed", e)
+        }
+        
+        val orderedTracks = if (sequence.isNotEmpty()) {
+            sequence.mapNotNull { tracksMap[it] }
+        } else {
+            tracksMap.values.toList()
+        }
+        
+        playlistName to orderedTracks
+    }
 }
