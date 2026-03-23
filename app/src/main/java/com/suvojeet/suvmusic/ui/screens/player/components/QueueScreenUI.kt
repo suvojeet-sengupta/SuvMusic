@@ -101,6 +101,7 @@ fun ModernQueueView(
     onMoveItem: (Int, Int) -> Unit,
     onRemoveItems: (List<Int>) -> Unit,
     onSaveAsPlaylist: (String, String, Boolean, Boolean) -> Unit,
+    onAddToPlaylistClick: (List<Song>) -> Unit,
     onClearQueue: () -> Unit,
     dominantColors: DominantColors,
     animatedBackgroundEnabled: Boolean = true,
@@ -108,7 +109,6 @@ fun ModernQueueView(
 ) {
     val haptic = LocalHapticFeedback.current
     val isSelectionMode = selectedQueueIndices.isNotEmpty()
-    var showSavePlaylistDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -143,7 +143,12 @@ fun ModernQueueView(
                     }
                     Row {
                         IconButton(onClick = onSelectAll) { Icon(Icons.Default.SelectAll, "Select All", tint = dominantColors.onBackground) }
-                        IconButton(onClick = { showSavePlaylistDialog = true }) { Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground) }
+                        IconButton(onClick = { 
+                            val selectedSongs = selectedQueueIndices.mapNotNull { index ->
+                                if (index < queue.size) queue[index] else null
+                            }
+                            onAddToPlaylistClick(selectedSongs) 
+                        }) { Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground) }
                         IconButton(onClick = { onRemoveItems(selectedQueueIndices.toList()) }) { Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error) }
                     }
                 } else {
@@ -190,7 +195,7 @@ fun ModernQueueView(
                         Box(
                             modifier = Modifier
                                 .dpadFocusable(
-                                    onClick = { showSavePlaylistDialog = true },
+                                    onClick = { onAddToPlaylistClick(queue) },
                                     shape = CircleShape,
                                 )
                                 .size(40.dp)
@@ -411,18 +416,6 @@ fun ModernQueueView(
                 }
             }
         }
-    }
-
-    if (showSavePlaylistDialog) {
-        CreatePlaylistDialog(
-            isVisible = showSavePlaylistDialog,
-            isCreating = false,
-            onDismiss = { showSavePlaylistDialog = false },
-            onCreate = { title, desc, isPrivate, sync ->
-                onSaveAsPlaylist(title, desc, isPrivate, sync)
-                showSavePlaylistDialog = false
-            }
-        )
     }
 }
 

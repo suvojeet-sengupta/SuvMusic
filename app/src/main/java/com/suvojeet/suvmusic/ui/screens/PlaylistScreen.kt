@@ -402,11 +402,12 @@ fun PlaylistScreen(
                     onAddToQueue = { viewModel.addToQueue(playlist.songs) },
                     onAddToPlaylist = { 
                         if (playlist.songs.isNotEmpty()) {
-                            playlistMgmtViewModel.showAddToPlaylistSheet(playlist.songs.first())
+                            playlistMgmtViewModel.showAddToPlaylistSheet(playlist.songs)
                         }
                     },
                     onDownload = { viewModel.downloadPlaylist(playlist) },
                     onShare = { sharePlaylist(playlist) },
+                    onExport = { viewModel.exportPlaylistToM3U(context) },
                     onRename = { showRenameDialog = true },
                     onDelete = { showDeleteDialog = true },
                     showShare = playlist.id != "CACHED_ALL" && playlist.id != "DEVICE_SONGS"
@@ -462,14 +463,14 @@ fun PlaylistScreen(
             }
         }
 
-        if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSong != null) {
+        if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSongs.isNotEmpty()) {
             com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
-                song = playlistMgmtState.selectedSong!!,
+                songs = playlistMgmtState.selectedSongs,
                 isVisible = playlistMgmtState.showAddToPlaylistSheet,
                 playlists = playlistMgmtState.userPlaylists,
                 isLoading = playlistMgmtState.isLoadingPlaylists,
                 onDismiss = { playlistMgmtViewModel.hideAddToPlaylistSheet() },
-                onAddToPlaylist = { playlistId -> playlistMgmtViewModel.addSongToPlaylist(playlistId) },
+                onAddToPlaylist = { playlistId -> playlistMgmtViewModel.addSongsToPlaylist(playlistId) },
                 onCreateNewPlaylist = { playlistMgmtViewModel.showCreatePlaylistDialog() }
             )
         }

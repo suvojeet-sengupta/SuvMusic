@@ -999,14 +999,14 @@ fun SuvMusicApp(
             )
         }
         
-        playlistManagementUiState.selectedSong?.let { song ->
+        if (playlistManagementUiState.selectedSongs.isNotEmpty()) {
             com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet(
-                song = song,
+                songs = playlistManagementUiState.selectedSongs,
                 isVisible = playlistManagementUiState.showAddToPlaylistSheet,
                 playlists = playlistManagementUiState.userPlaylists,
                 isLoading = playlistManagementUiState.isLoadingPlaylists || playlistManagementUiState.isAddingSong,
                 onDismiss = { playlistManagementViewModel.hideAddToPlaylistSheet() },
-                onAddToPlaylist = { playlistId -> playlistManagementViewModel.addSongToPlaylist(playlistId) },
+                onAddToPlaylist = { playlistId -> playlistManagementViewModel.addSongsToPlaylist(playlistId) },
                 onCreateNewPlaylist = { playlistManagementViewModel.showCreatePlaylistDialog() }
             )
             
