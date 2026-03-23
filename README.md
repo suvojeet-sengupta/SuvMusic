@@ -113,6 +113,7 @@ SuvMusic is an independent project featuring original UI/UX and a custom audio e
 - **[Metrolist](https://github.com/MetrolistGroup/Metrolist)**: Core logic for the 'Listen Together' protocol.
 - **[NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)**: High-performance metadata extraction.
 - **[SimpMusic](https://github.com/SimpMusic/SimpMusic)**: Lyrics provider implementation logic.
+- **[kaif-00z](mailto:kaif-00z@proton.me)**: Original concept and architectural logic for the high-performance `.suv` native playlist format.
 
 ---
 

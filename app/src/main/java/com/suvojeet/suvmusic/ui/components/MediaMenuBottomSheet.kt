@@ -65,6 +65,7 @@ fun MediaMenuBottomSheet(
     onDownload: () -> Unit,
     onShare: () -> Unit,
     onExport: () -> Unit = {},
+    onExportSUV: () -> Unit = {},
     onRename: () -> Unit = {},
     onDelete: () -> Unit = {},
     showShare: Boolean = true
@@ -202,6 +203,13 @@ fun MediaMenuBottomSheet(
                     title = "Export as .m3u",
                     subtitle = "Export this playlist to a file",
                     onClick = { onExport(); onDismiss() }
+                )
+                
+                MenuActionItem(
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    title = "Export as .suv",
+                    subtitle = "Optimized custom format",
+                    onClick = { onExportSUV(); onDismiss() }
                 )
                 
                 if (isUserPlaylist) {
