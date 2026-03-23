@@ -807,14 +807,6 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
-    fun showCreatePlaylistDialog() {
-        _uiState.update { it.copy(showCreatePlaylistDialog = true) }
-    }
-
-    fun hideCreatePlaylistDialog() {
-        _uiState.update { it.copy(showCreatePlaylistDialog = false) }
-    }
-
     private suspend fun loadAllCachedSongs(): List<Song> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val allKeys = cache.keys
         val allHistory = listeningHistoryDao.getAllHistory()
