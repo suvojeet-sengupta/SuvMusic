@@ -6,6 +6,8 @@
     <cache-path name="images" path="images/" />
     <!-- Cache directory for crash logs -->
     <cache-path name="crash_logs" path="crash_logs/" />
+    <!-- Cache directory for exported playlists -->
+    <cache-path name="playlists" path="playlists/" />
     <!-- Public downloads for APK installation -->
     <external-path name="external_downloads" path="Download" />
 </paths>

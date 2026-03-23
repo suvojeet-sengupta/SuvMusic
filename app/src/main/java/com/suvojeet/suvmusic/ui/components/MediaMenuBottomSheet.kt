@@ -64,6 +64,7 @@ fun MediaMenuBottomSheet(
     onAddToPlaylist: () -> Unit,
     onDownload: () -> Unit,
     onShare: () -> Unit,
+    onExport: () -> Unit = {},
     onRename: () -> Unit = {},
     onDelete: () -> Unit = {},
     showShare: Boolean = true
@@ -194,6 +195,13 @@ fun MediaMenuBottomSheet(
                     title = "Download",
                     subtitle = "Make available for offline playback",
                     onClick = { onDownload(); onDismiss() }
+                )
+                
+                MenuActionItem(
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    title = "Export as .m3u",
+                    subtitle = "Export this playlist to a file",
+                    onClick = { onExport(); onDismiss() }
                 )
                 
                 if (isUserPlaylist) {
