@@ -124,6 +124,7 @@ fun LibraryScreen(
     // Playlist Menu State
     var showPlaylistMenu by remember { mutableStateOf(false) }
     var selectedPlaylist: PlaylistDisplayItem? by remember { mutableStateOf(null) }
+    var showExportDialog by remember { mutableStateOf(false) }
 
     // Add Menu State
     var showAddMenu by remember { mutableStateOf(false) }
@@ -326,6 +327,9 @@ fun LibraryScreen(
             onImportM3U = { uri ->
                 viewModel.importM3U(uri)
             },
+            onImportSUV = { uri ->
+                viewModel.importSUV(uri)
+            },
             onCancel = {
                 viewModel.cancelImport()
             },
@@ -360,8 +364,19 @@ fun LibraryScreen(
                 val shareIntent = Intent.createChooser(sendIntent, null)
                 context.startActivity(shareIntent)
             },
+            onExport = { showExportDialog = true },
             onRename = { },
             onDelete = { viewModel.deletePlaylist(playlist.id) }
+        )
+    }
+
+    // Export Playlist Dialog
+    if (showExportDialog && selectedPlaylist != null) {
+        com.suvojeet.suvmusic.ui.components.ExportPlaylistDialog(
+            isVisible = showExportDialog,
+            onDismiss = { showExportDialog = false },
+            onExportM3U = { viewModel.exportPlaylistToM3U(context, selectedPlaylist!!) },
+            onExportSUV = { viewModel.exportPlaylistToSUV(context, selectedPlaylist!!) }
         )
     }
 
