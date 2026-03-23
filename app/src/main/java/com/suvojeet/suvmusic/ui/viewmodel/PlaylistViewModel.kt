@@ -35,16 +35,22 @@ data class PlaylistUiState(
     val isCreating: Boolean = false,
     val isDeleting: Boolean = false,
     val deleteSuccess: Boolean = false,
-    isLoggedIn: Boolean = false,
+    val isLoggedIn: Boolean = false,
     val isSaved: Boolean = false,
+    val userPlaylists: List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem> = emptyList(),
+    val isLoadingPlaylists: Boolean = false,
+    val showAddToPlaylistSheet: Boolean = false,
+    val showCreatePlaylistDialog: Boolean = false,
+    val isCreatingPlaylist: Boolean = false,
+    val selectedSong: Song? = null,
     val selectedSongIds: Set<String> = emptySet(),
     val isSelectionMode: Boolean = false,
     val successMessage: String? = null,
     val errorMessage: String? = null
-    ) {
+) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
-    }
+}
 
 @HiltViewModel
 class PlaylistViewModel @Inject constructor(
@@ -576,6 +582,95 @@ class PlaylistViewModel @Inject constructor(
         }
     }
     
+    fun addToPlaylist(song: Song) {
+        showAddToPlaylistSheet(song)
+    }
+
+    // Add to Playlist management
+    fun showAddToPlaylistSheet(song: Song) {
+        _uiState.update { 
+            it.copy(
+                showAddToPlaylistSheet = true,
+                selectedSong = song
+            )
+        }
+        loadUserPlaylists()
+    }
+
+    fun hideAddToPlaylistSheet() {
+        _uiState.update { 
+            it.copy(
+                showAddToPlaylistSheet = false,
+                selectedSong = null
+            )
+        }
+    }
+
+    private fun loadUserPlaylists() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingPlaylists = true) }
+            val playlists = youTubeRepository.getUserEditablePlaylists()
+            _uiState.update { 
+                it.copy(
+                    userPlaylists = playlists,
+                    isLoadingPlaylists = false
+                )
+            }
+        }
+    }
+
+    fun addSongToPlaylist(targetPlaylistId: String) {
+        val song = _uiState.value.selectedSong ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingPlaylists = true) }
+            val isLocal = targetPlaylistId.startsWith("local_") || targetPlaylistId == "LM"
+            var success = false
+            var message: String? = null
+
+            if (isLocal) {
+                try {
+                    if (libraryRepository.isSongInPlaylist(targetPlaylistId, song.id)) {
+                        success = false
+                        message = "${song.title} is already in this playlist"
+                    } else {
+                        libraryRepository.addSongToPlaylist(targetPlaylistId, song)
+                        success = true
+                        message = "Added ${song.title} to playlist"
+                    }
+                } catch (e: Exception) {
+                    success = false
+                    message = "Failed to add ${song.title}"
+                }
+            } else {
+                success = youTubeRepository.addSongToPlaylist(targetPlaylistId, song.id)
+                message = if (success) "Added ${song.title} to playlist" else "Failed to add to YouTube playlist"
+            }
+            
+            _uiState.update { 
+                it.copy(
+                    isLoadingPlaylists = false,
+                    showAddToPlaylistSheet = false,
+                    selectedSong = null,
+                    successMessage = if (success) message else null,
+                    errorMessage = if (!success) message else null
+                )
+            }
+            
+            // Reload if the song was added to the currently viewed playlist
+            if (success && targetPlaylistId == playlistId) {
+                refreshPlaylist()
+            }
+        }
+    }
+
+    fun showCreatePlaylistDialog() {
+        _uiState.update { it.copy(showCreatePlaylistDialog = true) }
+    }
+
+    fun hideCreatePlaylistDialog() {
+        _uiState.update { it.copy(showCreatePlaylistDialog = false) }
+    }
+
     fun removeSongFromPlaylist(song: Song) {
         viewModelScope.launch {
             val isLocal = playlistId.startsWith("local_") || playlistId == "LM"
