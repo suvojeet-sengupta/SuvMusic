@@ -24,7 +24,7 @@ data class PlaylistManagementUiState(
     val isAddingSong: Boolean = false,
     val showAddToPlaylistSheet: Boolean = false,
     val showCreatePlaylistDialog: Boolean = false,
-    val selectedSong: Song? = null,
+    val selectedSongs: List<Song> = emptyList(),
     val successMessage: String? = null,
     val errorMessage: String? = null
 )
@@ -68,7 +68,21 @@ class PlaylistManagementViewModel @Inject constructor(
         _uiState.update { 
             it.copy(
                 showAddToPlaylistSheet = true,
-                selectedSong = song
+                selectedSongs = listOf(song)
+            )
+        }
+        loadUserPlaylists()
+    }
+
+    /**
+     * Show the Add to Playlist sheet for multiple songs.
+     */
+    fun showAddToPlaylistSheet(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        _uiState.update { 
+            it.copy(
+                showAddToPlaylistSheet = true,
+                selectedSongs = songs
             )
         }
         loadUserPlaylists()
@@ -81,7 +95,7 @@ class PlaylistManagementViewModel @Inject constructor(
         _uiState.update { 
             it.copy(
                 showAddToPlaylistSheet = false,
-                selectedSong = null
+                selectedSongs = emptyList()
             )
         }
     }
@@ -107,7 +121,7 @@ class PlaylistManagementViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingPlaylist = true) }
             
-            val song = _uiState.value.selectedSong
+            val songs = _uiState.value.selectedSongs
             val playlistId = if (syncWithYt && sessionManager.isLoggedIn()) {
                 val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
                 youTubeRepository.createPlaylist(title, description, privacyStatus)
@@ -119,7 +133,7 @@ class PlaylistManagementViewModel @Inject constructor(
                         id = id, 
                         title = title, 
                         author = "You", 
-                        thumbnailUrl = song?.thumbnailUrl, // Use song thumb if creating from a song
+                        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl, // Use first song thumb if creating from songs
                         songs = emptyList()
                     )
                     libraryRepository.savePlaylist(playlist)
@@ -130,27 +144,34 @@ class PlaylistManagementViewModel @Inject constructor(
             }
             
             if (playlistId != null) {
-                // If there's a selected song, add it to the new playlist
-                if (song != null) {
-                    val added = if (syncWithYt && sessionManager.isLoggedIn()) {
-                        youTubeRepository.addSongToPlaylist(playlistId, song.id)
+                // If there are selected songs, add them to the new playlist
+                if (songs.isNotEmpty()) {
+                    var success = false
+                    if (syncWithYt && sessionManager.isLoggedIn() && !playlistId.startsWith("local_")) {
+                        success = youTubeRepository.addSongsToPlaylist(playlistId, songs.map { it.id })
                     } else {
-                         try {
-                             libraryRepository.addSongToPlaylist(playlistId, song)
-                             true
-                         } catch (e: Exception) {
-                             false
-                         }
+                        var successCount = 0
+                        for (song in songs) {
+                             try {
+                                 libraryRepository.addSongToPlaylist(playlistId, song)
+                                 successCount++
+                             } catch (e: Exception) {
+                                 // Skip
+                             }
+                        }
+                        success = successCount > 0
                     }
 
-                    if (added) {
+                    if (success) {
+                        val msg = if (songs.size == 1) "Created \"$title\" and added ${songs[0].title}"
+                                 else "Created \"$title\" and added ${songs.size} songs"
                         _uiState.update { 
                             it.copy(
                                 isCreatingPlaylist = false,
                                 showCreatePlaylistDialog = false,
                                 showAddToPlaylistSheet = false,
-                                selectedSong = null,
-                                successMessage = "Created \"$title\" and added ${song.title}"
+                                selectedSongs = emptyList(),
+                                successMessage = msg
                             )
                         }
                     } else {
@@ -186,52 +207,62 @@ class PlaylistManagementViewModel @Inject constructor(
     }
     
     /**
-     * Add selected song to an existing playlist.
+     * Add selected songs to an existing playlist.
      */
-    fun addSongToPlaylist(playlistId: String) {
-        val song = _uiState.value.selectedSong ?: return
+    fun addSongsToPlaylist(playlistId: String) {
+        val songs = _uiState.value.selectedSongs
+        if (songs.isEmpty()) return
         
         viewModelScope.launch {
             _uiState.update { it.copy(isAddingSong = true) }
             
-            var success = false
-            var message: String? = null
+            var successCount = 0
+            var lastMessage: String? = null
 
             if (playlistId.startsWith("local_")) {
-                try {
-                    // 1. Check for duplicates
-                    if (libraryRepository.isSongInPlaylist(playlistId, song.id)) {
-                        success = false
-                        message = "${song.title} is already in this playlist"
-                    } else {
-                        // 2. Add song
-                        libraryRepository.addSongToPlaylist(playlistId, song)
-                        
-                        // 3. Auto-update thumbnail if playlist has none
-                        val playlistItem = libraryRepository.getPlaylistById(playlistId)
-                        if (playlistItem != null && playlistItem.thumbnailUrl.isNullOrBlank()) {
-                            libraryRepository.updatePlaylistThumbnail(playlistId, song.thumbnailUrl)
+                for (song in songs) {
+                    try {
+                        // 1. Check for duplicates
+                        if (libraryRepository.isSongInPlaylist(playlistId, song.id)) {
+                            lastMessage = "${song.title} is already in this playlist"
+                        } else {
+                            // 2. Add song
+                            libraryRepository.addSongToPlaylist(playlistId, song)
+                            
+                            // 3. Auto-update thumbnail if playlist has none
+                            val playlistItem = libraryRepository.getPlaylistById(playlistId)
+                            if (playlistItem != null && playlistItem.thumbnailUrl.isNullOrBlank()) {
+                                libraryRepository.updatePlaylistThumbnail(playlistId, song.thumbnailUrl)
+                            }
+                            
+                            successCount++
                         }
-                        
-                        success = true
-                        message = "Added ${song.title} to playlist"
+                    } catch (e: Exception) {
+                        lastMessage = "Failed to add ${song.title}"
                     }
-                } catch (e: Exception) {
-                    success = false
-                    message = "Failed to add ${song.title}"
                 }
             } else {
-                success = youTubeRepository.addSongToPlaylist(playlistId, song.id)
-                message = if (success) "Added ${song.title} to playlist" else "Failed to add to YouTube playlist"
+                val success = youTubeRepository.addSongsToPlaylist(playlistId, songs.map { it.id })
+                if (success) successCount = songs.size
+                else lastMessage = "Failed to add songs to YouTube"
+            }
+            
+            val success = successCount > 0
+            val finalMessage = when {
+                songs.size == 1 && successCount == 1 -> "Added ${songs[0].title} to playlist"
+                songs.size == 1 && successCount == 0 -> lastMessage ?: "Failed to add to playlist"
+                successCount == songs.size -> "Added $successCount songs to playlist"
+                successCount > 0 -> "Added $successCount of ${songs.size} songs to playlist"
+                else -> lastMessage ?: "Failed to add songs to playlist"
             }
             
             _uiState.update { 
                 it.copy(
                     isAddingSong = false,
                     showAddToPlaylistSheet = false,
-                    selectedSong = null,
-                    successMessage = if (success) message else null,
-                    errorMessage = if (!success) message else null
+                    selectedSongs = emptyList(),
+                    successMessage = if (success) finalMessage else null,
+                    errorMessage = if (!success) finalMessage else null
                 )
             }
         }

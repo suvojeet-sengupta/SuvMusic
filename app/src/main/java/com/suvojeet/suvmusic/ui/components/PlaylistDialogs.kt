@@ -72,7 +72,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.ImportState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddToPlaylistSheet(
-    song: Song,
+    songs: List<Song>,
     isVisible: Boolean,
     playlists: List<PlaylistDisplayItem>,
     isLoading: Boolean,
@@ -98,7 +98,7 @@ fun AddToPlaylistSheet(
             ) {
                 // Header
                 Text(
-                    text = "Add to Playlist",
+                    text = if (songs.size <= 1) "Add to Playlist" else "Add ${songs.size} Songs",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -106,44 +106,63 @@ fun AddToPlaylistSheet(
                 )
                 
                 // Song info - Compact Preview
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = SquircleShape,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                if (songs.isNotEmpty()) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = SquircleShape,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
                     ) {
-                        AsyncImage(
-                            model = song.thumbnailUrl,
-                            contentDescription = song.title,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(SquircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        
-                        Spacer(modifier = Modifier.width(16.dp))
-                        
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = song.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val firstSong = songs.first()
+                            AsyncImage(
+                                model = firstSong.thumbnailUrl,
+                                contentDescription = firstSong.title,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(SquircleShape),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = song.artist,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            
+                            Spacer(modifier = Modifier.width(16.dp))
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                if (songs.size == 1) {
+                                    Text(
+                                        text = firstSong.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = firstSong.artist,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                } else {
+                                    Text(
+                                        text = "${songs.size} items selected",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Starting with ${firstSong.title}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
                     }
                 }

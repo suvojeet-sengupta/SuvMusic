@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.viewmodel
 
 import android.widget.Toast
+import android.content.Intent
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -34,22 +35,16 @@ data class PlaylistUiState(
     val isCreating: Boolean = false,
     val isDeleting: Boolean = false,
     val deleteSuccess: Boolean = false,
-    val isLoggedIn: Boolean = false,
+    isLoggedIn: Boolean = false,
     val isSaved: Boolean = false,
-    val userPlaylists: List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem> = emptyList(),
-    val isLoadingPlaylists: Boolean = false,
-    val showAddToPlaylistSheet: Boolean = false,
-    val showCreatePlaylistDialog: Boolean = false,
-    val isCreatingPlaylist: Boolean = false,
-    val selectedSong: Song? = null,
     val selectedSongIds: Set<String> = emptySet(),
     val isSelectionMode: Boolean = false,
     val successMessage: String? = null,
     val errorMessage: String? = null
-) {
+    ) {
     val isUserPlaylist: Boolean
         get() = isEditable // Alias for clarity
-}
+    }
 
 @HiltViewModel
 class PlaylistViewModel @Inject constructor(
@@ -532,87 +527,55 @@ class PlaylistViewModel @Inject constructor(
         }
     }
     
-    fun addToPlaylist(song: Song) {
-        showAddToPlaylistSheet(song)
-    }
+    fun exportPlaylistToM3U(context: android.content.Context) {
+        val playlist = _uiState.value.playlist ?: return
+        val songs = playlist.songs
+        if (songs.isEmpty()) return
 
-    // Add to Playlist management
-    fun showAddToPlaylistSheet(song: Song) {
-        _uiState.update { 
-            it.copy(
-                showAddToPlaylistSheet = true,
-                selectedSong = song
-            )
-        }
-        loadUserPlaylists()
-    }
-
-    fun hideAddToPlaylistSheet() {
-        _uiState.update { 
-            it.copy(
-                showAddToPlaylistSheet = false,
-                selectedSong = null
-            )
-        }
-    }
-
-    private fun loadUserPlaylists() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingPlaylists = true) }
-            val playlists = youTubeRepository.getUserEditablePlaylists()
-            _uiState.update { 
-                it.copy(
-                    userPlaylists = playlists,
-                    isLoadingPlaylists = false
-                )
-            }
-        }
-    }
-
-    fun addSongToPlaylist(targetPlaylistId: String) {
-        val song = _uiState.value.selectedSong ?: return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingPlaylists = true) }
-            val isLocal = targetPlaylistId.startsWith("local_") || targetPlaylistId == "LM"
-            var success = false
-            var message: String? = null
-
-            if (isLocal) {
-                try {
-                    if (libraryRepository.isSongInPlaylist(targetPlaylistId, song.id)) {
-                        success = false
-                        message = "${song.title} is already in this playlist"
+            try {
+                val m3uContent = StringBuilder("#EXTM3U\n")
+                for (song in songs) {
+                    m3uContent.append("#EXTINF:${song.duration / 1000},${song.artist} - ${song.title}\n")
+                    // For YouTube songs, use the URL. For local songs, use the URI.
+                    val url = if (song.localUri != null) {
+                        song.localUri.toString()
                     } else {
-                        libraryRepository.addSongToPlaylist(targetPlaylistId, song)
-                        success = true
-                        message = "Added ${song.title} to playlist"
+                        "https://www.youtube.com/watch?v=${song.id}"
                     }
-                } catch (e: Exception) {
-                    success = false
-                    message = "Failed to add ${song.title}"
+                    m3uContent.append("$url\n")
                 }
-            } else {
-                success = youTubeRepository.addSongToPlaylist(targetPlaylistId, song.id)
-                message = if (success) "Added ${song.title} to playlist" else "Failed to add to YouTube playlist"
-            }
-            
-            _uiState.update { 
-                it.copy(
-                    isLoadingPlaylists = false,
-                    showAddToPlaylistSheet = false,
-                    selectedSong = null,
-                    successMessage = if (success) message else null,
-                    errorMessage = if (!success) message else null
+
+                val safeTitle = playlist.title.replace(Regex("[^a-zA-Z0-9]"), "_")
+                val fileName = "$safeTitle.m3u"
+                
+                val playlistsDir = java.io.File(context.cacheDir, "playlists")
+                if (!playlistsDir.exists()) playlistsDir.mkdirs()
+                
+                val tempFile = java.io.File(playlistsDir, fileName)
+                tempFile.writeText(m3uContent.toString())
+                
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    tempFile
                 )
-            }
-            
-            // Reload if the song was added to the currently viewed playlist
-            if (success && targetPlaylistId == playlistId) {
-                refreshPlaylist()
+                
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "audio/x-mpegurl"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                
+                val chooser = Intent.createChooser(intent, "Export Playlist")
+                chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(chooser)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Failed to export: ${e.localizedMessage}") }
             }
         }
     }
-
+    
     fun removeSongFromPlaylist(song: Song) {
         viewModelScope.launch {
             val isLocal = playlistId.startsWith("local_") || playlistId == "LM"
