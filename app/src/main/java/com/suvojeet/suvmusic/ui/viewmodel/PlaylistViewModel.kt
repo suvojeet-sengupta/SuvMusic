@@ -12,6 +12,7 @@ import com.suvojeet.suvmusic.core.model.SortType
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
+import com.suvojeet.suvmusic.util.PlaylistExportHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -535,51 +536,12 @@ class PlaylistViewModel @Inject constructor(
     
     fun exportPlaylistToM3U(context: android.content.Context) {
         val playlist = _uiState.value.playlist ?: return
-        val songs = playlist.songs
-        if (songs.isEmpty()) return
+        PlaylistExportHelper.exportPlaylistToM3U(context, playlist)
+    }
 
-        viewModelScope.launch {
-            try {
-                val m3uContent = StringBuilder("#EXTM3U\n")
-                for (song in songs) {
-                    m3uContent.append("#EXTINF:${song.duration / 1000},${song.artist} - ${song.title}\n")
-                    // For YouTube songs, use the URL. For local songs, use the URI.
-                    val url = if (song.localUri != null) {
-                        song.localUri.toString()
-                    } else {
-                        "https://www.youtube.com/watch?v=${song.id}"
-                    }
-                    m3uContent.append("$url\n")
-                }
-
-                val safeTitle = playlist.title.replace(Regex("[^a-zA-Z0-9]"), "_")
-                val fileName = "$safeTitle.m3u"
-                
-                val playlistsDir = java.io.File(context.cacheDir, "playlists")
-                if (!playlistsDir.exists()) playlistsDir.mkdirs()
-                
-                val tempFile = java.io.File(playlistsDir, fileName)
-                tempFile.writeText(m3uContent.toString())
-                
-                val uri = androidx.core.content.FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.provider",
-                    tempFile
-                )
-                
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "audio/x-mpegurl"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                
-                val chooser = Intent.createChooser(intent, "Export Playlist")
-                chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(chooser)
-            } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Failed to export: ${e.localizedMessage}") }
-            }
-        }
+    fun exportPlaylistToSUV(context: android.content.Context) {
+        val playlist = _uiState.value.playlist ?: return
+        PlaylistExportHelper.exportPlaylistToSUV(context, playlist)
     }
     
     fun addToPlaylist(song: Song) {

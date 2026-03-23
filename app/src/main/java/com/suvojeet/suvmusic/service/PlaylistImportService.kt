@@ -70,10 +70,13 @@ class PlaylistImportService : Service() {
             ACTION_START -> {
                 val url = intent.getStringExtra(EXTRA_URL)
                 val m3uUri = intent.getParcelableExtra<Uri>(EXTRA_M3U_URI)
+                val suvUri = intent.getParcelableExtra<Uri>(EXTRA_SUV_URI)
                 if (url != null) {
                     startImport(url = url)
                 } else if (m3uUri != null) {
                     startImport(m3uUri = m3uUri)
+                } else if (suvUri != null) {
+                    startImport(suvUri = suvUri)
                 }
             }
             ACTION_CANCEL -> {
@@ -83,7 +86,7 @@ class PlaylistImportService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startImport(url: String? = null, m3uUri: Uri? = null) {
+    private fun startImport(url: String? = null, m3uUri: Uri? = null, suvUri: Uri? = null) {
         if (currentJob?.isActive == true) return
 
         startForeground(NOTIFICATION_ID, buildNotification("Preparing import...", 0, 0, true))
@@ -102,6 +105,9 @@ class PlaylistImportService : Service() {
                     }
                     m3uUri != null -> {
                         playlistImportHelper.parseM3U(m3uUri)
+                    }
+                    suvUri != null -> {
+                        playlistImportHelper.parseSUV(suvUri)
                     }
                     else -> "Imported Playlist" to emptyList()
                 }
@@ -133,46 +139,65 @@ class PlaylistImportService : Service() {
 
                 _importState.update { it.copy(state = ImportStatus.State.PROCESSING, total = total, progress = 0) }
 
-                importTracks.forEachIndexed { index, track ->
-                    if (!isActive) return@forEachIndexed
-                    val title = track.title
-                    val artist = track.artist
-
+                // Check if all tracks already have song objects (e.g. from .suv import)
+                val allHaveSongs = importTracks.isNotEmpty() && importTracks.all { it.song != null }
+                
+                if (allHaveSongs && isLocal) {
+                    // Fast path for native formats
+                    val matches = importTracks.mapNotNull { it.song }
+                    libraryRepository.appendPlaylistSongs(finalPlaylistId!!, matches, 0)
+                    successCount = matches.size
                     _importState.update { 
                         it.copy(
-                            currentSong = title,
-                            currentArtist = artist,
-                            progress = index + 1,
-                            thumbnail = null
+                            progress = total,
+                            currentSong = "Imported $successCount songs",
+                            thumbnail = matches.firstOrNull()?.thumbnailUrl
                         )
                     }
-                    updateNotification("Importing: $title", index + 1, total, false)
+                    updateNotification("Imported $successCount songs", total, total, false)
+                } else {
+                    // Regular matching path
+                    importTracks.forEachIndexed { index, track ->
+                        if (!isActive) return@forEachIndexed
+                        val title = track.title
+                        val artist = track.artist
 
-                    // Find Match or use direct song/sourceId
-                    val match = when {
-                        track.song != null -> track.song
-                        track.sourceId != null -> youTubeRepository.getSongDetails(track.sourceId)
-                        else -> spotifyImportHelper.findMatch(title, artist, track.durationMs)
+                        _importState.update { 
+                            it.copy(
+                                currentSong = title,
+                                currentArtist = artist,
+                                progress = index + 1,
+                                thumbnail = null
+                            )
+                        }
+                        updateNotification("Importing: $title", index + 1, total, false)
+
+                        // Find Match or use direct song/sourceId
+                        val match = when {
+                            track.song != null -> track.song
+                            track.sourceId != null -> youTubeRepository.getSongDetails(track.sourceId)
+                            else -> spotifyImportHelper.findMatch(title, artist, track.durationMs)
+                        }
+                        
+                        if (match != null) {
+                             _importState.update { it.copy(thumbnail = match.thumbnailUrl) }
+                             val added = if (isLocal) {
+                                 libraryRepository.addSongToPlaylist(finalPlaylistId!!, match)
+                                 true
+                             } else {
+                                 youTubeRepository.addSongToPlaylist(finalPlaylistId!!, match.id)
+                             }
+                             if (added) {
+                                 successCount++
+                             } else {
+                                 failedSongs.add(title to artist)
+                             }
+                        } else {
+                            failedSongs.add(title to artist)
+                        }
+                        
+                        delay(50) 
                     }
-                    
-                    if (match != null) {
-                         _importState.update { it.copy(thumbnail = match.thumbnailUrl) }
-                         val added = if (isLocal) {
-                             libraryRepository.addSongToPlaylist(finalPlaylistId!!, match)
-                             true
-                         } else {
-                             youTubeRepository.addSongToPlaylist(finalPlaylistId!!, match.id)
-                         }
-                         if (added) {
-                             successCount++
-                         } else {
-                             failedSongs.add(title to artist)
-                         }
-                    } else {
-                        failedSongs.add(title to artist)
-                    }
-                    
-                    delay(50) 
                 }
 
                 _importState.update { 
@@ -271,6 +296,7 @@ class PlaylistImportService : Service() {
         const val ACTION_CANCEL = "com.suvojeet.suvmusic.action.CANCEL_IMPORT"
         const val EXTRA_URL = "com.suvojeet.suvmusic.extra.URL"
         const val EXTRA_M3U_URI = "com.suvojeet.suvmusic.extra.M3U_URI"
+        const val EXTRA_SUV_URI = "com.suvojeet.suvmusic.extra.SUV_URI"
 
         private val _importState = MutableStateFlow(ImportStatus())
         val importState = _importState.asStateFlow()

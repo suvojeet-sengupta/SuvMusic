@@ -115,6 +115,7 @@ fun PlaylistScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
     var showMediaMenu by remember { mutableStateOf(false) }
     
     // Song Menu State
@@ -407,7 +408,7 @@ fun PlaylistScreen(
                     },
                     onDownload = { viewModel.downloadPlaylist(playlist) },
                     onShare = { sharePlaylist(playlist) },
-                    onExport = { viewModel.exportPlaylistToM3U(context) },
+                    onExport = { showExportDialog = true },
                     onRename = { showRenameDialog = true },
                     onDelete = { showDeleteDialog = true },
                     showShare = playlist.id != "CACHED_ALL" && playlist.id != "DEVICE_SONGS"
@@ -519,6 +520,15 @@ fun PlaylistScreen(
                 onDelete = {
                     viewModel.deletePlaylist()
                 }
+            )
+        }
+
+        if (showExportDialog && playlist != null) {
+            com.suvojeet.suvmusic.ui.components.ExportPlaylistDialog(
+                isVisible = showExportDialog,
+                onDismiss = { showExportDialog = false },
+                onExportM3U = { viewModel.exportPlaylistToM3U(context) },
+                onExportSUV = { viewModel.exportPlaylistToSUV(context) }
             )
         }
     }
