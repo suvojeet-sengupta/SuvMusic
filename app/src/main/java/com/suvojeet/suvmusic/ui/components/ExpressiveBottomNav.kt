@@ -172,7 +172,7 @@ private fun LiquidGlassNavBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .height(72.dp)
     ) {
         // Layer 1: Enhanced shadow
@@ -214,9 +214,9 @@ private fun LiquidGlassNavBar(
                 }
                 .then(
                     if (Build.VERSION.SDK_INT >= 31) {
-                        Modifier.blur(45.dp)
+                        Modifier.blur(60.dp)
                     } else {
-                        Modifier.blur(22.dp)
+                        Modifier.blur(30.dp)
                     }
                 )
         )

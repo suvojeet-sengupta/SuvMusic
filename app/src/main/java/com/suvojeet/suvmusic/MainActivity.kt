@@ -347,6 +347,7 @@ fun SuvMusicApp(
     
     // Collect volume slider enabled preference
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
     val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.YT_MUSIC)
     val swipeDownToDismissEnabled by sessionManager.swipeDownToDismissEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
@@ -601,12 +602,16 @@ fun SuvMusicApp(
     )
     
     // Fallback colors for non-player screens (volume indicator etc.)
-    val defaultDominantColors = if (playbackInfo.currentSong != null) songDominantColors else DominantColors(
-        primary = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-        secondary = androidx.compose.material3.MaterialTheme.colorScheme.secondary,
-        accent = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
-        onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-    )
+    val defaultDominantColors = if (playbackInfo.currentSong != null && isAlbumArtDynamicColorsEnabled) {
+        songDominantColors 
+    } else {
+        DominantColors(
+            primary = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer,
+            secondary = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
+            accent = androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer,
+            onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+        )
+    }
     
 
     
