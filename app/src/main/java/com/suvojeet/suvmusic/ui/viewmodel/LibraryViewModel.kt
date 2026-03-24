@@ -33,6 +33,7 @@ import javax.inject.Inject
 data class LibraryUiState(
     val playlists: List<PlaylistDisplayItem> = emptyList(),
     val userPlaylists: List<PlaylistDisplayItem> = emptyList(),
+    val remotePlaylists: List<PlaylistDisplayItem> = emptyList(),
     val localSongs: List<Song> = emptyList(),
     val downloadedSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
@@ -227,12 +228,12 @@ class LibraryViewModel @Inject constructor(
                     // Optimization: Show cached playlists immediately to prevent UI blocking/delay
                     val cachedPlaylists = sessionManager.getCachedLibraryPlaylistsSync()
                     if (cachedPlaylists.isNotEmpty()) {
-                        _uiState.update { it.copy(playlists = cachedPlaylists) }
+                        _uiState.update { it.copy(remotePlaylists = cachedPlaylists) }
                     }
 
                     // Then fetch fresh data from network
                     val playlists = youTubeRepository.getUserPlaylists(autoSave = false)
-                    _uiState.update { it.copy(playlists = playlists) }
+                    _uiState.update { it.copy(remotePlaylists = playlists) }
 
                     val artists = youTubeRepository.getLibraryArtists()
                     _uiState.update { it.copy(libraryArtists = artists) }
@@ -286,9 +287,9 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             libraryRepository.getSavedPlaylists().collect { displayItems ->
                 _uiState.update { state ->
-                    // Filter out local playlists from current state to prevent duplicates or stale items after deletion/rename
-                    val nonLocalPlaylists = state.playlists.filterNot { it.id.startsWith("local_") }
-                    val combined = (nonLocalPlaylists + displayItems).distinctBy { it.id }
+                    // Combined list should always be remote playlists + saved/local playlists from DB.
+                    // This way, removing from DB correctly reflects in the UI.
+                    val combined = (state.remotePlaylists + displayItems).distinctBy { it.id }
                     state.copy(playlists = combined, userPlaylists = displayItems)
                 }
             }
