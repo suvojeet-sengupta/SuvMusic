@@ -15,8 +15,14 @@ interface LibraryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: LibraryEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertItems(items: List<LibraryEntity>)
+
     @Query("DELETE FROM library_items WHERE id = :id")
     suspend fun deleteItem(id: String)
+
+    @Query("DELETE FROM library_items")
+    suspend fun clearAll()
 
     @Query("SELECT * FROM library_items WHERE id = :id")
     suspend fun getItem(id: String): LibraryEntity?
@@ -38,12 +44,21 @@ interface LibraryDao {
     @Query("SELECT * FROM library_items ORDER BY timestamp DESC")
     fun getAllItems(): Flow<List<LibraryEntity>>
 
+    @Query("SELECT * FROM library_items")
+    suspend fun getAllItemsSync(): List<LibraryEntity>
+
     // Playlist Songs Caching
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylistSongs(songs: List<PlaylistSongEntity>)
 
     @Query("DELETE FROM playlist_songs WHERE playlistId = :playlistId")
     suspend fun deletePlaylistSongs(playlistId: String)
+
+    @Query("DELETE FROM playlist_songs")
+    suspend fun clearAllPlaylistSongs()
+
+    @Query("SELECT * FROM playlist_songs")
+    suspend fun getAllPlaylistSongs(): List<PlaylistSongEntity>
 
     @Query("SELECT * FROM playlist_songs WHERE playlistId = :playlistId ORDER BY `order` ASC")
     suspend fun getPlaylistSongs(playlistId: String): List<PlaylistSongEntity>

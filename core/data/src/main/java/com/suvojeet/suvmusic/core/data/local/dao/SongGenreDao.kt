@@ -21,6 +21,9 @@ interface SongGenreDao {
     @Query("SELECT * FROM song_genres WHERE songId IN (:songIds)")
     suspend fun getGenres(songIds: List<String>): List<SongGenre>
 
+    @Query("SELECT * FROM song_genres")
+    suspend fun getAllGenres(): List<SongGenre>
+
     /** Insert or update a genre vector. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGenre(genre: SongGenre)
