@@ -608,8 +608,6 @@ fun HomeScreen(
                     }
                 }
             }
-        }
-    }
         
         // Song Options Menu
         selectedSong?.let { song ->
@@ -666,8 +664,8 @@ fun HomeScreen(
                 }
             )
         }
+        }
     }
-}
 }
 
 // -----------------------------------------------------------------------------

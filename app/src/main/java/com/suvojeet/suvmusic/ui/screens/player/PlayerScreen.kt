@@ -490,7 +490,6 @@ fun PlayerScreen(
     }
 }
 
-
 @Composable
 fun PiPPlayerContent(song: com.suvojeet.suvmusic.core.model.Song?, isVideoMode: Boolean, player: Player?) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
