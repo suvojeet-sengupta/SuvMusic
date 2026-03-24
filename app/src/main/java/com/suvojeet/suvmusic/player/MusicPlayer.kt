@@ -208,27 +208,50 @@ class MusicPlayer @Inject constructor(
         val isWiredHeadsetConnected = audioManager.isWiredHeadsetOn
         val autoSelectPhone = !isBluetoothActive && !isWiredHeadsetConnected
 
-        // 1. Add Phone Speaker
+        // 1. Add Phone Speaker as the primary internal output
         rawDevices.add(OutputDevice("phone_speaker", "Phone Speaker", DeviceType.PHONE, false))
 
         // 2. Add other devices
         audioDevices.forEach { device ->
+            // Skip internal speakers/earpieces as they are represented by "Phone Speaker"
+            if (device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER || 
+                device.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE ||
+                device.type == AudioDeviceInfo.TYPE_TELEPHONY) {
+                return@forEach
+            }
+
             val type = when (device.type) {
                 AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 
                 AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> DeviceType.BLUETOOTH
                 AudioDeviceInfo.TYPE_WIRED_HEADPHONES, 
                 AudioDeviceInfo.TYPE_WIRED_HEADSET,
-                AudioDeviceInfo.TYPE_USB_HEADSET -> DeviceType.HEADPHONES
-                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> return@forEach // Already handled
+                AudioDeviceInfo.TYPE_USB_HEADSET,
+                AudioDeviceInfo.TYPE_USB_DEVICE,
+                AudioDeviceInfo.TYPE_USB_ACCESSORY -> DeviceType.HEADPHONES
+                AudioDeviceInfo.TYPE_HDMI,
+                AudioDeviceInfo.TYPE_HDMI_ARC,
+                AudioDeviceInfo.TYPE_HDMI_EARC -> DeviceType.SPEAKER
                 else -> DeviceType.UNKNOWN
             }
             
-            // Avoid duplicates by name
-            if (rawDevices.none { it.name == device.productName.toString() }) {
+            val deviceName = device.productName.toString().trim()
+            val finalName = if (deviceName.isBlank() || deviceName.lowercase() == "null") {
+                type.name.lowercase().replaceFirstChar { it.uppercase() }
+            } else {
+                deviceName
+            }
+
+            // Avoid duplicates by name (case-insensitive) and ID
+            val isDuplicate = rawDevices.any { 
+                it.id == device.id.toString() || 
+                it.name.equals(finalName, ignoreCase = true)
+            }
+
+            if (!isDuplicate) {
                 rawDevices.add(
                     OutputDevice(
                         id = device.id.toString(),
-                        name = device.productName.toString().ifBlank { type.name },
+                        name = finalName,
                         type = type,
                         isSelected = false
                     )

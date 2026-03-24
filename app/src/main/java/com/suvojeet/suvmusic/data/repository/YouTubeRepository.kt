@@ -2339,16 +2339,25 @@ class YouTubeRepository @Inject constructor(
     }
 
     private fun extractSongCount(subtitle: String): Int {
-        // Try to find "X songs", "X tracks", "X items"
-        val songCountRegex = Regex("([\\d,]+)\\s*(song|track|item|video)", RegexOption.IGNORE_CASE)
-        songCountRegex.find(subtitle)?.groupValues?.get(1)?.let { countStr ->
-            return countStr.replace(",", "").toIntOrNull() ?: 0
-        }
+        if (subtitle.isBlank()) return 0
         
-        // Handle "100+ songs" case
-        val plusRegex = Regex("([\\d,]+)\\+\\s*(song|track|item|video)", RegexOption.IGNORE_CASE)
-        plusRegex.find(subtitle)?.groupValues?.get(1)?.let { countStr ->
-            return countStr.replace(",", "").toIntOrNull() ?: 0
+        // Try to find "X songs", "X tracks", "X items", "X videos"
+        // Also handle cases like "50 songs", "1,234 tracks", "100+ items"
+        val songCountRegex = Regex("([\\d,]+)\\+?\\s*(song|track|item|video|music)", RegexOption.IGNORE_CASE)
+        
+        // Find all matches as some subtitles might have multiple (e.g., "Artist • 50 songs • 2024")
+        val matches = songCountRegex.findAll(subtitle).toList()
+        if (matches.isNotEmpty()) {
+            // Take the last match which is usually the song count
+            matches.last().groupValues.getOrNull(1)?.let { countStr ->
+                val count = countStr.replace(",", "").toIntOrNull()
+                if (count != null) return count
+            }
+        }
+
+        // Fallback: If subtitle is JUST a number (sometimes happens in small cards)
+        if (subtitle.trim().all { it.isDigit() || it == ',' }) {
+            return subtitle.trim().replace(",", "").toIntOrNull() ?: 0
         }
 
         return 0
