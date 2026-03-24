@@ -426,7 +426,7 @@ fun QuickPicksSection(
     }
 
     val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
-    val chunkCount = if (isLandscape) 2 else 3 // Reduced from 4
+    val chunkCount = if (isLandscape) 2 else 4 // Restore to 4
     val chunkedItems = remember(items, isLandscape) { items.chunked(chunkCount) }
     val lazyListState = rememberLazyListState()
 
