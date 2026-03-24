@@ -166,6 +166,8 @@ class MainActivity : ComponentActivity() {
             val dynamicColor by sessionManager.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true)
             val appTheme by sessionManager.appThemeFlow.collectAsStateWithLifecycle(initialValue = AppTheme.DEFAULT)
             val pureBlackEnabled by sessionManager.pureBlackEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+            val albumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+            val playerState by musicPlayer.playerState.collectAsStateWithLifecycle()
             val forceMaxRefreshRate by sessionManager.forceMaxRefreshRateFlow.collectAsStateWithLifecycle(initialValue = true)
             val systemDarkTheme = isSystemInDarkTheme()
             LaunchedEffect(forceMaxRefreshRate) {
@@ -195,11 +197,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
             
+            val albumArtColors = rememberDominantColors(
+                imageUrl = playerState.currentSong?.thumbnailUrl,
+                isDarkTheme = darkTheme
+            )
+            
             SuvMusicTheme(
                 darkTheme = darkTheme, 
                 dynamicColor = dynamicColor,
                 appTheme = appTheme,
-                pureBlack = pureBlackEnabled
+                pureBlack = pureBlackEnabled,
+                albumArtColors = if (albumArtDynamicColorsEnabled && playerState.currentSong != null) albumArtColors else null
             ) {
                 SuvMusicApp(
                     intent = intent,
@@ -594,26 +602,14 @@ fun SuvMusicApp(
     // Don't show global volume indicator on PlayerScreen (it has its own)
     val showGlobalVolumeIndicator = hasSong && !isPlayerExpanded
     
-    // Extract dominant colors from current song's album art
-    val isAppInDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val songDominantColors = rememberDominantColors(
-        imageUrl = playbackInfo.currentSong?.thumbnailUrl,
-        isDarkTheme = isAppInDarkTheme
+    // Use MaterialTheme colors as current dominant colors for components
+    // These automatically adapt to album art if SuvMusicTheme is updated
+    val currentDominantColors = DominantColors(
+        primary = androidx.compose.material3.MaterialTheme.colorScheme.background,
+        secondary = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+        accent = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+        onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
     )
-    
-    // Fallback colors for non-player screens (volume indicator etc.)
-    val defaultDominantColors = if (playbackInfo.currentSong != null && isAlbumArtDynamicColorsEnabled) {
-        songDominantColors 
-    } else {
-        DominantColors(
-            primary = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer,
-            secondary = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
-            accent = androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer,
-            onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-        )
-    }
-    
-
     
     // Welcome Dialog State
     val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsStateWithLifecycle(initialValue = true) // Start assuming true to avoid flicker if already done
@@ -705,9 +701,9 @@ fun SuvMusicApp(
                             val isDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
                             val navBarColor = if (showMiniPlayer) {
                                 if (miniPlayerStyle == MiniPlayerStyle.YT_MUSIC && isDarkTheme) {
-                                    lerp(defaultDominantColors.primary, Color.Black, 0.45f)
+                                    lerp(currentDominantColors.primary, Color.Black, 0.45f)
                                 } else {
-                                    defaultDominantColors.primary
+                                    currentDominantColors.primary
                                 }
                             } else {
                                 androidx.compose.material3.MaterialTheme.colorScheme.surface
@@ -862,7 +858,7 @@ fun SuvMusicApp(
                             startDestination = Destination.Home, // Always start at Home
                             // Removed sharedTransitionScope
                             deviceType = deviceType,
-                            dominantColors = defaultDominantColors
+                            dominantColors = currentDominantColors
                         )
                     }
 
@@ -881,7 +877,7 @@ fun SuvMusicApp(
 
         ExpandablePlayerSheet(
             playerState = playerState,
-            dominantColors = defaultDominantColors, 
+            dominantColors = currentDominantColors, 
             onPlayPause = { playerViewModel.togglePlayPause() },
             onNext = { playerViewModel.seekToNext() },
             onPrevious = { playerViewModel.seekToPrevious() },
@@ -985,7 +981,7 @@ fun SuvMusicApp(
                     navController.navigate(Destination.Artist(artistId))
                 },
                 onDismiss = { playerViewModel.toggleMultipleArtistsDialog(false) },
-                dominantColors = defaultDominantColors
+                dominantColors = currentDominantColors
             )
         }
     }    
@@ -995,7 +991,7 @@ fun SuvMusicApp(
                 isVisible = showVolumeIndicator,
                 currentVolume = currentVolume,
                 maxVolume = maxVolume,
-                dominantColors = defaultDominantColors,
+                dominantColors = currentDominantColors,
                 onVolumeChange = { newVolume ->
                     audioManager.setStreamVolume(
                         AudioManager.STREAM_MUSIC,
