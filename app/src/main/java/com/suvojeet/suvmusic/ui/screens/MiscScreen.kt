@@ -56,19 +56,60 @@ import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.suvojeet.suvmusic.ui.viewmodel.BackupViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MiscScreen(
     onBack: () -> Unit,
     onLyricsProvidersClick: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    backupViewModel: BackupViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val backupState by backupViewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val createBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri ->
+        uri?.let { backupViewModel.createBackup(it) }
+    }
+
+    val restoreBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        uri?.let { backupViewModel.restoreBackup(it) }
+    }
+
+    LaunchedEffect(backupState.successMessage) {
+        backupState.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            backupViewModel.clearMessages()
+        }
+    }
+
+    LaunchedEffect(backupState.lastError) {
+        backupState.lastError?.let {
+            snackbarHostState.showSnackbar(it)
+            backupViewModel.clearMessages()
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.statusBars,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Misc", fontWeight = FontWeight.Bold) },
@@ -137,6 +178,36 @@ fun MiscScreen(
                         onClick = onLyricsProvidersClick
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SettingsSectionTitle("Backup & Restore")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    MiscNavigationItem(
+                        icon = Icons.Default.Save,
+                        title = "Create Backup",
+                        subtitle = if (backupState.isBackingUp) "Backing up..." else "Save library, history, and settings to .suv file",
+                        onClick = { 
+                            if (!backupState.isBackingUp) {
+                                createBackupLauncher.launch("suvmusic_backup_${System.currentTimeMillis()}.suv")
+                            }
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    MiscNavigationItem(
+                        icon = Icons.Default.Restore,
+                        title = "Restore Backup",
+                        subtitle = if (backupState.isRestoring) "Restoring..." else "Restore your data from a .suv backup file",
+                        onClick = { 
+                            if (!backupState.isRestoring) {
+                                restoreBackupLauncher.launch("*/*")
+                            }
+                        }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
