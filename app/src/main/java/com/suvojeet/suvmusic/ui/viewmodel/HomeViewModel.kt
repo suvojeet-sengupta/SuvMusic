@@ -64,7 +64,9 @@ data class HomeUiState(
     /** Detected current mood based on listening patterns */
     val detectedMood: String? = null,
     /** Whether the "Made for You" banner should be shown */
-    val isForYouBannerVisible: Boolean = true
+    val isForYouBannerVisible: Boolean = true,
+    /** Configuration for home screen sections visibility */
+    val homeSectionsVisibility: Set<String> = SessionManager.DEFAULT_HOME_SECTIONS
 )
 
 @HiltViewModel
@@ -89,9 +91,18 @@ class HomeViewModel @Inject constructor(
         observeSession()
         observeMusicSource()
         observeForYouBanner()
+        observeHomeSectionsVisibility()
         
         // 2. Structured data loading
         loadHomeContent()
+    }
+
+    private fun observeHomeSectionsVisibility() {
+        viewModelScope.launch {
+            sessionManager.homeSectionsVisibilityFlow.collect { visibility ->
+                _uiState.update { it.copy(homeSectionsVisibility = visibility) }
+            }
+        }
     }
     
     /**

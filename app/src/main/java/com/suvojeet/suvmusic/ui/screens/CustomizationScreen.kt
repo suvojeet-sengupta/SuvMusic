@@ -102,11 +102,13 @@ fun CustomizationScreen(
     val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
     val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.YT_MUSIC)
+    val homeSectionsVisibility by sessionManager.homeSectionsVisibilityFlow.collectAsStateWithLifecycle(initialValue = SessionManager.DEFAULT_HOME_SECTIONS)
 
     val scope = rememberCoroutineScope()
     
     // Style Selection Dialog/Sheet
     var showMiniPlayerStyleSheet by remember { mutableStateOf(false) }
+    var showHomeSectionsSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
     Scaffold(
@@ -196,6 +198,15 @@ fun CustomizationScreen(
                     
                     HorizontalDivider()
 
+                    CustomizationNavigationItem(
+                        icon = Icons.Default.Dashboard,
+                        title = "Home Screen Layout",
+                        subtitle = "Configure visible sections",
+                        onClick = { showHomeSectionsSheet = true }
+                    )
+                    
+                    HorizontalDivider()
+
                     CustomizationSwitchItem(
                         icon = Icons.Default.BlurOn,
                         title = "iOS Liquid Glass",
@@ -269,6 +280,69 @@ fun CustomizationScreen(
                                 },
                                 shape = SquircleShape
                             )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    // Home Sections Visibility Bottom Sheet
+    if (showHomeSectionsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showHomeSectionsSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = "Home Screen Layout",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
+
+                val sectionMap = listOf(
+                    "Greeting & Moods" to setOf("greeting", "mood_chips"),
+                    "For You Banner" to setOf("for_you_banner"),
+                    "Recommendations (Artists/Tracks)" to setOf("recommendations"),
+                    "Quick Picks" to setOf("quick_picks"),
+                    "YouTube Sections (Charts, etc.)" to setOf("youtube_sections"),
+                    "Personalized Sections" to setOf("personalized"),
+                    "Genres & Contextual Mixes" to setOf("genres", "contextual"),
+                    "Mood Banner" to setOf("mood_banner"),
+                    "Create Mix Card" to setOf("create_mix")
+                )
+
+                sectionMap.forEach { (label, ids) ->
+                    val isChecked = ids.any { homeSectionsVisibility.contains(it) }
+                    
+                    ListItem(
+                        headlineContent = { Text(label) },
+                        trailingContent = {
+                            Checkbox(
+                                checked = isChecked,
+                                onCheckedChange = { checked ->
+                                    val newSet = homeSectionsVisibility.toMutableSet()
+                                    if (checked) newSet.addAll(ids) else newSet.removeAll(ids)
+                                    scope.launch { sessionManager.setHomeSectionsVisibility(newSet) }
+                                }
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val newSet = homeSectionsVisibility.toMutableSet()
+                                if (!isChecked) newSet.addAll(ids) else newSet.removeAll(ids)
+                                scope.launch { sessionManager.setHomeSectionsVisibility(newSet) }
+                            }
                             .padding(horizontal = 8.dp),
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
