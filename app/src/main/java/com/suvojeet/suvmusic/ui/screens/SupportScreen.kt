@@ -206,12 +206,12 @@ fun SupportScreen(
                 SettingsSectionTitle("Contribute & Support")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     SupportListItem(
-                        icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.BuyMeACoffee,
-                        title = "Buy Me a Coffee",
-                        subtitle = "Support directly via BuyMeACoffee",
-                        accentColor = Color(0xFFFFDD00),
+                        icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Donate,
+                        title = "Donate via Coindrop",
+                        subtitle = "Support the project directly",
+                        accentColor = Color(0xFF007BFF),
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/suvojeet_sengupta"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://coindrop.to/suvojeet_sengupta"))
                             context.startActivity(intent)
                         }
                     )

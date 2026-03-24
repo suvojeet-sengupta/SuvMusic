@@ -73,6 +73,7 @@ import kotlin.random.Random
 fun ExpressiveBottomNav(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
+    onReClick: (Destination) -> Unit = {},
     modifier: Modifier = Modifier,
     alpha: Float = 1.0f,
     iosLiquidGlassEnabled: Boolean = false,
@@ -90,6 +91,7 @@ fun ExpressiveBottomNav(
             navItems = navItems,
             currentDestination = currentDestination,
             onDestinationChange = onDestinationChange,
+            onReClick = onReClick,
             modifier = modifier
         )
     } else {
@@ -97,6 +99,7 @@ fun ExpressiveBottomNav(
             navItems = navItems,
             currentDestination = currentDestination,
             onDestinationChange = onDestinationChange,
+            onReClick = onReClick,
             modifier = modifier,
             alpha = alpha,
             backgroundColor = backgroundColor
@@ -111,6 +114,7 @@ private fun LiquidGlassNavBar(
     navItems: List<BottomNavItem>,
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
+    onReClick: (Destination) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -268,7 +272,13 @@ private fun LiquidGlassNavBar(
                 LiquidGlassNavItem(
                     item = item,
                     isSelected = isSelected,
-                    onClick = { onDestinationChange(item.destination) },
+                    onClick = { 
+                        if (currentDestination == item.destination) {
+                            onReClick(item.destination)
+                        } else {
+                            onDestinationChange(item.destination)
+                        }
+                    },
                     isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .weight(1f)
@@ -357,6 +367,7 @@ private fun StandardNavBar(
     navItems: List<BottomNavItem>,
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
+    onReClick: (Destination) -> Unit,
     modifier: Modifier = Modifier,
     alpha: Float = 1.0f,
     backgroundColor: Color? = null
@@ -385,7 +396,13 @@ private fun StandardNavBar(
                 StandardNavItem(
                     item = item,
                     isSelected = isSelected,
-                    onClick = { onDestinationChange(item.destination) }
+                    onClick = {
+                        if (currentDestination == item.destination) {
+                            onReClick(item.destination)
+                        } else {
+                            onDestinationChange(item.destination)
+                        }
+                    }
                 )
             }
         }

@@ -833,7 +833,7 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-    suspend fun getPlaylist(playlistId: String, autoSave: Boolean = true): Playlist = withContext(Dispatchers.IO) {
+    suspend fun getPlaylist(playlistId: String, autoSave: Boolean = false): Playlist = withContext(Dispatchers.IO) {
         // Fallback to cache if offline
         if (!networkMonitor.isCurrentlyConnected()) {
             val cachedPlaylist = getCachedPlaylist(playlistId)
@@ -2339,17 +2339,17 @@ class YouTubeRepository @Inject constructor(
     }
 
     private fun extractSongCount(subtitle: String): Int {
-        // Try to find "X songs"
-        val songCountRegex = Regex("(\\d+)\\s*song")
-        songCountRegex.find(subtitle)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
-        
-        // Sometimes just digits if it's a list item validation? No, usually valid text.
-        // Try finding any large number if "song" is missing but it looks like a stat? 
-        // Maybe unsafe. Stick to "songs" for now.
+        // Try to find "X songs", "X tracks", "X items"
+        val songCountRegex = Regex("([\\d,]+)\\s*(song|track|item|video)", RegexOption.IGNORE_CASE)
+        songCountRegex.find(subtitle)?.groupValues?.get(1)?.let { countStr ->
+            return countStr.replace(",", "").toIntOrNull() ?: 0
+        }
         
         // Handle "100+ songs" case
-        val plusRegex = Regex("(\\d+)\\+\\s*song")
-        plusRegex.find(subtitle)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
+        val plusRegex = Regex("([\\d,]+)\\+\\s*(song|track|item|video)", RegexOption.IGNORE_CASE)
+        plusRegex.find(subtitle)?.groupValues?.get(1)?.let { countStr ->
+            return countStr.replace(",", "").toIntOrNull() ?: 0
+        }
 
         return 0
     }

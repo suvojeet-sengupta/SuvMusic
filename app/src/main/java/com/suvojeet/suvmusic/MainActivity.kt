@@ -30,9 +30,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -706,6 +708,8 @@ fun SuvMusicApp(
                                 androidx.compose.material3.MaterialTheme.colorScheme.surface
                             }
 
+                            val lastHomeClickTime = remember { mutableLongStateOf(0L) }
+
                             ExpressiveBottomNav(
                                 currentDestination = currentDestination,
                                 onDestinationChange = { dest ->
@@ -715,6 +719,19 @@ fun SuvMusicApp(
                                         }
                                         launchSingleTop = true
                                         restoreState = true
+                                    }
+                                },
+                                onReClick = { dest ->
+                                    if (dest == Destination.Home) {
+                                        val currentTime = System.currentTimeMillis()
+                                        if ((currentTime - lastHomeClickTime.longValue) < 500L) {
+                                            // Double tap -> Refresh
+                                            homeViewModel.triggerRefresh()
+                                        } else {
+                                            // Single tap -> Scroll to top
+                                            homeViewModel.scrollToTop()
+                                        }
+                                        lastHomeClickTime.longValue = currentTime
                                     }
                                 },
                                 alpha = navBarAlpha,

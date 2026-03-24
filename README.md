@@ -124,7 +124,7 @@ Senior Android Engineer
 
 [![GitHub](https://img.shields.io/badge/GitHub-@suvojeet--sengupta-181717?style=for-the-badge&logo=github)](https://github.com/suvojeet-sengupta)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-@suvojeet--sengupta-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/suvojeet-sengupta/)
-[![Buy Me A Coffee](https://img.shields.io/badge/Support-Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/suvojeet_sengupta)
+[![Donate via Coindrop](https://img.shields.io/badge/Support-Coindrop-007BFF?style=for-the-badge&logo=heart&logoColor=white)](https://coindrop.to/suvojeet_sengupta)
 
 ---
 
