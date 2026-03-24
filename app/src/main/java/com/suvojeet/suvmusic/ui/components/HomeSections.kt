@@ -343,6 +343,71 @@ fun GridSection(
 }
 
 @Composable
+fun QuickPickItem(
+    song: Song,
+    onClick: () -> Unit,
+    onMoreClick: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val highResThumbnail = remember(song.thumbnailUrl) {
+        ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 160)
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Compact thumbnail
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(highResThumbnail)
+                .crossfade(true)
+                .build(),
+            contentDescription = song.title,
+            modifier = Modifier
+                .size(52.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Info
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = song.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = song.artist,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        IconButton(onClick = onMoreClick) {
+            Icon(
+                imageVector = Icons.Rounded.MoreVert,
+                contentDescription = "More",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
 fun QuickPicksSection(
     section: HomeSection,
     onSongClick: (List<Song>, Int) -> Unit,
@@ -359,23 +424,22 @@ fun QuickPicksSection(
     val songs = remember(items) {
         items.filterIsInstance<HomeItem.SongItem>().map { it.song }
     }
-    
+
     val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
-    val chunkCount = if (isLandscape) 2 else 4
+    val chunkCount = if (isLandscape) 2 else 3 // Reduced from 4
     val chunkedItems = remember(items, isLandscape) { items.chunked(chunkCount) }
     val lazyListState = rememberLazyListState()
-    
+
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         HomeSectionHeader(
             title = section.title,
             trailingContent = {
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = Color.Transparent,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
                         .clickable {
@@ -384,64 +448,72 @@ fun QuickPicksSection(
                             }
                         }
                 ) {
-                    Text(
-                        text = "Play all",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Play all",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         )
-        
+
         LazyRow(
             state = lazyListState,
             flingBehavior = rememberSnapFlingBehavior(lazyListState),
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             chunkedItems.forEach { columnItems ->
                 item(
                     key = columnItems.firstOrNull()?.id ?: java.util.UUID.randomUUID().toString(),
-                    contentType = "column_of_4"
+                    contentType = "column"
                 ) {
                     Column(
-                        modifier = Modifier.fillParentMaxWidth(0.92f), // Peeking effect
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillParentMaxWidth(0.85f), // Refined peeking
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         columnItems.forEach { item ->
                             when (item) {
                                 is HomeItem.SongItem -> {
-                                    MusicCard(
+                                    QuickPickItem(
                                         song = item.song,
                                         onClick = {
                                             val index = songs.indexOf(item.song)
                                             if (index != -1) onSongClick(songs, index)
                                         },
-                                        onMoreClick = { onSongMoreClick(item.song) },
-                                        backgroundColor = Color.Transparent
+                                        onMoreClick = { onSongMoreClick(item.song) }
                                     )
                                 }
                                 is HomeItem.PlaylistItem -> {
                                     val tempSong = remember(item.playlist.id) {
                                         Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
                                     }
-                                    MusicCard(
+                                    QuickPickItem(
                                         song = tempSong,
-                                        onClick = { onPlaylistClick(item.playlist) },
-                                        backgroundColor = Color.Transparent
+                                        onClick = { onPlaylistClick(item.playlist) }
                                     )
                                 }
                                 is HomeItem.AlbumItem -> {
                                     val tempSong = remember(item.album.id) {
                                         Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
                                     }
-                                    MusicCard(
+                                    QuickPickItem(
                                         song = tempSong,
-                                        onClick = { onAlbumClick(item.album) },
-                                        backgroundColor = Color.Transparent
+                                        onClick = { onAlbumClick(item.album) }
                                     )
                                 }
                                 else -> {}
@@ -453,7 +525,6 @@ fun QuickPicksSection(
         }
     }
 }
-
 
 @Composable
 fun HomeItemCardLarge(
