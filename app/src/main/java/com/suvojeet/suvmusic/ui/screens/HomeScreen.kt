@@ -235,27 +235,31 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
                         // Greeting & Profile Header
-                        item(key = "header", contentType = "header") {
-                            ProfileHeader(
-                                modifier = Modifier
-                                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-                                    .animateEnter(index = 0),
-                                onRecentsClick = onRecentsClick,
-                                onListenTogetherClick = onListenTogetherClick
-                            )
+                        if (uiState.homeSectionsVisibility.contains("greeting")) {
+                            item(key = "header", contentType = "header") {
+                                ProfileHeader(
+                                    modifier = Modifier
+                                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+                                        .animateEnter(index = 0),
+                                    onRecentsClick = onRecentsClick,
+                                    onListenTogetherClick = onListenTogetherClick
+                                )
+                            }
                         }
 
                         // Mood Chips Section
-                        item(key = "mood_chips", contentType = "mood_chips") {
-                            MoodChipsSection(
-                                selectedMood = uiState.selectedMood,
-                                onMoodSelected = viewModel::onMoodSelected,
-                                modifier = Modifier.animateEnter(index = 1)
-                            )
+                        if (uiState.homeSectionsVisibility.contains("mood_chips")) {
+                            item(key = "mood_chips", contentType = "mood_chips") {
+                                MoodChipsSection(
+                                    selectedMood = uiState.selectedMood,
+                                    onMoodSelected = viewModel::onMoodSelected,
+                                    modifier = Modifier.animateEnter(index = 1)
+                                )
+                            }
                         }
 
                         // Personalized "For You" Banner — shown when logged in
-                        if (uiState.isLoggedIn) {
+                        if (uiState.isLoggedIn && uiState.homeSectionsVisibility.contains("for_you_banner")) {
                             item(key = "for_you_banner", contentType = "for_you_banner") {
                                 AnimatedVisibility(
                                     visible = uiState.isForYouBannerVisible,
@@ -273,7 +277,7 @@ fun HomeScreen(
                         }
 
                         // Recommended Artists (Last.fm)
-                        if (uiState.recommendedArtists.isNotEmpty()) {
+                        if (uiState.recommendedArtists.isNotEmpty() && uiState.homeSectionsVisibility.contains("recommendations")) {
                             item(key = "recommended_artists", contentType = "artists") {
                                 RecommendedArtistsSection(
                                     artists = uiState.recommendedArtists,
@@ -283,7 +287,7 @@ fun HomeScreen(
                         }
 
                         // Recommended Tracks (Last.fm)
-                        if (uiState.recommendedTracks.isNotEmpty()) {
+                        if (uiState.recommendedTracks.isNotEmpty() && uiState.homeSectionsVisibility.contains("recommendations")) {
                             item(key = "recommended_tracks", contentType = "tracks") {
                                 RecommendedTracksSection(
                                     tracks = uiState.recommendedTracks,
@@ -293,7 +297,7 @@ fun HomeScreen(
                         }
 
                         // Quick Picks Section
-                        if (uiState.recommendations.isNotEmpty()) {
+                        if (uiState.recommendations.isNotEmpty() && uiState.homeSectionsVisibility.contains("quick_picks")) {
                             item(key = "quick_picks", contentType = "section_quick_picks") {
                                 com.suvojeet.suvmusic.ui.components.QuickPicksSection(
                                     section = HomeSection(
@@ -314,11 +318,12 @@ fun HomeScreen(
                         }
 
                         // Sections Loop
-                        itemsIndexed(
-                            items = uiState.filteredSections,
-                            key = { _, section -> section.title },
-                            contentType = { _, section -> section.type }
-                        ) { index, section ->
+                        if (uiState.homeSectionsVisibility.contains("youtube_sections")) {
+                            itemsIndexed(
+                                items = uiState.filteredSections,
+                                key = { _, section -> section.title },
+                                contentType = { _, section -> section.type }
+                            ) { index, section ->
                             val enterModifier = Modifier.animateEnter(index = index)
                             
                             when (section.type) {
@@ -395,10 +400,10 @@ fun HomeScreen(
                                 }
                             }
                         }
+                    }
 
-                        // Create a Mix Section (Quick Access)
-                        // Personalized Recommendation Sections (artist mixes, discovery, forgotten favorites, time-based)
-                        if (uiState.personalizedSections.isNotEmpty()) {
+                    // Personalized Recommendation Sections (artist mixes, discovery, forgotten favorites, time-based)
+                        if (uiState.personalizedSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("personalized")) {
                             // Personalized section header with sparkle
                             item(key = "personalized_header", contentType = "personalized_header") {
                                 PersonalizedSectionHeader(
@@ -441,7 +446,7 @@ fun HomeScreen(
                         }
 
                         // Genre-Based Discovery Sections ("Because you like Pop", "Your R&B Mix", etc.)
-                        if (uiState.genreSections.isNotEmpty()) {
+                        if (uiState.genreSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("genres")) {
                             item(key = "genre_header", contentType = "genre_header") {
                                 SectionDividerHeader(
                                     title = "Your Genres",
@@ -470,7 +475,7 @@ fun HomeScreen(
                         }
 
                         // Context-Aware Sections (time-of-day, listening patterns)
-                        if (uiState.contextSections.isNotEmpty()) {
+                        if (uiState.contextSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("contextual")) {
                             itemsIndexed(
                                 items = uiState.contextSections,
                                 key = { _, section -> "context_${section.title}" },
@@ -490,7 +495,7 @@ fun HomeScreen(
 
                         // Detected Mood Banner
                         uiState.detectedMood?.let { mood ->
-                            if (uiState.selectedMood == null) {
+                            if (uiState.selectedMood == null && uiState.homeSectionsVisibility.contains("mood_banner")) {
                                 item(key = "mood_banner", contentType = "mood_banner") {
                                     DetectedMoodBanner(
                                         mood = mood,
@@ -504,18 +509,20 @@ fun HomeScreen(
                         }
 
                         // Create a Mix Section (Quick Access)
-                        item(key = "create_mix", contentType = "create_mix") {
-                             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                 HomeSectionHeader(title = "More specifically")
-                                 Spacer(modifier = Modifier.height(12.dp))
-                                 CreateMixCard(onClick = onCreateMixClick)
-                             }
+                        if (uiState.homeSectionsVisibility.contains("create_mix")) {
+                            item(key = "create_mix", contentType = "create_mix") {
+                                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                     HomeSectionHeader(title = "More specifically")
+                                     Spacer(modifier = Modifier.height(12.dp))
+                                     CreateMixCard(onClick = onCreateMixClick)
+                                 }
+                            }
                         }
 
                         // ──────────────────────────────────────────────────
                         // "More for you" — Scroll-loaded sections (varied styles)
                         // ──────────────────────────────────────────────────
-                        if (uiState.moreSections.isNotEmpty()) {
+                        if (uiState.moreSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("youtube_sections")) {
                             itemsIndexed(
                                 items = uiState.moreSections,
                                 key = { _, section -> "more_${section.title}" },
