@@ -12,11 +12,14 @@ import com.suvojeet.suvmusic.core.data.local.entity.SongGenre
  * Contains all user data: settings, library, and history.
  */
 data class BackupData(
-    val version: Int = 1,
+    val version: Int = 2,
     val timestamp: Long = System.currentTimeMillis(),
     
     // Settings (Serialized from DataStore)
     val settings: Map<String, Any?> = emptyMap(),
+    
+    // Encrypted Settings (Cookies, Accounts, Cache)
+    val encryptedSettings: Map<String, Any?> = emptyMap(),
     
     // Library Data
     val libraryItems: List<LibraryEntity> = emptyList(),

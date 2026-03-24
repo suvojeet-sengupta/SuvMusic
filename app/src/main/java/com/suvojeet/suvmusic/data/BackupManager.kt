@@ -36,6 +36,7 @@ class BackupManager @Inject constructor(
 
             val backup = BackupData(
                 settings = sessionManager.getAllSettings(),
+                encryptedSettings = sessionManager.getAllEncryptedSettings(),
                 libraryItems = libraryDao.getAllItemsSync(),
                 playlistSongs = libraryDao.getAllPlaylistSongs(),
                 listeningHistory = historyDao.getAllHistory(),
@@ -68,7 +69,8 @@ class BackupManager @Inject constructor(
 
             // 1. Restore settings
             sessionManager.restoreSettings(backup.settings)
-            Log.d("BackupManager", "Settings restored")
+            sessionManager.restoreEncryptedSettings(backup.encryptedSettings)
+            Log.d("BackupManager", "Settings (DataStore and Encrypted) restored")
 
             // 2. Restore Database Atomically
             database.withTransaction {
