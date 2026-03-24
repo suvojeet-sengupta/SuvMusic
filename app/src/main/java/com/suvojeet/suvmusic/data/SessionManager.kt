@@ -296,6 +296,42 @@ class SessionManager @Inject constructor(
         }
     }
 
+    /**
+     * Get all encrypted settings as a Map.
+     */
+    fun getAllEncryptedSettings(): Map<String, Any?> {
+        return encryptedPrefs.all
+    }
+
+    /**
+     * Restore all encrypted settings from a Map.
+     */
+    fun restoreEncryptedSettings(settings: Map<String, Any?>) {
+        val editor = encryptedPrefs.edit()
+        settings.forEach { (key, value) ->
+            if (value == null) return@forEach
+            when (value) {
+                is Boolean -> editor.putBoolean(key, value)
+                is Float -> editor.putFloat(key, value)
+                is Number -> {
+                    // Try to restore as Long for whole numbers, else Float
+                    val doubleVal = value.toDouble()
+                    if (doubleVal == doubleVal.toLong().toDouble()) {
+                        editor.putLong(key, value.toLong())
+                    } else {
+                        editor.putFloat(key, value.toFloat())
+                    }
+                }
+                is String -> editor.putString(key, value)
+                is List<*> -> {
+                    val set = value.filterIsInstance<String>().toSet()
+                    editor.putStringSet(key, set)
+                }
+            }
+        }
+        editor.apply()
+    }
+
     // --- Appearance Settings ---
 
     suspend fun isAlbumArtDynamicColorsEnabled(): Boolean =
