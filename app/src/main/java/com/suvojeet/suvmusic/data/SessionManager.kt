@@ -236,6 +236,46 @@ class SessionManager @Inject constructor(
         }
     }
 
+    /**
+     * Get all settings from DataStore as a Map of string-key to value.
+     */
+    suspend fun getAllSettings(): Map<String, Any?> {
+        val prefs = context.dataStore.data.first()
+        return prefs.asMap().mapKeys { it.key.name }
+    }
+
+    /**
+     * Restore all settings from a Map.
+     */
+    suspend fun restoreSettings(settings: Map<String, Any?>) {
+        context.dataStore.edit { prefs ->
+            settings.forEach { (keyName, value) ->
+                if (value == null) return@forEach
+                
+                when (value) {
+                    is Boolean -> prefs[booleanPreferencesKey(keyName)] = value
+                    is Float -> {
+                        // Gson might deserialize Float as Double
+                        val floatVal = (value as? Number)?.toFloat() ?: 0f
+                        prefs[floatPreferencesKey(keyName)] = floatVal
+                    }
+                    is Int -> prefs[intPreferencesKey(keyName)] = value
+                    is Long -> {
+                        // Gson might deserialize Long as Double/Int
+                        val longVal = (value as? Number)?.toLong() ?: 0L
+                        prefs[longPreferencesKey(keyName)] = longVal
+                    }
+                    is String -> prefs[stringPreferencesKey(keyName)] = value
+                    is List<*> -> {
+                        // Gson deserializes stringSet as List
+                        val set = value.filterIsInstance<String>().toSet()
+                        prefs[stringSetPreferencesKey(keyName)] = set
+                    }
+                }
+            }
+        }
+    }
+
     // --- Appearance Settings ---
 
     suspend fun isAlbumArtDynamicColorsEnabled(): Boolean =
