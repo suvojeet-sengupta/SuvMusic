@@ -254,16 +254,36 @@ class SessionManager @Inject constructor(
                 
                 when (value) {
                     is Boolean -> prefs[booleanPreferencesKey(keyName)] = value
-                    is Float -> {
-                        // Gson might deserialize Float as Double
-                        val floatVal = (value as? Number)?.toFloat() ?: 0f
-                        prefs[floatPreferencesKey(keyName)] = floatVal
-                    }
-                    is Int -> prefs[intPreferencesKey(keyName)] = value
-                    is Long -> {
-                        // Gson might deserialize Long as Double/Int
-                        val longVal = (value as? Number)?.toLong() ?: 0L
-                        prefs[longPreferencesKey(keyName)] = longVal
+                    is Number -> {
+                        // Gson often deserializes all numbers as Double. 
+                        // Map by known key name or just try to find the key in prefs?
+                        // Prefs keys are private, so we'll try to match by name or common conventions.
+                        
+                        // Check if key is already in prefs to infer type
+                        // But prefs might be empty. Let's use name-based inference or just try all.
+                        
+                        // Better: DataStore is type-strict. We'll use the value's likely target.
+                        // Long is used for timestamps and positions.
+                        // Int is used for offsets, quality levels, etc.
+                        // Float is used for alpha/spacing.
+                        
+                        val doubleVal = value.toDouble()
+                        
+                        // Heuristic: if it's a whole number, it might be Int or Long
+                        if (doubleVal == doubleVal.toLong().toDouble()) {
+                             // Try common Long keys
+                             if (keyName.contains("timestamp") || keyName.contains("time") || 
+                                 keyName.contains("position") || keyName.contains("at") ||
+                                 keyName.contains("limit")) {
+                                 prefs[longPreferencesKey(keyName)] = value.toLong()
+                             } else {
+                                 // Default to Int for small whole numbers
+                                 prefs[intPreferencesKey(keyName)] = value.toInt()
+                             }
+                        } else {
+                             // Float for fractional values
+                             prefs[floatPreferencesKey(keyName)] = value.toFloat()
+                        }
                     }
                     is String -> prefs[stringPreferencesKey(keyName)] = value
                     is List<*> -> {

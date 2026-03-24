@@ -1,13 +1,14 @@
 package com.suvojeet.suvmusic.data
 
 import android.content.Context
+import android.util.Log
+import androidx.room.withTransaction
 import com.google.gson.Gson
 import com.suvojeet.suvmusic.core.data.local.AppDatabase
 import com.suvojeet.suvmusic.data.model.BackupData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.zip.GZIPInputStream
@@ -17,7 +18,7 @@ import javax.inject.Singleton
 
 @Singleton
 class BackupManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val database: AppDatabase,
     private val sessionManager: SessionManager,
     private val gson: Gson
@@ -59,55 +60,54 @@ class BackupManager @Inject constructor(
      */
     suspend fun restoreBackup(inputStream: InputStream): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            Log.d("BackupManager", "Starting restore...")
             val json = GZIPInputStream(inputStream).bufferedReader().use { it.readText() }
-            val backup = gson.fromJson(json, BackupData::class.java)
+            val backup = gson.fromJson(json, BackupData::class.java) ?: return@withContext Result.failure(Exception("Failed to deserialize backup data"))
+
+            Log.d("BackupManager", "Backup deserialized. Version: ${backup.version}, Items: ${backup.libraryItems.size}")
 
             // 1. Restore settings
             sessionManager.restoreSettings(backup.settings)
+            Log.d("BackupManager", "Settings restored")
 
-            // 2. Restore Database (In a transaction to ensure atomicity)
-            database.runInTransaction {
-                // Clear existing data
-                // We use a simplified clear-all approach here
-                // Note: database.clearAllTables() can be used but might be too aggressive 
-                // for some implementations. We'll use DAOs for more control.
-                
-                // We'll use a coroutine to run the suspend functions in the transaction
-                // Actually, runInTransaction is blocking, so we need to use runBlocking
-                // OR better, just call the DAO methods which are designed for this.
-                // For simplicity in this implementation, we'll assume the DAOs are used
+            // 2. Restore Database Atomically
+            database.withTransaction {
+                val libraryDao = database.libraryDao()
+                val historyDao = database.listeningHistoryDao()
+                val dislikeDao = database.dislikedItemDao()
+                val genreDao = database.songGenreDao()
+
+                // Library
+                libraryDao.clearAll()
+                libraryDao.clearAllPlaylistSongs()
+                Log.d("BackupManager", "Database cleared")
+
+                libraryDao.insertItems(backup.libraryItems)
+                libraryDao.insertPlaylistSongs(backup.playlistSongs)
+                Log.d("BackupManager", "Library and playlist songs inserted: ${backup.libraryItems.size}, ${backup.playlistSongs.size}")
+
+                // History
+                historyDao.clearAll()
+                backup.listeningHistory.forEach { historyDao.upsert(it) }
+                Log.d("BackupManager", "Listening history restored: ${backup.listeningHistory.size}")
+
+                // Dislikes
+                dislikeDao.clearAllDislikedSongs()
+                dislikeDao.clearAllDislikedArtists()
+                dislikeDao.insertDislikedSongs(backup.dislikedSongs)
+                dislikeDao.insertDislikedArtists(backup.dislikedArtists)
+                Log.d("BackupManager", "Dislikes restored")
+
+                // Genres
+                genreDao.clearAll()
+                genreDao.insertGenres(backup.songGenres)
+                Log.d("BackupManager", "Genres restored: ${backup.songGenres.size}")
             }
 
-            // Room's runInTransaction doesn't support suspend functions directly easily 
-            // without specialized handling. Let's do it sequentially for now.
-            
-            val libraryDao = database.libraryDao()
-            val historyDao = database.listeningHistoryDao()
-            val dislikeDao = database.dislikedItemDao()
-            val genreDao = database.songGenreDao()
-
-            // Library
-            libraryDao.clearAll()
-            libraryDao.clearAllPlaylistSongs()
-            libraryDao.insertItems(backup.libraryItems)
-            libraryDao.insertPlaylistSongs(backup.playlistSongs)
-
-            // History
-            historyDao.clearAll()
-            backup.listeningHistory.forEach { historyDao.upsert(it) }
-
-            // Dislikes
-            dislikeDao.clearAllDislikedSongs()
-            dislikeDao.clearAllDislikedArtists()
-            dislikeDao.insertDislikedSongs(backup.dislikedSongs)
-            dislikeDao.insertDislikedArtists(backup.dislikedArtists)
-
-            // Genres
-            genreDao.clearAll()
-            genreDao.insertGenres(backup.songGenres)
-
+            Log.d("BackupManager", "Restore completed successfully!")
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e("BackupManager", "Restore failed!", e)
             Result.failure(e)
         }
     }
