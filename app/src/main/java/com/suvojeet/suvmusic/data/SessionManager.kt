@@ -206,6 +206,34 @@ class SessionManager @Inject constructor(
         
         private val PLAYLIST_SORT_TYPE_KEY = stringPreferencesKey("playlist_sort_type")
         private val PLAYLIST_SORT_ORDER_KEY = booleanPreferencesKey("playlist_sort_order")
+        private val HOME_SECTIONS_VISIBILITY_KEY = stringSetPreferencesKey("home_sections_visibility")
+
+        val DEFAULT_HOME_SECTIONS = setOf(
+            "greeting",
+            "mood_chips",
+            "for_you_banner",
+            "recommendations",
+            "quick_picks",
+            "youtube_sections",
+            "personalized",
+            "genres",
+            "contextual",
+            "mood_banner",
+            "create_mix"
+        )
+    }
+
+    // --- Home Configuration ---
+
+    val homeSectionsVisibilityFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[HOME_SECTIONS_VISIBILITY_KEY] ?: DEFAULT_HOME_SECTIONS
+    }
+
+    suspend fun setHomeSectionsVisibility(sections: Set<String>) {
+        val finalSections = if (sections.isEmpty()) DEFAULT_HOME_SECTIONS else sections
+        context.dataStore.edit { preferences ->
+            preferences[HOME_SECTIONS_VISIBILITY_KEY] = finalSections
+        }
     }
 
     // --- Appearance Settings ---
