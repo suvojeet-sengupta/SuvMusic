@@ -132,17 +132,18 @@ private fun extractColorsFromBitmap(bitmap: Bitmap, isDarkTheme: Boolean = true)
     val onBackground: Color
     
     if (isDarkTheme) {
-        // Dark theme: dark backgrounds with white text
+        // Dark theme: very dark backgrounds with white text
+        // Use lower multipliers (0.12f and 0.22f) for a much subtler, darker look
         primary = Color(
-            red = (avgR * 0.3f / 255f).coerceIn(0f, 1f),
-            green = (avgG * 0.3f / 255f).coerceIn(0f, 1f),
-            blue = (avgB * 0.3f / 255f).coerceIn(0f, 1f)
+            red = (avgR * 0.12f / 255f).coerceIn(0f, 1f),
+            green = (avgG * 0.12f / 255f).coerceIn(0f, 1f),
+            blue = (avgB * 0.12f / 255f).coerceIn(0f, 1f)
         )
         
         secondary = Color(
-            red = (avgR * 0.5f / 255f).coerceIn(0f, 1f),
-            green = (avgG * 0.5f / 255f).coerceIn(0f, 1f),
-            blue = (avgB * 0.5f / 255f).coerceIn(0f, 1f)
+            red = (avgR * 0.22f / 255f).coerceIn(0f, 1f),
+            green = (avgG * 0.22f / 255f).coerceIn(0f, 1f),
+            blue = (avgB * 0.22f / 255f).coerceIn(0f, 1f)
         )
         
         onBackground = Color.White

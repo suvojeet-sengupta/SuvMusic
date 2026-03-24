@@ -378,84 +378,113 @@ fun PlayerScreen(
     if (isInPip) {
         PiPPlayerContent(song = song, isVideoMode = playerState.isVideoMode, player = player)
     } else {
-        Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
-            // Background
-            if (animatedBackgroundEnabled && !playerState.isVideoMode) {
-                MeshGradientBackground(dominantColors = dominantColors, backgroundColor = playerBackgroundColor)
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(dominantColors.secondary, dominantColors.primary, playerBackgroundColor))))
-            }
+        // Create a local dynamic color scheme for the player to ensure all Material components
+        // (like ripples, text selection, sheets) follow the album art theme.
+        val dynamicColorScheme = MaterialTheme.colorScheme.copy(
+            primary = dominantColors.accent,
+            onPrimary = dominantColors.onBackground,
+            primaryContainer = dominantColors.secondary,
+            onPrimaryContainer = dominantColors.onBackground,
+            secondary = dominantColors.secondary,
+            onSecondary = dominantColors.onBackground,
+            secondaryContainer = dominantColors.secondary,
+            onSecondaryContainer = dominantColors.onBackground,
+            tertiary = dominantColors.accent,
+            onTertiary = dominantColors.onBackground,
+            surface = if (isAppInDarkTheme) dominantColors.primary else dominantColors.secondary,
+            onSurface = dominantColors.onBackground,
+            surfaceVariant = dominantColors.secondary,
+            onSurfaceVariant = dominantColors.onBackground,
+            background = playerBackgroundColor,
+            onBackground = dominantColors.onBackground,
+            outline = dominantColors.accent.copy(alpha = 0.5f),
+            surfaceContainer = dominantColors.primary,
+            surfaceContainerHigh = dominantColors.secondary,
+            surfaceContainerHighest = dominantColors.secondary,
+            surfaceContainerLow = dominantColors.primary,
+            surfaceContainerLowest = dominantColors.primary,
+        )
 
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val useWideLayout = maxWidth > 500.dp
-                AnimatedVisibility(visible = !showQueue, enter = fadeIn(), exit = fadeOut()) {
-                    if (useWideLayout) {
-                        LandscapePlayerContent(
-                            song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
-                            currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
-                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
-                            actions = actions,
-                            onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
-                            onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
-                            onShowQueue = { activeOverlay = PlayerOverlay.Queue },
-                            onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
-                            onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
-                            onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
-                            onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
-                            onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                            isVideoMode = playerState.isVideoMode,
-                            onToggleVideoMode = actions.onToggleVideoMode,
-                            handleDoubleTapSeek = handleDoubleTapSeek,
-                            onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
-                            onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                            onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                            player = player,
-                            isFullScreen = isFullScreen,
-                            onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                            isSwitchingMode = isSwitchingMode,
-                            sleepTimerOption = state.sleepTimerOption,
-                            sleepTimerRemainingMs = state.sleepTimerRemainingMs
-                        )
-                    } else {
-                        val isCompactHeight = maxHeight < 600.dp
-                        PortraitPlayerContent(
-                            song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
-                            currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
-                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
-                            player = player, isFullScreen = isFullScreen,
-                            isCompactHeight = isCompactHeight, actions = actions,
-                            onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
-                            onShowQueue = { activeOverlay = PlayerOverlay.Queue },
-                            onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
-                            onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
-                            onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
-                            onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
-                            onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
-                            onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                            handleDoubleTapSeek = handleDoubleTapSeek,
-                            onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
-                            onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                            onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                            onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                            isSwitchingMode = isSwitchingMode,
-                            sleepTimerOption = state.sleepTimerOption,
-                            sleepTimerRemainingMs = state.sleepTimerRemainingMs
-                        )
-                    }
+        MaterialTheme(colorScheme = dynamicColorScheme) {
+            Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
+                // Background
+                if (animatedBackgroundEnabled && !playerState.isVideoMode) {
+                    MeshGradientBackground(dominantColors = dominantColors, backgroundColor = playerBackgroundColor)
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(dominantColors.secondary, dominantColors.primary, playerBackgroundColor))))
                 }
 
-                OverlaysContent(
-                    state = state, actions = actions.copy(onClearQueue = { playerViewModel.clearQueue() }), activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
-                    dominantColors = dominantColors, playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
-                    ringtoneViewModel = hiltViewModel<RingtoneViewModel>(), // Explicit type for clarity and to fix inference errors
-                    historySongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
-                    isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
-                    volumeSliderEnabled = volumeSliderEnabled, volumeKeyEvents = volumeKeyEvents,
-                    lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
-                    lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize,
-                    sessionManager = sessionManager, coroutineScope = coroutineScope, isFullScreen = isFullScreen,
-                    eqEnabled = eqEnabled, eqBands = eqBands, eqPreamp = eqPreamp, bassBoost = bassBoost, virtualizer = virtualizer
-                )
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val useWideLayout = maxWidth > 500.dp
+                    AnimatedVisibility(visible = !showQueue, enter = fadeIn(), exit = fadeOut()) {
+                        if (useWideLayout) {
+                            LandscapePlayerContent(
+                                song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
+                                currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
+                                sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
+                                actions = actions,
+                                onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
+                                onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                isVideoMode = playerState.isVideoMode,
+                                onToggleVideoMode = actions.onToggleVideoMode,
+                                handleDoubleTapSeek = handleDoubleTapSeek,
+                                onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                player = player,
+                                isFullScreen = isFullScreen,
+                                onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                isSwitchingMode = isSwitchingMode,
+                                sleepTimerOption = state.sleepTimerOption,
+                                sleepTimerRemainingMs = state.sleepTimerRemainingMs
+                            )
+                        } else {
+                            val isCompactHeight = maxHeight < 600.dp
+                            PortraitPlayerContent(
+                                song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
+                                currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
+                                sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
+                                player = player, isFullScreen = isFullScreen,
+                                isCompactHeight = isCompactHeight, actions = actions,
+                                onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
+                                onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                handleDoubleTapSeek = handleDoubleTapSeek,
+                                onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                isSwitchingMode = isSwitchingMode,
+                                sleepTimerOption = state.sleepTimerOption,
+                                sleepTimerRemainingMs = state.sleepTimerRemainingMs
+                            )
+                        }
+                    }
+
+                    OverlaysContent(
+                        state = state, actions = actions.copy(onClearQueue = { playerViewModel.clearQueue() }), activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
+                        dominantColors = dominantColors, playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
+                        ringtoneViewModel = hiltViewModel<RingtoneViewModel>(), // Explicit type for clarity and to fix inference errors
+                        historySongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+                        isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
+                        volumeSliderEnabled = volumeSliderEnabled, volumeKeyEvents = volumeKeyEvents,
+                        lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
+                        lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize,
+                        sessionManager = sessionManager, coroutineScope = coroutineScope, isFullScreen = isFullScreen,
+                        eqEnabled = eqEnabled, eqBands = eqBands, eqPreamp = eqPreamp, bassBoost = bassBoost, virtualizer = virtualizer
+                    )
+                }
             }
         }
     }

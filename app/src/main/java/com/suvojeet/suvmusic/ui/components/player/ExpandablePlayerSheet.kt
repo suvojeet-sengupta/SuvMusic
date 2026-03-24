@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -150,66 +151,109 @@ fun ExpandablePlayerSheet(
     val panelHeightPx = (miniPlayerHeightPx + bottomPadding) + (dragRange * expansion.value.coerceAtLeast(0f))
     val panelHeightDp = with(density) { panelHeightPx.toDp() }
 
-    // The entire expandable panel
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(panelHeightDp)
-            // Removed pointerInput from here to allow clicks to pass through to Nav Bar in the transparent area
-    ) {
-        // ── Collapsed Mini Player Row ──
-        // Visible when expansion < ~0.4, fades out as expansion increases
-        val miniPlayerAlpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
-        if (miniPlayerAlpha > 0f) {
-            // When collapsed (expansion=0), offset the mini player down to close the gap
-            val collapsedOffsetPx = (bottomPadding - adjustedBottomPadding) * (1f - expansion.value.coerceAtLeast(0f))
-            
-            CollapsedMiniPlayer(
-                song = song,
-                playerState = playerState,
-                dominantColors = dominantColors,
-                progress = playerState.progress,
-                onPlayPause = onPlayPause,
-                onNext = onNext,
-                onClose = onClose,
-                userAlpha = userAlpha,
-                style = style,
-                onTap = {
-                    coroutineScope.launch {
-                        expansion.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(
-                                durationMillis = 350,
-                                easing = FastOutSlowInEasing
+    val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    
+    // Create a local dynamic color scheme for the entire sheet (mini & full player)
+    val dynamicColorScheme = MaterialTheme.colorScheme.copy(
+        primary = dominantColors.accent,
+        onPrimary = dominantColors.onBackground,
+        primaryContainer = dominantColors.secondary,
+        onPrimaryContainer = dominantColors.onBackground,
+        secondary = dominantColors.secondary,
+        onSecondary = dominantColors.onBackground,
+        secondaryContainer = dominantColors.secondary,
+        onSecondaryContainer = dominantColors.onBackground,
+        tertiary = dominantColors.accent,
+        onTertiary = dominantColors.onBackground,
+        surface = if (isAppInDarkTheme) dominantColors.primary else dominantColors.secondary,
+        onSurface = dominantColors.onBackground,
+        surfaceVariant = dominantColors.secondary,
+        onSurfaceVariant = dominantColors.onBackground,
+        background = if (isAppInDarkTheme) Color.Black else Color.White,
+        onBackground = dominantColors.onBackground,
+        outline = dominantColors.accent.copy(alpha = 0.5f),
+        surfaceContainer = dominantColors.primary,
+        surfaceContainerHigh = dominantColors.secondary,
+        surfaceContainerHighest = dominantColors.secondary,
+        surfaceContainerLow = dominantColors.primary,
+        surfaceContainerLowest = dominantColors.primary,
+    )
+
+    MaterialTheme(colorScheme = dynamicColorScheme) {
+        // The entire expandable panel
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(panelHeightDp)
+                // Removed pointerInput from here to allow clicks to pass through to Nav Bar in the transparent area
+        ) {
+            // ── Collapsed Mini Player Row ──
+            // Visible when expansion < ~0.4, fades out as expansion increases
+            val miniPlayerAlpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
+            if (miniPlayerAlpha > 0f) {
+                // When collapsed (expansion=0), offset the mini player down to close the gap
+                val collapsedOffsetPx = (bottomPadding - adjustedBottomPadding) * (1f - expansion.value.coerceAtLeast(0f))
+                
+                CollapsedMiniPlayer(
+                    song = song,
+                    playerState = playerState,
+                    dominantColors = dominantColors,
+                    progress = playerState.progress,
+                    onPlayPause = onPlayPause,
+                    onNext = onNext,
+                    onClose = onClose,
+                    userAlpha = userAlpha,
+                    style = style,
+                    onTap = {
+                        coroutineScope.launch {
+                            expansion.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(
+                                    durationMillis = 350,
+                                    easing = FastOutSlowInEasing
+                                )
                             )
-                        )
-                        onExpandChange(true)
-                    }
-                },
-                modifier = Modifier
-                     .fillMaxWidth()
-                     .height(MiniPlayerHeight)
-                     .alpha(miniPlayerAlpha)
-                     .align(Alignment.TopCenter)
-                     .offset(y = with(density) { collapsedOffsetPx.toDp() })
-                     .graphicsLayer {
-                         // Visual feedback for swipe down to dismiss
-                         if (expansion.value < 0f && swipeDownToDismissEnabled) {
-                             translationY = -expansion.value * dragRange * 0.8f
+                            onExpandChange(true)
+                        }
+                    },
+                    modifier = Modifier
+                         .fillMaxWidth()
+                         .height(MiniPlayerHeight)
+                         .alpha(miniPlayerAlpha)
+                         .align(Alignment.TopCenter)
+                         .offset(y = with(density) { collapsedOffsetPx.toDp() })
+                         .graphicsLayer {
+                             // Visual feedback for swipe down to dismiss
+                             if (expansion.value < 0f && swipeDownToDismissEnabled) {
+                                 translationY = -expansion.value * dragRange * 0.8f
+                             }
                          }
-                     }
-                     .zIndex(if (isExpanded) 0f else 1f)
-                     // Add gesture detection to MiniPlayer
-                     .pointerInput(Unit) {
-                        detectVerticalDragGestures(
-                            onDragEnd = {
-                                coroutineScope.launch {
-                                    if (expansion.value < -0.1f && swipeDownToDismissEnabled) {
-                                        // Swipe down to dismiss/stop
-                                        onClose()
-                                        // Reset expansion for next time it's shown
-                                        expansion.snapTo(0f)
-                                    } else {
+                         .zIndex(if (isExpanded) 0f else 1f)
+                         // Add gesture detection to MiniPlayer
+                         .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onDragEnd = {
+                                    coroutineScope.launch {
+                                        if (expansion.value < -0.1f && swipeDownToDismissEnabled) {
+                                            // Swipe down to dismiss/stop
+                                            onClose()
+                                            // Reset expansion for next time it's shown
+                                            expansion.snapTo(0f)
+                                        } else {
+                                            val targetValue = if (expansion.value > 0.4f) 1f else 0f
+                                            expansion.animateTo(
+                                                targetValue = targetValue,
+                                                animationSpec = tween(
+                                                    durationMillis = 250,
+                                                    easing = FastOutSlowInEasing
+                                                )
+                                            )
+                                            onExpandChange(targetValue == 1f)
+                                        }
+                                    }
+                                },
+                                onDragCancel = {
+                                    coroutineScope.launch {
                                         val targetValue = if (expansion.value > 0.4f) 1f else 0f
                                         expansion.animateTo(
                                             targetValue = targetValue,
@@ -220,99 +264,86 @@ fun ExpandablePlayerSheet(
                                         )
                                         onExpandChange(targetValue == 1f)
                                     }
-                                }
-                            },
-                            onDragCancel = {
-                                coroutineScope.launch {
-                                    val targetValue = if (expansion.value > 0.4f) 1f else 0f
-                                    expansion.animateTo(
-                                        targetValue = targetValue,
-                                        animationSpec = tween(
-                                            durationMillis = 250,
-                                            easing = FastOutSlowInEasing
+                                },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val delta = -dragAmount / dragRange
+                                    coroutineScope.launch {
+                                        val minExpansion = if (swipeDownToDismissEnabled) -0.5f else 0f
+                                        expansion.snapTo(
+                                            (expansion.value + delta).coerceIn(minExpansion, 1f)
                                         )
-                                    )
-                                    onExpandChange(targetValue == 1f)
+                                    }
                                 }
-                            },
-                            onVerticalDrag = { change, dragAmount ->
-                                change.consume()
-                                val delta = -dragAmount / dragRange
-                                coroutineScope.launch {
-                                    val minExpansion = if (swipeDownToDismissEnabled) -0.5f else 0f
-                                    expansion.snapTo(
-                                        (expansion.value + delta).coerceIn(minExpansion, 1f)
-                                    )
-                                }
-                            }
-                        )
-                    }
-             )
-        }
-
-        // ── Expanded Full Player ──
-        // Visible when expansion > ~0.3, fades out as expansion increases
-        val fullPlayerAlpha = ((expansion.value - 0.3f) / 0.7f).coerceIn(0f, 1f)
-        if (fullPlayerAlpha > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(fullPlayerAlpha)
-                    .zIndex(if (isExpanded) 1f else 0f)
-                    // Add gesture detection to Full Player
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures(
-                            onDragEnd = {
-                                // Threshold 0.8f makes it easier to collapse (only need to drag down 20%)
-                                val targetValue = if (expansion.value > 0.8f) 1f else 0f 
-                                
-                                coroutineScope.launch {
-                                     expansion.animateTo(
-                                        targetValue = targetValue,
-                                        animationSpec = tween(
-                                            durationMillis = 250,
-                                            easing = FastOutSlowInEasing
-                                        )
-                                    )
-                                    onExpandChange(targetValue == 1f)
-                                }
-                            },
-                            onDragCancel = {
-                                coroutineScope.launch {
-                                    val targetValue = if (expansion.value > 0.8f) 1f else 0f
-                                    expansion.animateTo(
-                                        targetValue = targetValue,
-                                        animationSpec = tween(
-                                            durationMillis = 250,
-                                            easing = FastOutSlowInEasing
-                                        )
-                                    )
-                                    onExpandChange(targetValue == 1f)
-                                }
-                            },
-                            onVerticalDrag = { change, dragAmount ->
-                                change.consume()
-                                val delta = -dragAmount / dragRange
-                                coroutineScope.launch {
-                                    expansion.snapTo(
-                                        (expansion.value + delta).coerceIn(0f, 1f)
-                                    )
-                                }
-                            }
-                        )
-                    }
-            ) {
-                expandedContent {
-                    // onCollapse callback
-                    coroutineScope.launch {
-                        expansion.animateTo(
-                            targetValue = 0f,
-                            animationSpec = tween(
-                                durationMillis = 300,
-                                easing = FastOutSlowInEasing
                             )
-                        )
-                        onExpandChange(false)
+                        }
+                 )
+            }
+
+            // ── Expanded Full Player ──
+            // Visible when expansion > ~0.3, fades out as expansion increases
+            val fullPlayerAlpha = ((expansion.value - 0.3f) / 0.7f).coerceIn(0f, 1f)
+            if (fullPlayerAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(fullPlayerAlpha)
+                        .zIndex(if (isExpanded) 1f else 0f)
+                        // Add gesture detection to Full Player
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onDragEnd = {
+                                    // Threshold 0.8f makes it easier to collapse (only need to drag down 20%)
+                                    val targetValue = if (expansion.value > 0.8f) 1f else 0f 
+                                    
+                                    coroutineScope.launch {
+                                         expansion.animateTo(
+                                            targetValue = targetValue,
+                                            animationSpec = tween(
+                                                durationMillis = 250,
+                                                easing = FastOutSlowInEasing
+                                            )
+                                        )
+                                        onExpandChange(targetValue == 1f)
+                                    }
+                                },
+                                onDragCancel = {
+                                    coroutineScope.launch {
+                                        val targetValue = if (expansion.value > 0.8f) 1f else 0f
+                                        expansion.animateTo(
+                                            targetValue = targetValue,
+                                            animationSpec = tween(
+                                                durationMillis = 250,
+                                                easing = FastOutSlowInEasing
+                                            )
+                                        )
+                                        onExpandChange(targetValue == 1f)
+                                    }
+                                },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val delta = -dragAmount / dragRange
+                                    coroutineScope.launch {
+                                        expansion.snapTo(
+                                            (expansion.value + delta).coerceIn(0f, 1f)
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                ) {
+                    expandedContent {
+                        // onCollapse callback
+                        coroutineScope.launch {
+                            expansion.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    easing = FastOutSlowInEasing
+                                )
+                            )
+                            onExpandChange(false)
+                        }
                     }
                 }
             }
