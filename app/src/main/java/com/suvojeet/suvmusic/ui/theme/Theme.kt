@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.ui.components.DominantColors
 
 /**
  * Dark color scheme - Primary for SuvMusic (Default/Purple)
@@ -142,6 +144,61 @@ private val LoveLightColorScheme = lightColorScheme(
     background = Neutral99, onBackground = Neutral10, surface = Neutral99, onSurface = Neutral10
 )
 
+/**
+ * Creates a Material3 ColorScheme from extracted dominant colors.
+ */
+private fun createColorSchemeFromDominantColors(
+    colors: DominantColors,
+    darkTheme: Boolean
+): ColorScheme {
+    val primary = colors.accent
+    val onPrimary = if (darkTheme) Color.Black else Color.White
+    
+    return if (darkTheme) {
+        darkColorScheme(
+            primary = primary,
+            onPrimary = onPrimary,
+            primaryContainer = colors.secondary,
+            onPrimaryContainer = colors.onBackground,
+            secondary = colors.secondary,
+            onSecondary = colors.onBackground,
+            secondaryContainer = colors.secondary.copy(alpha = 0.3f),
+            onSecondaryContainer = colors.onBackground,
+            tertiary = colors.accent,
+            onTertiary = onPrimary,
+            background = colors.primary,
+            onBackground = colors.onBackground,
+            surface = colors.primary,
+            onSurface = colors.onBackground,
+            surfaceVariant = colors.secondary,
+            onSurfaceVariant = colors.onBackground,
+            outline = colors.secondary,
+            outlineVariant = colors.primary,
+        )
+    } else {
+        lightColorScheme(
+            primary = primary,
+            onPrimary = onPrimary,
+            primaryContainer = colors.secondary,
+            onPrimaryContainer = colors.onBackground,
+            secondary = colors.secondary,
+            onSecondary = colors.onBackground,
+            secondaryContainer = colors.secondary.copy(alpha = 0.3f),
+            onSecondaryContainer = colors.onBackground,
+            tertiary = colors.accent,
+            onTertiary = onPrimary,
+            background = colors.primary,
+            onBackground = colors.onBackground,
+            surface = colors.primary,
+            onSurface = colors.onBackground,
+            surfaceVariant = colors.secondary,
+            onSurfaceVariant = colors.onBackground,
+            outline = colors.secondary,
+            outlineVariant = colors.primary,
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SuvMusicTheme(
@@ -149,9 +206,13 @@ fun SuvMusicTheme(
     dynamicColor: Boolean = true,
     pureBlack: Boolean = false,
     appTheme: AppTheme = AppTheme.DEFAULT,
+    albumArtColors: DominantColors? = null,
     content: @Composable () -> Unit
 ) {
     var colorScheme = when {
+        albumArtColors != null -> {
+            createColorSchemeFromDominantColors(albumArtColors, darkTheme)
+        }
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
