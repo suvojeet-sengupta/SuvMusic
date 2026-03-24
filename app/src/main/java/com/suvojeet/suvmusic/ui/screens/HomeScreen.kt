@@ -112,6 +112,11 @@ fun HomeScreen(
         }
     }
     
+    val playlistMgmtState by playlistViewModel.uiState.collectAsState()
+    val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsState(initial = true)
+    
+    val lazyListState = rememberLazyListState()
+
     // Handle Events
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -119,12 +124,17 @@ fun HomeScreen(
                 is HomeEvent.ShowAddToPlaylistSheet -> {
                     playlistViewModel.showAddToPlaylistSheet(event.song)
                 }
+                is HomeEvent.ScrollToTop -> {
+                    if (uiState.homeSections.isNotEmpty() || uiState.recommendations.isNotEmpty()) {
+                        lazyListState.animateScrollToItem(0)
+                    }
+                }
+                is HomeEvent.Refresh -> {
+                   // Refresh is already triggered in ViewModel, which sets isRefreshing = true
+                }
             }
         }
     }
-    
-    val playlistMgmtState by playlistViewModel.uiState.collectAsState()
-    val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsState(initial = true)
 
     // Handle messages from PlaylistManagement
     androidx.compose.runtime.LaunchedEffect(playlistMgmtState.successMessage, playlistMgmtState.errorMessage) {
@@ -185,8 +195,6 @@ fun HomeScreen(
                 )
             }
             uiState.homeSections.isNotEmpty() || uiState.recommendations.isNotEmpty() -> {
-                val lazyListState = rememberLazyListState()
-
                 // Infinite scroll detection — trigger slightly earlier for seamless loading
                 LaunchedEffect(lazyListState, uiState.isLoadingMore) {
                     snapshotFlow {

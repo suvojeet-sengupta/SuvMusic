@@ -29,6 +29,8 @@ import javax.inject.Inject
 
 sealed class HomeEvent {
     data class ShowAddToPlaylistSheet(val song: Song) : HomeEvent()
+    object ScrollToTop : HomeEvent()
+    object Refresh : HomeEvent()
 }
 
 data class HomeUiState(
@@ -296,6 +298,19 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+    
+    fun scrollToTop() {
+        viewModelScope.launch {
+            _events.emit(HomeEvent.ScrollToTop)
+        }
+    }
+
+    fun triggerRefresh() {
+        viewModelScope.launch {
+            _events.emit(HomeEvent.Refresh)
+            refresh()
         }
     }
     
