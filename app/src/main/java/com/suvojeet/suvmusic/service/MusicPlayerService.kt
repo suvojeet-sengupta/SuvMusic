@@ -625,16 +625,31 @@ class MusicPlayerService : MediaLibraryService() {
                     "SET_OUTPUT_DEVICE" -> {
                         val deviceId = args.getString("DEVICE_ID")
                         val player = session.player as? ExoPlayer
-                        if (deviceId != null && player != null) {
+                        if (player != null) {
                             serviceScope.launch {
                                  val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
                                  val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-                                 val targetDevice = if (deviceId == "phone_speaker") {
+                                 
+                                 val targetDevice = if (deviceId == null || deviceId == "default") {
+                                     null // Clear preference
+                                 } else if (deviceId == "phone_speaker") {
                                      devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
                                  } else {
                                      devices.find { it.id.toString() == deviceId }
                                  }
+                                 
+                                 android.util.Log.d("MusicPlayerService", "Switching output to: ${targetDevice?.productName ?: "Default"}")
                                  player.setPreferredAudioDevice(targetDevice)
+                                 
+                                 // "Nudge" the volume to kickstart the AudioSink on the new device
+                                 // This fixes the "No sound on switch" issue on many devices
+                                 delay(150) // Give it a moment to switch routing
+                                 if (player.isPlaying) {
+                                     val originalVol = player.volume
+                                     player.volume = 0.95f * originalVol
+                                     delay(100)
+                                     player.volume = originalVol
+                                 }
                             }
                         }
                     }
