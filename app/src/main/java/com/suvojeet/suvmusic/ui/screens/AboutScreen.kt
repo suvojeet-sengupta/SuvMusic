@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Palette
@@ -61,6 +62,7 @@ fun AboutScreen(
     viewModel: AboutViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
     var showPasswordDialog by remember { mutableStateOf(false) }
     
@@ -256,6 +258,7 @@ fun AboutScreen(
                         
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub, onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") })
+                            SocialIconBadge(icon = androidx.compose.material.icons.Icons.Filled.Language, onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/") })
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Instagram, onClick = { uriHandler.openUri("https://www.instagram.com/suvojeet__sengupta?igsh=MWhyMXE4YzhxaDVvNg==") })
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram, onClick = { uriHandler.openUri("https://t.me/suvojeet_sengupta") })
                         }
@@ -277,10 +280,33 @@ fun AboutScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // === HOW IT WORKS SECTION ===
+            // === WEBSITE SECTION ===
             item {
-                SettingsSectionTitle("Learn More")
+                SettingsSectionTitle("Information")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    ListItem(
+                        headlineContent = { Text("Official Website", fontWeight = FontWeight.SemiBold) },
+                        supportingContent = { Text("Visit the official SuvMusic website") },
+                        leadingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(SquircleShape)
+                                    .background(primaryColor.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(androidx.compose.material.icons.Icons.Filled.Language, null, tint = primaryColor, modifier = Modifier.size(20.dp))
+                            }
+                        },
+                        trailingContent = { Icon(androidx.compose.material.icons.Icons.Filled.OpenInNew, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
+                        modifier = Modifier
+                            .dpadFocusable(onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/") }, shape = SquircleShape)
+                            .clip(SquircleShape),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                    
+                    M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
                     ListItem(
                         headlineContent = { Text("How It Works", fontWeight = FontWeight.SemiBold) },
                         supportingContent = { Text("Learn how SuvMusic works with YouTube Music") },
