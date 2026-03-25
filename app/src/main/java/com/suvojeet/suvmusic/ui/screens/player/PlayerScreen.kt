@@ -221,7 +221,7 @@ fun PlayerScreen(
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 26f)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val albumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
-    val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val pendingIntent by playerViewModel.pendingIntent.collectAsStateWithLifecycle()
     val deleteLauncher = rememberLauncherForActivityResult(
