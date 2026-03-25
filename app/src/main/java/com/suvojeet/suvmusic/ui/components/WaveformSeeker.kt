@@ -102,7 +102,7 @@ fun WaveformSeeker(
     modifier: Modifier = Modifier,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
-    initialStyle: SeekbarStyle = SeekbarStyle.WAVE_LINE,
+    initialStyle: SeekbarStyle = SeekbarStyle.M3E_WAVY,
     onStyleChange: ((SeekbarStyle) -> Unit)? = null,
     duration: Long = 0L,
     sponsorSegments: List<SponsorSegment> = emptyList()
@@ -130,7 +130,7 @@ fun WaveformSeeker(
             initialValue = 0f,
             targetValue = 360f,
             animationSpec = infiniteRepeatable(
-                animation = tween(4000, easing = LinearEasing),
+                animation = tween(3000, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "wavePhase"
@@ -140,12 +140,12 @@ fun WaveformSeeker(
         0f
     }
 
-    // M3E Wavy: spring-animated amplitude (1f when playing, 0f when paused)
+    // M3E Wavy: spring-animated amplitude (1.2f when playing for better visibility, 0f when paused)
     val wavyAmplitude by animateFloatAsState(
-        targetValue = if (isPlaying && currentStyle == SeekbarStyle.M3E_WAVY) 1f else 0f,
+        targetValue = if (isPlaying && currentStyle == SeekbarStyle.M3E_WAVY) 1.2f else 0f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessVeryLow
         ),
         label = "wavyAmplitude"
     )
