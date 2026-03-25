@@ -77,7 +77,8 @@ fun ExpressiveBottomNav(
     modifier: Modifier = Modifier,
     alpha: Float = 1.0f,
     iosLiquidGlassEnabled: Boolean = false,
-    backgroundColor: Color? = null
+    backgroundColor: Color? = null,
+    iosNavBarBlur: Float = 60f
 ) {
     val navItems = listOf(
         BottomNavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
@@ -92,7 +93,8 @@ fun ExpressiveBottomNav(
             currentDestination = currentDestination,
             onDestinationChange = onDestinationChange,
             onReClick = onReClick,
-            modifier = modifier
+            modifier = modifier,
+            blurAmount = iosNavBarBlur
         )
     } else {
         StandardNavBar(
@@ -115,7 +117,8 @@ private fun LiquidGlassNavBar(
     currentDestination: Destination,
     onDestinationChange: (Destination) -> Unit,
     onReClick: (Destination) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    blurAmount: Float = 60f
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -214,9 +217,9 @@ private fun LiquidGlassNavBar(
                 }
                 .then(
                     if (Build.VERSION.SDK_INT >= 31) {
-                        Modifier.blur(60.dp)
+                        Modifier.blur(blurAmount.dp)
                     } else {
-                        Modifier.blur(30.dp)
+                        Modifier.blur((blurAmount / 2).dp)
                     }
                 )
         )

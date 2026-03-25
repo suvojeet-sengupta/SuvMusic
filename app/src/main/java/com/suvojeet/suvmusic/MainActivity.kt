@@ -696,6 +696,7 @@ fun SuvMusicApp(
                         Column {
                             // Bottom navigation (phone only)
                             val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
+                            val navBarBlur by sessionManager.navBarBlurFlow.collectAsStateWithLifecycle(initialValue = 60.0f)
                             val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
                             
                             val isDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -737,7 +738,8 @@ fun SuvMusicApp(
                                 },
                                 alpha = navBarAlpha,
                                 iosLiquidGlassEnabled = iosLiquidGlassEnabled,
-                                backgroundColor = navBarColor
+                                backgroundColor = navBarColor,
+                                iosNavBarBlur = navBarBlur
                             )
                         }
                     }
