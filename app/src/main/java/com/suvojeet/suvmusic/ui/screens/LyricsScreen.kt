@@ -69,6 +69,9 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import com.suvojeet.suvmusic.util.LyricsPdfGenerator
 import com.suvojeet.suvmusic.util.MoodDetector
 import com.suvojeet.suvmusic.ui.components.DynamicLyricsBackground
+import com.suvojeet.suvmusic.ui.components.BounceButton
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,6 +108,18 @@ fun LyricsScreen(
     val backgroundColor = if (isDarkTheme) Color.Black else Color.White
     val textColor = if (isDarkTheme) Color.White else Color.Black
     val overlayColor = if (isDarkTheme) Color.Black else Color.White
+    
+    // M3E Fast Expressive color transitions
+    val animatedBgColor by animateColorAsState(
+        targetValue = backgroundColor,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "bgColor"
+    )
+    val animatedTextColor by animateColorAsState(
+        targetValue = textColor,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "textColor"
+    )
     
     val context = LocalContext.current
     var showSettingsSheet by remember { mutableStateOf(false) }
@@ -149,7 +164,7 @@ fun LyricsScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(animatedBgColor)
             // Block volume gesture from parent by consuming vertical drags
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, _ -> }
@@ -167,86 +182,105 @@ fun LyricsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            // Header
+            // Reorganized Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Settings Button (Top Left)
-                IconButton(
-                    onClick = { showSettingsSheet = true },
-                    modifier = Modifier
-                        .size(42.dp)
-                        .background(textColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Tune,
-                        contentDescription = "Settings",
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
+                // Left side actions
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BounceButton(
+                        onClick = { showSettingsSheet = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) { isPressed ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(animatedTextColor.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Tune,
+                                contentDescription = "Settings",
+                                tint = animatedTextColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    BounceButton(
+                        onClick = { showShareSheet = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) { isPressed ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(animatedTextColor.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share",
+                                tint = animatedTextColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
                 }
 
-                // Share Button (Middle)
-                IconButton(
-                    onClick = { showShareSheet = true },
-                    modifier = Modifier
-                        .size(42.dp)
-                        .background(textColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share Lyrics",
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Close Button (Top Right)
-                IconButton(
+                // Center/Right - Close Button
+                BounceButton(
                     onClick = onClose,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .background(textColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) { isPressed ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(animatedTextColor.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = animatedTextColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
             
-            // Song Info Header
+            // Song Info Header - Refined Typography
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                    .padding(horizontal = 24.dp, vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = songTitle,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
                     ),
-                    color = textColor,
+                    color = animatedTextColor,
                     textAlign = TextAlign.Center,
-                    maxLines = 2
+                    maxLines = 1
                 )
                 Text(
                     text = artistName,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 16.sp
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Medium
                     ),
-                    color = textColor.copy(alpha = 0.7f),
+                    color = animatedTextColor.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
                     maxLines = 1,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
 
@@ -346,92 +380,113 @@ fun LyricsScreen(
                 }
             }
             
-            // Bottom Seek Bar
+            // Bottom Controls and Seek Bar
             if (duration > 0) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                        .background(
+                            animatedTextColor.copy(alpha = 0.04f),
+                            RoundedCornerShape(32.dp)
+                        )
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
-                     var sliderPosition by remember { mutableStateOf<Float?>(null) }
-                     val progress = sliderPosition ?: (currentTimeProvider().toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                     
-                     Slider(
-                         value = progress,
-                         onValueChange = { sliderPosition = it },
-                         onValueChangeFinished = {
-                             sliderPosition?.let {
-                                 onSeekTo((it * duration).toLong())
-                                 sliderPosition = null
-                             }
-                         },
-                         modifier = Modifier.fillMaxWidth().height(20.dp),
-                         colors = SliderDefaults.colors(
-                             thumbColor = textColor,
-                             activeTrackColor = textColor.copy(alpha = 0.8f),
-                             inactiveTrackColor = textColor.copy(alpha = 0.2f)
-                         )
-                     )
-                     
-                     Row(
-                         modifier = Modifier.fillMaxWidth(),
-                         horizontalArrangement = Arrangement.SpaceBetween
-                     ) {
+                    var sliderPosition by remember { mutableStateOf<Float?>(null) }
+                    val progress = sliderPosition ?: (currentTimeProvider().toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    
+                    Slider(
+                        value = progress,
+                        onValueChange = { sliderPosition = it },
+                        onValueChangeFinished = {
+                            sliderPosition?.let {
+                                onSeekTo((it * duration).toLong())
+                                sliderPosition = null
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(16.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = animatedTextColor,
+                            activeTrackColor = animatedTextColor.copy(alpha = 0.8f),
+                            inactiveTrackColor = animatedTextColor.copy(alpha = 0.15f)
+                        )
+                    )
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
                             text = formatTime(if (sliderPosition != null) (sliderPosition!! * duration).toLong() else currentTimeProvider()),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = textColor.copy(alpha = 0.6f)
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = animatedTextColor.copy(alpha = 0.5f)
                         )
+                        Text(
+                            text = formatTime(duration),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = animatedTextColor.copy(alpha = 0.5f)
+                        )
+                    }
 
-                        // Playback Controls
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(24.dp)
-                        ) {
-                            IconButton(
-                                onClick = onPrevious,
+                    // Playback Controls Row - Centered and Ergonomic
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        BounceButton(
+                            onClick = onPrevious,
+                            modifier = Modifier.size(52.dp)
+                        ) { isPressed ->
+                            Icon(
+                                imageVector = Icons.Default.SkipPrevious,
+                                contentDescription = "Previous",
+                                tint = animatedTextColor.copy(alpha = if (isPressed) 0.6f else 0.9f),
                                 modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SkipPrevious,
-                                    contentDescription = "Previous",
-                                    tint = textColor,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
-                            
-                            IconButton(
-                                onClick = onPlayPause,
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(32.dp))
+                        
+                        BounceButton(
+                            onClick = onPlayPause,
+                            modifier = Modifier.size(72.dp),
+                            shape = RoundedCornerShape(24.dp)
+                        ) { isPressed ->
+                            Box(
                                 modifier = Modifier
-                                    .size(56.dp)
-                                    .background(textColor, androidx.compose.foundation.shape.CircleShape)
+                                    .fillMaxSize()
+                                    .background(animatedTextColor, RoundedCornerShape(24.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (isPlaying) "Pause" else "Play",
-                                    tint = backgroundColor,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                            
-                            IconButton(
-                                onClick = onNext,
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SkipNext,
-                                    contentDescription = "Next",
-                                    tint = textColor,
-                                    modifier = Modifier.size(28.dp)
+                                    tint = animatedBgColor,
+                                    modifier = Modifier.size(38.dp)
                                 )
                             }
                         }
-
-                        Text(
-                            text = formatTime(duration),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = textColor.copy(alpha = 0.6f)
-                        )
+                        
+                        Spacer(modifier = Modifier.width(32.dp))
+                        
+                        BounceButton(
+                            onClick = onNext,
+                            modifier = Modifier.size(52.dp)
+                        ) { isPressed ->
+                            Icon(
+                                imageVector = Icons.Default.SkipNext,
+                                contentDescription = "Next",
+                                tint = animatedTextColor.copy(alpha = if (isPressed) 0.6f else 0.9f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
             } else {
@@ -444,14 +499,14 @@ fun LyricsScreen(
             ModalBottomSheet(
                 onDismissRequest = { showSettingsSheet = false },
                 sheetState = sheetState,
-                containerColor = Color.Black.copy(alpha = 0.85f), // Semi-transparent black for immersion
+                containerColor = Color.Black.copy(alpha = 0.92f), // More immersive dark
                 contentColor = Color.White,
                 dragHandle = { 
                     BottomSheetDefaults.DragHandle(
-                        color = Color.White.copy(alpha = 0.3f)   // subtle on dark bg
+                        color = Color.White.copy(alpha = 0.4f)
                     )
                 },
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -461,119 +516,87 @@ fun LyricsScreen(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Appearance",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        text = "Customize Lyrics",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 24.dp)
                     )
 
-                    // Font Size & Spacing Combined Row for compactness
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    // Appearance Section
+                    SettingsSectionHeader(title = "Appearance", icon = Icons.Default.Tune)
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .padding(20.dp)
                     ) {
                         // Font Size
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Size", 
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.FormatSize, 
-                                    null, 
-                                    tint = Color.White.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Slider(
-                                    value = lyricsFontSize,
-                                    onValueChange = onFontSizeChange,
-                                    valueRange = 16f..50f,
-                                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = Color.White.copy(alpha = 0.8f),
-                                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
-                                    )
-                                )
-                            }
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                        SettingsSlider(
+                            label = "Font Size",
+                            value = lyricsFontSize,
+                            onValueChange = onFontSizeChange,
+                            valueRange = 16f..50f,
+                            icon = Icons.Default.FormatSize
+                        )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
                         // Line Spacing
-                        Column(modifier = Modifier.weight(1f)) {
-                             Text(
-                                text = "Spacing", 
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.FormatAlignLeft, 
-                                    null, 
-                                    tint = Color.White.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Slider(
-                                    value = lyricsLineSpacing,
-                                    onValueChange = onLineSpacingChange,
-                                    valueRange = 1.0f..2.5f,
-                                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                                     colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = Color.White.copy(alpha = 0.8f),
-                                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
-                                    )
-                                )
-                            }
-                        }
+                        SettingsSlider(
+                            label = "Line Spacing",
+                            value = lyricsLineSpacing,
+                            onValueChange = onLineSpacingChange,
+                            valueRange = 1.0f..2.5f,
+                            icon = Icons.Default.FormatAlignLeft
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    
-                    // Alignment & Screen On
+
+                    // Alignment & Behavior
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column {
+                        // Alignment Selection
+                        Column(
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                                .padding(16.dp)
+                        ) {
                             Text(
                                 text = "Alignment", 
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                color = Color.White.copy(alpha = 0.5f),
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
                             Row(
                                 modifier = Modifier
+                                    .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.1f))
-                                    .padding(4.dp)
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .padding(4.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 LyricsTextPosition.entries.forEach { position ->
                                     val isSelected = lyricsTextPosition == position
                                     Box(
                                         modifier = Modifier
+                                            .weight(1f)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) Color.White.copy(alpha = 0.2f) else Color.Transparent)
+                                            .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
                                             .clickable { onTextPositionChange(position) }
-                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = position.name.lowercase().replaceFirstChar { it.uppercase() },
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f)
                                         )
                                     }
                                 }
@@ -581,11 +604,18 @@ fun LyricsScreen(
                         }
                         
                         // Screen On Toggle
-                         Column(horizontalAlignment = Alignment.End) {
+                        Column(
+                            modifier = Modifier
+                                .weight(0.7f)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                             Text(
                                 text = "Screen On", 
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Switch(
@@ -593,133 +623,130 @@ fun LyricsScreen(
                                 onCheckedChange = { keepScreenOn = it },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = Color.White.copy(alpha = 0.5f),
-                                    uncheckedThumbColor = Color.White.copy(alpha = 0.6f),
-                                    uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                                    checkedTrackColor = Color.White.copy(alpha = 0.4f),
+                                    uncheckedThumbColor = Color.White.copy(alpha = 0.4f),
+                                    uncheckedTrackColor = Color.White.copy(alpha = 0.1f),
+                                    uncheckedBorderColor = Color.Transparent
                                 )
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                    Spacer(modifier = Modifier.height(24.dp))
 
-                    // Sync Correction
-                    Text(
-                        text = "Sync Correction",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
+                    // Sync Correction Section
+                    SettingsSectionHeader(title = "Sync Correction", icon = Icons.Default.Tune)
+                    
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(24.dp))
                             .background(Color.White.copy(alpha = 0.05f))
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        IconButton(
+                        BounceButton(
                             onClick = { syncOffset -= 500L },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color.White.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
-                        ) {
-                            Text("-0.5s", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            modifier = Modifier.size(48.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) { isPressed ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.White.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("-0.5s", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            }
                         }
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "${if (syncOffset > 0) "+" else ""}${syncOffset}ms",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
                                 color = if (syncOffset != 0L) MaterialTheme.colorScheme.primary else Color.White
                             )
                             if (syncOffset != 0L) {
                                 Text(
-                                    text = "Tap to reset",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.5f),
-                                    modifier = Modifier.clickable { syncOffset = 0L }
+                                    text = "Reset",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { syncOffset = 0L }
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
                         }
 
-                        IconButton(
+                        BounceButton(
                             onClick = { syncOffset += 500L },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color.White.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
-                        ) {
-                            Text("+0.5s", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            modifier = Modifier.size(48.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) { isPressed ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.White.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("+0.5s", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                    Spacer(modifier = Modifier.height(24.dp))
 
-                    // Source Provider
-                    Text(
-                        text = "Source",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
+                    // Provider Section
+                    SettingsSectionHeader(title = "Lyrics Source", icon = Icons.Default.LibraryMusic)
+                    
                     var expandedProvider by remember { mutableStateOf(false) }
                     
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(24.dp))
                             .background(Color.White.copy(alpha = 0.05f))
-                            .clickable(
-                                onClick = { expandedProvider = !expandedProvider },
-                                indication = LocalIndication.current,
-                                interactionSource = remember { MutableInteractionSource() }
-                            )
-                            .padding(16.dp)
+                            .clickable { expandedProvider = !expandedProvider }
+                            .padding(20.dp)
                             .animateContentSize()
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.LibraryMusic,
-                                null,
-                                tint = Color.White.copy(alpha = 0.8f)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.LibraryMusic, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Provider",
+                                    text = "Current Provider",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(alpha = 0.5f)
                                 )
                                 Text(
                                     text = selectedProvider.displayName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White
                                 )
                             }
                              Icon(
                                 imageVector = if(expandedProvider) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.5f)
+                                tint = Color.White.copy(alpha = 0.4f)
                             )
                         }
                         
                         if (expandedProvider) {
                              Spacer(modifier = Modifier.height(16.dp))
-                             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                             HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                              Spacer(modifier = Modifier.height(8.dp))
                              
                              com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.entries.forEach { provider ->
@@ -729,12 +756,13 @@ fun LyricsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
                                         .clickable(enabled = isEnabled) {
                                             onProviderChange(provider)
                                             expandedProvider = false
                                         }
-                                        .padding(vertical = 12.dp)
-                                        .alpha(if (isEnabled) 1f else 0.5f),
+                                        .padding(vertical = 12.dp, horizontal = 8.dp)
+                                        .alpha(if (isEnabled) 1f else 0.4f),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     RadioButton(
@@ -743,13 +771,15 @@ fun LyricsScreen(
                                         enabled = isEnabled,
                                         colors = RadioButtonDefaults.colors(
                                             selectedColor = Color.White,
-                                            unselectedColor = Color.White.copy(alpha = 0.5f)
+                                            unselectedColor = Color.White.copy(alpha = 0.3f)
                                         )
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
                                         text = provider.displayName,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        ),
                                         color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
                                     )
                                 }
@@ -855,6 +885,63 @@ fun LyricsScreen(
     }
 }
 
+@Composable
+private fun SettingsSectionHeader(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
+    ) {
+        Icon(icon, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            ),
+            color = Color.White.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+private fun SettingsSlider(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = if (value % 1f == 0f) value.toInt().toString() else "%.1f".format(value),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
+                color = Color.White.copy(alpha = 0.5f)
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            modifier = Modifier.padding(top = 4.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White.copy(alpha = 0.8f),
+                inactiveTrackColor = Color.White.copy(alpha = 0.1f)
+            )
+        )
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun LyricsList(
@@ -874,6 +961,14 @@ fun LyricsList(
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val textColor = if (isDarkTheme) Color.White else Color.Black
+    
+    // M3E Fast Expressive text color transition
+    val animatedTextColor by animateColorAsState(
+        targetValue = textColor,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "listTextColor"
+    )
+    
     val currentTime = currentTimeProvider()
 
 
@@ -1025,7 +1120,7 @@ fun LyricsList(
                             Icon(
                                 imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
                                 contentDescription = if (isSelected) "Selected" else "Unselected",
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.3f),
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else animatedTextColor.copy(alpha = 0.3f),
                                 modifier = Modifier.size(24.dp).padding(end = 16.dp)
                             )
                         }
@@ -1035,9 +1130,9 @@ fun LyricsList(
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontSize = fontSize.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = (fontSize * lineSpacingMultiplier).sp
+                                lineHeight = (fontSize * (lineSpacingMultiplier * 1.1f)).sp
                             ),
-                            color = textColor.copy(alpha = alpha),
+                            color = animatedTextColor.copy(alpha = alpha),
                             textAlign = TextAlign.Start,
                             modifier = Modifier.weight(1f)
                         )
@@ -1048,7 +1143,7 @@ fun LyricsList(
                     
                     val scale by animateFloatAsState(
                         targetValue = if (isActive) 1.05f else 1f, // Reduced scale for smoother feel
-                        animationSpec = tween(durationMillis = 300),
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
                         label = "scale"
                     )
 
@@ -1070,7 +1165,7 @@ fun LyricsList(
                                     }
                                 }
                             )
-                            .padding(horizontal = 32.dp, vertical = 8.dp) // Reduced vertical padding
+                            .padding(horizontal = 32.dp, vertical = 6.dp) // Even more compact for better organization
                     ) {
                         // Use word-by-word ONLY if enabled and available
                         val words = line.words
@@ -1090,27 +1185,18 @@ fun LyricsList(
                                         targetValue = if (isActive) {
                                             if (currentTime >= word.startTimeMs) 1f else 0.4f
                                         } else 0.3f, // Inactive lines are dimmed
-                                        animationSpec = tween(300),
+                                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
                                         label = "wordAlpha"
                                     )
-                                    
-                                    val wordColor = if (isActive && currentTime >= word.startTimeMs) {
-                                        textColor // Highlighted
-                                    } else {
-                                        textColor // Alpha handles the dimming
-                                    }
-
-                                    // Add glow effect for currently sung word?
-                                    // For now, simple opacity transition is cleaner
                                     
                                     Text(
                                         text = word.text + " ",
                                         style = MaterialTheme.typography.headlineMedium.copy(
-                                            fontSize = fontSize.sp, 
+                                            fontSize = (if (isActive) fontSize * 1.05f else fontSize).sp, 
                                             fontWeight = FontWeight.Bold,
-                                            lineHeight = (fontSize * lineSpacingMultiplier).sp
+                                            lineHeight = (fontSize * (lineSpacingMultiplier * 1.1f)).sp
                                         ),
-                                        color = wordColor.copy(alpha = wordAlpha),
+                                        color = animatedTextColor.copy(alpha = wordAlpha),
                                         modifier = Modifier.padding(vertical = 2.dp)
                                     )
                                 }
@@ -1118,21 +1204,21 @@ fun LyricsList(
                         } else {
                             // Standard line rendering
                             val lineAlpha by animateFloatAsState(
-                                targetValue = if (isActive || !lyrics.isSynced) 1f else 0.3f, // Dim inactive lines more
-                                animationSpec = tween(300),
+                                targetValue = if (isActive || !lyrics.isSynced) 1f else 0.25f, // Dim inactive lines more for better focus
+                                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
                                 label = "lineAlpha"
                             )
                             
                             Text(
                                 text = line.text,
                                 style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontSize = fontSize.sp,
+                                    fontSize = (if (isActive && lyrics.isSynced) fontSize * 1.05f else fontSize).sp,
                                     fontWeight = FontWeight.Bold,
-                                    lineHeight = (fontSize * lineSpacingMultiplier).sp
+                                    lineHeight = (fontSize * (lineSpacingMultiplier * 1.1f)).sp
                                 ),
-                                color = textColor.copy(alpha = lineAlpha),
+                                color = animatedTextColor.copy(alpha = lineAlpha),
                                 textAlign = textAlign,
-                                modifier = Modifier.fillMaxWidth() // Ensuring full width for text
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
