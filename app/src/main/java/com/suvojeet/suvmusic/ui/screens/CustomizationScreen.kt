@@ -100,6 +100,7 @@ fun CustomizationScreen(
 
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
     val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
+    val navBarBlur by sessionManager.navBarBlurFlow.collectAsStateWithLifecycle(initialValue = 60.0f)
     val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.YT_MUSIC)
     val homeSectionsVisibility by sessionManager.homeSectionsVisibilityFlow.collectAsStateWithLifecycle(initialValue = SessionManager.DEFAULT_HOME_SECTIONS)
@@ -237,6 +238,17 @@ fun CustomizationScreen(
                         alpha = navBarAlpha,
                         onAlphaChange = { scope.launch { sessionManager.setNavBarAlpha(it) } }
                     )
+
+                    if (iosLiquidGlassEnabled) {
+                        HorizontalDivider()
+                        
+                        BlurSliderItem(
+                            title = "iOS NavBar Blur",
+                            icon = Icons.Default.BlurOn,
+                            blur = navBarBlur,
+                            onBlurChange = { scope.launch { sessionManager.setNavBarBlur(it) } }
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -564,6 +576,69 @@ private fun TransparencySliderItem(
             value = alpha,
             onValueChange = onAlphaChange,
             valueRange = 0f..1f,
+            steps = 0,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+    }
+}
+
+@Composable
+private fun BlurSliderItem(
+    title: String,
+    icon: ImageVector,
+    blur: Float,
+    onBlurChange: (Float) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            
+            Text(
+                text = "${blur.toInt()}px",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Slider(
+            value = blur,
+            onValueChange = onBlurChange,
+            valueRange = 0f..120f,
             steps = 0,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
