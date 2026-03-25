@@ -39,20 +39,20 @@ fun MeshGradientBackground(
         onBackground = MaterialTheme.colorScheme.onBackground
     )
 
-    // Animate colors for smooth transitions when song changes
+    // Animate colors for fast expressive transitions when song changes
     val animatedPrimary by animateColorAsState(
         targetValue = colors.primary,
-        animationSpec = tween(1000),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "primary_color_anim"
     )
     val animatedSecondary by animateColorAsState(
         targetValue = colors.secondary,
-        animationSpec = tween(1000),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "secondary_color_anim"
     )
     val animatedAccent by animateColorAsState(
         targetValue = colors.accent,
-        animationSpec = tween(1000),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "accent_color_anim"
     )
 
