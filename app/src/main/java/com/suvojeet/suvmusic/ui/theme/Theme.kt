@@ -2,6 +2,9 @@ package com.suvojeet.suvmusic.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -13,6 +16,8 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -209,9 +214,41 @@ fun SuvMusicTheme(
     albumArtColors: DominantColors? = null,
     content: @Composable () -> Unit
 ) {
+    // M3E Fast Expressive animation for song-based color changes
+    val animatedColors = if (albumArtColors != null) {
+        val animatedPrimary by animateColorAsState(
+            targetValue = albumArtColors.primary,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+            label = "theme_primary"
+        )
+        val animatedSecondary by animateColorAsState(
+            targetValue = albumArtColors.secondary,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+            label = "theme_secondary"
+        )
+        val animatedAccent by animateColorAsState(
+            targetValue = albumArtColors.accent,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+            label = "theme_accent"
+        )
+        val animatedOnBg by animateColorAsState(
+            targetValue = albumArtColors.onBackground,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+            label = "theme_onBg"
+        )
+        remember(animatedPrimary, animatedSecondary, animatedAccent, animatedOnBg) {
+            DominantColors(
+                primary = animatedPrimary,
+                secondary = animatedSecondary,
+                accent = animatedAccent,
+                onBackground = animatedOnBg
+            )
+        }
+    } else null
+
     var colorScheme = when {
-        albumArtColors != null -> {
-            createColorSchemeFromDominantColors(albumArtColors, darkTheme)
+        animatedColors != null -> {
+            createColorSchemeFromDominantColors(animatedColors, darkTheme)
         }
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

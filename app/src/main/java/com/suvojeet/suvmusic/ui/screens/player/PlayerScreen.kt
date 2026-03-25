@@ -285,25 +285,25 @@ fun PlayerScreen(
         }
     }
 
-    // M3E Spring-based color transitions
+    // M3E Fast Expressive color transitions
     val animatedPrimary by animateColorAsState(
         targetValue = finalColors.primary,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "primary"
     )
     val animatedSecondary by animateColorAsState(
         targetValue = finalColors.secondary,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "secondary"
     )
     val animatedAccent by animateColorAsState(
         targetValue = finalColors.accent,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "accent"
     )
     val animatedOnBg by animateColorAsState(
         targetValue = finalColors.onBackground,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessVeryLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "onBg"
     )
 
