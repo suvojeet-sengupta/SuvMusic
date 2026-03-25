@@ -308,6 +308,29 @@ fun AboutScreen(
                     M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
                     ListItem(
+                        headlineContent = { Text("Privacy Policy", fontWeight = FontWeight.SemiBold) },
+                        supportingContent = { Text("Review how SuvMusic handles your data") },
+                        leadingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(SquircleShape)
+                                    .background(primaryColor.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(androidx.compose.material.icons.Icons.Filled.Security, null, tint = primaryColor, modifier = Modifier.size(20.dp))
+                            }
+                        },
+                        trailingContent = { Icon(androidx.compose.material.icons.Icons.Filled.OpenInNew, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
+                        modifier = Modifier
+                            .dpadFocusable(onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html") }, shape = SquircleShape)
+                            .clip(SquircleShape),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                    
+                    M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                    ListItem(
                         headlineContent = { Text("How It Works", fontWeight = FontWeight.SemiBold) },
                         supportingContent = { Text("Learn how SuvMusic works with YouTube Music") },
                         leadingContent = {

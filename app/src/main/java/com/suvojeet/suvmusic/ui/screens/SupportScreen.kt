@@ -312,6 +312,19 @@ fun SupportScreen(
                             context.startActivity(intent)
                         }
                     )
+
+                    M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                    SupportListItem(
+                        icon = Icons.Default.Security,
+                        title = "Privacy Policy",
+                        subtitle = "How SuvMusic handles your data",
+                        accentColor = Color(0xFF9C27B0),
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html"))
+                            context.startActivity(intent)
+                        }
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }

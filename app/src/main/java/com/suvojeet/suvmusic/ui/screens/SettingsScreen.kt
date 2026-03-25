@@ -568,6 +568,17 @@ fun SettingsScreen(
 
                     HorizontalDivider()
 
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                    SettingsNavigationItem(
+                        icon = Icons.Default.Security,
+                        title = "Privacy Policy",
+                        subtitle = "How SuvMusic handles your data",
+                        onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html") }
+                    )
+
+                    HorizontalDivider()
+
                     SettingsNavigationItem(
                         icon = Icons.Default.SystemUpdate,
                         title = "Update Channel",
