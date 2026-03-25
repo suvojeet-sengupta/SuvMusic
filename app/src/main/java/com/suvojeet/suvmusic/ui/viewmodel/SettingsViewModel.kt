@@ -73,7 +73,7 @@ data class SettingsUiState(
     val pureBlackEnabled: Boolean = false,
     val playerAnimatedBackgroundEnabled: Boolean = true,
     val albumArtDynamicColorsEnabled: Boolean = true,
-    val rotatingVinylAnimationEnabled: Boolean = false,
+    val rotatingVinylAnimationEnabled: Boolean = true,
     // Lyrics
     val preferredLyricsProvider: String = "BetterLyrics",
     val lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
