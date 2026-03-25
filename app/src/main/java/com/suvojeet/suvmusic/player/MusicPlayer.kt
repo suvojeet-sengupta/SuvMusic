@@ -213,10 +213,16 @@ class MusicPlayer @Inject constructor(
 
         // 2. Add other devices
         audioDevices.forEach { device ->
-            // Skip internal speakers/earpieces as they are represented by "Phone Speaker"
+            // Skip unwanted/internal devices
+            // TYPE_REMOTE_SUBMIX is used for recording and shows up as a "device"
+            // TYPE_TELEPHONY is for calls
             if (device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER || 
                 device.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE ||
-                device.type == AudioDeviceInfo.TYPE_TELEPHONY) {
+                device.type == AudioDeviceInfo.TYPE_TELEPHONY ||
+                device.type == AudioDeviceInfo.TYPE_FM_TUNER ||
+                device.type == AudioDeviceInfo.TYPE_TV_TUNER ||
+                device.type == 15 || // TYPE_REMOTE_SUBMIX (API 23+)
+                device.type == 18) { // TYPE_TELEPHONY
                 return@forEach
             }
 
@@ -231,10 +237,16 @@ class MusicPlayer @Inject constructor(
                 AudioDeviceInfo.TYPE_HDMI,
                 AudioDeviceInfo.TYPE_HDMI_ARC,
                 AudioDeviceInfo.TYPE_HDMI_EARC -> DeviceType.SPEAKER
+                AudioDeviceInfo.TYPE_AUX_LINE -> DeviceType.HEADPHONES
                 else -> DeviceType.UNKNOWN
             }
             
+            // Skip unknown devices if they don't have a valid name to avoid "null" entries
             val deviceName = device.productName.toString().trim()
+            if (type == DeviceType.UNKNOWN && (deviceName.isBlank() || deviceName.lowercase() == "null")) {
+                return@forEach
+            }
+
             val finalName = if (deviceName.isBlank() || deviceName.lowercase() == "null") {
                 type.name.lowercase().replaceFirstChar { it.uppercase() }
             } else {
@@ -285,6 +297,13 @@ class MusicPlayer @Inject constructor(
             // Manual device lost or auto-logic failed -> Reset manual and use auto logic
             if (manualSelectedDeviceId != null) {
                 manualSelectedDeviceId = null
+                
+                // Also tell service to reset to default routing since manual device is gone
+                mediaController?.sendCustomCommand(
+                    androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY),
+                    android.os.Bundle().apply { putString("DEVICE_ID", "default") }
+                )
+                
                 devicesWithSelection = rawDevices.map { device ->
                     val isSelected = when (device.type) {
                         DeviceType.PHONE -> autoSelectPhone
