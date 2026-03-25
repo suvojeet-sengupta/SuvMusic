@@ -441,16 +441,26 @@ class MusicPlayerService : MediaLibraryService() {
 
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                     super.onPlayWhenReadyChanged(playWhenReady, reason)
-                    // If playWhenReady was changed to false due to audio focus loss
-                    // Media3's default AudioFocusManager handles the actual resume if the loss was transient.
-                    // By checking isAutoResumeAfterCallEnabled, we can override and prevent auto-resume if desired.
-                    if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
+                    // If playWhenReady was changed due to audio focus loss/gain
+                    if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
                         serviceScope.launch {
                             val autoResume = sessionManager.isAutoResumeAfterCallEnabled()
-                            if (!autoResume) {
-                                android.util.Log.d("MusicPlayerService", "Focus lost. Auto-resume is disabled by user.")
-                                // To prevent auto-resume after call ends, we might need to stay in playWhenReady = false
-                                // even when focus is regained. 
+                            if (!playWhenReady) {
+                                // Focus lost: if auto-resume is disabled, permanently pause so it won't resume later
+                                if (!autoResume) {
+                                    android.util.Log.d("MusicPlayerService", "Focus lost. Auto-resume is disabled by user. Forcing permanent pause.")
+                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        mediaLibrarySession?.player?.pause()
+                                    }
+                                }
+                            } else {
+                                // Focus regained: if auto-resume is enabled, ensure the player actually starts
+                                if (autoResume) {
+                                    android.util.Log.d("MusicPlayerService", "Focus regained. Ensuring playback resumes.")
+                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        mediaLibrarySession?.player?.play()
+                                    }
+                                }
                             }
                         }
                     }
