@@ -349,10 +349,10 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun isRotatingVinylAnimationEnabled(): Boolean =
-        context.dataStore.data.first()[ROTATING_VINYL_ANIMATION_KEY] ?: false
+        context.dataStore.data.first()[ROTATING_VINYL_ANIMATION_KEY] ?: true
 
     val rotatingVinylAnimationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[ROTATING_VINYL_ANIMATION_KEY] ?: false
+        preferences[ROTATING_VINYL_ANIMATION_KEY] ?: true
     }
 
     suspend fun setRotatingVinylAnimationEnabled(enabled: Boolean) {
