@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.rounded.*
@@ -342,6 +343,10 @@ private fun DeveloperCard() {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 SocialIconBadge(icon = SocialIcons.GitHub, onClick = { 
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/suvojeet-sengupta"))
+                    context.startActivity(intent)
+                })
+                SocialIconBadge(icon = androidx.compose.material.icons.Icons.Filled.Language, onClick = { 
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://suvojeet-sengupta.github.io/SuvMusic-Website/"))
                     context.startActivity(intent)
                 })
                 SocialIconBadge(icon = SocialIcons.Instagram, onClick = { 
