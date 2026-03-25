@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.3.0] - 2026-03-25
+
+### Added
+- **Comprehensive Backup & Restore**: Securely back up your entire SuvMusic experience, including library cache and encrypted YouTube settings, using the new high-performance `.suv` format.
+- **Lyrics Screen Overhaul**: Experience a completely redesigned, more immersive lyrics screen built with modern Material 3 Expressive components.
+- **Home Screen Personalization**: Take control of your home feed with new layout customization options and a refined 4-row Quick Picks layout.
+- **Enhanced Playlist Management**: Expanded playlist support with native `.suv` and standard `.m3u` export options, plus a new 'Queue to Playlist' action.
+- **Visual Refinements**: Introduced the M3E wavy seekbar as the new default with smoother, more expressive animations and enabled rotating vinyl artwork by default.
+- **Customization & Links**: New blur customization for iOS-style navigation bars and added official SuvMusic website and Privacy Policy links for quick access.
+
+### Changed
+- **Audio Stability**: Optimized audio output detection and fixed 'Auto-resume after calls' to ensure seamless playback transitions.
+- **Under-the-Hood Fixes**: Resolved various UI state restoration issues, improved dynamic theme transitions, and filtered virtual devices for better audio switching.
+
 ## [2.1.2.0] - 2026-03-21
 
 ### Added
