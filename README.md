@@ -16,6 +16,9 @@
     <a href="https://github.com/suvojeet-sengupta/SuvMusic/releases/latest">
       <img src="https://img.shields.io/github/v/release/suvojeet-sengupta/SuvMusic?style=for-the-badge&color=FA2D48&label=DOWNLOAD%20APK&logo=android" alt="Download APK" />
     </a>
+    <a href="https://suvojeet-sengupta.github.io/SuvMusic-Website/">
+      <img src="https://img.shields.io/badge/Official_Website-SuvMusic-FF4081?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Official Website" />
+    </a>
     <a href="https://t.me/TechToli">
       <img src="https://img.shields.io/badge/Join_Telegram-Community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram" />
     </a>
