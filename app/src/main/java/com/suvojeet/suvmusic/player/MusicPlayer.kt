@@ -44,6 +44,8 @@ import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.util.MusicHapticsManager
 import com.suvojeet.suvmusic.util.TTSManager
+import androidx.glance.appwidget.updateAll
+import com.suvojeet.suvmusic.glance.SuvMusicWidget
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -150,7 +152,26 @@ class MusicPlayer @Inject constructor(
         
         // Register receiver for device changes
         registerDeviceReceiver()
+
+        // Update homescreen widget on state changes (filtered to avoid excessive updates from progress)
+        scope.launch {
+            _playerState.collect { state ->
+                // Check if important state changed compared to last update
+                // (We use a simple local variable to track the "significant" part of the state)
+                val currentSignificantState = state.currentSong?.id to state.isPlaying to state.shuffleEnabled to state.repeatMode
+                if (lastSignificantState != currentSignificantState) {
+                    lastSignificantState = currentSignificantState
+                    try {
+                        com.suvojeet.suvmusic.glance.SuvMusicWidget().updateAll(context)
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }
+            }
+        }
     }
+
+    private var lastSignificantState: Any? = null
 
     private fun registerDeviceReceiver() {
         val filter = android.content.IntentFilter().apply {
