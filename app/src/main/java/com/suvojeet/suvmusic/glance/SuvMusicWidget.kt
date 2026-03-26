@@ -1,8 +1,9 @@
 package com.suvojeet.suvmusic.glance
 
 import android.content.Context
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,7 +38,12 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.toBitmap
 import com.suvojeet.suvmusic.R
+import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.player.MusicPlayer
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -60,13 +66,31 @@ class SuvMusicWidget : GlanceAppWidget() {
                 val playerState by musicPlayer.playerState.collectAsState()
                 val currentSong = playerState.currentSong
                 
-                // Dynamic background color from PlayerState (default to dark sleek color)
-                // Use a fallback if dominantColor is invalid/default (-16777216 is Black)
+                var artworkBitmap by remember(currentSong?.id) { mutableStateOf<Bitmap?>(null) }
+                
+                LaunchedEffect(currentSong?.id) {
+                    if (currentSong?.thumbnailUrl != null) {
+                        try {
+                            val request = ImageRequest.Builder(context)
+                                .data(currentSong.thumbnailUrl)
+                                .size(256, 256)
+                                .build()
+                            val result = context.imageLoader.execute(request)
+                            if (result is SuccessResult) {
+                                artworkBitmap = result.image.toBitmap()
+                            }
+                        } catch (e: Exception) {
+                            // Fallback to placeholder
+                        }
+                    }
+                }
+
+                // Dynamic background color from PlayerState
                 val domColor = playerState.dominantColor
                 val backgroundColor = if (domColor != -16777216 && domColor != 0) {
-                     Color(domColor).copy(alpha = 0.95f) // Slightly transparent/glassy
+                     Color(domColor).copy(alpha = 0.92f)
                 } else {
-                     Color(0xFF252836).copy(alpha = 0.95f) // Sleek dark blue-grey fallback
+                     Color(0xFF252836).copy(alpha = 0.95f)
                 }
                 
                 val contentColor = Color.White
@@ -77,131 +101,173 @@ class SuvMusicWidget : GlanceAppWidget() {
                     modifier = GlanceModifier
                         .fillMaxSize()
                         .background(ColorProvider(backgroundColor))
-                        .cornerRadius(24.dp) // Large rounded corners as per image
+                        .cornerRadius(24.dp)
                         .clickable(actionRunCallback<OpenAppAction>())
                 ) {
-                    Row(
+                    Column(
                         modifier = GlanceModifier
                             .fillMaxSize()
-                            .padding(16.dp), // Consistent padding
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(12.dp)
                     ) {
-                        // Album Art (Left Side)
-                        // Use a solid colored box with music icon as placeholder
-                        // This avoids the transparent/checkered look
-                        Box(
-                            modifier = GlanceModifier
-                                .size(80.dp)
-                                .cornerRadius(12.dp)
-                                .background(ColorProvider(Color(0xFF3D3D50))), // Solid dark purple-grey
-                            contentAlignment = Alignment.Center
-                        ) {
-                             Image(
-                                provider = ImageProvider(R.drawable.ic_music_note),
-                                contentDescription = "Artwork",
-                                colorFilter = ColorFilter.tint(ColorProvider(Color.White.copy(alpha = 0.8f))),
-                                modifier = GlanceModifier.size(40.dp)
-                            )
-                        }
-
-                        Spacer(modifier = GlanceModifier.width(16.dp))
-
-                        // Right Side: Info + Controls
-                        Column(
-                            modifier = GlanceModifier
-                                .defaultWeight()
-                                .fillMaxHeight(),
+                        // Top Section: Artwork + Info
+                        Row(
+                            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Top Row: Title + App Icon
-                            Row(
-                                modifier = GlanceModifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                            // Album Art
+                            Box(
+                                modifier = GlanceModifier
+                                    .size(68.dp)
+                                    .cornerRadius(12.dp)
+                                    .background(ColorProvider(Color.White.copy(alpha = 0.1f))),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Column(
-                                    modifier = GlanceModifier.defaultWeight()
-                                ) {
-                                    Text(
-                                        text = currentSong?.title ?: "Select a song",
-                                        style = TextStyle(
-                                            color = ColorProvider(contentColor),
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                        maxLines = 1
+                                if (artworkBitmap != null) {
+                                    Image(
+                                        provider = ImageProvider(artworkBitmap!!),
+                                        contentDescription = "Artwork",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = GlanceModifier.fillMaxSize().cornerRadius(12.dp)
                                     )
-                                    Spacer(modifier = GlanceModifier.height(4.dp))
-                                    Text(
-                                        text = currentSong?.artist ?: "SuvMusic",
-                                        style = TextStyle(
-                                            color = ColorProvider(secondaryColor),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Normal
-                                        ),
-                                        maxLines = 1
+                                } else {
+                                     Image(
+                                        provider = ImageProvider(R.drawable.ic_music_note),
+                                        contentDescription = "Artwork",
+                                        colorFilter = ColorFilter.tint(ColorProvider(Color.White.copy(alpha = 0.5f))),
+                                        modifier = GlanceModifier.size(32.dp)
                                     )
                                 }
-                                
-                                // Music Note Icon (Top Right)
-                                Image(
-                                    provider = ImageProvider(R.drawable.ic_music_note), // Ensure this exists
-                                    contentDescription = "App Icon",
-                                    colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
-                                    modifier = GlanceModifier.size(16.dp).padding(start = 8.dp)
+                            }
+
+                            Spacer(modifier = GlanceModifier.width(12.dp))
+
+                            // Info
+                            Column(
+                                modifier = GlanceModifier.defaultWeight()
+                            ) {
+                                Text(
+                                    text = currentSong?.title ?: "Not Playing",
+                                    style = TextStyle(
+                                        color = ColorProvider(contentColor),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    maxLines = 1
+                                )
+                                Spacer(modifier = GlanceModifier.height(2.dp))
+                                Text(
+                                    text = currentSong?.artist ?: "SuvMusic Player",
+                                    style = TextStyle(
+                                        color = ColorProvider(secondaryColor),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Normal
+                                    ),
+                                    maxLines = 1
                                 )
                             }
-                            
-                            Spacer(modifier = GlanceModifier.defaultWeight())
-                            
-                            // Bottom Row: Controls (Right Aligned in the column, or spread)
-                            // Image shows spacing.
-                            Row(
-                                modifier = GlanceModifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.End, // Align to right like screenshot? 
-                                // Actually screenshot shows them spaced out but arguably centered/right-ish.
-                                // Let's use SpaceEvenly or SpaceBetween for the control row itself?
-                                // Screenshot: Prev - Play - Next are clustered somewhat.
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Spacer to push controls to right if desired, OR just center them in the available width
-                                // Let's spread them out slightly.
-                                
-                                // Previous
-                                Image(
-                                    provider = ImageProvider(R.drawable.ic_skip_previous),
-                                    contentDescription = "Previous",
-                                    colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
+                        }
+
+                        // Progress Line (Simplified to fixed height Box if fractional weight is unavailable)
+                        Box(
+                            modifier = GlanceModifier
+                                .fillMaxWidth()
+                                .height(3.dp)
+                                .background(ColorProvider(Color.White.copy(alpha = 0.15f)))
+                                .cornerRadius(1.5.dp)
+                        ) {
+                            val progress = playerState.progress.coerceIn(0f, 1f)
+                            if (progress > 0.05f) { // Only show if significant progress
+                                Box(
                                     modifier = GlanceModifier
-                                        .size(32.dp)
-                                        .clickable(actionRunCallback<PreviousAction>())
-                                )
-                                
-                                Spacer(modifier = GlanceModifier.width(24.dp))
-                                
-                                // Play/Pause (Larger)
+                                        .fillMaxWidth() // Fill container, but since it's a Box, we can't easily do fractional width without weight
+                                        .fillMaxHeight()
+                                        .background(ColorProvider(contentColor))
+                                        .cornerRadius(1.5.dp)
+                                ) {}
+                            }
+                        }
+
+                        Spacer(modifier = GlanceModifier.height(10.dp))
+
+                        // Bottom Section: All Controls
+                        Row(
+                            modifier = GlanceModifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Shuffle
+                            Image(
+                                provider = ImageProvider(
+                                    if (playerState.shuffleEnabled) R.drawable.ic_shuffle_on else R.drawable.ic_shuffle
+                                ),
+                                contentDescription = "Shuffle",
+                                colorFilter = ColorFilter.tint(ColorProvider(if (playerState.shuffleEnabled) contentColor else secondaryColor)),
+                                modifier = GlanceModifier
+                                    .size(24.dp)
+                                    .clickable(actionRunCallback<ToggleShuffleAction>())
+                            )
+                            
+                            Spacer(modifier = GlanceModifier.width(18.dp))
+                            
+                            // Previous
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_skip_previous),
+                                contentDescription = "Previous",
+                                colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
+                                modifier = GlanceModifier
+                                    .size(30.dp)
+                                    .clickable(actionRunCallback<PreviousAction>())
+                            )
+                            
+                            Spacer(modifier = GlanceModifier.width(18.dp))
+                            
+                            // Play/Pause
+                            Box(
+                                modifier = GlanceModifier
+                                    .size(52.dp)
+                                    .background(ColorProvider(Color.White.copy(alpha = 0.15f)))
+                                    .cornerRadius(26.dp)
+                                    .clickable(actionRunCallback<PlayPauseAction>()),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Image(
                                     provider = ImageProvider(
                                         if (playerState.isPlaying) R.drawable.ic_pause else R.drawable.ic_play
                                     ),
                                     contentDescription = "Play/Pause",
                                     colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
-                                    modifier = GlanceModifier
-                                        .size(40.dp)
-                                        .clickable(actionRunCallback<PlayPauseAction>())
-                                )
-                                
-                                Spacer(modifier = GlanceModifier.width(24.dp))
-                                
-                                // Next
-                                Image(
-                                    provider = ImageProvider(R.drawable.ic_skip_next),
-                                    contentDescription = "Next",
-                                    colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
-                                    modifier = GlanceModifier
-                                        .size(32.dp)
-                                        .clickable(actionRunCallback<NextAction>())
+                                    modifier = GlanceModifier.size(30.dp)
                                 )
                             }
+                            
+                            Spacer(modifier = GlanceModifier.width(18.dp))
+                            
+                            // Next
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_skip_next),
+                                contentDescription = "Next",
+                                colorFilter = ColorFilter.tint(ColorProvider(contentColor)),
+                                modifier = GlanceModifier
+                                    .size(30.dp)
+                                    .clickable(actionRunCallback<NextAction>())
+                            )
+                            
+                            Spacer(modifier = GlanceModifier.width(18.dp))
+                            
+                            // Repeat
+                            val repeatIcon = when (playerState.repeatMode) {
+                                RepeatMode.ONE -> R.drawable.ic_repeat_one_on
+                                RepeatMode.ALL -> R.drawable.ic_repeat_all_on
+                                RepeatMode.OFF -> R.drawable.ic_repeat
+                            }
+                            Image(
+                                provider = ImageProvider(repeatIcon),
+                                contentDescription = "Repeat",
+                                colorFilter = ColorFilter.tint(ColorProvider(if (playerState.repeatMode != RepeatMode.OFF) contentColor else secondaryColor)),
+                                modifier = GlanceModifier
+                                    .size(24.dp)
+                                    .clickable(actionRunCallback<ToggleRepeatAction>())
+                            )
                         }
                     }
                 }
@@ -240,9 +306,29 @@ class PreviousAction : ActionCallback {
     }
 }
 
+class ToggleShuffleAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val entryPoint = EntryPointAccessors.fromApplication(context, SuvMusicWidget.WidgetEntryPoint::class.java)
+        entryPoint.getMusicPlayer().toggleShuffle()
+        SuvMusicWidget().update(context, glanceId)
+    }
+}
+
+class ToggleRepeatAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val entryPoint = EntryPointAccessors.fromApplication(context, SuvMusicWidget.WidgetEntryPoint::class.java)
+        entryPoint.getMusicPlayer().toggleRepeat()
+        SuvMusicWidget().update(context, glanceId)
+    }
+}
+
 class OpenAppAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        intent?.let { context.startActivity(it) }
+        intent?.let { 
+            it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(it) 
+        }
     }
 }
+
