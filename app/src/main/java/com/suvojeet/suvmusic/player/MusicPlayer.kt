@@ -687,6 +687,56 @@ class MusicPlayer @Inject constructor(
                     
                     songPlayStartWallTime = System.currentTimeMillis()
                     
+                    // Fast path: if we pre-resolved this song's URL during preloading
+                    // (in shuffle mode, we cache the URL without calling replaceMediaItem
+                    // to avoid disrupting ExoPlayer's internal state). Apply it now.
+                    if (needsResolution && preloadedNextSongId == song.id && preloadedStreamUrl != null) {
+                        val cachedUrl = preloadedStreamUrl!!
+                        val cachedIsVideo = preloadedIsVideoMode
+                        preloadedNextSongId = null
+                        preloadedStreamUrl = null
+                        preloadedIsVideoMode = false
+                        isPreloading = false
+                        
+                        currentResolutionJob?.cancel()
+                        currentResolutionJob = scope.launch {
+                            val cacheKey = if (cachedIsVideo) "${song.id}_${_playerState.value.videoQuality.name}" else song.id
+                            val newMediaItem = MediaItem.Builder()
+                                .setUri(cachedUrl)
+                                .setMediaId(song.id)
+                                .setCustomCacheKey(cacheKey)
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(song.title)
+                                        .setArtist(song.artist)
+                                        .setAlbumTitle(song.album)
+                                        .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                                        .setIsPlayable(true)
+                                        .setIsBrowsable(false)
+                                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                        .build()
+                                )
+                                .build()
+                            
+                            if (index < controller.mediaItemCount && controller.getMediaItemAt(index).mediaId == song.id) {
+                                controller.replaceMediaItem(index, newMediaItem)
+                                if (index == controller.currentMediaItemIndex) {
+                                    controller.prepare()
+                                    if (!timerTriggered) controller.play()
+                                }
+                                _playerState.update { it.copy(isLoading = false, error = null) }
+                                
+                                if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
+                                    cachingJob?.cancel()
+                                    startAggressiveCaching(cacheKey, cachedUrl)
+                                }
+                            } else {
+                                _playerState.update { it.copy(isLoading = false) }
+                            }
+                        }
+                        return@let
+                    }
+                    
                     currentResolutionJob?.cancel()
                     currentResolutionJob = scope.launch {
                         // Check if service is already resolving this — avoid double resolution
@@ -1311,13 +1361,16 @@ class MusicPlayer @Inject constructor(
                 }
                 
                 if (streamUrl != null) {
-                    // Bug Fix: Set preloaded state AFTER updateNextMediaItemWithPreloadedUrl,
-                    // not before. If the update call fails silently (its try-catch swallows errors),
-                    // the media item still has a placeholder URI. Setting preloadedNextSongId first
-                    // caused the gapless trigger to think the item was safe to transition to,
-                    // resulting in SOURCE_ERROR cascade.
-                    updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
-                    // Only mark as preloaded if update was attempted (exception would have thrown above)
+                    // CRITICAL FIX (Shuffle premature transition prevention):
+                    // In shuffle mode, calling replaceMediaItem on the next item disrupts
+                    // ExoPlayer's internal state, causing it to auto-transition away from
+                    // the current song after only ~460ms. Instead, we just cache the URL
+                    // and apply it at transition time via the fast-path in onMediaItemTransition.
+                    //
+                    // In non-shuffle mode, replace the item normally for true gapless playback.
+                    if (!state.shuffleEnabled) {
+                        updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
+                    }
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
                     preloadedIsVideoMode = isVideoMode
