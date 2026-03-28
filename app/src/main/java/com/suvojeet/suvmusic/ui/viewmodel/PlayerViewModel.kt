@@ -133,6 +133,28 @@ class PlayerViewModel @Inject constructor(
     private val _commentPostSuccess = MutableStateFlow<Boolean?>(null)
     val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
 
+    // UI Style Settings (Exposed as StateFlow to prevent flicker in PlayerScreen)
+    val artworkShape: StateFlow<String> = sessionManager.artworkShapeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = "ROUNDED_SQUARE"
+        )
+    
+    val artworkSize: StateFlow<String> = sessionManager.artworkSizeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = "LARGE"
+        )
+    
+    val seekbarStyle: StateFlow<String> = sessionManager.seekbarStyleFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = "WAVE_LINE"
+        )
+
     val sponsorSegments: StateFlow<List<SponsorSegment>> = sponsorBlockRepository.currentSegments
     
     fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
