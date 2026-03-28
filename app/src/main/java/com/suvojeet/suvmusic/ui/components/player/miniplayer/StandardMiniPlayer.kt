@@ -59,7 +59,7 @@ fun StandardMiniPlayer(
     
     val artShape = when (artworkShape) {
         "CIRCLE", "VINYL" -> androidx.compose.foundation.shape.CircleShape
-        "SQUARE" -> androidx.compose.foundation.shape.RectangleShape
+        "SQUARE" -> androidx.compose.ui.graphics.RectangleShape
         else -> RoundedCornerShape(8.dp)
     }
 
