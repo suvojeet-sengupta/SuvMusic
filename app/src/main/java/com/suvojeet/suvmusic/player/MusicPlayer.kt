@@ -720,6 +720,20 @@ class MusicPlayer @Inject constructor(
             val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
             if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isParseError || isYouTubePlaceholder || isInvalidPlaceholder) {
+                // Bug Fix (Shuffle SOURCE_ERROR race condition):
+                // When user presses Next with shuffle on, seekToNext() now pre-resolves
+                // the placeholder BEFORE seeking. But if something slips through (e.g. pre-resolve
+                // timed out), onMediaItemTransition already launched a currentResolutionJob.
+                // If that job is still active here, launching ANOTHER recovery job causes a
+                // double-resolution race: two coroutines both call replaceMediaItem() on the
+                // same index, the second one clobbers the first mid-parse → ERROR_CODE_PARSING_*
+                // (which then loops back into this function again — infinite retry spiral).
+                // Guard: if resolution is already in-flight, skip launching a second one.
+                if ((isYouTubePlaceholder || isInvalidPlaceholder) && currentResolutionJob?.isActive == true) {
+                    android.util.Log.d("MusicPlayer", "Placeholder SOURCE_ERROR but resolution already in-flight — skipping duplicate recovery")
+                    return
+                }
+
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
@@ -1452,10 +1466,66 @@ class MusicPlayer @Inject constructor(
         val nextIndex = controller.nextMediaItemIndex
         
         if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET && nextIndex in queue.indices) {
-             // Optimization: Instead of playSong() which resets the whole playlist,
-             // we just seek to the next item. The onMediaItemTransition will handle 
-             // resolution if it's a placeholder.
-             controller.seekToNextMediaItem()
+            // Bug Fix (Shuffle + Next skip flicker):
+            // When shuffle is on, the next media item at nextIndex likely has a placeholder URI
+            // (unresolved stream URL). Calling seekToNextMediaItem() immediately makes ExoPlayer
+            // try to play it right away → STATE_ERROR(7) "Source error" before our resolution
+            // coroutine from onMediaItemTransition can even start.
+            //
+            // Fix: Check if the next item needs resolution. If it does, resolve it FIRST
+            // (updating the media item in-place), then seek to it. ExoPlayer will then find
+            // a valid stream URL and won't emit a SOURCE_ERROR.
+            val nextMediaItem = controller.getMediaItemAt(nextIndex)
+            val nextUri = nextMediaItem.localConfiguration?.uri?.toString()
+            val nextNeedsResolution = nextUri.isNullOrBlank() ||
+                nextUri.contains("placeholder.invalid") ||
+                nextUri.contains("youtube.com/watch") ||
+                nextUri.contains("youtu.be/")
+
+            if (nextNeedsResolution) {
+                val nextSong = queue.firstOrNull { it.id == nextMediaItem.mediaId }
+                if (nextSong != null) {
+                    // Show loading and resolve BEFORE seeking so ExoPlayer never sees placeholder
+                    _playerState.update { it.copy(isLoading = true) }
+                    currentResolutionJob = scope.launch {
+                        try {
+                            val streamUrl = when (nextSong.source) {
+                                SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
+                                SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
+                                else -> {
+                                    if (_playerState.value.isVideoMode) {
+                                        val videoId = resolvedVideoIds[nextSong.id]
+                                            ?: youTubeRepository.getBestVideoId(nextSong).also {
+                                                resolvedVideoIds.put(nextSong.id, it)
+                                            }
+                                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                                        videoResult?.videoUrl ?: youTubeRepository.getVideoStreamUrl(videoId)
+                                    } else {
+                                        youTubeRepository.getStreamUrl(nextSong.id)
+                                    }
+                                }
+                            }
+                            if (streamUrl != null) {
+                                // Update the media item with resolved URL before seeking
+                                preloadedNextSongId = nextSong.id
+                                preloadedStreamUrl = streamUrl
+                                preloadedIsVideoMode = _playerState.value.isVideoMode
+                                updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
+                                // Small yield to let ExoPlayer process the replaceMediaItem
+                                delay(80)
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("MusicPlayer", "Pre-resolve for next song failed, falling back: ${e.message}")
+                            // Fall through — onMediaItemTransition will handle it
+                        }
+                        // Now seek — ExoPlayer will find a real URL (or fall back to placeholder resolution)
+                        controller.seekToNextMediaItem()
+                    }
+                    return
+                }
+            }
+            // Next item already has a resolved URL — safe to seek immediately
+            controller.seekToNextMediaItem()
         } else {
             // End of queue logic
              if (state.repeatMode == RepeatMode.ALL) {
