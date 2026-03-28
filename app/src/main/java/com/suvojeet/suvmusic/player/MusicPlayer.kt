@@ -75,6 +75,7 @@ class MusicPlayer @Inject constructor(
     // Caching
     private var cachingJob: Job? = null
     private var currentResolutionJob: Job? = null
+    private var preloadJob: Job? = null
     private var ttsVolumeJob: Job? = null
 
     
@@ -1230,7 +1231,7 @@ class MusicPlayer @Inject constructor(
         
         isPreloading = true
         lastPreloadAttemptTime = System.currentTimeMillis()
-        scope.launch {
+        preloadJob = scope.launch {
             try {
                 val streamUrl = when (nextSong.source) {
                     SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
@@ -1456,6 +1457,11 @@ class MusicPlayer @Inject constructor(
     
     fun seekToNext() {
         currentResolutionJob?.cancel()
+        // Bug Fix: Cancel any in-flight preload coroutine before we start our own resolution.
+        // If preloadJob and our new coroutine both call replaceMediaItem(nextIndex, ...) concurrently,
+        // the second one clobbers the first mid-parse → intermittent SOURCE_ERROR in shuffle mode.
+        preloadJob?.cancel()
+        isPreloading = false
         lastPreloadAttemptTime = 0L
         val state = _playerState.value
         val queue = state.queue
@@ -1506,20 +1512,23 @@ class MusicPlayer @Inject constructor(
                                 }
                             }
                             if (streamUrl != null) {
-                                // Update the media item with resolved URL before seeking
+                                // Update the media item with resolved URL before seeking.
+                                // CRITICAL: We use controller.seekTo(nextIndex, 0L) instead of
+                                // seekToNextMediaItem() + delay(80ms) because ExoPlayer processes
+                                // its command queue SERIALLY — replaceMediaItem(nextIndex) is
+                                // guaranteed to execute before seekTo(nextIndex). No timing guess needed.
                                 preloadedNextSongId = nextSong.id
                                 preloadedStreamUrl = streamUrl
                                 preloadedIsVideoMode = _playerState.value.isVideoMode
                                 updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
-                                // Small yield to let ExoPlayer process the replaceMediaItem
-                                delay(80)
                             }
                         } catch (e: Exception) {
                             android.util.Log.w("MusicPlayer", "Pre-resolve for next song failed, falling back: ${e.message}")
-                            // Fall through — onMediaItemTransition will handle it
+                            // Fall through — onMediaItemTransition will handle resolution
                         }
-                        // Now seek — ExoPlayer will find a real URL (or fall back to placeholder resolution)
-                        controller.seekToNextMediaItem()
+                        // Seek using the captured nextIndex (not seekToNextMediaItem) so ExoPlayer
+                        // is guaranteed to go exactly where we put the resolved media item.
+                        controller.seekTo(nextIndex, 0L)
                     }
                     return
                 }
