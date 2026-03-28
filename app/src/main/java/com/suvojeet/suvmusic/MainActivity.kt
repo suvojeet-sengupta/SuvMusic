@@ -407,6 +407,7 @@ fun SuvMusicApp(
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
+    val artworkShape by playerViewModel.artworkShape.collectAsStateWithLifecycle()
     
     val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle(initialValue = null)
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
@@ -888,6 +889,7 @@ fun SuvMusicApp(
             isExpanded = isPlayerExpanded,
             userAlpha = miniPlayerAlpha,
             style = miniPlayerStyle,
+            artworkShape = artworkShape,
             swipeDownToDismissEnabled = swipeDownToDismissEnabled,
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()

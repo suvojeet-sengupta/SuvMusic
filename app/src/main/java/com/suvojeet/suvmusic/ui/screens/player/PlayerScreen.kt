@@ -208,9 +208,9 @@ fun PlayerScreen(
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
     
-    val savedSeekbarStyleString by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = "WAVE_LINE")
-    val savedArtworkShapeString by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = "ROUNDED_SQUARE")
-    val savedArtworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = "LARGE")
+    val savedSeekbarStyleString by playerViewModel.seekbarStyle.collectAsStateWithLifecycle()
+    val savedArtworkShapeString by playerViewModel.artworkShape.collectAsStateWithLifecycle()
+    val savedArtworkSizeString by playerViewModel.artworkSize.collectAsStateWithLifecycle()
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsStateWithLifecycle(initialValue = 10)
     val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsStateWithLifecycle(initialValue = false)

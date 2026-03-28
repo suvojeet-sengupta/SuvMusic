@@ -55,9 +55,17 @@ fun YTMusicMiniPlayer(
     onClose: () -> Unit,
     onTap: () -> Unit,
     userAlpha: Float = 0f,
+    artworkShape: String = "ROUNDED_SQUARE",
     modifier: Modifier = Modifier
 ) {
     val effectiveAlpha = 1f - userAlpha
+    
+    val artShape = when (artworkShape) {
+        "CIRCLE", "VINYL" -> androidx.compose.foundation.shape.CircleShape
+        "SQUARE" -> androidx.compose.foundation.shape.RectangleShape
+        else -> RoundedCornerShape(4.dp)
+    }
+
     val highResThumbnail = androidx.compose.runtime.remember(song.thumbnailUrl) {
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
     }
@@ -94,7 +102,7 @@ fun YTMusicMiniPlayer(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(artShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
