@@ -103,6 +103,9 @@ class MusicPlayer @Inject constructor(
     private var preloadedIsVideoMode: Boolean = false  // Track if preloaded URL is video or audio
     private var isPreloading = false
     
+    // Track wall-clock time when current song started playing (for gapless guard)
+    private var songPlayStartWallTime: Long = 0L
+    
     // Track manually selected device ID to persist selection across refreshes
     private var manualSelectedDeviceId: String? = null
     
@@ -639,6 +642,7 @@ class MusicPlayer @Inject constructor(
     
                         if (!modeMismatch) {
                             // Already has valid stream, just ensure UI state is correct and play
+                            songPlayStartWallTime = System.currentTimeMillis()
                             _playerState.update { it.copy(isLoading = false) }
     
                             // Reset preload state as we've consumed it
@@ -669,6 +673,19 @@ class MusicPlayer @Inject constructor(
                     } else {
                         false
                     }
+                    
+                    // CRITICAL FIX (Shuffle cascade prevention):
+                    // When transitioning to an item with an unresolved placeholder URI,
+                    // pause the player IMMEDIATELY. Without this, ExoPlayer tries to play
+                    // the placeholder → SOURCE_ERROR → auto-advances to the next item
+                    // (also a placeholder in shuffle mode) → another SOURCE_ERROR →
+                    // cascade through the entire queue in seconds.
+                    // Pausing stops ExoPlayer from producing the error while we resolve.
+                    if (needsResolution) {
+                        controller.pause()
+                    }
+                    
+                    songPlayStartWallTime = System.currentTimeMillis()
                     
                     currentResolutionJob?.cancel()
                     currentResolutionJob = scope.launch {
@@ -721,6 +738,14 @@ class MusicPlayer @Inject constructor(
             val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
             if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isParseError || isYouTubePlaceholder || isInvalidPlaceholder) {
+                // CRITICAL FIX (Shuffle cascade prevention):
+                // Pause player immediately on placeholder errors to prevent ExoPlayer
+                // from auto-advancing to the next item (which is also a placeholder
+                // in shuffle mode), causing a rapid error cascade.
+                if (isYouTubePlaceholder || isInvalidPlaceholder) {
+                    mediaController?.pause()
+                }
+                
                 // Bug Fix (Shuffle SOURCE_ERROR race condition):
                 // When user presses Next with shuffle on, seekToNext() now pre-resolves
                 // the placeholder BEFORE seeking. But if something slips through (e.g. pre-resolve
@@ -749,10 +774,21 @@ class MusicPlayer @Inject constructor(
                     
                     if (errorRetryCount > 3) {
                         android.util.Log.w("MusicPlayer", "Max retries reached for ${currentSong.id}, skipping")
-                        _playerState.update { it.copy(error = "Skipping unplayable song", isLoading = false) }
                         errorRetryCount = 0
                         errorRetrySongId = null
-                        seekToNext()
+                        
+                        // In shuffle mode, don't blindly seekToNext() — every next item
+                        // likely has an unresolved placeholder URI, causing a cascade of
+                        // SOURCE_ERROR → skip → SOURCE_ERROR through the entire queue.
+                        // Instead, just stop and show an error so the user can manually skip.
+                        if (_playerState.value.shuffleEnabled) {
+                            android.util.Log.w("MusicPlayer", "Shuffle mode: stopping instead of cascade-skipping")
+                            _playerState.update { it.copy(error = "Could not play song. Tap next to skip.", isLoading = false) }
+                            mediaController?.pause()
+                        } else {
+                            _playerState.update { it.copy(error = "Skipping unplayable song", isLoading = false) }
+                            seekToNext()
+                        }
                         return
                     }
                     
@@ -1114,7 +1150,12 @@ class MusicPlayer @Inject constructor(
                         // Also verify the next item actually has a resolved URI (not a placeholder)
                         // before firing — preloadedNextSongId can be set even if updateNextMediaItem
                         // failed silently, leaving the item with a placeholder URI.
-                        if (duration >= 10_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
+                        // Additional guard: require at least 5 seconds of actual wall-clock
+                        // playback time. This prevents premature gapless triggers when
+                        // ExoPlayer briefly reports a small duration from the initial buffer
+                        // before full media headers are parsed.
+                        val wallPlayTime = System.currentTimeMillis() - songPlayStartWallTime
+                        if (duration >= 10_000L && wallPlayTime >= 5_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
                                 // Use Media3's nextMediaItemIndex which correctly handles
