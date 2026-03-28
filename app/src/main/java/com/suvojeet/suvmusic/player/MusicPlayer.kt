@@ -1091,17 +1091,18 @@ class MusicPlayer @Inject constructor(
                         if (duration > 0 && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
-                                // Bug Fix: Handle RepeatMode.ALL wrap-around for gapless transition
-                                var nextIndex = state.currentIndex + 1
-                                if (nextIndex >= state.queue.size && state.repeatMode == RepeatMode.ALL) {
-                                    nextIndex = 0
-                                }
-                                // Only do early transition if the next index is valid.
-                                // For autoplay/radio, new songs are appended dynamically so
-                                // nextIndex may not exist yet — let STATE_ENDED handle that.
-                                if (nextIndex < state.queue.size && state.queue.getOrNull(nextIndex)?.id == preloadedNextSongId) {
-                                    // Transition to next song immediately
-                                    controller.seekToNextMediaItem()
+                                // Use Media3's nextMediaItemIndex which correctly handles
+                                // shuffle mode, repeat mode, and queue boundaries.
+                                // Previous bug: used (currentIndex + 1) which is only correct
+                                // in linear (non-shuffle) mode and caused wrong-song transitions.
+                                val nextIndex = controller.nextMediaItemIndex
+                                if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET) {
+                                    // Verify the preloaded song matches what the player expects next
+                                    val nextMediaId = controller.getMediaItemAt(nextIndex).mediaId
+                                    if (nextMediaId == preloadedNextSongId) {
+                                        // Transition to next song immediately
+                                        controller.seekToNextMediaItem()
+                                    }
                                 }
                             }
                         }
@@ -1185,30 +1186,26 @@ class MusicPlayer @Inject constructor(
         
         val state = _playerState.value
         val isVideoMode = state.isVideoMode
+        val controller = mediaController ?: return
         
-        // Correctly handle next index for both shuffle and linear modes using Media3's built-in logic
-        var nextIndex = mediaController?.nextMediaItemIndex ?: (state.currentIndex + 1)
-        if (nextIndex == -1 || nextIndex == androidx.media3.common.C.INDEX_UNSET) return
-
         // Fix: If Repeat One is active, don't preload next song (we will loop current one)
         if (state.repeatMode == RepeatMode.ONE) {
             return
         }
         
-        // Handle repeat/autoplay
-        if (nextIndex >= state.queue.size) {
-            if (state.repeatMode == RepeatMode.ALL) {
-                nextIndex = 0
-            } else if (state.isAutoplayEnabled || state.isRadioMode) {
-                // Autoplay/Radio: new songs will be appended dynamically.
-                // Don't wrap to index 0 — just skip preloading until songs are added.
-                return
-            } else {
-                return // No next song
-            }
-        }
+        // Use Media3's nextMediaItemIndex which correctly handles shuffle, repeat, and boundaries.
+        // Previous bug: fallback to (currentIndex + 1) was wrong in shuffle mode, and the manual
+        // repeat wrap-around could override a valid shuffle index with 0.
+        val nextIndex = controller.nextMediaItemIndex
+        if (nextIndex == -1 || nextIndex == androidx.media3.common.C.INDEX_UNSET) return
         
-        val nextSong = state.queue.getOrNull(nextIndex) ?: return
+        // Safety: verify index is within player's media item count
+        if (nextIndex >= controller.mediaItemCount) return
+        
+        // Get the song by matching the media ID from the player (not from state.queue by index,
+        // which may be stale or in a different order during shuffle transitions)
+        val nextMediaId = controller.getMediaItemAt(nextIndex).mediaId
+        val nextSong = state.queue.firstOrNull { it.id == nextMediaId } ?: return
         
         // Check if already preloaded
         // Important: check if preloaded type (audio/video) matches current mode? 
