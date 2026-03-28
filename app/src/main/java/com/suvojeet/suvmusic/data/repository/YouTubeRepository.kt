@@ -2977,11 +2977,10 @@ class YouTubeRepository @Inject constructor(
                 val subtitle = extractFullSubtitle(responsiveItem)
                 if (browseId.startsWith("VL") || browseId.startsWith("PL") || browseId.startsWith("RD") || browseId == "LM") {
                     // Playlist
-                    val cleanId = if (browseId.startsWith("VL")) browseId.removePrefix("VL") else browseId
                     val playlist = PlaylistDisplayItem(
-                        id = cleanId,
+                        id = browseId,
                         name = title,
-                        url = "https://music.youtube.com/playlist?list=$cleanId",
+                        url = "https://music.youtube.com/playlist?list=$browseId",
                         uploaderName = artist, // Artist field captures second row well
                         thumbnailUrl = thumbnail,
                         songCount = extractSongCount(subtitle)
@@ -3032,11 +3031,10 @@ class YouTubeRepository @Inject constructor(
                 if (browseId.startsWith("VL") || browseId.startsWith("PL") || 
                     browseId.startsWith("RD") || browseId.startsWith("RTM") || browseId == "LM") {
                     // Playlist
-                    val cleanId = if (browseId.startsWith("VL")) browseId.removePrefix("VL") else browseId
                     val playlist = PlaylistDisplayItem(
-                        id = cleanId,
+                        id = browseId,
                         name = title,
-                        url = "https://music.youtube.com/playlist?list=$cleanId",
+                        url = "https://music.youtube.com/playlist?list=$browseId",
                         uploaderName = subtitle,
                         thumbnailUrl = thumbnail,
                          songCount = extractSongCount(subtitle)
