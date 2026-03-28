@@ -534,6 +534,31 @@ class MusicPlayer @Inject constructor(
                     )
                 }
                 
+                // Rebuild accurate queue from player's media items to stay in sync
+                // This is especially important when shuffle mode changes externally
+                val accurateQueue = mutableListOf<Song>()
+                val mediaItemCount = controller.mediaItemCount
+                for (i in 0 until mediaItemCount) {
+                    val mediaItemAtIndex = controller.getMediaItemAt(i)
+                    val videoId = mediaItemAtIndex.mediaId
+                    // Try to get song from current state first
+                    var queueSong = _playerState.value.queue.firstOrNull { it.id == videoId }
+                    if (queueSong == null && mediaItemAtIndex.mediaMetadata.title != null) {
+                        // Create from metadata if not found in current state
+                        val duration = if (controller.duration != androidx.media3.common.C.TIME_UNSET) controller.duration else 0L
+                        queueSong = Song(
+                            id = videoId,
+                            title = mediaItemAtIndex.mediaMetadata.title.toString(),
+                            artist = mediaItemAtIndex.mediaMetadata.artist.toString(),
+                            album = mediaItemAtIndex.mediaMetadata.albumTitle?.toString() ?: "",
+                            duration = duration,
+                            thumbnailUrl = mediaItemAtIndex.mediaMetadata.artworkUri?.toString(),
+                            source = SongSource.YOUTUBE // Assume YouTube as default for external
+                        )
+                    }
+                    queueSong?.let { accurateQueue.add(it) }
+                }
+                
                 // Reset error retry state on successful transition
                 errorRetryCount = 0
                 errorRetrySongId = null
@@ -549,7 +574,8 @@ class MusicPlayer @Inject constructor(
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
                         isVideoMode = it.isVideoMode,
-                        videoNotFound = false // Reset error flag on track change
+                        videoNotFound = false, // Reset error flag on track change
+                        queue = accurateQueue // Update with accurate queue from player
                     )
                 }
                 
@@ -573,7 +599,7 @@ class MusicPlayer @Inject constructor(
                                 }
                             }
                         }
-
+                        
                         // Track previous song if it was playing
                         if (previousSong != null && currentSongStartTime > 0) {
                             val listenDuration = System.currentTimeMillis() - currentSongStartTime
@@ -609,23 +635,23 @@ class MusicPlayer @Inject constructor(
                         // Check if preloaded content mode matches current video mode
                         val modeMismatch = preloadedNextSongId == song.id &&
                             preloadedIsVideoMode != _playerState.value.isVideoMode
-
+    
                         if (!modeMismatch) {
                             // Already has valid stream, just ensure UI state is correct and play
                             _playerState.update { it.copy(isLoading = false) }
-
+    
                             // Reset preload state as we've consumed it
                             preloadedNextSongId = null
                             preloadedStreamUrl = null
                             preloadedIsVideoMode = false
                             isPreloading = false
-
+    
                             // Start aggressive caching for this preloaded/resolved song
                             if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
                                 cachingJob?.cancel()
                                 startAggressiveCaching(song.id, currentUri)
                             }
-
+    
                             // Ensure playback continues for SEEK transitions (notification controls)
                             if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
                                 controller.play()
