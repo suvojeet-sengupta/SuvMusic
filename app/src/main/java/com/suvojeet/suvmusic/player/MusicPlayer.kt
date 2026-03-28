@@ -1103,20 +1103,39 @@ class MusicPlayer @Inject constructor(
                         // Early transition: If we're in the last 1.5 seconds and next song is preloaded,
                         // trigger transition to prevent any audible gap during the final silence/fade-out
                         // Fix: Do NOT trigger this if Repeat One is active, as we want to loop the current song
-                        if (duration > 0 && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
+                        //
+                        // Bug Fix (Premature gapless trigger):
+                        // ExoPlayer initially reports duration = initial buffer size (e.g. 1301ms) before
+                        // it receives the full media headers. With no minimum guard, the condition
+                        // `currentPos >= duration - 1500` fires IMMEDIATELY at position=0 when
+                        // duration=1301ms (0 >= -199 = true), jumping to the next song within 200ms
+                        // of the current one starting. Guard: only trigger if duration >= 10 seconds.
+                        //
+                        // Also verify the next item actually has a resolved URI (not a placeholder)
+                        // before firing — preloadedNextSongId can be set even if updateNextMediaItem
+                        // failed silently, leaving the item with a placeholder URI.
+                        if (duration >= 10_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
                                 // Use Media3's nextMediaItemIndex which correctly handles
                                 // shuffle mode, repeat mode, and queue boundaries.
-                                // Previous bug: used (currentIndex + 1) which is only correct
-                                // in linear (non-shuffle) mode and caused wrong-song transitions.
                                 val nextIndex = controller.nextMediaItemIndex
                                 if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET) {
                                     // Verify the preloaded song matches what the player expects next
                                     val nextMediaId = controller.getMediaItemAt(nextIndex).mediaId
                                     if (nextMediaId == preloadedNextSongId) {
-                                        // Transition to next song immediately
-                                        controller.seekToNextMediaItem()
+                                        // Double-check the item actually has a valid resolved URI,
+                                        // not just a placeholder — otherwise gapless fires into an error
+                                        val nextUri = controller.getMediaItemAt(nextIndex)
+                                            .localConfiguration?.uri?.toString()
+                                        val isResolved = !nextUri.isNullOrBlank() &&
+                                            !nextUri.contains("placeholder.invalid") &&
+                                            !nextUri.contains("youtube.com/watch") &&
+                                            !nextUri.contains("youtu.be/")
+                                        if (isResolved) {
+                                            // Transition to next song immediately
+                                            controller.seekToNextMediaItem()
+                                        }
                                     }
                                 }
                             }
@@ -1251,12 +1270,16 @@ class MusicPlayer @Inject constructor(
                 }
                 
                 if (streamUrl != null) {
+                    // Bug Fix: Set preloaded state AFTER updateNextMediaItemWithPreloadedUrl,
+                    // not before. If the update call fails silently (its try-catch swallows errors),
+                    // the media item still has a placeholder URI. Setting preloadedNextSongId first
+                    // caused the gapless trigger to think the item was safe to transition to,
+                    // resulting in SOURCE_ERROR cascade.
+                    updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
+                    // Only mark as preloaded if update was attempted (exception would have thrown above)
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
                     preloadedIsVideoMode = isVideoMode
-                    
-                    // Update the media item in the queue with resolved URL
-                    updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
                 }
             } catch (e: Exception) {
                 // Preload failed, will resolve on transition
@@ -1517,10 +1540,14 @@ class MusicPlayer @Inject constructor(
                                 // seekToNextMediaItem() + delay(80ms) because ExoPlayer processes
                                 // its command queue SERIALLY — replaceMediaItem(nextIndex) is
                                 // guaranteed to execute before seekTo(nextIndex). No timing guess needed.
+                                //
+                                // Bug Fix: Set preloaded state AFTER updateNextMediaItemWithPreloadedUrl.
+                                // If the update fails, the item still has a placeholder URI — setting
+                                // preloadedNextSongId first would fool the gapless trigger into firing.
+                                updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
                                 preloadedNextSongId = nextSong.id
                                 preloadedStreamUrl = streamUrl
                                 preloadedIsVideoMode = _playerState.value.isVideoMode
-                                updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
                             }
                         } catch (e: Exception) {
                             android.util.Log.w("MusicPlayer", "Pre-resolve for next song failed, falling back: ${e.message}")
