@@ -75,6 +75,7 @@ class MusicPlayer @Inject constructor(
     // Caching
     private var cachingJob: Job? = null
     private var currentResolutionJob: Job? = null
+    private var preloadJob: Job? = null
     private var ttsVolumeJob: Job? = null
 
     
@@ -101,6 +102,9 @@ class MusicPlayer @Inject constructor(
     private var preloadedStreamUrl: String? = null
     private var preloadedIsVideoMode: Boolean = false  // Track if preloaded URL is video or audio
     private var isPreloading = false
+    
+    // Track wall-clock time when current song started playing (for gapless guard)
+    private var songPlayStartWallTime: Long = 0L
     
     // Track manually selected device ID to persist selection across refreshes
     private var manualSelectedDeviceId: String? = null
@@ -534,6 +538,31 @@ class MusicPlayer @Inject constructor(
                     )
                 }
                 
+                // Rebuild accurate queue from player's media items to stay in sync
+                // This is especially important when shuffle mode changes externally
+                val accurateQueue = mutableListOf<Song>()
+                val mediaItemCount = controller.mediaItemCount
+                for (i in 0 until mediaItemCount) {
+                    val mediaItemAtIndex = controller.getMediaItemAt(i)
+                    val videoId = mediaItemAtIndex.mediaId
+                    // Try to get song from current state first
+                    var queueSong = _playerState.value.queue.firstOrNull { it.id == videoId }
+                    if (queueSong == null && mediaItemAtIndex.mediaMetadata.title != null) {
+                        // Create from metadata if not found in current state
+                        val duration = if (controller.duration != androidx.media3.common.C.TIME_UNSET) controller.duration else 0L
+                        queueSong = Song(
+                            id = videoId,
+                            title = mediaItemAtIndex.mediaMetadata.title.toString(),
+                            artist = mediaItemAtIndex.mediaMetadata.artist.toString(),
+                            album = mediaItemAtIndex.mediaMetadata.albumTitle?.toString() ?: "",
+                            duration = duration,
+                            thumbnailUrl = mediaItemAtIndex.mediaMetadata.artworkUri?.toString(),
+                            source = SongSource.YOUTUBE // Assume YouTube as default for external
+                        )
+                    }
+                    queueSong?.let { accurateQueue.add(it) }
+                }
+                
                 // Reset error retry state on successful transition
                 errorRetryCount = 0
                 errorRetrySongId = null
@@ -549,7 +578,8 @@ class MusicPlayer @Inject constructor(
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
                         isVideoMode = it.isVideoMode,
-                        videoNotFound = false // Reset error flag on track change
+                        videoNotFound = false, // Reset error flag on track change
+                        queue = accurateQueue // Update with accurate queue from player
                     )
                 }
                 
@@ -573,7 +603,7 @@ class MusicPlayer @Inject constructor(
                                 }
                             }
                         }
-
+                        
                         // Track previous song if it was playing
                         if (previousSong != null && currentSongStartTime > 0) {
                             val listenDuration = System.currentTimeMillis() - currentSongStartTime
@@ -609,23 +639,24 @@ class MusicPlayer @Inject constructor(
                         // Check if preloaded content mode matches current video mode
                         val modeMismatch = preloadedNextSongId == song.id &&
                             preloadedIsVideoMode != _playerState.value.isVideoMode
-
+    
                         if (!modeMismatch) {
                             // Already has valid stream, just ensure UI state is correct and play
+                            songPlayStartWallTime = System.currentTimeMillis()
                             _playerState.update { it.copy(isLoading = false) }
-
+    
                             // Reset preload state as we've consumed it
                             preloadedNextSongId = null
                             preloadedStreamUrl = null
                             preloadedIsVideoMode = false
                             isPreloading = false
-
+    
                             // Start aggressive caching for this preloaded/resolved song
                             if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
                                 cachingJob?.cancel()
                                 startAggressiveCaching(song.id, currentUri)
                             }
-
+    
                             // Ensure playback continues for SEEK transitions (notification controls)
                             if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
                                 controller.play()
@@ -641,6 +672,69 @@ class MusicPlayer @Inject constructor(
                         sleepTimerManager.onSongEnded()
                     } else {
                         false
+                    }
+                    
+                    // CRITICAL FIX (Shuffle cascade prevention):
+                    // When transitioning to an item with an unresolved placeholder URI,
+                    // pause the player IMMEDIATELY. Without this, ExoPlayer tries to play
+                    // the placeholder → SOURCE_ERROR → auto-advances to the next item
+                    // (also a placeholder in shuffle mode) → another SOURCE_ERROR →
+                    // cascade through the entire queue in seconds.
+                    // Pausing stops ExoPlayer from producing the error while we resolve.
+                    if (needsResolution) {
+                        controller.pause()
+                    }
+                    
+                    songPlayStartWallTime = System.currentTimeMillis()
+                    
+                    // Fast path: if we pre-resolved this song's URL during preloading
+                    // (in shuffle mode, we cache the URL without calling replaceMediaItem
+                    // to avoid disrupting ExoPlayer's internal state). Apply it now.
+                    if (needsResolution && preloadedNextSongId == song.id && preloadedStreamUrl != null) {
+                        val cachedUrl = preloadedStreamUrl!!
+                        val cachedIsVideo = preloadedIsVideoMode
+                        preloadedNextSongId = null
+                        preloadedStreamUrl = null
+                        preloadedIsVideoMode = false
+                        isPreloading = false
+                        
+                        currentResolutionJob?.cancel()
+                        currentResolutionJob = scope.launch {
+                            val cacheKey = if (cachedIsVideo) "${song.id}_${_playerState.value.videoQuality.name}" else song.id
+                            val newMediaItem = MediaItem.Builder()
+                                .setUri(cachedUrl)
+                                .setMediaId(song.id)
+                                .setCustomCacheKey(cacheKey)
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(song.title)
+                                        .setArtist(song.artist)
+                                        .setAlbumTitle(song.album)
+                                        .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                                        .setIsPlayable(true)
+                                        .setIsBrowsable(false)
+                                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                        .build()
+                                )
+                                .build()
+                            
+                            if (index < controller.mediaItemCount && controller.getMediaItemAt(index).mediaId == song.id) {
+                                controller.replaceMediaItem(index, newMediaItem)
+                                if (index == controller.currentMediaItemIndex) {
+                                    controller.prepare()
+                                    if (!timerTriggered) controller.play()
+                                }
+                                _playerState.update { it.copy(isLoading = false, error = null) }
+                                
+                                if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
+                                    cachingJob?.cancel()
+                                    startAggressiveCaching(cacheKey, cachedUrl)
+                                }
+                            } else {
+                                _playerState.update { it.copy(isLoading = false) }
+                            }
+                        }
+                        return@let
                     }
                     
                     currentResolutionJob?.cancel()
@@ -694,6 +788,28 @@ class MusicPlayer @Inject constructor(
             val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
             if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isParseError || isYouTubePlaceholder || isInvalidPlaceholder) {
+                // CRITICAL FIX (Shuffle cascade prevention):
+                // Pause player immediately on placeholder errors to prevent ExoPlayer
+                // from auto-advancing to the next item (which is also a placeholder
+                // in shuffle mode), causing a rapid error cascade.
+                if (isYouTubePlaceholder || isInvalidPlaceholder) {
+                    mediaController?.pause()
+                }
+                
+                // Bug Fix (Shuffle SOURCE_ERROR race condition):
+                // When user presses Next with shuffle on, seekToNext() now pre-resolves
+                // the placeholder BEFORE seeking. But if something slips through (e.g. pre-resolve
+                // timed out), onMediaItemTransition already launched a currentResolutionJob.
+                // If that job is still active here, launching ANOTHER recovery job causes a
+                // double-resolution race: two coroutines both call replaceMediaItem() on the
+                // same index, the second one clobbers the first mid-parse → ERROR_CODE_PARSING_*
+                // (which then loops back into this function again — infinite retry spiral).
+                // Guard: if resolution is already in-flight, skip launching a second one.
+                if ((isYouTubePlaceholder || isInvalidPlaceholder) && currentResolutionJob?.isActive == true) {
+                    android.util.Log.d("MusicPlayer", "Placeholder SOURCE_ERROR but resolution already in-flight — skipping duplicate recovery")
+                    return
+                }
+
                 // Try to recover by re-resolving the stream URL
                 val currentSong = _playerState.value.currentSong
                 
@@ -708,10 +824,21 @@ class MusicPlayer @Inject constructor(
                     
                     if (errorRetryCount > 3) {
                         android.util.Log.w("MusicPlayer", "Max retries reached for ${currentSong.id}, skipping")
-                        _playerState.update { it.copy(error = "Skipping unplayable song", isLoading = false) }
                         errorRetryCount = 0
                         errorRetrySongId = null
-                        seekToNext()
+                        
+                        // In shuffle mode, don't blindly seekToNext() — every next item
+                        // likely has an unresolved placeholder URI, causing a cascade of
+                        // SOURCE_ERROR → skip → SOURCE_ERROR through the entire queue.
+                        // Instead, just stop and show an error so the user can manually skip.
+                        if (_playerState.value.shuffleEnabled) {
+                            android.util.Log.w("MusicPlayer", "Shuffle mode: stopping instead of cascade-skipping")
+                            _playerState.update { it.copy(error = "Could not play song. Tap next to skip.", isLoading = false) }
+                            mediaController?.pause()
+                        } else {
+                            _playerState.update { it.copy(error = "Skipping unplayable song", isLoading = false) }
+                            seekToNext()
+                        }
                         return
                     }
                     
@@ -1062,20 +1189,45 @@ class MusicPlayer @Inject constructor(
                         // Early transition: If we're in the last 1.5 seconds and next song is preloaded,
                         // trigger transition to prevent any audible gap during the final silence/fade-out
                         // Fix: Do NOT trigger this if Repeat One is active, as we want to loop the current song
-                        if (duration > 0 && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
+                        //
+                        // Bug Fix (Premature gapless trigger):
+                        // ExoPlayer initially reports duration = initial buffer size (e.g. 1301ms) before
+                        // it receives the full media headers. With no minimum guard, the condition
+                        // `currentPos >= duration - 1500` fires IMMEDIATELY at position=0 when
+                        // duration=1301ms (0 >= -199 = true), jumping to the next song within 200ms
+                        // of the current one starting. Guard: only trigger if duration >= 10 seconds.
+                        //
+                        // Also verify the next item actually has a resolved URI (not a placeholder)
+                        // before firing — preloadedNextSongId can be set even if updateNextMediaItem
+                        // failed silently, leaving the item with a placeholder URI.
+                        // Additional guard: require at least 5 seconds of actual wall-clock
+                        // playback time. This prevents premature gapless triggers when
+                        // ExoPlayer briefly reports a small duration from the initial buffer
+                        // before full media headers are parsed.
+                        val wallPlayTime = System.currentTimeMillis() - songPlayStartWallTime
+                        if (duration >= 10_000L && wallPlayTime >= 5_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
-                                // Bug Fix: Handle RepeatMode.ALL wrap-around for gapless transition
-                                var nextIndex = state.currentIndex + 1
-                                if (nextIndex >= state.queue.size && state.repeatMode == RepeatMode.ALL) {
-                                    nextIndex = 0
-                                }
-                                // Only do early transition if the next index is valid.
-                                // For autoplay/radio, new songs are appended dynamically so
-                                // nextIndex may not exist yet — let STATE_ENDED handle that.
-                                if (nextIndex < state.queue.size && state.queue.getOrNull(nextIndex)?.id == preloadedNextSongId) {
-                                    // Transition to next song immediately
-                                    controller.seekToNextMediaItem()
+                                // Use Media3's nextMediaItemIndex which correctly handles
+                                // shuffle mode, repeat mode, and queue boundaries.
+                                val nextIndex = controller.nextMediaItemIndex
+                                if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET) {
+                                    // Verify the preloaded song matches what the player expects next
+                                    val nextMediaId = controller.getMediaItemAt(nextIndex).mediaId
+                                    if (nextMediaId == preloadedNextSongId) {
+                                        // Double-check the item actually has a valid resolved URI,
+                                        // not just a placeholder — otherwise gapless fires into an error
+                                        val nextUri = controller.getMediaItemAt(nextIndex)
+                                            .localConfiguration?.uri?.toString()
+                                        val isResolved = !nextUri.isNullOrBlank() &&
+                                            !nextUri.contains("placeholder.invalid") &&
+                                            !nextUri.contains("youtube.com/watch") &&
+                                            !nextUri.contains("youtu.be/")
+                                        if (isResolved) {
+                                            // Transition to next song immediately
+                                            controller.seekToNextMediaItem()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1159,30 +1311,26 @@ class MusicPlayer @Inject constructor(
         
         val state = _playerState.value
         val isVideoMode = state.isVideoMode
+        val controller = mediaController ?: return
         
-        // Correctly handle next index for both shuffle and linear modes using Media3's built-in logic
-        var nextIndex = mediaController?.nextMediaItemIndex ?: (state.currentIndex + 1)
-        if (nextIndex == -1 || nextIndex == androidx.media3.common.C.INDEX_UNSET) return
-
         // Fix: If Repeat One is active, don't preload next song (we will loop current one)
         if (state.repeatMode == RepeatMode.ONE) {
             return
         }
         
-        // Handle repeat/autoplay
-        if (nextIndex >= state.queue.size) {
-            if (state.repeatMode == RepeatMode.ALL) {
-                nextIndex = 0
-            } else if (state.isAutoplayEnabled || state.isRadioMode) {
-                // Autoplay/Radio: new songs will be appended dynamically.
-                // Don't wrap to index 0 — just skip preloading until songs are added.
-                return
-            } else {
-                return // No next song
-            }
-        }
+        // Use Media3's nextMediaItemIndex which correctly handles shuffle, repeat, and boundaries.
+        // Previous bug: fallback to (currentIndex + 1) was wrong in shuffle mode, and the manual
+        // repeat wrap-around could override a valid shuffle index with 0.
+        val nextIndex = controller.nextMediaItemIndex
+        if (nextIndex == -1 || nextIndex == androidx.media3.common.C.INDEX_UNSET) return
         
-        val nextSong = state.queue.getOrNull(nextIndex) ?: return
+        // Safety: verify index is within player's media item count
+        if (nextIndex >= controller.mediaItemCount) return
+        
+        // Get the song by matching the media ID from the player (not from state.queue by index,
+        // which may be stale or in a different order during shuffle transitions)
+        val nextMediaId = controller.getMediaItemAt(nextIndex).mediaId
+        val nextSong = state.queue.firstOrNull { it.id == nextMediaId } ?: return
         
         // Check if already preloaded
         // Important: check if preloaded type (audio/video) matches current mode? 
@@ -1193,7 +1341,7 @@ class MusicPlayer @Inject constructor(
         
         isPreloading = true
         lastPreloadAttemptTime = System.currentTimeMillis()
-        scope.launch {
+        preloadJob = scope.launch {
             try {
                 val streamUrl = when (nextSong.source) {
                     SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
@@ -1213,12 +1361,19 @@ class MusicPlayer @Inject constructor(
                 }
                 
                 if (streamUrl != null) {
+                    // CRITICAL FIX (Shuffle premature transition prevention):
+                    // In shuffle mode, calling replaceMediaItem on the next item disrupts
+                    // ExoPlayer's internal state, causing it to auto-transition away from
+                    // the current song after only ~460ms. Instead, we just cache the URL
+                    // and apply it at transition time via the fast-path in onMediaItemTransition.
+                    //
+                    // In non-shuffle mode, replace the item normally for true gapless playback.
+                    if (!state.shuffleEnabled) {
+                        updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
+                    }
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
                     preloadedIsVideoMode = isVideoMode
-                    
-                    // Update the media item in the queue with resolved URL
-                    updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
                 }
             } catch (e: Exception) {
                 // Preload failed, will resolve on transition
@@ -1419,6 +1574,11 @@ class MusicPlayer @Inject constructor(
     
     fun seekToNext() {
         currentResolutionJob?.cancel()
+        // Bug Fix: Cancel any in-flight preload coroutine before we start our own resolution.
+        // If preloadJob and our new coroutine both call replaceMediaItem(nextIndex, ...) concurrently,
+        // the second one clobbers the first mid-parse → intermittent SOURCE_ERROR in shuffle mode.
+        preloadJob?.cancel()
+        isPreloading = false
         lastPreloadAttemptTime = 0L
         val state = _playerState.value
         val queue = state.queue
@@ -1429,10 +1589,73 @@ class MusicPlayer @Inject constructor(
         val nextIndex = controller.nextMediaItemIndex
         
         if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET && nextIndex in queue.indices) {
-             // Optimization: Instead of playSong() which resets the whole playlist,
-             // we just seek to the next item. The onMediaItemTransition will handle 
-             // resolution if it's a placeholder.
-             controller.seekToNextMediaItem()
+            // Bug Fix (Shuffle + Next skip flicker):
+            // When shuffle is on, the next media item at nextIndex likely has a placeholder URI
+            // (unresolved stream URL). Calling seekToNextMediaItem() immediately makes ExoPlayer
+            // try to play it right away → STATE_ERROR(7) "Source error" before our resolution
+            // coroutine from onMediaItemTransition can even start.
+            //
+            // Fix: Check if the next item needs resolution. If it does, resolve it FIRST
+            // (updating the media item in-place), then seek to it. ExoPlayer will then find
+            // a valid stream URL and won't emit a SOURCE_ERROR.
+            val nextMediaItem = controller.getMediaItemAt(nextIndex)
+            val nextUri = nextMediaItem.localConfiguration?.uri?.toString()
+            val nextNeedsResolution = nextUri.isNullOrBlank() ||
+                nextUri.contains("placeholder.invalid") ||
+                nextUri.contains("youtube.com/watch") ||
+                nextUri.contains("youtu.be/")
+
+            if (nextNeedsResolution) {
+                val nextSong = queue.firstOrNull { it.id == nextMediaItem.mediaId }
+                if (nextSong != null) {
+                    // Show loading and resolve BEFORE seeking so ExoPlayer never sees placeholder
+                    _playerState.update { it.copy(isLoading = true) }
+                    currentResolutionJob = scope.launch {
+                        try {
+                            val streamUrl = when (nextSong.source) {
+                                SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
+                                SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
+                                else -> {
+                                    if (_playerState.value.isVideoMode) {
+                                        val videoId = resolvedVideoIds[nextSong.id]
+                                            ?: youTubeRepository.getBestVideoId(nextSong).also {
+                                                resolvedVideoIds.put(nextSong.id, it)
+                                            }
+                                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                                        videoResult?.videoUrl ?: youTubeRepository.getVideoStreamUrl(videoId)
+                                    } else {
+                                        youTubeRepository.getStreamUrl(nextSong.id)
+                                    }
+                                }
+                            }
+                            if (streamUrl != null) {
+                                // Update the media item with resolved URL before seeking.
+                                // CRITICAL: We use controller.seekTo(nextIndex, 0L) instead of
+                                // seekToNextMediaItem() + delay(80ms) because ExoPlayer processes
+                                // its command queue SERIALLY — replaceMediaItem(nextIndex) is
+                                // guaranteed to execute before seekTo(nextIndex). No timing guess needed.
+                                //
+                                // Bug Fix: Set preloaded state AFTER updateNextMediaItemWithPreloadedUrl.
+                                // If the update fails, the item still has a placeholder URI — setting
+                                // preloadedNextSongId first would fool the gapless trigger into firing.
+                                updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
+                                preloadedNextSongId = nextSong.id
+                                preloadedStreamUrl = streamUrl
+                                preloadedIsVideoMode = _playerState.value.isVideoMode
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("MusicPlayer", "Pre-resolve for next song failed, falling back: ${e.message}")
+                            // Fall through — onMediaItemTransition will handle resolution
+                        }
+                        // Seek using the captured nextIndex (not seekToNextMediaItem) so ExoPlayer
+                        // is guaranteed to go exactly where we put the resolved media item.
+                        controller.seekTo(nextIndex, 0L)
+                    }
+                    return
+                }
+            }
+            // Next item already has a resolved URL — safe to seek immediately
+            controller.seekToNextMediaItem()
         } else {
             // End of queue logic
              if (state.repeatMode == RepeatMode.ALL) {
