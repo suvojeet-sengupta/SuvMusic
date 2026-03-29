@@ -500,6 +500,30 @@ class MusicPlayerService : MediaLibraryService() {
                      boostAmount = state.boostAmount,
                      normEnabled = state.normEnabled
                  )
+                 
+                 // Improvement (4): Dynamic Audio Offload
+                 // Offload is incompatible with software processors (Spatial, Limiter, EQ).
+                 // Disable it when any effect is active to ensure the processors are used.
+                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                     val player = mediaLibrarySession?.player as? ExoPlayer
+                     if (player != null) {
+                         val isAnyEffectActive = state.audioArEnabled || state.boostEnabled || state.normEnabled
+                         val offloadMode = if (isAnyEffectActive) {
+                             androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
+                         } else {
+                             androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+                         }
+                         
+                         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                             .setAudioOffloadPreferences(
+                                 androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                                     .setAudioOffloadMode(offloadMode)
+                                     .setIsGaplessSupportRequired(false)
+                                     .build()
+                             )
+                             .build()
+                     }
+                 }
             }
         }
 
@@ -650,6 +674,9 @@ class MusicPlayerService : MediaLibraryService() {
                                  
                                  android.util.Log.d("MusicPlayerService", "Switching output to: ${targetDevice?.productName ?: "Default"}")
                                  player.setPreferredAudioDevice(targetDevice)
+                                 
+                                 // Improvement (1): Reset kickstart flag so it runs again for the new device
+                                 audioSinkKickstartDone = false
                                  
                                  // "Nudge" the volume to kickstart the AudioSink on the new device
                                  // This fixes the "No sound on switch" issue on many devices
