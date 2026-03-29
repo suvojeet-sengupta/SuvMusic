@@ -74,7 +74,8 @@ fun SongInfoSection(
     compact: Boolean = false,
     sleepTimerRemainingMs: Long? = null,
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
-    showMoreButton: Boolean = true
+    showMoreButton: Boolean = true,
+    isClassic: Boolean = false
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
 
@@ -91,7 +92,7 @@ fun SongInfoSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            // Title and Capsule Row
+            // Title and Capsule Row (YT Music style uses this)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -145,55 +146,57 @@ fun SongInfoSection(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                if (!isClassic) {
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                // Like/Dislike Capsule
-                Row(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                        .padding(horizontal = 2.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Dislike button
-                    IconButton(
-                        onClick = onDislikeClick,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                            contentDescription = "Dislike",
-                            tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    // Vertical Divider
-                    Box(
+                    // Like/Dislike Capsule (Visible only in YT Music style here)
+                    Row(
                         modifier = Modifier
-                            .width(1.dp)
-                            .height(18.dp)
-                            .background(dominantColors.onBackground.copy(alpha = 0.15f))
-                    )
-
-                    // Like button
-                    IconButton(
-                        onClick = onFavoriteClick,
-                        modifier = Modifier.size(36.dp)
+                            .clip(CircleShape)
+                            .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                            .padding(horizontal = 2.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                            contentDescription = "Like",
-                            tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(18.dp)
+                        // Dislike button
+                        IconButton(
+                            onClick = onDislikeClick,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                                contentDescription = "Dislike",
+                                tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Vertical Divider
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(18.dp)
+                                .background(dominantColors.onBackground.copy(alpha = 0.15f))
                         )
+
+                        // Like button
+                        IconButton(
+                            onClick = onFavoriteClick,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                                contentDescription = "Like",
+                                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(if (compact) 1.dp else 2.dp))
 
-            // Artist and More button (if enabled)
+            // Artist and More button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -216,7 +219,7 @@ fun SongInfoSection(
                         }
                 )
 
-                if (showMoreButton) {
+                if (!isClassic && showMoreButton) {
                     IconButton(
                         onClick = onMoreClick,
                         modifier = Modifier.size(32.dp)
@@ -230,7 +233,9 @@ fun SongInfoSection(
                     }
                 }
             }
-
+            
+            // ... rest of the column content (sleep timer, quality)
+            
             // Sleep Timer indicator
             androidx.compose.animation.AnimatedVisibility(
                 visible = sleepTimerOption != com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
@@ -303,7 +308,75 @@ fun SongInfoSection(
                 }
             }
         }
+
+        if (isClassic) {
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Like/Dislike Capsule (Classic style placement)
+                Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Dislike button
+                    IconButton(
+                        onClick = onDislikeClick,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                            contentDescription = "Dislike",
+                            tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Vertical Divider
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(20.dp)
+                            .background(dominantColors.onBackground.copy(alpha = 0.15f))
+                    )
+
+                    // Like button
+                    IconButton(
+                        onClick = onFavoriteClick,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                            contentDescription = "Like",
+                            tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Increased 3-dot button size for Classic style
+                IconButton(
+                    onClick = onMoreClick,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options",
+                        tint = dominantColors.onBackground.copy(alpha = 0.9f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
     }
+}
 }
 
 @Composable
