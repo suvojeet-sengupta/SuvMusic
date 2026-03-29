@@ -48,6 +48,7 @@ fun BottomActions(
     onLyricsClick: () -> Unit,
     onCastClick: () -> Unit,
     onQueueClick: () -> Unit,
+    onRelatedClick: () -> Unit,
     onDownloadClick: () -> Unit,
     downloadState: com.suvojeet.suvmusic.data.model.DownloadState,
     dominantColors: DominantColors,
@@ -77,9 +78,9 @@ fun BottomActions(
 
         BottomTabButton(
             label = "RELATED",
-            onClick = { /* Not implemented yet */ },
+            onClick = onRelatedClick,
             dominantColors = dominantColors,
-            enabled = false
+            enabled = true
         )
     }
 }
