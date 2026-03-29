@@ -17,7 +17,8 @@ import javax.inject.Singleton
 @Suppress("DEPRECATION")
 @Singleton
 class YouTubeStreamingService @Inject constructor(
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor
 ) {
     private val ytService: org.schabi.newpipe.extractor.StreamingService by lazy {
         ServiceList.all().find { it.serviceInfo.name == "YouTube" }
@@ -86,7 +87,16 @@ class YouTubeStreamingService @Inject constructor(
         val cacheKey = "audio_$videoId"
         return retryWithBackoff {
             val startTime = System.currentTimeMillis()
-            val audioQuality = sessionManager.getAudioQuality()
+            var audioQuality = sessionManager.getAudioQuality()
+            
+            // Adaptive logic for AUTO quality
+            if (audioQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
+                audioQuality = if (networkMonitor.isOnWifi()) {
+                    com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM
+                } else {
+                    com.suvojeet.suvmusic.data.model.AudioQuality.LOW
+                }
+            }
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
@@ -164,10 +174,21 @@ class YouTubeStreamingService @Inject constructor(
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
 
         return retryWithBackoff {
+            var quality = targetQuality
+            
+            // Adaptive logic for AUTO quality
+            if (quality == com.suvojeet.suvmusic.data.model.VideoQuality.AUTO) {
+                quality = if (networkMonitor.isOnWifi()) {
+                    com.suvojeet.suvmusic.data.model.VideoQuality.MEDIUM
+                } else {
+                    com.suvojeet.suvmusic.data.model.VideoQuality.LOW
+                }
+            }
+            
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
-            val targetResolution = targetQuality.maxResolution
+            val targetResolution = quality.maxResolution
             var result: VideoStreamResult? = null
             
             if (targetResolution >= 720) {
