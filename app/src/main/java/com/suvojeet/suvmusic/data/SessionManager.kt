@@ -230,6 +230,9 @@ class SessionManager @Inject constructor(
         preferences[HOME_SECTIONS_VISIBILITY_KEY] ?: DEFAULT_HOME_SECTIONS
     }
 
+    suspend fun getHomeSectionsVisibility(): Set<String> =
+        context.dataStore.data.first()[HOME_SECTIONS_VISIBILITY_KEY] ?: DEFAULT_HOME_SECTIONS
+
     suspend fun setHomeSectionsVisibility(sections: Set<String>) {
         val finalSections = if (sections.isEmpty()) DEFAULT_HOME_SECTIONS else sections
         context.dataStore.edit { preferences ->
@@ -1305,6 +1308,9 @@ class SessionManager @Inject constructor(
     val iosLiquidGlassEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IOS_LIQUID_GLASS_ENABLED_KEY] ?: false
     }
+
+    suspend fun isIosLiquidGlassEnabled(): Boolean =
+        context.dataStore.data.first()[IOS_LIQUID_GLASS_ENABLED_KEY] ?: false
 
     suspend fun setIosLiquidGlassEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
