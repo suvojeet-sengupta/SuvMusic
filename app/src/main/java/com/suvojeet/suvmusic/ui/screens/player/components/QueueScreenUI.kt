@@ -2,20 +2,7 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,25 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOne
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarOutline
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.model.RepeatMode
-import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.NowPlayingAnimation
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -113,7 +82,7 @@ fun ModernQueueView(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(dominantColors.primary.copy(alpha = 0.95f)) // Solid modern background
+            .background(dominantColors.primary.copy(alpha = 0.98f))
     ) {
         Column(
             modifier = Modifier
@@ -121,235 +90,93 @@ fun ModernQueueView(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // Header
+            // Refined Modern Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 if (isSelectionMode) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onClearSelection, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground)
+                        IconButton(
+                            onClick = onClearSelection,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Close, "Close", tint = dominantColors.onBackground, modifier = Modifier.size(20.dp))
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             "${selectedQueueIndices.size} Selected",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
                             color = dominantColors.onBackground
                         )
                     }
-                    Row {
-                        IconButton(onClick = onSelectAll) { Icon(Icons.Default.SelectAll, "Select All", tint = dominantColors.onBackground) }
-                        IconButton(onClick = { 
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HeaderActionButton(Icons.Default.SelectAll, onSelectAll, dominantColors)
+                        HeaderActionButton(Icons.Default.PlaylistAdd, { 
                             val selectedSongs = selectedQueueIndices.mapNotNull { index ->
                                 if (index < queue.size) queue[index] else null
                             }
                             onAddToPlaylistClick(selectedSongs) 
-                        }) { Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground) }
-                        IconButton(onClick = { onRemoveItems(selectedQueueIndices.toList()) }) { Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error) }
+                        }, dominantColors)
+                        HeaderActionButton(Icons.Default.Delete, { onRemoveItems(selectedQueueIndices.toList()) }, dominantColors, isError = true)
                     }
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
+                        IconButton(
+                            onClick = onBack,
                             modifier = Modifier
-                                .dpadFocusable(
-                                    onClick = onBack,
-                                    shape = CircleShape,
-                                )
                                 .size(40.dp)
-                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape),
-                            contentAlignment = Alignment.Center
+                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
                         ) {
                             Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground, modifier = Modifier.size(28.dp))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             "Playing Next",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
                             color = dominantColors.onBackground
                         )
                     }
                     
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Select button for discoverability
-                        Box(
-                            modifier = Modifier
-                                .clip(SquircleShape)
-                                .clickable { if (queue.isNotEmpty()) onToggleSelection(if (currentIndex >= 0) currentIndex else 0) }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                "Select",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = dominantColors.accent
-                            )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(onClick = onClearQueue) {
+                            Icon(Icons.Default.DeleteSweep, "Clear", tint = dominantColors.onBackground.copy(alpha = 0.6f))
                         }
-                        
-                        IconButton(onClick = onClearQueue, modifier = Modifier.size(40.dp)) {
-                            Icon(Icons.Default.Delete, "Clear Queue", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(22.dp))
-                        }
-                        
-                        Box(
-                            modifier = Modifier
-                                .dpadFocusable(
-                                    onClick = { onAddToPlaylistClick(queue) },
-                                    shape = CircleShape,
-                                )
-                                .size(40.dp)
-                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.PlaylistAdd, "Save", tint = dominantColors.onBackground, modifier = Modifier.size(22.dp))
+                        IconButton(onClick = { if (queue.isNotEmpty()) onToggleSelection(if (currentIndex >= 0) currentIndex else 0) }) {
+                            Icon(Icons.Default.Checklist, "Select", tint = dominantColors.accent)
                         }
                     }
                 }
             }
 
-            // Now Playing Card (Modern Compact)
+            // Hero Now Playing Card
             if (!isSelectionMode && currentSong != null) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = SquircleShape,
-                    color = dominantColors.accent.copy(alpha = 0.15f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            AsyncImage(
-                                model = currentSong.thumbnailUrl,
-                                contentDescription = currentSong.title,
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .clip(SquircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            if (isPlaying) {
-                                Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.3f), SquircleShape), contentAlignment = Alignment.Center) {
-                                    NowPlayingAnimation(color = Color.White, isPlaying = true)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "NOW PLAYING",
-                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp, fontWeight = FontWeight.Black),
-                                color = dominantColors.accent
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                currentSong.title,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = dominantColors.onBackground,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                currentSong.artist,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = dominantColors.onBackground.copy(alpha = 0.7f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        IconButton(onClick = onToggleLike) {
-                            Icon(
-                                if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
-                                "Like",
-                                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                        IconButton(onClick = { onMoreClick(currentSong) }) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                "More",
-                                tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                }
+                HeroNowPlayingCard(currentSong, isPlaying, isFavorite, onToggleLike, { onMoreClick(currentSong) }, dominantColors)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Controls (Modern Switch for Autoplay/Infinite Play)
+            // Infinite Play Toggle Section
             if (!isSelectionMode) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp)
-                        .clip(SquircleShape)
-                        .background(dominantColors.onBackground.copy(alpha = 0.05f))
-                        .clickable { onToggleAutoplay() }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(SquircleShape)
-                                .background(dominantColors.onBackground.copy(alpha = 0.05f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                                contentDescription = null,
-                                tint = if (isAutoplayEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                "Infinite Play",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = dominantColors.onBackground
-                            )
-                            Text(
-                                "Keep the music going forever",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = dominantColors.onBackground.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = isAutoplayEnabled,
-                        onCheckedChange = { onToggleAutoplay() },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = dominantColors.accent,
-                            uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.4f),
-                            uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.1f),
-                            uncheckedBorderColor = Color.Transparent
-                        ),
-                        modifier = Modifier.scale(0.8f)
-                    )
-                }
+                AutoplayToggleRow(isAutoplayEnabled, onToggleAutoplay, dominantColors)
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // List
+            // Queue List
             val listState = rememberLazyListState()
             LazyColumn(
                 state = listState,
-                contentPadding = PaddingValues(bottom = 80.dp),
+                contentPadding = PaddingValues(bottom = 24.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                // 1. History Section
                 if (playedSongs.isNotEmpty()) {
-                    item { ModernHeader("History", dominantColors) }
+                    item { SectionDivider("HISTORY", dominantColors) }
                     itemsIndexed(playedSongs, key = { index, s -> "history_${s.id}_$index" }) { index, song ->
-                        ModernQueueItem(
+                        ModernQueueListItem(
                             song = song,
                             isCurrent = false,
                             isPlaying = false,
@@ -363,11 +190,10 @@ fun ModernQueueView(
                     }
                 }
 
-                // 2. Currently Playing (In-list indicator)
                 if (currentSong != null) {
-                    item { ModernHeader("Now Playing", dominantColors) }
+                    item { SectionDivider("NOW PLAYING", dominantColors) }
                     item(key = "current_${currentSong.id}") {
-                        ModernQueueItem(
+                        ModernQueueListItem(
                             song = currentSong,
                             isCurrent = true,
                             isPlaying = isPlaying,
@@ -381,19 +207,11 @@ fun ModernQueueView(
                     }
                 }
 
-                // 3. Upcoming Section
                 if (upNextSongs.isNotEmpty()) {
-                    item { 
-                        ModernHeader(
-                            if (isRadioMode || isAutoplayEnabled) "Upcoming (Autoplay)" else "Up Next", 
-                            dominantColors 
-                        ) 
-                    }
+                    item { SectionDivider(if (isRadioMode || isAutoplayEnabled) "UPCOMING (AUTOPLAY)" else "UP NEXT", dominantColors) }
                     itemsIndexed(upNextSongs, key = { indexInList, s -> "next_${s.id}_$indexInList" }) { indexInList, song ->
-                        // Absolute index in full queue
                         val actualIndex = currentIndex + 1 + indexInList
-                        
-                        ModernQueueItem(
+                        ModernQueueListItem(
                             song = song,
                             isCurrent = false,
                             isPlaying = false,
@@ -409,8 +227,8 @@ fun ModernQueueView(
 
                 if (isLoadingMore) {
                     item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            LoadingIndicator(color = dominantColors.accent, modifier = Modifier.size(32.dp))
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = dominantColors.accent, modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                         }
                     }
                 }
@@ -420,47 +238,121 @@ fun ModernQueueView(
 }
 
 @Composable
-private fun ModernHeader(title: String, dominantColors: DominantColors) {
+private fun HeaderActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, dominantColors: DominantColors, isError: Boolean = false) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(36.dp),
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = if (isError) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) else dominantColors.onBackground.copy(alpha = 0.05f),
+            contentColor = if (isError) MaterialTheme.colorScheme.error else dominantColors.onBackground
+        )
+    ) {
+        Icon(icon, null, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun HeroNowPlayingCard(song: Song, isPlaying: Boolean, isFavorite: Boolean, onToggleLike: () -> Unit, onMoreClick: () -> Unit, dominantColors: DominantColors) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        shape = SquircleShape,
+        color = dominantColors.accent.copy(alpha = 0.1f),
+        border = null
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(contentAlignment = Alignment.Center) {
+                AsyncImage(
+                    model = song.thumbnailUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp).clip(SquircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                if (isPlaying) {
+                    Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.3f), SquircleShape), contentAlignment = Alignment.Center) {
+                        NowPlayingAnimation(color = Color.White, isPlaying = true)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "NOW PLAYING",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp, fontWeight = FontWeight.Black),
+                    color = dominantColors.accent
+                )
+                Text(
+                    song.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = dominantColors.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = dominantColors.onBackground.copy(alpha = 0.6f),
+                    maxLines = 1
+                )
+            }
+            IconButton(onClick = onToggleLike) {
+                Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AutoplayToggleRow(enabled: Boolean, onToggle: () -> Unit, dominantColors: DominantColors) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).clickable { onToggle() },
+        shape = SquircleShape,
+        color = dominantColors.onBackground.copy(alpha = 0.03f)
+    ) {
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.AutoMirrored.Filled.QueueMusic, null, tint = if (enabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Infinite Play", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = dominantColors.onBackground)
+            }
+            Switch(
+                checked = enabled, onCheckedChange = { onToggle() },
+                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = dominantColors.accent, uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.3f), uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.08f), uncheckedBorderColor = Color.Transparent),
+                modifier = Modifier.scale(0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionDivider(title: String, dominantColors: DominantColors) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-        color = dominantColors.onBackground.copy(alpha = 0.5f),
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Black),
+        color = dominantColors.onBackground.copy(alpha = 0.3f),
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
     )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ModernQueueItem(
-    song: Song,
-    isCurrent: Boolean,
-    isPlaying: Boolean,
-    isSelected: Boolean,
-    isSelectionMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    onMoreClick: () -> Unit,
-    dominantColors: DominantColors
+private fun ModernQueueListItem(
+    song: Song, isCurrent: Boolean, isPlaying: Boolean, isSelected: Boolean, isSelectionMode: Boolean,
+    onClick: () -> Unit, onLongClick: () -> Unit, onMoreClick: () -> Unit, dominantColors: DominantColors
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 1.dp)
-            .dpadFocusable(onClick = onClick, shape = SquircleShape)
+            .padding(horizontal = 12.dp, vertical = 2.dp)
             .clip(SquircleShape)
-            .background(if (isSelected) dominantColors.accent.copy(alpha = 0.2f) else Color.Transparent)
+            .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(6.dp),
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box {
             AsyncImage(
-                model = song.thumbnailUrl,
-                contentDescription = song.title,
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(SquircleShape),
-                contentScale = ContentScale.Crop
+                model = song.thumbnailUrl, contentDescription = null,
+                modifier = Modifier.size(52.dp).clip(SquircleShape), contentScale = ContentScale.Crop
             )
             if (isCurrent && isPlaying) {
                 Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.4f), SquircleShape), contentAlignment = Alignment.Center) {
@@ -468,38 +360,30 @@ private fun ModernQueueItem(
                 }
             }
         }
-
         Spacer(modifier = Modifier.width(16.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 color = if (isCurrent) dominantColors.accent else dominantColors.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                maxLines = 1, overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = dominantColors.onBackground.copy(alpha = 0.6f),
+                color = dominantColors.onBackground.copy(alpha = 0.5f),
                 maxLines = 1
             )
         }
-
         if (isSelectionMode) {
-            androidx.compose.material3.Checkbox(
-                checked = isSelected,
-                onCheckedChange = { onClick() },
-                modifier = Modifier.scale(0.8f),
-                colors = androidx.compose.material3.CheckboxDefaults.colors(
-                    checkedColor = dominantColors.accent,
-                    uncheckedColor = dominantColors.onBackground.copy(alpha = 0.4f)
-                )
+            Checkbox(
+                checked = isSelected, onCheckedChange = { onClick() },
+                colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent, uncheckedColor = dominantColors.onBackground.copy(alpha = 0.3f)),
+                modifier = Modifier.scale(0.85f)
             )
         } else {
-            IconButton(onClick = onMoreClick, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.MoreVert, "More", tint = dominantColors.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            IconButton(onClick = onMoreClick) {
+                Icon(Icons.Default.MoreVert, null, tint = dominantColors.onBackground.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
             }
         }
     }

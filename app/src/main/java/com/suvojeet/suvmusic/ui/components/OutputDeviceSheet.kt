@@ -1,8 +1,9 @@
 package com.suvojeet.suvmusic.ui.components
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
-import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,11 +42,10 @@ fun OutputDeviceSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Determine colors
-    val finalBackgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surfaceContainerHigh
+    val finalBackgroundColor = dominantColors?.primary?.copy(alpha = 0.98f) ?: MaterialTheme.colorScheme.surface
     val finalContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
     val finalAccentColor = dominantColors?.accent ?: accentColor
 
-    // Refresh devices when sheet becomes visible
     LaunchedEffect(isVisible) {
         if (isVisible) {
             onRefreshDevices()
@@ -58,123 +57,127 @@ fun OutputDeviceSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = finalBackgroundColor,
-            dragHandle = { BottomSheetDefaults.DragHandle() },
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            dragHandle = null,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             contentWindowInsets = { WindowInsets(0) }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 24.dp)
             ) {
-                Row(
+                // Modern Header with Refresh
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(top = 20.dp, bottom = 12.dp, start = 24.dp, end = 24.dp)
                 ) {
-                    Text(
-                        text = "Audio Output",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.5).sp
-                        ),
-                        color = finalContentColor
-                    )
+                    Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                        Text(
+                            text = "Audio Output",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = finalContentColor
+                        )
+                        Text(
+                            text = "Choose where to play",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = finalContentColor.copy(alpha = 0.5f)
+                        )
+                    }
                     
                     FilledTonalIconButton(
                         onClick = onRefreshDevices,
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier
+                            .size(44.dp)
+                            .align(Alignment.CenterEnd),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = finalAccentColor.copy(alpha = 0.15f),
-                            contentColor = finalAccentColor
+                            containerColor = finalContentColor.copy(alpha = 0.05f),
+                            contentColor = finalContentColor
                         )
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
                             contentDescription = "Refresh",
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
 
-                if (devices.isEmpty()) {
-                    Box(
+                val currentDevice = devices.find { it.isSelected }
+                
+                // Hero Section for Active Device
+                if (currentDevice != null) {
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(240.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        shape = SquircleShape,
+                        color = finalAccentColor.copy(alpha = 0.12f),
+                        border = null
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(48.dp),
-                                strokeWidth = 4.dp,
-                                color = finalAccentColor,
-                                strokeCap = StrokeCap.Round
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Text(
-                                text = "Scanning for devices...",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = finalContentColor.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        items(
-                            items = devices,
-                            key = { it.id }
-                        ) { device ->
-                            DeviceItem(
-                                device = device,
-                                onClick = {
-                                    onDeviceSelected(device)
-                                },
-                                accentColor = finalAccentColor,
-                                contentColorOnBackground = finalContentColor
+                            HeroDeviceIcon(currentDevice, finalAccentColor)
+                            Spacer(modifier = Modifier.width(20.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Current Output",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        letterSpacing = 1.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = finalAccentColor.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = currentDevice.name,
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = finalContentColor
+                                )
+                            }
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = finalAccentColor,
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp)
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = finalContentColor.copy(alpha = 0.05f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+
+                // Available Devices Section
+                Text(
+                    text = "AVAILABLE DEVICES",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        letterSpacing = 1.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = finalContentColor.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                )
+
+                if (devices.isEmpty()) {
+                    ScanningState(finalAccentColor, finalContentColor)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = finalAccentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "Switch between connected audio outputs like Bluetooth, Cast, or Phone speakers.",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = finalContentColor.copy(alpha = 0.7f),
-                            lineHeight = 18.sp
-                        )
+                        items(items = devices.filter { !it.isSelected }, key = { it.id }) { device ->
+                            DeviceListItem(
+                                device = device,
+                                onClick = { onDeviceSelected(device) },
+                                contentColor = finalContentColor,
+                                accentColor = finalAccentColor
+                            )
+                        }
                     }
                 }
             }
@@ -183,35 +186,9 @@ fun OutputDeviceSheet(
 }
 
 @Composable
-private fun DeviceItem(
-    device: OutputDevice,
-    onClick: () -> Unit,
-    accentColor: Color,
-    contentColorOnBackground: Color = MaterialTheme.colorScheme.onSurface
-) {
-    val isSelected = device.isSelected
+private fun HeroDeviceIcon(device: OutputDevice, accentColor: Color) {
+    val icon = getDeviceIcon(device.type)
     
-    val containerColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor.copy(alpha = 0.15f) 
-                      else Color.Transparent,
-        animationSpec = tween(durationMillis = 400),
-        label = "containerColor"
-    )
-    
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor 
-                      else contentColorOnBackground,
-        animationSpec = tween(durationMillis = 400),
-        label = "contentColor"
-    )
-
-    val iconContainerColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor.copy(alpha = 0.25f)
-                      else contentColorOnBackground.copy(alpha = 0.08f),
-        animationSpec = tween(durationMillis = 400),
-        label = "iconContainerColor"
-    )
-
     // Pulsing animation for the active indicator
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
@@ -233,115 +210,122 @@ private fun DeviceItem(
         label = "pulseAlpha"
     )
 
-    val icon = when (device.type) {
-        DeviceType.PHONE -> Icons.Default.PhoneAndroid
-        DeviceType.SPEAKER -> Icons.Default.Speaker
-        DeviceType.BLUETOOTH -> Icons.Default.Bluetooth
-        DeviceType.HEADPHONES -> Icons.Default.Headset
-        DeviceType.CAST -> Icons.Default.Cast
-        DeviceType.UNKNOWN -> Icons.Default.Devices
-    }
-
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = containerColor
-    ) {
-        Row(
+    Box(contentAlignment = Alignment.Center) {
+        Box(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(56.dp)
+                .scale(pulseScale)
+                .clip(CircleShape)
+                .background(accentColor.copy(alpha = pulseAlpha))
+        )
+        Surface(
+            modifier = Modifier.size(56.dp),
+            shape = SquircleShape,
+            color = accentColor
         ) {
             Box(contentAlignment = Alignment.Center) {
-                // Pulse effect for selected device
-                if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .scale(pulseScale)
-                            .clip(CircleShape)
-                            .background(accentColor.copy(alpha = pulseAlpha))
-                    )
-                }
-                
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = iconContainerColor
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = contentColor,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = device.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
-                        letterSpacing = 0.1.sp
-                    ),
-                    color = contentColor
-                )
-                
-                if (isSelected) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(accentColor)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Currently Active",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = accentColor.copy(alpha = 0.9f)
-                        )
-                    }
-                } else {
-                    Text(
-                        text = device.type.name.lowercase().replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = contentColorOnBackground.copy(alpha = 0.6f)
-                    )
-                }
-            }
-
-            if (isSelected) {
-                Surface(
-                    modifier = Modifier.size(28.dp),
-                    shape = CircleShape,
-                    color = accentColor
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = "Selected",
-                        tint = Color.White,
-                        modifier = Modifier.padding(6.dp)
-                    )
-                }
-            } else {
                 Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = contentColorOnBackground.copy(alpha = 0.3f),
-                    modifier = Modifier.size(24.dp)
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
                 )
             }
         }
     }
+}
+
+@Composable
+private fun DeviceListItem(
+    device: OutputDevice,
+    onClick: () -> Unit,
+    contentColor: Color,
+    accentColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(48.dp),
+            shape = SquircleShape,
+            color = contentColor.copy(alpha = 0.05f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = getDeviceIcon(device.type),
+                    contentDescription = null,
+                    tint = contentColor.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = device.name,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                color = contentColor
+            )
+            Text(
+                text = device.type.name.lowercase().replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.labelMedium,
+                color = contentColor.copy(alpha = 0.4f)
+            )
+        }
+        
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(contentColor.copy(alpha = 0.05f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = contentColor.copy(alpha = 0.3f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScanningState(accentColor: Color, contentColor: Color) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(40.dp),
+                strokeWidth = 3.dp,
+                color = accentColor,
+                strokeCap = StrokeCap.Round
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Looking for devices...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor.copy(alpha = 0.5f)
+            )
+        }
+    }
+}
+
+private fun getDeviceIcon(type: DeviceType) = when (type) {
+    DeviceType.PHONE -> Icons.Default.Smartphone
+    DeviceType.SPEAKER -> Icons.Default.Speaker
+    DeviceType.BLUETOOTH -> Icons.Default.Bluetooth
+    DeviceType.HEADPHONES -> Icons.Default.Headset
+    DeviceType.CAST -> Icons.Default.Cast
+    DeviceType.UNKNOWN -> Icons.Default.Devices
 }
