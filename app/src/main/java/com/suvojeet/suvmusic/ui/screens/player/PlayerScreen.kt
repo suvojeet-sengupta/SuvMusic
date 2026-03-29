@@ -67,6 +67,9 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
 import android.app.Activity
+import android.content.Context
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.widget.Toast
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.data.model.PlayerState
@@ -602,11 +605,12 @@ fun PortraitPlayerContent(
                         )
                         
                         // Improvement: Visual Error Overlay
-                        AnimatedVisibility(
+                        androidx.compose.animation.AnimatedVisibility(
                             visible = playerState.error != null,
                             enter = fadeIn() + scaleIn(),
                             exit = fadeOut() + scaleOut()
                         ) {
+                            val context = LocalContext.current
                             val errorText = playerState.error ?: ""
                             Surface(
                                 modifier = Modifier
@@ -649,8 +653,8 @@ fun PortraitPlayerContent(
                                     ) {
                                         androidx.compose.material3.OutlinedButton(
                                             onClick = {
-                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                                val clip = android.content.ClipData.newPlainText("SuvMusic Error", errorText)
+                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                val clip = ClipData.newPlainText("SuvMusic Error", errorText)
                                                 clipboardManager.setPrimaryClip(clip)
                                                 Toast.makeText(context, "Error copied to clipboard", Toast.LENGTH_SHORT).show()
                                             },
@@ -832,11 +836,12 @@ fun LandscapePlayerContent(
                         )
                         
                         // Improvement: Visual Error Overlay
-                        AnimatedVisibility(
+                        androidx.compose.animation.AnimatedVisibility(
                             visible = playerState.error != null,
                             enter = fadeIn() + scaleIn(),
                             exit = fadeOut() + scaleOut()
                         ) {
+                            val context = LocalContext.current
                             val errorText = playerState.error ?: ""
                             Surface(
                                 modifier = Modifier
@@ -879,8 +884,8 @@ fun LandscapePlayerContent(
                                     ) {
                                         androidx.compose.material3.OutlinedButton(
                                             onClick = {
-                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                                val clip = android.content.ClipData.newPlainText("SuvMusic Error", errorText)
+                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                val clip = ClipData.newPlainText("SuvMusic Error", errorText)
                                                 clipboardManager.setPrimaryClip(clip)
                                                 Toast.makeText(context, "Error copied to clipboard", Toast.LENGTH_SHORT).show()
                                             },
