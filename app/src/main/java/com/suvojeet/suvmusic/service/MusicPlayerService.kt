@@ -676,71 +676,86 @@ class MusicPlayerService : MediaLibraryService() {
                         session.player.shuffleModeEnabled = !session.player.shuffleModeEnabled
                     }
                     "SET_OUTPUT_DEVICE" -> {
-                        val deviceId = args.getString("DEVICE_ID")
-                        val player = session.player as? ExoPlayer
-                        if (player != null) {
-                            serviceScope.launch {
-                                 val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
-                                 val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-                                 
-                                 val targetDevice = if (deviceId == null || deviceId == "default") {
-                                     null // Clear preference
-                                 } else if (deviceId == "phone_speaker") {
-                                     devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                                 } else {
-                                     devices.find { it.id.toString() == deviceId }
-                                 }
-                                 
-                                 android.util.Log.d("MusicPlayerService", "Switching output to: ${targetDevice?.productName ?: "Default"}")
-                                 
-                                 val wasPlaying = player.isPlaying
-                                 if (wasPlaying) player.pause()
-                                 
-                                 // Reset to default first to clear any stale routing state
-                                 player.setPreferredAudioDevice(null)
-                                 delay(100)
-                                 
-                                 // Set the new target device
-                                 player.setPreferredAudioDevice(targetDevice)
-                                 
-                                 // Force buffer flush and AudioTrack recreation by seeking
-                                 player.seekTo(player.currentPosition)
-                                 
-                                 // Improvement (1): Reset kickstart flag so it runs again for the new device
-                                 audioSinkKickstartDone = false
-                                 
-                                 // For Bluetooth devices, we need a longer delay as the hardware handshake takes time
-                                 val isBluetooth = targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
-                                                  targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
-                                 
-                                 delay(if (isBluetooth) 1000 else 300) // Give it a moment to switch routing
-                                 
-                                 if (wasPlaying) {
-                                     player.play()
-                                     delay(200)
-                                 }
+                       val deviceId = args.getString("DEVICE_ID")
+                       val player = session.player as? ExoPlayer
+                       if (player != null) {
+                           serviceScope.launch {
+                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                                val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
 
-                                 if (player.isPlaying || wasPlaying) {
-                                     val originalVol = player.volume
-                                     // Ensure we always have a delta, even if muted or at max
-                                     val nudgeVol = if (originalVol > 0.1f) originalVol * 0.95f else originalVol + 0.05f
-                                     
-                                     player.volume = nudgeVol
-                                     delay(150)
-                                     player.volume = originalVol
-                                     
-                                     // Second nudge for Bluetooth after a longer interval to be absolutely sure
-                                     if (isBluetooth) {
-                                         delay(1000)
-                                         player.volume = nudgeVol
-                                         delay(100)
-                                         player.volume = originalVol
-                                     }
-                                 }
-                            }
-                        }
+                                val targetDevice = if (deviceId == null || deviceId == "default") {
+                                    null // Clear preference
+                                } else if (deviceId == "phone_speaker") {
+                                    devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                                } else {
+                                    devices.find { it.id.toString() == deviceId }
+                                }
+
+                                android.util.Log.d("MusicPlayerService", "Switching output to: ${targetDevice?.productName ?: "Default"}")
+
+                                val wasPlaying = player.isPlaying
+
+                                // 1. Force Audio System to Normal Mode
+                                // (Prevents system from being stuck in "Communication Mode" which blocks some media routing)
+                                audioManager.mode = android.media.AudioManager.MODE_NORMAL
+
+                                // 2. Clear current routing
+                                player.setPreferredAudioDevice(null)
+                                delay(150)
+
+                                // 3. Set the new target device
+                                player.setPreferredAudioDevice(targetDevice)
+
+                                // 4. Reset kickstart flag so it runs again for the new device
+                                audioSinkKickstartDone = false
+
+                                // For Bluetooth devices, we need a longer delay as the hardware handshake takes time
+                                val isBluetooth = targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
+                                                 targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                                                 (android.os.Build.VERSION.SDK_INT >= 31 && (
+                                                     targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET || 
+                                                     targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER
+                                                 ))
+
+                                // 5. Force buffer flush by seeking
+                                player.seekTo(player.currentPosition)
+
+                                delay(if (isBluetooth) 1200 else 400) // Give it a moment to switch routing
+
+                                // 6. Forceful wake-up if it was playing
+                                if (wasPlaying) {
+                                    player.pause()
+                                    delay(300)
+                                    player.play()
+                                }
+
+                                // 7. Multi-step volume nudge sequence
+                                if (player.isPlaying || wasPlaying) {
+                                    val originalVol = player.volume
+                                    val nudgeVol = if (originalVol > 0.1f) originalVol * 0.95f else originalVol + 0.05f
+
+                                    // Immediate nudge
+                                    player.volume = nudgeVol
+                                    delay(150)
+                                    player.volume = originalVol
+
+                                    if (isBluetooth) {
+                                        // Secondary nudge after more time
+                                        delay(800)
+                                        player.volume = nudgeVol
+                                        delay(150)
+                                        player.volume = originalVol
+
+                                        // Tertiary check: if still silent (or to be safe) toggle play/pause one more time
+                                        delay(500)
+                                        player.pause()
+                                        delay(200)
+                                        player.play()
+                                    }
+                                }
+                           }
+                       }
                     }
-
                     COMMAND_START_RADIO -> {
                         val currentVideoId = session.player.currentMediaItem?.mediaId
                         if (!currentVideoId.isNullOrBlank()) {
