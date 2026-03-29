@@ -126,13 +126,13 @@ fun SongActionsSheet(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .navigationBarsPadding()
-                    .padding(bottom = 32.dp)
+                    .padding(bottom = 24.dp)
             ) {
                 // Centered Premium Header
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 24.dp, bottom = 20.dp),
+                        .padding(top = 20.dp, bottom = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
@@ -146,7 +146,7 @@ fun SongActionsSheet(
                         )
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     
                     Text(
                         text = song.title,
@@ -200,7 +200,7 @@ fun SongActionsSheet(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 
                 // List of Actions with Icons and Dividers
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -208,7 +208,7 @@ fun SongActionsSheet(
                         "PLAYBACK & QUEUE",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
                         color = contentColor.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                     
                     if (!isFromQueue && !isCurrentlyPlaying) {
@@ -217,12 +217,12 @@ fun SongActionsSheet(
                     ModernActionItem(Icons.Default.Radio, "Start Radio", contentColor, { handleAction(onStartRadio) })
                     ModernActionItem(Icons.Default.Group, "Listen Together", contentColor, { handleAction(onListenTogether) })
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "OPTIONS",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
                         color = contentColor.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                     
                     ModernActionItem(
@@ -238,12 +238,12 @@ fun SongActionsSheet(
                     ModernActionItem(Icons.Default.Nightlight, "Sleep Timer", contentColor, { handleAction(onSleepTimer) })
                     ModernActionItem(Icons.Default.RingVolume, "Set as Ringtone", contentColor, { handleAction(onSetRingtone) })
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "INFO",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
                         color = contentColor.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                     ModernActionItem(Icons.Default.Info, "Song Details", contentColor, { handleAction(onViewInfo) })
                     ModernActionItem(Icons.Default.Comment, "View Comments", contentColor, { handleAction(onViewComments) })
@@ -290,7 +290,7 @@ private fun ModernActionItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 24.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, modifier = Modifier.size(24.dp), tint = tint.copy(alpha = 0.8f))
