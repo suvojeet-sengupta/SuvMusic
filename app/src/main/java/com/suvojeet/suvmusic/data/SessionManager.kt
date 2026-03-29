@@ -142,6 +142,7 @@ class SessionManager @Inject constructor(
         private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
+        private val PLAYER_STYLE_KEY = stringPreferencesKey("player_style")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val SWIPE_DOWN_TO_DISMISS_ENABLED_KEY = booleanPreferencesKey("swipe_down_to_dismiss_enabled")
         private val PLAYER_ANIMATED_BACKGROUND_KEY = booleanPreferencesKey("player_animated_background")
@@ -745,6 +746,25 @@ class SessionManager @Inject constructor(
     suspend fun setMiniPlayerStyle(style: MiniPlayerStyle) {
         context.dataStore.edit { preferences ->
             preferences[MINI_PLAYER_STYLE_KEY] = style.name
+        }
+    }
+
+    suspend fun getPlayerStyle(): com.suvojeet.suvmusic.data.model.PlayerStyle {
+        val styleName = context.dataStore.data.first()[PLAYER_STYLE_KEY]
+        return styleName?.let {
+            try { com.suvojeet.suvmusic.data.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC }
+        } ?: com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC
+    }
+
+    val playerStyleFlow: Flow<com.suvojeet.suvmusic.data.model.PlayerStyle> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_STYLE_KEY]?.let {
+            try { com.suvojeet.suvmusic.data.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC }
+        } ?: com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC
+    }
+
+    suspend fun setPlayerStyle(style: com.suvojeet.suvmusic.data.model.PlayerStyle) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYER_STYLE_KEY] = style.name
         }
     }
 
