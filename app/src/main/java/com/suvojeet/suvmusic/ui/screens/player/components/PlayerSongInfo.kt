@@ -235,75 +235,64 @@ fun SongInfoSection(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Dislike button
-            AnimatedContent(
-                targetState = isDisliked,
-                transitionSpec = {
-                    (scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow), initialScale = 0.7f) + fadeIn())
-                        .togetherWith(scaleOut(targetScale = 0.7f) + fadeOut())
-                },
-                label = "dislikeAnimation"
-            ) { active ->
-                if (active) {
-                    FilledIconButton(
-                        onClick = onDislikeClick,
-                        modifier = Modifier.size(42.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Filled.ThumbDown, "Undislike", modifier = Modifier.size(22.dp))
-                    }
-                } else {
+            // Like/Dislike Capsule
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Dislike button
+                AnimatedContent(
+                    targetState = isDisliked,
+                    transitionSpec = {
+                        (scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow), initialScale = 0.7f) + fadeIn())
+                            .togetherWith(scaleOut(targetScale = 0.7f) + fadeOut())
+                    },
+                    label = "dislikeAnimation"
+                ) { active ->
                     IconButton(
                         onClick = onDislikeClick,
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            Icons.Outlined.ThumbDown, "Dislike",
-                            tint = dominantColors.onBackground.copy(alpha = 0.6f),
-                            modifier = Modifier.size(22.dp)
+                            imageVector = if (active) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                            contentDescription = if (active) "Undislike" else "Dislike",
+                            tint = if (active) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
-            }
 
-            // Like button
-            AnimatedContent(
-                targetState = isFavorite,
-                transitionSpec = {
-                    (scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow), initialScale = 0.7f) + fadeIn())
-                        .togetherWith(scaleOut(targetScale = 0.7f) + fadeOut())
-                },
-                label = "likeAnimation"
-            ) { active ->
-                if (active) {
-                    FilledIconButton(
-                        onClick = onFavoriteClick,
-                        modifier = Modifier.size(42.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = dominantColors.accent.copy(alpha = 0.2f),
-                            contentColor = dominantColors.accent
-                        )
-                    ) {
-                        Icon(Icons.Filled.ThumbUp, "Unlike", modifier = Modifier.size(22.dp))
-                    }
-                } else {
+                // Vertical Divider
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(20.dp)
+                        .background(dominantColors.onBackground.copy(alpha = 0.15f))
+                )
+
+                // Like button
+                AnimatedContent(
+                    targetState = isFavorite,
+                    transitionSpec = {
+                        (scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow), initialScale = 0.7f) + fadeIn())
+                            .togetherWith(scaleOut(targetScale = 0.7f) + fadeOut())
+                    },
+                    label = "likeAnimation"
+                ) { active ->
                     IconButton(
                         onClick = onFavoriteClick,
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            Icons.Outlined.ThumbUp, "Like",
-                            tint = dominantColors.onBackground.copy(alpha = 0.6f),
-                            modifier = Modifier.size(22.dp)
+                            imageVector = if (active) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                            contentDescription = if (active) "Unlike" else "Like",
+                            tint = if (active) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

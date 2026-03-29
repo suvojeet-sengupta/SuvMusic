@@ -253,7 +253,7 @@ private fun YTMusicPortraitContent(
 
         TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
 
-        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
+        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.05f else 0.2f))
 
         Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
             PlaybackControls(

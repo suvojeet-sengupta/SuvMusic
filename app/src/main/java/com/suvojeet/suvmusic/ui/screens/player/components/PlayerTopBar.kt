@@ -38,7 +38,7 @@ fun PlayerTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 12.dp)
+            .padding(horizontal = 4.dp, vertical = 12.dp)
     ) {
         // Left side: Back Button
         Box(
@@ -115,7 +115,9 @@ fun PlayerTopBar(
 
         // Right side: Cast, Audio AR and More Menu
         Row(
-            modifier = Modifier.align(Alignment.CenterEnd),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -130,12 +132,12 @@ fun PlayerTopBar(
                     imageVector = Icons.Default.Devices,
                     contentDescription = "Cast",
                     tint = dominantColors.onBackground,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
             
             if (audioArEnabled) {
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -153,7 +155,7 @@ fun PlayerTopBar(
                 }
             }
             
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
 
             Box(
                 modifier = Modifier
@@ -167,7 +169,7 @@ fun PlayerTopBar(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More",
                     tint = dominantColors.onBackground,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
