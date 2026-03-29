@@ -403,28 +403,27 @@ class MusicPlayerService : MediaLibraryService() {
 
                 }
 
-                @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-                override fun onAudioSinkError(audioSinkError: Exception) {
-                    android.util.Log.e("MusicPlayerService", "AudioSink Error: ${audioSinkError.message}", audioSinkError)
-                    
-                    // If AudioTrack failed to initialize (common on Bluetooth switch race conditions)
-                    // we attempt a recovery by resetting the player's target device or re-preparing.
-                    serviceScope.launch {
-                        delay(500)
-                        val p = mediaLibrarySession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@launch
-                        if (p.playbackState != Player.STATE_IDLE) {
-                            android.util.Log.i("MusicPlayerService", "Attempting AudioSink recovery...")
-                            val wasPlaying = p.playWhenReady
-                            p.prepare() // Re-prepare to force AudioSink recreation
-                            if (wasPlaying) p.play()
-                        }
-                    }
-                }
-
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     super.onPlayerError(error)
                     android.util.Log.e("MusicPlayerService", "Playback error: ${error.message}", error)
                     
+                    // Recovery for AudioSink issues (common on Bluetooth switches)
+                    // Check if the error is related to audio track initialization or sink issues
+                    val isAudioSinkError = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
+                                         error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED
+                    
+                    if (isAudioSinkError) {
+                        android.util.Log.i("MusicPlayerService", "Detected AudioSink error, attempting recovery...")
+                        serviceScope.launch {
+                            delay(500)
+                            val p = mediaLibrarySession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@launch
+                            val wasPlaying = p.playWhenReady
+                            p.prepare() 
+                            if (wasPlaying) p.play()
+                        }
+                        return
+                    }
+
                     // Only auto-skip on REAL errors, not placeholder URI failures.
                     // Placeholder failures are handled by the resolution coroutine in MusicPlayer.
                     val currentUri = mediaLibrarySession?.player
