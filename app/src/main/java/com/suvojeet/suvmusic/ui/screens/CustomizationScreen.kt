@@ -73,6 +73,7 @@ fun CustomizationScreen(
     onArtworkSizeClick: () -> Unit = {},
     showStyleSheet: () -> Unit = {}
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     
@@ -98,12 +99,12 @@ fun CustomizationScreen(
         ArtworkSize.LARGE
     }
 
-    val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
-    val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
-    val navBarBlur by sessionManager.navBarBlurFlow.collectAsStateWithLifecycle(initialValue = 60.0f)
-    val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
-    val currentMiniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.YT_MUSIC)
-    val homeSectionsVisibility by sessionManager.homeSectionsVisibilityFlow.collectAsStateWithLifecycle(initialValue = SessionManager.DEFAULT_HOME_SECTIONS)
+    val miniPlayerAlpha = uiState.miniPlayerAlpha
+    val navBarAlpha = uiState.navBarAlpha
+    val navBarBlur = uiState.navBarBlur
+    val iosLiquidGlassEnabled = uiState.iosLiquidGlassEnabled
+    val currentMiniPlayerStyle = uiState.miniPlayerStyle
+    val homeSectionsVisibility = uiState.homeSectionsVisibility
 
     val scope = rememberCoroutineScope()
     
@@ -213,7 +214,7 @@ fun CustomizationScreen(
                         title = "iOS Liquid Glass",
                         subtitle = "Apply liquid blur effect to player",
                         checked = iosLiquidGlassEnabled,
-                        onCheckedChange = { scope.launch { sessionManager.setIosLiquidGlassEnabled(it) } }
+                        onCheckedChange = { viewModel.setIosLiquidGlassEnabled(it) }
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -227,7 +228,7 @@ fun CustomizationScreen(
                         title = "Mini Player Transparency",
                         icon = Icons.Default.Opacity,
                         alpha = miniPlayerAlpha,
-                        onAlphaChange = { scope.launch { sessionManager.setMiniPlayerAlpha(it) } }
+                        onAlphaChange = { viewModel.setMiniPlayerAlpha(it) }
                     )
                     
                     HorizontalDivider()
@@ -236,7 +237,7 @@ fun CustomizationScreen(
                         title = "Navigation Bar Transparency",
                         icon = Icons.Default.Layers,
                         alpha = navBarAlpha,
-                        onAlphaChange = { scope.launch { sessionManager.setNavBarAlpha(it) } }
+                        onAlphaChange = { viewModel.setNavBarAlpha(it) }
                     )
 
                     if (iosLiquidGlassEnabled) {
@@ -246,7 +247,7 @@ fun CustomizationScreen(
                             title = "iOS NavBar Blur",
                             icon = Icons.Default.BlurOn,
                             blur = navBarBlur,
-                            onBlurChange = { scope.launch { sessionManager.setNavBarBlur(it) } }
+                            onBlurChange = { viewModel.setNavBarBlur(it) }
                         )
                     }
                 }
@@ -284,7 +285,7 @@ fun CustomizationScreen(
                             .fillMaxWidth()
                             .dpadFocusable(
                                 onClick = {
-                                    scope.launch { sessionManager.setMiniPlayerStyle(style) }
+                                    viewModel.setMiniPlayerStyle(style)
                                     scope.launch {
                                         sheetState.hide()
                                         showMiniPlayerStyleSheet = false
@@ -344,7 +345,7 @@ fun CustomizationScreen(
                                 onCheckedChange = { checked ->
                                     val newSet = homeSectionsVisibility.toMutableSet()
                                     if (checked) newSet.addAll(ids) else newSet.removeAll(ids)
-                                    scope.launch { sessionManager.setHomeSectionsVisibility(newSet) }
+                                    viewModel.setHomeSectionsVisibility(newSet)
                                 }
                             )
                         },
@@ -353,7 +354,7 @@ fun CustomizationScreen(
                             .clickable {
                                 val newSet = homeSectionsVisibility.toMutableSet()
                                 if (!isChecked) newSet.addAll(ids) else newSet.removeAll(ids)
-                                scope.launch { sessionManager.setHomeSectionsVisibility(newSet) }
+                                viewModel.setHomeSectionsVisibility(newSet)
                             }
                             .padding(horizontal = 8.dp),
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)

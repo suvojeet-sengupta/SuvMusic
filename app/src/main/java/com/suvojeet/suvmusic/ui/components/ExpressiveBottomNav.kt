@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.navigation.Destination
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import kotlin.random.Random
 
@@ -196,6 +197,19 @@ private fun LiquidGlassNavBar(
             modifier = Modifier
                 .matchParentSize()
                 .clip(glassShape)
+                .then(
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        Modifier.graphicsLayer {
+                            renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                                blurAmount,
+                                blurAmount,
+                                android.graphics.Shader.TileMode.DECAL
+                            ).asComposeRenderEffect()
+                        }
+                    } else {
+                        Modifier.blur((blurAmount / 2).dp)
+                    }
+                )
                 .drawWithContent {
                     // Draw frosted background
                     drawRect(color = glassBaseColor)
@@ -215,13 +229,6 @@ private fun LiquidGlassNavBar(
                     
                     drawContent()
                 }
-                .then(
-                    if (Build.VERSION.SDK_INT >= 31) {
-                        Modifier.blur(blurAmount.dp)
-                    } else {
-                        Modifier.blur((blurAmount / 2).dp)
-                    }
-                )
         )
 
         // Layer 3: Color tint & Specular highlight
