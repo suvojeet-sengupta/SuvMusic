@@ -412,6 +412,8 @@ fun SuvMusicApp(
     
     val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle(initialValue = null)
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
+    val relatedSongs by playerViewModel.relatedSongsState.collectAsStateWithLifecycle(initialValue = emptyList())
+    val isFetchingRelated by playerViewModel.isFetchingRelated.collectAsStateWithLifecycle(initialValue = false)
     val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO)
 
     val artistCredits by playerViewModel.artistCredits.collectAsStateWithLifecycle(initialValue = emptyList<ArtistCreditInfo>())
@@ -904,6 +906,8 @@ fun SuvMusicApp(
                     playerState = playerState,
                     lyrics = lyrics,
                     isFetchingLyrics = isFetchingLyrics,
+                    relatedSongs = relatedSongs,
+                    isFetchingRelated = isFetchingRelated,
                     comments = comments,
                     isFetchingComments = isFetchingComments,
                     isLoggedIn = isLoggedIn,
@@ -965,6 +969,9 @@ fun SuvMusicApp(
                     onListenTogetherClick = {
                         onCollapse()
                         navController.navigate(Destination.ListenTogether)
+                    },
+                    onPlayRelated = { song ->
+                        playerViewModel.startRadio(song, null)
                     }
                 )
 

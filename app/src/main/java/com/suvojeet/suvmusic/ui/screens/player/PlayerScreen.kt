@@ -127,6 +127,8 @@ import com.suvojeet.suvmusic.data.model.PlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.YTMusicPlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.ClassicPlayerStyle
 
+import com.suvojeet.suvmusic.ui.screens.player.components.RelatedSheet
+
 /**
  * State object for PlayerScreen to reduce parameter count.
  */
@@ -135,6 +137,8 @@ data class PlayerScreenState(
     val playerState: PlayerState,
     val lyrics: Lyrics? = null,
     val isFetchingLyrics: Boolean = false,
+    val relatedSongs: List<com.suvojeet.suvmusic.core.model.Song> = emptyList(),
+    val isFetchingRelated: Boolean = false,
     val comments: List<com.suvojeet.suvmusic.data.model.Comment>? = null,
     val isFetchingComments: Boolean = false,
     val isLoggedIn: Boolean = false,
@@ -178,7 +182,8 @@ data class PlayerScreenActions(
     val onLyricsProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
     val onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
     val onClearQueue: () -> Unit = {},
-    val onListenTogetherClick: () -> Unit = {}
+    val onListenTogetherClick: () -> Unit = {},
+    val onPlayRelated: (com.suvojeet.suvmusic.core.model.Song) -> Unit = {}
 )
 
 
@@ -363,19 +368,18 @@ fun PlayerScreen(
     val showEqualizerSheet = activeOverlay is PlayerOverlay.Equalizer
 
     val coroutineScope = rememberCoroutineScope()
-    BackHandler { 
+    BackHandler {
         val overlay = activeOverlay
         if (overlay != PlayerOverlay.None) {
-            if (overlay is PlayerOverlay.Actions && overlay.fromQueue) {
-                activeOverlay = PlayerOverlay.Queue
-            } else {
-                activeOverlay = PlayerOverlay.None 
+            when {
+                overlay is PlayerOverlay.Actions && overlay.fromQueue -> activeOverlay = PlayerOverlay.Queue
+                overlay is PlayerOverlay.Actions && overlay.fromRelated -> activeOverlay = PlayerOverlay.Related
+                else -> activeOverlay = PlayerOverlay.None
             }
         } else {
-            actions.onBack() 
+            actions.onBack()
         }
     }
-
     var pendingSeekPosition by remember { mutableStateOf<Long?>(null) }
     var seekDebounceJob by remember { mutableStateOf<Job?>(null) }
 
@@ -420,6 +424,7 @@ fun PlayerScreen(
                                 onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
                                 onShowQueue = { activeOverlay = PlayerOverlay.Queue },
                                 onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowRelated = { activeOverlay = PlayerOverlay.Related },
                                 onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
                                 onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
                                 onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
@@ -446,6 +451,7 @@ fun PlayerScreen(
                                 onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
                                 onShowQueue = { activeOverlay = PlayerOverlay.Queue },
                                 onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowRelated = { activeOverlay = PlayerOverlay.Related },
                                 onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
                                 onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
                                 onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
@@ -561,19 +567,41 @@ fun BoxScope.OverlaysContent(
         )
     }
 
+    // Related View
+    AnimatedVisibility(
+        visible = activeOverlay is PlayerOverlay.Related || (activeOverlay is PlayerOverlay.Actions && activeOverlay.fromRelated),
+        enter = slideInVertically { it },
+        exit = slideOutVertically { it }
+    ) {
+        RelatedSheet(
+            isVisible = true,
+            relatedSongs = state.relatedSongs,
+            isLoading = state.isFetchingRelated,
+            onSongClick = {
+                actions.onPlayRelated(it)
+                onOverlayChange(PlayerOverlay.None)
+            },
+            onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromRelated = true)) },
+            onClose = { if (currentOverlay is PlayerOverlay.Related) onOverlayChange(PlayerOverlay.None) },
+            dominantColors = dominantColors
+        )
+    }
+
     // Other Sheets
     val menuSong = (activeOverlay as? PlayerOverlay.Actions)?.targetSong ?: song
     if (menuSong != null) {
         SongActionsSheet(
-            song = menuSong, isVisible = activeOverlay is PlayerOverlay.Actions, 
-            onDismiss = { 
+            song = menuSong, isVisible = activeOverlay is PlayerOverlay.Actions,
+            onDismiss = {
                 val overlay = currentOverlay
                 if (overlay is PlayerOverlay.Actions) {
-                    if (overlay.fromQueue) onOverlayChange(PlayerOverlay.Queue)
-                    else onOverlayChange(PlayerOverlay.None)
+                    when {
+                        overlay.fromQueue -> onOverlayChange(PlayerOverlay.Queue)
+                        overlay.fromRelated -> onOverlayChange(PlayerOverlay.Related)
+                        else -> onOverlayChange(PlayerOverlay.None)
+                    }
                 }
-            }, 
-            dominantColors = dominantColors,
+            },            dominantColors = dominantColors,
             isDownloaded = playerViewModel.isDownloaded(menuSong.id), onToggleFavorite = { if (menuSong.id == song?.id) actions.onToggleLike() else playerViewModel.likeSong(menuSong) },
             onToggleDislike = { if (menuSong.id == song?.id) actions.onToggleDislike() else playerViewModel.dislikeCurrentSong() },
             isFavorite = if (menuSong.id == song?.id) playerState.isLiked else false, isDisliked = if (menuSong.id == song?.id) playerState.isDisliked else false,
