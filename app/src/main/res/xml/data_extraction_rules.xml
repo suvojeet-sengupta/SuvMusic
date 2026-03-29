@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Include all data by default (databases, shared_prefs, files) -->
-        <include domain="root" path="."/>
+        <!-- Explicitly include domains so Lint can validate exclusions -->
+        <include domain="file" path="."/>
+        <include domain="database" path="."/>
+        <include domain="sharedpref" path="."/>
         
-        <!-- Exclude non-essential/large items from cloud backup -->
-        <!-- System automatically excludes context.getCacheDir(), so we don't need to specify it -->
+        <!-- Exclude large/ephemeral thumbnails from cloud backup -->
         <exclude domain="file" path="thumbnails"/>
     </cloud-backup>
     <device-transfer>
-        <!-- For device-to-device transfer, include everything for a complete migration -->
+        <!-- Device-to-device transfer can include everything -->
         <include domain="root" path="."/>
     </device-transfer>
 </data-extraction-rules>
