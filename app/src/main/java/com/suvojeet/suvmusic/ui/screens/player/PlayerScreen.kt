@@ -556,6 +556,7 @@ fun PortraitPlayerContent(
             isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
             onVideoToggle = actions.onToggleVideoMode,
             onMoreClick = onShowActions,
+            onCastClick = onShowDevices,
             audioArEnabled = audioArEnabled,
             onRecenter = onRecenterAr
         )
@@ -957,6 +958,7 @@ fun LandscapePlayerContent(
                 isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                 onVideoToggle = onToggleVideoMode,
                 onMoreClick = onShowActions,
+                onCastClick = onShowDevices,
                 audioArEnabled = audioArEnabled,
                 onRecenter = onRecenterAr
             )
