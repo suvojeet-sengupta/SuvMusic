@@ -2,7 +2,7 @@ name: Debug Build
 
 on:
   push:
-    branches-ignore: [ "main" ] # Runs on all branches EXCEPT main (which build.yml handles)
+    branches-ignore: [ "main", "dev" ] # Runs on all branches EXCEPT main and dev
   pull_request:
     branches: [ "main" ]
   workflow_dispatch: # Allows manual trigger
