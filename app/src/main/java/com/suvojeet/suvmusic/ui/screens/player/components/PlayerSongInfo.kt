@@ -73,7 +73,8 @@ fun SongInfoSection(
     isLoading: Boolean = false,
     compact: Boolean = false,
     sleepTimerRemainingMs: Long? = null,
-    sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF
+    sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
+    showMoreButton: Boolean = true
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
 
@@ -308,18 +309,20 @@ fun SongInfoSection(
                 }
             }
 
-            IconButton(
-                onClick = onMoreClick,
-                modifier = Modifier
-                    .size(42.dp)
-                    .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "More options",
-                    tint = dominantColors.onBackground.copy(alpha = 0.9f),
-                    modifier = Modifier.size(20.dp)
-                )
+            if (showMoreButton) {
+                IconButton(
+                    onClick = onMoreClick,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options",
+                        tint = dominantColors.onBackground.copy(alpha = 0.9f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
