@@ -1277,13 +1277,22 @@ class MusicPlayer @Inject constructor(
                 mediaController?.let { controller ->
                     val currentPos = controller.currentPosition.coerceAtLeast(0L)
                     val duration = controller.duration.coerceAtLeast(0L)
+                    val bufferedPercentage = controller.bufferedPercentage
                     
-                    _playerState.update { 
-                        it.copy(
-                            currentPosition = currentPos,
-                            duration = duration,
-                            bufferedPercentage = controller.bufferedPercentage
-                        )
+                    val currentState = _playerState.value
+                    // Only update if significant change (position > 500ms diff or meta change)
+                    val shouldUpdate = kotlin.math.abs(currentState.currentPosition - currentPos) > 500 ||
+                                     currentState.duration != duration ||
+                                     currentState.bufferedPercentage != bufferedPercentage
+                    
+                    if (shouldUpdate) {
+                        _playerState.update { 
+                            it.copy(
+                                currentPosition = currentPos,
+                                duration = duration,
+                                bufferedPercentage = bufferedPercentage
+                            )
+                        }
                     }
                     
                     // Save playback state every ~5 seconds (25 iterations * 200ms = 5s)
