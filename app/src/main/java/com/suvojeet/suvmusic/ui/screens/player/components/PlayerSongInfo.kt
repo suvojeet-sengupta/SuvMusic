@@ -377,7 +377,6 @@ fun SongInfoSection(
         }
     }
 }
-}
 
 @Composable
 fun TimeLabelsWithQuality(
