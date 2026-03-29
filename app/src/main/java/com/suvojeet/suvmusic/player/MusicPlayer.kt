@@ -67,7 +67,8 @@ class MusicPlayer @Inject constructor(
     private val musicHapticsManager: MusicHapticsManager,
     private val ttsManager: TTSManager,
     private val spatialAudioProcessor: SpatialAudioProcessor,
-    private val nativeSpatialAudio: NativeSpatialAudio
+    private val nativeSpatialAudio: NativeSpatialAudio,
+    private val streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
 ) {
     
     // ... (existing properties)
@@ -1270,6 +1271,7 @@ class MusicPlayer @Inject constructor(
     private var saveCounter = 0
     private var bufferingStartWallTime = 0L
     private val MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE = 3000L // 3 seconds
+    private var hasTriedLowQualityForCurrent = false
     
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
@@ -1285,8 +1287,22 @@ class MusicPlayer @Inject constructor(
                     if (playbackState == Player.STATE_BUFFERING) {
                         if (bufferingStartWallTime == 0L) bufferingStartWallTime = System.currentTimeMillis()
                         val bufferingDuration = System.currentTimeMillis() - bufferingStartWallTime
-                        if (bufferingDuration > MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE) {
-                             // Inform user or trigger auto-downscale logic
+                        if (bufferingDuration > MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE && !hasTriedLowQualityForCurrent) {
+                            val currentQuality = sessionManager.getAudioQuality()
+                            if (currentQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
+                                // Downscale: Clear cache and re-trigger play with forceLow
+                                _playerState.value.currentSong?.let { song ->
+                                    android.util.Log.i("MusicPlayer", "Buffering too long in AUTO mode. Downscaling to LOW quality for ${song.title}")
+                                    streamingService.clearCacheFor(song.id)
+                                    hasTriedLowQualityForCurrent = true
+                                    bufferingStartWallTime = 0L
+                                    
+                                    // Re-play current song to force resolution with new quality
+                                    scope.launch {
+                                        playSong(song, _playerState.value.queue, _playerState.value.currentIndex, forceLow = true)
+                                    }
+                                }
+                            }
                         }
                     } else {
                         bufferingStartWallTime = 0L
@@ -1555,10 +1571,15 @@ class MusicPlayer @Inject constructor(
     
     private var playJob: Job? = null
 
-    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true) {
+    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true, forceLow: Boolean = false) {
         // Cancel any pending play request
         playJob?.cancel()
         currentResolutionJob?.cancel()
+        
+        // Reset downscale tracking for new song (unless we ARE downscaling)
+        if (!forceLow) {
+            hasTriedLowQualityForCurrent = false
+        }
         
         // IMMEDIATELY pause current playback for instant response
         mediaController?.pause()
@@ -1582,7 +1603,7 @@ class MusicPlayer @Inject constructor(
             try {
                 _playerState.update { it.copy(isLoading = true) }
                 
-                val mediaItems = queue.mapIndexed { index, s -> createMediaItem(s, index == startIndex) }
+                val mediaItems = queue.mapIndexed { index, s -> createMediaItem(s, index == startIndex, forceLow = (index == startIndex && forceLow)) }
                 mediaController?.let { controller ->
                     controller.setMediaItems(mediaItems, startIndex, 0L)
                     controller.prepare()
@@ -1600,7 +1621,7 @@ class MusicPlayer @Inject constructor(
         }
     }
     
-    private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true): MediaItem {
+    private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true, forceLow: Boolean = false): MediaItem {
         var audioStreamUrl: String? = null
         
         val uri = when (song.source) {
@@ -1628,7 +1649,7 @@ class MusicPlayer @Inject constructor(
                         val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
                             resolvedVideoIds.put(song.id, it) 
                         }
-                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality, forceLow = forceLow)
                         if (videoResult != null) {
                             audioStreamUrl = videoResult.audioUrl
                             videoResult.videoUrl
@@ -1637,10 +1658,10 @@ class MusicPlayer @Inject constructor(
                         }
                     } else {
                         // Retry once if first attempt fails
-                        youTubeRepository.getStreamUrl(song.id)
+                        youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
                             ?: run {
                                 kotlinx.coroutines.delay(500)
-                                youTubeRepository.getStreamUrl(song.id)
+                                youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
                             }
                             // Bug Fix: Use placeholder URI instead of empty string
                             ?: "https://placeholder.invalid/${song.id}"
