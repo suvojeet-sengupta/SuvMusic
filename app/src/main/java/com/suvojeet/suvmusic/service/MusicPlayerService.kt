@@ -404,8 +404,7 @@ class MusicPlayerService : MediaLibraryService() {
                 }
 
                 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-                override fun onAudioSinkError(player: androidx.media3.common.Player, audioSinkError: Exception) {
-                    super.onAudioSinkError(player, audioSinkError)
+                override fun onAudioSinkError(audioSinkError: Exception) {
                     android.util.Log.e("MusicPlayerService", "AudioSink Error: ${audioSinkError.message}", audioSinkError)
                     
                     // If AudioTrack failed to initialize (common on Bluetooth switch race conditions)
