@@ -157,6 +157,8 @@ class MusicPlayerService : MediaLibraryService() {
     }
 
     private var lastCustomLayout: List<CommandButton>? = null
+    private var fadeJob: kotlinx.coroutines.Job? = null
+    private val FADE_IN_DURATION_MS = 500L
 
     private fun updateCustomLayout() {
         val newLayout = getCustomLayout()
@@ -380,18 +382,11 @@ class MusicPlayerService : MediaLibraryService() {
                     // is ready but doesn't produce sound until gain is updated.
                     if (playbackState == Player.STATE_READY) {
                         if (!audioSinkKickstartDone) {
+                            startFadeIn()
                             audioSinkKickstartDone = true
-                            serviceScope.launch {
-                                val p = mediaLibrarySession?.player ?: return@launch
-                                if (p.playWhenReady) {
-                                    val currentVol = p.volume
-                                    // Micro-toggle volume to "kickstart" the AudioSink
-                                    p.volume = if (currentVol > 0.1f) currentVol * 0.99f else currentVol + 0.01f
-                                    delay(50)
-                                    p.volume = currentVol
-                                }
-                            }
                         }
+                    } else if (playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_IDLE) {
+                         audioSinkKickstartDone = false
                     }
 
                     // Only auto-skip if this was a REAL end, not a failed placeholder
@@ -410,7 +405,34 @@ class MusicPlayerService : MediaLibraryService() {
                             p.play()
                         }
                     }
+                }
 
+                private fun startFadeIn() {
+                    fadeJob?.cancel()
+                    fadeJob = serviceScope.launch {
+                        val p = mediaLibrarySession?.player ?: return@launch
+                        val originalVolume = 1.0f
+                        var currentFadeVolume = 0.0f
+                        
+                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            p.volume = 0.0f
+                        }
+                        
+                        val steps = 10
+                        val stepDelay = FADE_IN_DURATION_MS / steps
+                        val volumeStep = originalVolume / steps
+                        
+                        for (i in 1..steps) {
+                            delay(stepDelay)
+                            currentFadeVolume += volumeStep
+                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                p.volume = currentFadeVolume.coerceAtMost(originalVolume)
+                            }
+                        }
+                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            p.volume = originalVolume
+                        }
+                    }
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
