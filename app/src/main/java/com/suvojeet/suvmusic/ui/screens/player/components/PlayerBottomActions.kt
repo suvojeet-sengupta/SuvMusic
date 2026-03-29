@@ -30,12 +30,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
 @Composable
@@ -51,100 +54,54 @@ fun BottomActions(
     onVideoToggle: () -> Unit = {},
     compact: Boolean = false
 ) {
-    val iconSize = if (compact) 20.dp else 22.dp
-    val containerPadding = if (compact) 4.dp else 6.dp
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.Center,
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ButtonGroup(
-            modifier = Modifier
-                .clip(RoundedCornerShape(28.dp))
-                .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                .padding(horizontal = containerPadding, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
-        ) {
-            // Lyrics button
-            IconButton(
-                onClick = onLyricsClick,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lyrics,
-                    contentDescription = "Lyrics",
-                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                    modifier = Modifier.size(iconSize)
-                )
-            }
+        BottomTabButton(
+            label = "UP NEXT",
+            onClick = onQueueClick,
+            dominantColors = dominantColors
+        )
 
-            // Download Button
-            IconButton(
-                onClick = onDownloadClick,
-                modifier = Modifier.weight(1f)
-            ) {
-                when(downloadState) {
-                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADING -> {
-                        LoadingIndicator(
-                            modifier = Modifier.size(iconSize),
-                            color = dominantColors.accent
-                        )
-                    }
-                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED -> {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Downloaded",
-                            tint = dominantColors.accent,
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                    com.suvojeet.suvmusic.data.model.DownloadState.FAILED -> {
-                        Icon(
-                            imageVector = Icons.Filled.Error,
-                            contentDescription = "Retry Download",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                    else -> {
-                        Icon(
-                            imageVector = Icons.Filled.Download,
-                            contentDescription = "Download",
-                            tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                }
-            }
+        BottomTabButton(
+            label = "LYRICS",
+            onClick = onLyricsClick,
+            dominantColors = dominantColors
+        )
 
-            // Cast button
-            IconButton(
-                onClick = onCastClick,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Devices,
-                    contentDescription = "Output Device",
-                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                    modifier = Modifier.size(iconSize)
-                )
-            }
+        BottomTabButton(
+            label = "RELATED",
+            onClick = { /* Not implemented yet */ },
+            dominantColors = dominantColors,
+            enabled = false
+        )
+    }
+}
 
-            // Queue button
-            IconButton(
-                onClick = onQueueClick,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                    contentDescription = "Queue",
-                    tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                    modifier = Modifier.size(iconSize)
-                )
-            }
-        }
+@Composable
+private fun BottomTabButton(
+    label: String,
+    onClick: () -> Unit,
+    dominantColors: DominantColors,
+    enabled: Boolean = true
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (enabled) dominantColors.onBackground.copy(alpha = 0.8f) else dominantColors.onBackground.copy(alpha = 0.3f),
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
     }
 }
