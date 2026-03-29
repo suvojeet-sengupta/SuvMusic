@@ -256,8 +256,15 @@ class MusicPlayer @Inject constructor(
         val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         
         // System state for auto-selection
-        val isBluetoothActive = audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn
-        val isWiredHeadsetConnected = audioManager.isWiredHeadsetOn
+        val isBluetoothActive = audioDevices.any { 
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO 
+        }
+        val isWiredHeadsetConnected = audioDevices.any { 
+            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || 
+            it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+            it.type == AudioDeviceInfo.TYPE_USB_HEADSET
+        }
         val autoSelectPhone = !isBluetoothActive && !isWiredHeadsetConnected
 
         // 1. Add Phone Speaker as the primary internal output
