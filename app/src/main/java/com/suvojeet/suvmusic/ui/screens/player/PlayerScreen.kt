@@ -139,6 +139,7 @@ data class PlayerScreenState(
     val isFetchingLyrics: Boolean = false,
     val relatedSongs: List<com.suvojeet.suvmusic.core.model.Song> = emptyList(),
     val isFetchingRelated: Boolean = false,
+    val selectedRelatedIndices: Set<Int> = emptySet(),
     val comments: List<com.suvojeet.suvmusic.data.model.Comment>? = null,
     val isFetchingComments: Boolean = false,
     val isLoggedIn: Boolean = false,
@@ -183,7 +184,12 @@ data class PlayerScreenActions(
     val onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
     val onClearQueue: () -> Unit = {},
     val onListenTogetherClick: () -> Unit = {},
-    val onPlayRelated: (com.suvojeet.suvmusic.core.model.Song) -> Unit = {}
+    val onPlayRelated: (com.suvojeet.suvmusic.core.model.Song) -> Unit = {},
+    val onToggleRelatedSelection: (Int) -> Unit = {},
+    val onSelectAllRelated: () -> Unit = {},
+    val onClearRelatedSelection: () -> Unit = {},
+    val onAddRelatedToQueue: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {},
+    val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {}
 )
 
 
@@ -577,6 +583,24 @@ fun BoxScope.OverlaysContent(
             isVisible = true,
             relatedSongs = state.relatedSongs,
             isLoading = state.isFetchingRelated,
+            selectedIndices = state.selectedRelatedIndices,
+            onToggleSelection = actions.onToggleRelatedSelection,
+            onSelectAll = actions.onSelectAllRelated,
+            onClearSelection = actions.onClearRelatedSelection,
+            onAddSelectedToQueue = {
+                val selected = state.selectedRelatedIndices.mapNotNull { index ->
+                    if (index < state.relatedSongs.size) state.relatedSongs[index] else null
+                }
+                actions.onAddRelatedToQueue(selected)
+                actions.onClearRelatedSelection()
+            },
+            onAddSelectedToPlaylist = {
+                val selected = state.selectedRelatedIndices.mapNotNull { index ->
+                    if (index < state.relatedSongs.size) state.relatedSongs[index] else null
+                }
+                actions.onAddRelatedToPlaylist(selected)
+                actions.onClearRelatedSelection()
+            },
             onSongClick = {
                 actions.onPlayRelated(it)
                 onOverlayChange(PlayerOverlay.None)
