@@ -38,7 +38,7 @@ fun PlayerTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 12.dp)
+            .padding(horizontal = 2.dp, vertical = 12.dp)
     ) {
         // Left side: Back Button
         Box(
@@ -116,8 +116,7 @@ fun PlayerTopBar(
         // Right side: Cast, Audio AR and More Menu
         Row(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 2.dp),
+                .align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
