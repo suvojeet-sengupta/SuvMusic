@@ -120,30 +120,6 @@ fun BottomActions(
                 }
             }
 
-            // Video mode toggle
-            if (isYouTubeSong) {
-                IconButton(
-                    onClick = onVideoToggle,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    AnimatedContent(
-                        targetState = isVideoMode,
-                        transitionSpec = {
-                            scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn() togetherWith
-                            scaleOut() + fadeOut()
-                        },
-                        label = "videoModeToggle"
-                    ) { videoMode ->
-                        Icon(
-                            imageVector = if (videoMode) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                            contentDescription = if (videoMode) "Audio Mode" else "Video Mode",
-                            tint = if (videoMode) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                }
-            }
-
             // Cast button
             IconButton(
                 onClick = onCastClick,

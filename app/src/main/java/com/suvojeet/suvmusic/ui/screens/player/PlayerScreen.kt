@@ -549,7 +549,16 @@ fun PortraitPlayerContent(
         modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = if (isCompactHeight) 16.dp else 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
+        PlayerTopBar(
+            onBack = actions.onBack,
+            dominantColors = dominantColors,
+            isVideoMode = playerState.isVideoMode,
+            isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
+            onVideoToggle = actions.onToggleVideoMode,
+            onMoreClick = onShowActions,
+            audioArEnabled = audioArEnabled,
+            onRecenter = onRecenterAr
+        )
 
         Spacer(modifier = Modifier.weight(1f))
         
@@ -941,7 +950,16 @@ fun LandscapePlayerContent(
             }
         }
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            PlayerTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
+            PlayerTopBar(
+                onBack = actions.onBack,
+                dominantColors = dominantColors,
+                isVideoMode = isVideoMode,
+                isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
+                onVideoToggle = onToggleVideoMode,
+                onMoreClick = onShowActions,
+                audioArEnabled = audioArEnabled,
+                onRecenter = onRecenterAr
+            )
             Spacer(modifier = Modifier.height(8.dp))
             SongInfoSection(
                 song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
