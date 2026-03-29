@@ -1268,6 +1268,8 @@ class MusicPlayer @Inject constructor(
     }
     
     private var saveCounter = 0
+    private var bufferingStartWallTime = 0L
+    private val MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE = 3000L // 3 seconds
     
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
@@ -1278,7 +1280,18 @@ class MusicPlayer @Inject constructor(
                     val currentPos = controller.currentPosition.coerceAtLeast(0L)
                     val duration = controller.duration.coerceAtLeast(0L)
                     val bufferedPercentage = controller.bufferedPercentage
+                    val playbackState = controller.playbackState
                     
+                    if (playbackState == Player.STATE_BUFFERING) {
+                        if (bufferingStartWallTime == 0L) bufferingStartWallTime = System.currentTimeMillis()
+                        val bufferingDuration = System.currentTimeMillis() - bufferingStartWallTime
+                        if (bufferingDuration > MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE) {
+                             // Inform user or trigger auto-downscale logic
+                        }
+                    } else {
+                        bufferingStartWallTime = 0L
+                    }
+
                     val currentState = _playerState.value
                     // Only update if significant change (position > 500ms diff or meta change)
                     val shouldUpdate = kotlin.math.abs(currentState.currentPosition - currentPos) > 500 ||
