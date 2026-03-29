@@ -156,6 +156,16 @@ class MusicPlayerService : MediaLibraryService() {
         }
     }
 
+    private var lastCustomLayout: List<CommandButton>? = null
+
+    private fun updateCustomLayout() {
+        val newLayout = getCustomLayout()
+        if (lastCustomLayout != newLayout) {
+            lastCustomLayout = newLayout
+            mediaLibrarySession?.setCustomLayout(newLayout)
+        }
+    }
+
     private fun updateLikedState() {
         val currentSongId = mediaLibrarySession?.player?.currentMediaItem?.mediaId ?: return
         serviceScope.launch {
@@ -164,7 +174,7 @@ class MusicPlayerService : MediaLibraryService() {
                 val likedSongs = youTubeRepository.getLikedMusic()
                 isCurrentSongLiked = likedSongs.any { it.id == currentSongId }
                 
-                mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                updateCustomLayout()
             } catch (e: Exception) {
                 android.util.Log.e("MusicPlayerService", "Failed to update liked state", e)
             }
@@ -182,10 +192,10 @@ class MusicPlayerService : MediaLibraryService() {
         
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15_000,  // minBufferMs — keep healthy buffer to prevent rebuffering
-                50_000,  // maxBufferMs — larger max for gapless + preload
-                500,     // bufferForPlaybackMs ← WAS 2500, now starts playing after 0.5s
-                1_500    // bufferForPlaybackAfterRebufferMs ← WAS 5000
+                10_000,  // minBufferMs
+                50_000,  // maxBufferMs
+                2_500,   // bufferForPlaybackMs
+                5_000    // bufferForPlaybackAfterRebufferMs
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .setBackBuffer(10_000, true) // Increase back buffer slightly for seeking back
@@ -299,7 +309,7 @@ class MusicPlayerService : MediaLibraryService() {
             addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     super.onMediaItemTransition(mediaItem, reason)
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                     mediaItem?.let { item ->
                         val videoId = item.mediaId
                         if (videoId.isNotEmpty()) {
@@ -354,7 +364,7 @@ class MusicPlayerService : MediaLibraryService() {
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     super.onIsPlayingChanged(isPlaying)
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                     audioARManager.setPlaying(isPlaying)
                     if (isPlaying) {
                         startSponsorBlockMonitoring()
@@ -364,7 +374,7 @@ class MusicPlayerService : MediaLibraryService() {
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                     
                     // Bug Fix: Some devices have a "Silent Handshake" issue where AudioTrack 
                     // is ready but doesn't produce sound until gain is updated.
@@ -484,11 +494,11 @@ class MusicPlayerService : MediaLibraryService() {
                 }
                 
                 override fun onRepeatModeChanged(repeatMode: Int) {
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                 }
 
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                 }
             })
         }
@@ -642,7 +652,7 @@ class MusicPlayerService : MediaLibraryService() {
 
             override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
                 super.onPostConnect(session, controller)
-                session.setCustomLayout(getCustomLayout())
+                updateCustomLayout()
             }
 
             override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo, customCommand: androidx.media3.session.SessionCommand, args: android.os.Bundle): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
@@ -658,7 +668,7 @@ class MusicPlayerService : MediaLibraryService() {
                                      youTubeRepository.rateSong(currentSongId, "LIKE")
                                      isCurrentSongLiked = true
                                  }
-                                 session.setCustomLayout(getCustomLayout())
+                                 updateCustomLayout()
                              }
                          }
                     }
