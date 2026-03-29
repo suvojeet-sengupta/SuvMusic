@@ -123,6 +123,10 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.ui.screens.player.FullScreenVideoPlayer
 
+import com.suvojeet.suvmusic.data.model.PlayerStyle
+import com.suvojeet.suvmusic.ui.screens.player.styles.YTMusicPlayerStyle
+import com.suvojeet.suvmusic.ui.screens.player.styles.ClassicPlayerStyle
+
 /**
  * State object for PlayerScreen to reduce parameter count.
  */
@@ -226,6 +230,7 @@ fun PlayerScreen(
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val albumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = PlayerStyle.YT_MUSIC)
     
     val pendingIntent by playerViewModel.pendingIntent.collectAsStateWithLifecycle()
     val deleteLauncher = rememberLauncherForActivityResult(
@@ -403,65 +408,62 @@ fun PlayerScreen(
 
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val useWideLayout = maxWidth > 500.dp
+                val isCompactHeight = maxHeight < 600.dp
+
                 AnimatedVisibility(visible = !showQueue, enter = fadeIn(), exit = fadeOut()) {
-                    if (useWideLayout) {
-                        LandscapePlayerContent(
-                            song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
-                            currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
-                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
-                            actions = actions,
-                            onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
-                            onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
-                            onShowQueue = { activeOverlay = PlayerOverlay.Queue },
-                            onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
-                            onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
-                            onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
-                            onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
-                            onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                            isVideoMode = playerState.isVideoMode,
-                            onToggleVideoMode = actions.onToggleVideoMode,
-                            handleDoubleTapSeek = handleDoubleTapSeek,
-                            onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
-                            onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                            onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                            player = player,
-                            isFullScreen = isFullScreen,
-                            onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                            isSwitchingMode = isSwitchingMode,
-                            sleepTimerOption = state.sleepTimerOption,
-                            sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                            currentProgress = currentProgress,
-                            currentPosition = currentPosition,
-                            currentDuration = currentDuration
-                        )
-                    } else {
-                        val isCompactHeight = maxHeight < 600.dp
-                        PortraitPlayerContent(
-                            song = song, playerState = playerState, playbackInfo = playbackInfo, dominantColors = dominantColors,
-                            currentArtworkShape = currentArtworkShape, currentArtworkSize = currentArtworkSize, currentSeekbarStyle = currentSeekbarStyle,
-                            sponsorSegments = sponsorSegments, audioArEnabled = audioArEnabled, isRotatingEnabled = rotatingVinylAnimationEnabled,
-                            player = player, isFullScreen = isFullScreen,
-                            isCompactHeight = isCompactHeight, actions = actions,
-                            onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
-                            onShowQueue = { activeOverlay = PlayerOverlay.Queue },
-                            onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
-                            onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
-                            onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
-                            onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
-                            onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
-                            onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                            handleDoubleTapSeek = handleDoubleTapSeek,
-                            onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
-                            onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                            onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                            onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                            isSwitchingMode = isSwitchingMode,
-                            sleepTimerOption = state.sleepTimerOption,
-                            sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                            currentProgress = currentProgress,
-                            currentPosition = currentPosition,
-                            currentDuration = currentDuration
-                        )
+                    when (playerStyle) {
+                        PlayerStyle.YT_MUSIC -> {
+                            YTMusicPlayerStyle(
+                                song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
+                                currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
+                                player, isFullScreen, isCompactHeight, useWideLayout, actions,
+                                onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
+                                onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                handleDoubleTapSeek = handleDoubleTapSeek,
+                                onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                isSwitchingMode = isSwitchingMode,
+                                sleepTimerOption = state.sleepTimerOption,
+                                sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                                currentProgress = currentProgress,
+                                currentPosition = currentPosition,
+                                currentDuration = currentDuration
+                            )
+                        }
+                        PlayerStyle.CLASSIC -> {
+                            ClassicPlayerStyle(
+                                song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
+                                currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
+                                player, isFullScreen, isCompactHeight, useWideLayout, actions,
+                                onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
+                                onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                handleDoubleTapSeek = handleDoubleTapSeek,
+                                onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                isSwitchingMode = isSwitchingMode,
+                                sleepTimerOption = state.sleepTimerOption,
+                                sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                                currentProgress = currentProgress,
+                                currentPosition = currentPosition,
+                                currentDuration = currentDuration
+                            )
+                        }
                     }
                 }
 
@@ -496,519 +498,6 @@ fun PiPPlayerContent(song: com.suvojeet.suvmusic.core.model.Song?, isVideoMode: 
                 Text(text = song?.title ?: "Unknown", style = MaterialTheme.typography.titleSmall, color = Color.White, maxLines = 1)
                 Text(text = song?.artist ?: "Unknown Artist", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f), maxLines = 1)
             }
-        }
-    }
-}
-
-@Composable
-fun PortraitPlayerContent(
-    song: com.suvojeet.suvmusic.core.model.Song?,
-    playerState: PlayerState,
-    playbackInfo: PlayerState,
-    dominantColors: DominantColors,
-    currentArtworkShape: ArtworkShape,
-    currentArtworkSize: ArtworkSize,
-    currentSeekbarStyle: SeekbarStyle,
-    sponsorSegments: List<SponsorSegment>,
-    audioArEnabled: Boolean,
-    isRotatingEnabled: Boolean,
-    player: Player?,
-    isFullScreen: Boolean,
-    isCompactHeight: Boolean,
-    actions: PlayerScreenActions,
-    onShowActions: () -> Unit,
-    onShowQueue: () -> Unit,
-    onShowLyrics: () -> Unit,
-    onShowDevices: () -> Unit,
-    onShowSleepTimer: () -> Unit,
-    onShowPlaybackSpeed: () -> Unit,
-    onShowEqualizer: () -> Unit,
-    onShowListenTogether: () -> Unit,
-    handleDoubleTapSeek: (Boolean) -> Unit,
-    onShapeChange: (ArtworkShape) -> Unit,
-    onSeekbarStyleChange: (SeekbarStyle) -> Unit,
-    onRecenterAr: () -> Unit,
-    onSetFullScreen: (Boolean) -> Unit,
-    isSwitchingMode: Boolean = false,
-    sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
-    sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L
-) {
-    val combinedLoading = playerState.isLoading || isSwitchingMode
-
-    // Controls dimming when loading
-    val controlsAlpha by animateFloatAsState(
-        targetValue = if (combinedLoading) 0.45f else 1f,
-        animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
-        label = "controlsDimOnLoad"
-    )
-
-    Column(
-        modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = if (isCompactHeight) 16.dp else 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        PlayerTopBar(
-            onBack = actions.onBack,
-            dominantColors = dominantColors,
-            isVideoMode = playerState.isVideoMode,
-            isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-            onVideoToggle = actions.onToggleVideoMode,
-            onMoreClick = onShowActions,
-            onCastClick = onShowDevices,
-            audioArEnabled = audioArEnabled,
-            onRecenter = onRecenterAr
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-        
-        // Show Video or Artwork in the same center space
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            AnimatedContent(
-                targetState = playerState.isVideoMode && player != null && !isFullScreen,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(500)) togetherWith
-                    fadeOut(animationSpec = tween(500))
-                },
-                label = "video_artwork_transition"
-            ) { isVideo ->
-                if (isVideo) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxWidth(ArtworkSize.LARGE.fraction)
-                            .aspectRatio(1f)
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth(currentArtworkSize.fraction / ArtworkSize.LARGE.fraction)
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.Black)
-                                .clickable { onSetFullScreen(true) },
-                            tonalElevation = 16.dp,
-                            shadowElevation = 16.dp
-                        ) {
-                            AndroidView(
-                                factory = { context ->
-                                    PlayerView(context).apply {
-                                        this.player = player
-                                        useController = false
-                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                        setBackgroundColor(android.graphics.Color.BLACK)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                            
-                            // Small expand icon overlay
-                            Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
-                                Icon(
-                                    imageVector = Icons.Filled.Fullscreen,
-                                    contentDescription = "Full Screen",
-                                    tint = Color.White.copy(alpha = 0.8f),
-                                    modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
-                                )
-                            }
-
-                            // M3E Expressive loading overlay for video buffering
-                            com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay(
-                                isLoading = combinedLoading,
-                                dominantColors = dominantColors,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                } else {
-                    Box(contentAlignment = Alignment.Center) {
-                        AlbumArtwork(
-                            imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
-                            isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
-                            onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
-                            onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
-                        )
-                        
-                        // Improvement: Visual Error Overlay
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = playerState.error != null,
-                            enter = fadeIn() + scaleIn(),
-                            exit = fadeOut() + scaleOut()
-                        ) {
-                            val context = LocalContext.current
-                            val errorText = playerState.error ?: ""
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth(currentArtworkSize.fraction * 0.85f)
-                                    .padding(16.dp),
-                                shape = RoundedCornerShape(24.dp),
-                                color = Color.Black.copy(alpha = 0.75f),
-                                contentColor = Color.White,
-                                tonalElevation = 8.dp
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(20.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.Default.ErrorOutline,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(40.dp),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                    
-                                    Text(
-                                        text = "Playback Error",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                    )
-                                    
-                                    Text(
-                                        text = errorText,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 3,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                    )
-                                    
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        androidx.compose.material3.OutlinedButton(
-                                            onClick = {
-                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clip = ClipData.newPlainText("SuvMusic Error", errorText)
-                                                clipboardManager.setPrimaryClip(clip)
-                                                Toast.makeText(context, "Error copied to clipboard", Toast.LENGTH_SHORT).show()
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(12.dp),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
-                                        ) {
-                                            Text("Copy", color = Color.White)
-                                        }
-                                        
-                                        androidx.compose.material3.Button(
-                                            onClick = { 
-                                                // Trigger a manual re-play of the current song to retry resolution
-                                                if (song != null) actions.onPlayPause() 
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                                containerColor = dominantColors.accent
-                                            )
-                                        ) {
-                                            Text("Retry")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.weight(1f))
-
-        SongInfoSection(
-            song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
-            onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
-            dominantColors = dominantColors, isLoading = combinedLoading, compact = isCompactHeight,
-            sleepTimerRemainingMs = sleepTimerRemainingMs,
-            sleepTimerOption = sleepTimerOption
-        )
-
-        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (combinedLoading) {
-                M3ESeekbarShimmer(
-                    isVisible = true,
-                    dominantColors = dominantColors,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else {
-                WaveformSeeker(
-                    progressProvider = { currentProgress },
-                    isPlaying = playbackInfo.isPlaying,
-                    onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
-                    modifier = Modifier.fillMaxWidth(),
-                    activeColor = dominantColors.accent,
-                    inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                    initialStyle = currentSeekbarStyle,
-                    onStyleChange = onSeekbarStyleChange,
-                    duration = currentDuration,
-                    sponsorSegments = sponsorSegments
-                )
-            }
-        }
-
-        TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
-
-        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
-
-        Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
-            PlaybackControls(
-                isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
-                onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle,
-                onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors, compact = isCompactHeight
-            )
-        }
-
-        Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 16.dp))
-
-        BottomActions(
-            onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onDownloadClick = actions.onDownload,
-            downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-            isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode, compact = isCompactHeight
-        )
-        Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
-    }
-}
-
-@Composable
-fun LandscapePlayerContent(
-    song: com.suvojeet.suvmusic.core.model.Song?, playerState: PlayerState, playbackInfo: PlayerState, dominantColors: DominantColors,
-    currentArtworkShape: ArtworkShape, currentArtworkSize: ArtworkSize, currentSeekbarStyle: SeekbarStyle, sponsorSegments: List<SponsorSegment>,
-    audioArEnabled: Boolean, isRotatingEnabled: Boolean, actions: PlayerScreenActions, onShowActions: () -> Unit, onShowLyrics: () -> Unit, onShowQueue: () -> Unit,
-    onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit,
-    isVideoMode: Boolean, onToggleVideoMode: () -> Unit, handleDoubleTapSeek: (Boolean) -> Unit, onShapeChange: (ArtworkShape) -> Unit,
-    onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
-    player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit,
-    isSwitchingMode: Boolean = false,
-    sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
-    sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L
-) {
-    val combinedLoading = playerState.isLoading || isSwitchingMode
-
-    // Controls dimming when loading
-    val controlsAlpha by animateFloatAsState(
-        targetValue = if (combinedLoading) 0.45f else 1f,
-        animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
-        label = "controlsDimOnLoadLandscape"
-    )
-
-    Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.weight(0.45f).fillMaxHeight().padding(end = 16.dp), contentAlignment = Alignment.Center) {
-            AnimatedContent(
-                targetState = isVideoMode && player != null && !isFullScreen,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(500)) togetherWith
-                    fadeOut(animationSpec = tween(500))
-                },
-                label = "video_artwork_transition_landscape"
-            ) { isVideo ->
-                if (isVideo) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxHeight(ArtworkSize.LARGE.fraction).aspectRatio(1f)
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxHeight(currentArtworkSize.fraction / ArtworkSize.LARGE.fraction)
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.Black)
-                                .clickable { onSetFullScreen(true) },
-                            tonalElevation = 16.dp,
-                            shadowElevation = 16.dp
-                        ) {
-                            AndroidView(
-                                factory = { context ->
-                                    PlayerView(context).apply {
-                                        this.player = player
-                                        useController = false
-                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                        setBackgroundColor(android.graphics.Color.BLACK)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                            
-                            Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
-                                Icon(
-                                    imageVector = Icons.Filled.Fullscreen,
-                                    contentDescription = "Full Screen",
-                                    tint = Color.White.copy(alpha = 0.8f),
-                                    modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(4.dp)
-                                )
-                            }
-
-                            // M3E Expressive loading overlay for video buffering
-                            com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay(
-                                isLoading = combinedLoading,
-                                dominantColors = dominantColors,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                } else {
-                    Box(contentAlignment = Alignment.Center) {
-                        AlbumArtwork(
-                            imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
-                            isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
-                            onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
-                            onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
-                        )
-                        
-                        // Improvement: Visual Error Overlay
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = playerState.error != null,
-                            enter = fadeIn() + scaleIn(),
-                            exit = fadeOut() + scaleOut()
-                        ) {
-                            val context = LocalContext.current
-                            val errorText = playerState.error ?: ""
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth(currentArtworkSize.fraction * 0.85f)
-                                    .padding(16.dp),
-                                shape = RoundedCornerShape(24.dp),
-                                color = Color.Black.copy(alpha = 0.75f),
-                                contentColor = Color.White,
-                                tonalElevation = 8.dp
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(20.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.Default.ErrorOutline,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(40.dp),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                    
-                                    Text(
-                                        text = "Playback Error",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                    )
-                                    
-                                    Text(
-                                        text = errorText,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 3,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                    )
-                                    
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        androidx.compose.material3.OutlinedButton(
-                                            onClick = {
-                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clip = ClipData.newPlainText("SuvMusic Error", errorText)
-                                                clipboardManager.setPrimaryClip(clip)
-                                                Toast.makeText(context, "Error copied to clipboard", Toast.LENGTH_SHORT).show()
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(12.dp),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
-                                        ) {
-                                            Text("Copy", color = Color.White)
-                                        }
-                                        
-                                        androidx.compose.material3.Button(
-                                            onClick = { 
-                                                // Trigger a manual re-play of the current song to retry resolution
-                                                if (song != null) actions.onPlayPause() 
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                                containerColor = dominantColors.accent
-                                            )
-                                        ) {
-                                            Text("Retry")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            PlayerTopBar(
-                onBack = actions.onBack,
-                dominantColors = dominantColors,
-                isVideoMode = isVideoMode,
-                isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-                onVideoToggle = onToggleVideoMode,
-                onMoreClick = onShowActions,
-                onCastClick = onShowDevices,
-                audioArEnabled = audioArEnabled,
-                onRecenter = onRecenterAr
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            SongInfoSection(
-                song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
-                onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
-                dominantColors = dominantColors, isLoading = combinedLoading,
-                sleepTimerRemainingMs = sleepTimerRemainingMs,
-                sleepTimerOption = sleepTimerOption
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (combinedLoading) {
-                    M3ESeekbarShimmer(
-                        isVisible = true,
-                        dominantColors = dominantColors,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    WaveformSeeker(
-                        progressProvider = { currentProgress },
-                        isPlaying = playbackInfo.isPlaying,
-                        onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
-                        modifier = Modifier.fillMaxWidth(),
-                        activeColor = dominantColors.accent,
-                        inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                        initialStyle = currentSeekbarStyle,
-                        onStyleChange = onSeekbarStyleChange,
-                        duration = currentDuration,
-                        sponsorSegments = sponsorSegments
-                    )
-                }
-            }
-            
-            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
-                PlaybackControls(isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors)
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            BottomActions(onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onDownloadClick = actions.onDownload, downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE, isVideoMode = isVideoMode, onVideoToggle = onToggleVideoMode)
         }
     }
 }
