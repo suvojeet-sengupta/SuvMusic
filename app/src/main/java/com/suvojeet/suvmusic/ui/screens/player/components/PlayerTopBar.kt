@@ -30,6 +30,7 @@ fun PlayerTopBar(
     isYouTubeSong: Boolean = false,
     onVideoToggle: () -> Unit = {},
     onMoreClick: () -> Unit = {},
+    onCastClick: () -> Unit = {},
     audioArEnabled: Boolean = false,
     onRecenter: () -> Unit = {}
 ) {
@@ -107,8 +108,26 @@ fun PlayerTopBar(
             )
         }
 
-        // Right side: Audio AR and More Menu
+        // Right side: Cast, Audio AR and More Menu
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(SquircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                    .clickable(onClick = onCastClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Devices,
+                    contentDescription = "Cast",
+                    tint = dominantColors.onBackground,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(8.dp))
+
             if (audioArEnabled) {
                 Box(
                     modifier = Modifier
