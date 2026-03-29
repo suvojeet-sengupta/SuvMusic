@@ -5,51 +5,16 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddToQueue
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Comment
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Nightlight
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
-import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Radio
-import androidx.compose.material.icons.filled.RingVolume
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarOutline
-import androidx.compose.material.icons.filled.ThumbDown
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.outlined.ThumbDown
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,13 +23,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 
 /**
- * Song actions bottom sheet with options like Pin, Download, Add to Playlist, etc.
+ * Premium Song actions bottom sheet with modern layout.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,12 +70,10 @@ fun SongActionsSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     
-    // Determine colors
-    val backgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
+    val backgroundColor = dominantColors?.primary?.copy(alpha = 0.98f) ?: MaterialTheme.colorScheme.surface
     val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
-    val variantColor = dominantColors?.onBackground?.copy(alpha = 0.7f) ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val accentColor = dominantColors?.accent ?: MaterialTheme.colorScheme.primary
     
-    // Share function
     val shareSong = androidx.compose.runtime.remember(song) {
         {
             val shareText = buildString {
@@ -117,39 +83,30 @@ fun SongActionsSheet(
                     append("💿 ${song.album}\n")
                 }
                 append("\n")
-                
-                // Clickable link first
                 if (song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
                     val query = "${song.title} ${song.artist}".replace(" ", "+")
                     append("https://www.google.com/search?q=$query")
                 } else {
                     append("https://music.youtube.com/watch?v=${song.id}")
                 }
-                
-                // SuvMusic users note
                 append("\n\n▶️ SuvMusic users: suvmusic://play?id=${song.id}")
             }
-            
             val sendIntent = Intent().apply {
                 action = Intent.ACTION_SEND
                 putExtra(Intent.EXTRA_TEXT, shareText)
                 putExtra(Intent.EXTRA_SUBJECT, "${song.title} - ${song.artist}")
                 type = "text/plain"
             }
-            
-            val shareIntent = Intent.createChooser(sendIntent, "Share Song")
-            context.startActivity(shareIntent)
+            context.startActivity(Intent.createChooser(sendIntent, "Share Song"))
         }
     }
     
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    
     val handleAction = androidx.compose.runtime.remember(sheetState, onDismiss) {
         { action: () -> Unit ->
             scope.launch {
                 sheetState.hide()
                 onDismiss()
-                // Perform action AFTER dismissal to ensure state transitions work correctly
                 action()
             }
         }
@@ -160,8 +117,9 @@ fun SongActionsSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = backgroundColor,
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) },
-            dragHandle = { BottomSheetDefaults.DragHandle() }
+            contentWindowInsets = { WindowInsets(0) },
+            dragHandle = null,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -170,245 +128,130 @@ fun SongActionsSheet(
                     .navigationBarsPadding()
                     .padding(bottom = 32.dp)
             ) {
-                // Song header
-                Row(
+                // Centered Premium Header
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(top = 24.dp, bottom = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AsyncImage(
-                        model = song.thumbnailUrl,
-                        contentDescription = song.title,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = contentColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                    Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+                        AsyncImage(
+                            model = song.thumbnailUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(SquircleShape),
+                            contentScale = ContentScale.Crop
                         )
-                        Text(
-                            text = song.artist,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = variantColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (song.album != null) {
-                            Text(
-                                text = song.album,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = variantColor.copy(alpha = 0.7f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = song.title,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                        color = contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
 
-                // Top Horizontal Actions
+                // Grid Actions (Modern Pill style)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val cardBackground = dominantColors?.primary ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    val cardContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
-                    
-                    TopActionSheetCard(
+                    ModernActionPill(
                         icon = Icons.AutoMirrored.Filled.PlaylistPlay,
-                        label = "Play next",
-                        onClick = { 
-                            handleAction { 
-                                onPlayNext()
-                                Toast.makeText(context, "Playing next: ${song.title}", Toast.LENGTH_SHORT).show()
-                            } 
-                        },
+                        label = "Next",
+                        onClick = { handleAction { onPlayNext() } },
                         modifier = Modifier.weight(1f),
-                        backgroundColor = cardBackground,
-                        contentColor = cardContentColor
+                        containerColor = contentColor.copy(alpha = 0.05f),
+                        contentColor = contentColor
                     )
-                    
-                    TopActionSheetCard(
+                    ModernActionPill(
                         icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                         label = "Save",
                         onClick = { handleAction { onAddToPlaylist() } },
                         modifier = Modifier.weight(1f),
-                        backgroundColor = cardBackground,
-                        contentColor = cardContentColor
+                        containerColor = contentColor.copy(alpha = 0.05f),
+                        contentColor = contentColor
                     )
-                    
                     if (showShare) {
-                        TopActionSheetCard(
+                        ModernActionPill(
                             icon = Icons.Default.Share,
                             label = "Share",
                             onClick = { handleAction { shareSong() } },
                             modifier = Modifier.weight(1f),
-                            backgroundColor = cardBackground,
-                            contentColor = cardContentColor
+                            containerColor = contentColor.copy(alpha = 0.05f),
+                            contentColor = contentColor
                         )
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    color = contentColor.copy(alpha = 0.2f)
-                )
+                Spacer(modifier = Modifier.height(24.dp))
                 
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                if (isDownloaded) {
-                    ActionItem(
-                        icon = Icons.Default.Delete,
-                        title = "Delete from downloads",
-                        iconTint = contentColor,
-                        textColor = contentColor,
-                        onClick = { handleAction { onDeleteDownload() } }
+                // List of Actions with Icons and Dividers
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "PLAYBACK & QUEUE",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
+                        color = contentColor.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                     )
-                } else {
-                    ActionItem(
-                        icon = Icons.Default.Download,
-                        title = "Download",
-                        iconTint = contentColor,
-                        textColor = contentColor,
-                        onClick = { handleAction { onDownload() } }
+                    
+                    if (!isFromQueue && !isCurrentlyPlaying) {
+                        ModernActionItem(Icons.Default.AddToQueue, "Add to Queue", contentColor, { handleAction(onAddToQueue) })
+                    }
+                    ModernActionItem(Icons.Default.Radio, "Start Radio", contentColor, { handleAction(onStartRadio) })
+                    ModernActionItem(Icons.Default.Group, "Listen Together", contentColor, { handleAction(onListenTogether) })
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "OPTIONS",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
+                        color = contentColor.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                     )
-                }
-
-                if (!isFromQueue && !isCurrentlyPlaying) {
-                    ActionItem(
-                        icon = Icons.Default.AddToQueue,
-                        title = "Add to Queue",
-                        iconTint = contentColor,
-                        textColor = contentColor,
-                        onClick = { 
-                            handleAction { 
-                                onAddToQueue()
-                                Toast.makeText(context, "Added to queue: ${song.title}", Toast.LENGTH_SHORT).show()
-                            } 
-                        }
+                    
+                    ModernActionItem(
+                        if (isDownloaded) Icons.Default.FileDownloadDone else Icons.Default.FileDownload,
+                        if (isDownloaded) "Downloaded" else "Download",
+                        if (isDownloaded) accentColor else contentColor,
+                        { handleAction { if (isDownloaded) onDeleteDownload() else onDownload() } }
                     )
-                }
-                
-                ActionItem(
-                    icon = Icons.Default.Radio,
-                    title = "Start a Radio",
-                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.primary,
-                    textColor = contentColor,
-                    onClick = { handleAction { onStartRadio() } }
-                )
-
-                ActionItem(
-                    icon = Icons.Filled.Group,
-                    title = "Listen Together",
-                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
-                    textColor = contentColor,
-                    onClick = { handleAction { onListenTogether() } }
-                )
-                
-                ActionItem(
-                    icon = Icons.Default.Info,
-                    title = "View Info",
-                    iconTint = contentColor,
-                    textColor = contentColor,
-                    onClick = { handleAction { onViewInfo() } }
-                )
-                
-                ActionItem(
-                    icon = Icons.Default.Comment,
-                    title = "View Comments",
-                    iconTint = contentColor,
-                    textColor = contentColor,
-                    onClick = { handleAction { onViewComments() } }
-                )
-                
-                if (!isFromQueue) {
+                    
                     val speedLabel = if (currentSpeed == 1.0f) "" else "($currentSpeed x)"
-                    ActionItem(
-                        icon = Icons.Default.Speed,
-                        title = "Speed & Tempo $speedLabel",
-                        iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
-                        textColor = contentColor,
-                        onClick = { handleAction { onPlaybackSpeed() } }
-                    )
-
-                    ActionItem(
-                        icon = Icons.Default.Tune, // Using Tune icon for Equalizer
-                        title = "Equalizer",
-                        iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
-                        textColor = contentColor,
-                        onClick = { handleAction { onEqualizerClick() } }
-                    )
-
-                    ActionItem(
-                        icon = Icons.Default.Nightlight,
-                        title = "Sleep Timer",
-                        iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.tertiary,
-                        textColor = contentColor,
-                        onClick = { handleAction { onSleepTimer() } }
-                    )
-                }
-
-                // Dislike button removed as per request
-                
-                ActionItem(
-                    icon = Icons.Default.RingVolume,
-                    title = "Set as Ringtone",
-                    iconTint = if (dominantColors != null) dominantColors.accent else MaterialTheme.colorScheme.secondary,
-                    textColor = contentColor,
-                    onClick = { handleAction { onSetRingtone() } }
-                )
-
-                if (onMoveUp != null || onMoveDown != null || onRemoveFromQueue != null) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                        color = contentColor.copy(alpha = 0.2f)
-                    )
+                    ModernActionItem(Icons.Default.Speed, "Playback Speed $speedLabel", contentColor, { handleAction(onPlaybackSpeed) })
+                    ModernActionItem(Icons.Default.Tune, "Equalizer", contentColor, { handleAction(onEqualizerClick) })
+                    ModernActionItem(Icons.Default.Nightlight, "Sleep Timer", contentColor, { handleAction(onSleepTimer) })
+                    ModernActionItem(Icons.Default.RingVolume, "Set as Ringtone", contentColor, { handleAction(onSetRingtone) })
                     
-                    if (onMoveUp != null) {
-                        ActionItem(
-                            icon = Icons.Default.ArrowUpward,
-                            title = "Move Up in Queue",
-                            iconTint = contentColor,
-                            textColor = contentColor,
-                            onClick = { handleAction { onMoveUp() } }
-                        )
-                    }
-                    
-                    if (onMoveDown != null) {
-                        ActionItem(
-                            icon = Icons.Default.ArrowDownward,
-                            title = "Move Down in Queue",
-                            iconTint = contentColor,
-                            textColor = contentColor,
-                            onClick = { handleAction { onMoveDown() } }
-                        )
-                    }
-                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "INFO",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
+                        color = contentColor.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                    )
+                    ModernActionItem(Icons.Default.Info, "Song Details", contentColor, { handleAction(onViewInfo) })
+                    ModernActionItem(Icons.Default.Comment, "View Comments", contentColor, { handleAction(onViewComments) })
+
                     if (onRemoveFromQueue != null) {
-                        ActionItem(
-                            icon = Icons.Default.Delete,
-                            title = "Remove from Queue",
-                            iconTint = MaterialTheme.colorScheme.error,
-                            textColor = contentColor,
-                            onClick = { handleAction { onRemoveFromQueue() } }
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = contentColor.copy(alpha = 0.1f))
+                        ModernActionItem(Icons.Default.Delete, "Remove from Queue", MaterialTheme.colorScheme.error, { handleAction(onRemoveFromQueue) })
                     }
                 }
             }
@@ -417,68 +260,41 @@ fun SongActionsSheet(
 }
 
 @Composable
-private fun ActionItem(
-    icon: ImageVector,
-    title: String,
-    iconTint: Color = MaterialTheme.colorScheme.onSurface,
-    textColor: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
+private fun ModernActionPill(
+    icon: ImageVector, label: String, onClick: () -> Unit,
+    modifier: Modifier, containerColor: Color, contentColor: Color
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        shape = CircleShape,
+        color = containerColor
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, null, modifier = Modifier.size(20.dp), tint = contentColor)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = contentColor)
+        }
+    }
+}
+
+@Composable
+private fun ModernActionItem(
+    icon: ImageVector, title: String, tint: Color, onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            tint = iconTint,
-            modifier = Modifier.size(24.dp)
-        )
-        
+        Icon(icon, null, modifier = Modifier.size(24.dp), tint = tint.copy(alpha = 0.8f))
         Spacer(modifier = Modifier.width(20.dp))
-        
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = textColor
-        )
-    }
-}
-
-@Composable
-private fun TopActionSheetCard(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    backgroundColor: Color,
-    contentColor: Color
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = contentColor,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold), color = tint)
     }
 }
