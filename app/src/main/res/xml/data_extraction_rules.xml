@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Exclude large and ephemeral cache files from cloud backup -->
-        <exclude domain="external" path="Android/data/com.suvojeet.suvmusic/cache"/>
-        <exclude domain="root" path="cache"/>
-        <exclude domain="file" path="exoplayer_cache"/>
-        <exclude domain="file" path="coil_cache"/>
+        <!-- Include all data by default (databases, shared_prefs, files) -->
+        <include domain="root" path="."/>
         
-        <!-- Include essential data: Playlists, Settings, Library, and History -->
-        <include domain="database" path="SuvMusic.db"/>
-        <include domain="sharedpref" path="com.suvojeet.suvmusic_preferences.xml"/>
-        <include domain="file" path="user_data"/>
+        <!-- Exclude non-essential/large items from cloud backup -->
+        <!-- System automatically excludes context.getCacheDir(), so we don't need to specify it -->
+        <exclude domain="file" path="thumbnails"/>
     </cloud-backup>
     <device-transfer>
-        <!-- Device-to-device transfer can include everything for a seamless transition -->
+        <!-- For device-to-device transfer, include everything for a complete migration -->
         <include domain="root" path="."/>
     </device-transfer>
 </data-extraction-rules>
