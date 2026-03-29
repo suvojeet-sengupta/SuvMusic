@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.1.4.0",
+      "versionCode": 22,
+      "date": "March 29, 2026",
+      "description": "• Shuffle Integrity: Resolved a critical issue where shuffle mode would cause rapid song skipping or 'Source Errors'.\n• Audio Output Switching: Fixed playback failing to resume or becoming silent when switching between Bluetooth and speakers.\n• Visual Error Feedback: Introduced a modern error overlay on the Player screen with 'Copy Error' and 'Retry' actions.\n• Intelligent Recovery: Implemented exponential backoff for network retries and automatic search fallback for expired YouTube streams.\n• Battery & Efficiency: Optimized battery life with Dynamic Audio Offload and reduced memory usage for Android Auto thumbnails.\n• Safe Volume: Added 'Safe Volume Ducking' to prevent sudden loud volume when connecting Bluetooth devices.\n• Backup Efficiency: Optimized cloud backup rules to exclude large cache files for faster transfers.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.1.3.0",
       "versionCode": 21,
       "date": "March 25, 2026",
