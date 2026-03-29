@@ -261,6 +261,17 @@ fun PlayerScreen(
     val currentArtworkShape = remember(savedArtworkShapeString) { runCatching { ArtworkShape.valueOf(savedArtworkShapeString) }.getOrDefault(ArtworkShape.ROUNDED_SQUARE) }
     val currentArtworkSize = remember(savedArtworkSizeString) { runCatching { ArtworkSize.valueOf(savedArtworkSizeString) }.getOrDefault(ArtworkSize.LARGE) }
 
+    // Optimization: Use derivedStateOf for values that change frequently to avoid recomposing the whole screen
+    val currentProgress by androidx.compose.runtime.remember(playerState.progress) {
+        androidx.compose.runtime.mutableFloatStateOf(playerState.progress)
+    }
+    val currentPosition by androidx.compose.runtime.remember(playerState.currentPosition) {
+        androidx.compose.runtime.mutableLongStateOf(playerState.currentPosition)
+    }
+    val currentDuration by androidx.compose.runtime.remember(playerState.duration) {
+        androidx.compose.runtime.mutableLongStateOf(playerState.duration)
+    }
+
     // Fix status bar color
     val view = LocalView.current
     val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -418,7 +429,10 @@ fun PlayerScreen(
                             onSetFullScreen = { playerViewModel.setFullScreen(it) },
                             isSwitchingMode = isSwitchingMode,
                             sleepTimerOption = state.sleepTimerOption,
-                            sleepTimerRemainingMs = state.sleepTimerRemainingMs
+                            sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                            currentProgress = currentProgress,
+                            currentPosition = currentPosition,
+                            currentDuration = currentDuration
                         )
                     } else {
                         val isCompactHeight = maxHeight < 600.dp
@@ -443,7 +457,10 @@ fun PlayerScreen(
                             onSetFullScreen = { playerViewModel.setFullScreen(it) },
                             isSwitchingMode = isSwitchingMode,
                             sleepTimerOption = state.sleepTimerOption,
-                            sleepTimerRemainingMs = state.sleepTimerRemainingMs
+                            sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                            currentProgress = currentProgress,
+                            currentPosition = currentPosition,
+                            currentDuration = currentDuration
                         )
                     }
                 }
@@ -514,7 +531,10 @@ fun PortraitPlayerContent(
     onSetFullScreen: (Boolean) -> Unit,
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
-    sleepTimerRemainingMs: Long? = null
+    sleepTimerRemainingMs: Long? = null,
+    currentProgress: Float = 0f,
+    currentPosition: Long = 0L,
+    currentDuration: Long = 0L
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
@@ -713,21 +733,21 @@ fun PortraitPlayerContent(
                 )
             } else {
                 WaveformSeeker(
-                    progressProvider = { playerState.progress },
+                    progressProvider = { currentProgress },
                     isPlaying = playbackInfo.isPlaying,
-                    onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
+                    onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
                     modifier = Modifier.fillMaxWidth(),
                     activeColor = dominantColors.accent,
                     inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
                     initialStyle = currentSeekbarStyle,
                     onStyleChange = onSeekbarStyleChange,
-                    duration = playerState.duration,
+                    duration = currentDuration,
                     sponsorSegments = sponsorSegments
                 )
             }
         }
 
-        TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
+        TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
 
@@ -761,7 +781,10 @@ fun LandscapePlayerContent(
     player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit,
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
-    sleepTimerRemainingMs: Long? = null
+    sleepTimerRemainingMs: Long? = null,
+    currentProgress: Float = 0f,
+    currentPosition: Long = 0L,
+    currentDuration: Long = 0L
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
@@ -943,21 +966,21 @@ fun LandscapePlayerContent(
                     )
                 } else {
                     WaveformSeeker(
-                        progressProvider = { playerState.progress },
+                        progressProvider = { currentProgress },
                         isPlaying = playbackInfo.isPlaying,
-                        onSeek = { actions.onSeekTo((it * playerState.duration).toLong()) },
+                        onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
                         modifier = Modifier.fillMaxWidth(),
                         activeColor = dominantColors.accent,
                         inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
                         initialStyle = currentSeekbarStyle,
                         onStyleChange = onSeekbarStyleChange,
-                        duration = playerState.duration,
+                        duration = currentDuration,
                         sponsorSegments = sponsorSegments
                     )
                 }
             }
             
-            TimeLabelsWithQuality(currentPositionProvider = { playerState.currentPosition }, durationProvider = { playerState.duration }, dominantColors = dominantColors)
+            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
             Spacer(modifier = Modifier.height(12.dp))
             
             Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
