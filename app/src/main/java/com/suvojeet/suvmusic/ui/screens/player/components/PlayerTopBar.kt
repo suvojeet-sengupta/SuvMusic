@@ -35,16 +35,15 @@ fun PlayerTopBar(
     audioArEnabled: Boolean = false,
     onRecenter: () -> Unit = {}
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 8.dp, vertical = 12.dp)
     ) {
-        // Back Button
+        // Left side: Back Button
         Box(
             modifier = Modifier
+                .align(Alignment.CenterStart)
                 .size(44.dp)
                 .clip(SquircleShape)
                 .background(dominantColors.onBackground.copy(alpha = 0.1f))
@@ -59,58 +58,66 @@ fun PlayerTopBar(
             )
         }
 
-        // Center Switch or Title
-        if (isYouTubeSong) {
-            Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                    .padding(2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+        // Absolute Center: Switch or Title
+        Box(
+            modifier = Modifier.align(Alignment.Center),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isYouTubeSong) {
+                Row(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                        .clickable { if (isVideoMode) onVideoToggle() }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                        .padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Audio",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                        fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Audio",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                            fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (!isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Video",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                            fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 }
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                        .clickable { if (!isVideoMode) onVideoToggle() }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Video",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                        fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
+            } else {
+                Text(
+                    text = "NOW PLAYING",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = dominantColors.onBackground.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp
+                )
             }
-        } else {
-            Text(
-                text = "NOW PLAYING",
-                style = MaterialTheme.typography.labelLarge,
-                color = dominantColors.onBackground.copy(alpha = 0.8f),
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp
-            )
         }
 
         // Right side: Cast, Audio AR and More Menu
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -127,9 +134,8 @@ fun PlayerTopBar(
                 )
             }
             
-            Spacer(modifier = Modifier.width(8.dp))
-
             if (audioArEnabled) {
+                Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -145,9 +151,10 @@ fun PlayerTopBar(
                         modifier = Modifier.size(22.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
             }
             
+            Spacer(modifier = Modifier.width(8.dp))
+
             Box(
                 modifier = Modifier
                     .size(44.dp)
