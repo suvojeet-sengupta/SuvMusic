@@ -72,6 +72,7 @@ fun ClassicPlayerStyle(
     onShowActions: () -> Unit,
     onShowQueue: () -> Unit,
     onShowLyrics: () -> Unit,
+    onShowRelated: () -> Unit,
     onShowDevices: () -> Unit,
     onShowSleepTimer: () -> Unit,
     onShowPlaybackSpeed: () -> Unit,
@@ -93,7 +94,7 @@ fun ClassicPlayerStyle(
         ClassicLandscapeContent(
             song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
             currentSeekbarStyle, sponsorSegments, audioArEnabled, isRotatingEnabled, actions,
-            onShowActions, onShowLyrics, onShowQueue, onShowDevices, onShowSleepTimer,
+            onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
             onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, player, isFullScreen,
             onSetFullScreen, isSwitchingMode, sleepTimerOption, sleepTimerRemainingMs,
             currentProgress, currentPosition, currentDuration
@@ -101,11 +102,10 @@ fun ClassicPlayerStyle(
     } else {
         ClassicPortraitContent(
             song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
-            currentSeekbarStyle, sponsorSegments, audioArEnabled, isRotatingEnabled, player,
-            isFullScreen, isCompactHeight, actions, onShowActions, onShowQueue, onShowLyrics,
-            onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
-            onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
-            onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
+            currentSeekbarStyle, sponsorSegments, audioArEnabled, isRotatingEnabled, actions,
+            onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
+            onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, player, isFullScreen,
+            isCompactHeight, onSetFullScreen, isSwitchingMode, sleepTimerOption,
             sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration
         )
     }
@@ -130,6 +130,7 @@ private fun ClassicPortraitContent(
     onShowActions: () -> Unit,
     onShowQueue: () -> Unit,
     onShowLyrics: () -> Unit,
+    onShowRelated: () -> Unit,
     onShowDevices: () -> Unit,
     onShowSleepTimer: () -> Unit,
     onShowPlaybackSpeed: () -> Unit,
@@ -231,7 +232,7 @@ private fun ClassicPortraitContent(
         Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 16.dp))
 
         ClassicBottomActions(
-            onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onDownloadClick = actions.onDownload,
+            onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onRelatedClick = onShowRelated, onDownloadClick = actions.onDownload,
             downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
             isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode, compact = isCompactHeight
         )
@@ -244,6 +245,7 @@ private fun ClassicLandscapeContent(
     song: com.suvojeet.suvmusic.core.model.Song?, playerState: PlayerState, playbackInfo: PlayerState, dominantColors: DominantColors,
     currentArtworkShape: ArtworkShape, currentArtworkSize: ArtworkSize, currentSeekbarStyle: SeekbarStyle, sponsorSegments: List<SponsorSegment>,
     audioArEnabled: Boolean, isRotatingEnabled: Boolean, actions: PlayerScreenActions, onShowActions: () -> Unit, onShowLyrics: () -> Unit, onShowQueue: () -> Unit,
+    onShowRelated: () -> Unit,
     onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit,
     player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit,
     isSwitchingMode: Boolean = false,
@@ -304,7 +306,7 @@ private fun ClassicLandscapeContent(
             ClassicPlaybackControls(isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors)
             
             Spacer(modifier = Modifier.height(12.dp))
-            ClassicBottomActions(onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onDownloadClick = actions.onDownload, downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE, isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode)
+            ClassicBottomActions(onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onRelatedClick = onShowRelated, onDownloadClick = actions.onDownload, downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE, isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode)
         }
     }
 }
@@ -465,7 +467,7 @@ private fun ClassicPlaybackControls(
 
 @Composable
 private fun ClassicBottomActions(
-    onLyricsClick: () -> Unit, onCastClick: () -> Unit, onQueueClick: () -> Unit, onDownloadClick: () -> Unit,
+    onLyricsClick: () -> Unit, onCastClick: () -> Unit, onQueueClick: () -> Unit, onRelatedClick: () -> Unit, onDownloadClick: () -> Unit,
     downloadState: com.suvojeet.suvmusic.data.model.DownloadState, dominantColors: DominantColors, isYouTubeSong: Boolean, isVideoMode: Boolean, onVideoToggle: () -> Unit, compact: Boolean = false
 ) {
     val iconSize = if (compact) 20.dp else 22.dp
@@ -478,6 +480,10 @@ private fun ClassicBottomActions(
         ) {
             IconButton(onClick = onLyricsClick, modifier = Modifier.weight(1f)) {
                 Icon(imageVector = Icons.Default.Lyrics, contentDescription = "Lyrics", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
+            }
+
+            IconButton(onClick = onRelatedClick, modifier = Modifier.weight(1f)) {
+                Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "Related", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
             }
 
             IconButton(onClick = onDownloadClick, modifier = Modifier.weight(1f)) {

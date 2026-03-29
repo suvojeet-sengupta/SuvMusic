@@ -133,6 +133,12 @@ class PlayerViewModel @Inject constructor(
     private val _commentPostSuccess = MutableStateFlow<Boolean?>(null)
     val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
 
+    private val _relatedSongsState = MutableStateFlow<List<Song>>(emptyList())
+    val relatedSongsState: StateFlow<List<Song>> = _relatedSongsState.asStateFlow()
+
+    private val _isFetchingRelated = MutableStateFlow(false)
+    val isFetchingRelated: StateFlow<Boolean> = _isFetchingRelated.asStateFlow()
+
     // UI Style Settings (Exposed as StateFlow to prevent flicker in PlayerScreen)
     val artworkShape: StateFlow<String> = sessionManager.artworkShapeFlow
         .stateIn(
@@ -348,15 +354,18 @@ class PlayerViewModel @Inject constructor(
                         // Clear old data synchronously to prevent stale display
                         _lyricsState.value = null
                         _commentsState.value = null
+                        _relatedSongsState.value = emptyList()
                         
                         fetchLyrics(song.id)
                         fetchComments(song.id)
+                        fetchRelatedSongs(song.id)
                         fetchArtistCredits(song.artist, song.source)
                         
                         updateDiscordPresence()
                     } else {
                         _lyricsState.value = null
                         _commentsState.value = null
+                        _relatedSongsState.value = emptyList()
                         updateDiscordPresence()
                     }
                 }
@@ -369,6 +378,20 @@ class PlayerViewModel @Inject constructor(
                 .collect { isPlaying ->
                     updateDiscordPresence()
                 }
+        }
+    }
+    
+    private fun fetchRelatedSongs(videoId: String) {
+        viewModelScope.launch {
+            _isFetchingRelated.value = true
+            try {
+                val songs = youTubeRepository.getRelatedSongs(videoId)
+                _relatedSongsState.value = songs
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Error fetching related songs", e)
+            } finally {
+                _isFetchingRelated.value = false
+            }
         }
     }
     
