@@ -91,72 +91,147 @@ fun SongInfoSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            AnimatedContent(
-                targetState = song?.id,
-                transitionSpec = {
-                    (slideInVertically(
-                        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)
-                    ) { it / 3 } + fadeIn()) togetherWith
-                    (slideOutVertically { -it / 3 } + fadeOut())
-                },
-                label = "songInfoTransition"
-            ) { _ ->
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.width(if (isLoading) (if (compact) 26.dp else 30.dp) else 0.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            if (isLoading) {
-                                LoadingIndicator(
-                                    modifier = Modifier.size(if (compact) 18.dp else 22.dp),
-                                    color = dominantColors.accent
+            // Title and Capsule Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    AnimatedContent(
+                        targetState = song?.id,
+                        transitionSpec = {
+                            (slideInVertically(
+                                animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)
+                            ) { it / 3 } + fadeIn()) togetherWith
+                            (slideOutVertically { -it / 3 } + fadeOut())
+                        },
+                        label = "songInfoTransition"
+                    ) { _ ->
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier.width(if (isLoading) (if (compact) 26.dp else 30.dp) else 0.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    if (isLoading) {
+                                        LoadingIndicator(
+                                            modifier = Modifier.size(if (compact) 18.dp else 22.dp),
+                                            color = dominantColors.accent
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = song?.title ?: "No song playing",
+                                    style = if (compact) {
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = (-0.2).sp
+                                        )
+                                    } else {
+                                        MaterialTheme.typography.headlineSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = (-0.5).sp
+                                        )
+                                    },
+                                    color = dominantColors.onBackground,
+                                    maxLines = 1,
+                                    modifier = Modifier.basicMarquee(
+                                        iterations = Int.MAX_VALUE
+                                    )
                                 )
                             }
                         }
-                        Text(
-                            text = song?.title ?: "No song playing",
-                            style = if (compact) {
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = (-0.2).sp
-                                )
-                            } else {
-                                MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = (-0.5).sp
-                                )
-                            },
-                            color = dominantColors.onBackground,
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee(
-                                iterations = Int.MAX_VALUE
-                            )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Like/Dislike Capsule
+                Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                        .padding(horizontal = 2.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Dislike button
+                    IconButton(
+                        onClick = onDislikeClick,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                            contentDescription = "Dislike",
+                            tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
-
-                    Text(
-                        text = song?.artist ?: "",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            letterSpacing = 0.sp
-                        ),
-                        color = dominantColors.onBackground.copy(alpha = 0.65f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    // Vertical Divider
+                    Box(
                         modifier = Modifier
-                            .basicMarquee(iterations = Int.MAX_VALUE)
-                            .clickable {
-                                val target = song?.artistId ?: song?.artist
-                                target?.let { onArtistClick(it) }
-                            }
+                            .width(1.dp)
+                            .height(18.dp)
+                            .background(dominantColors.onBackground.copy(alpha = 0.15f))
                     )
+
+                    // Like button
+                    IconButton(
+                        onClick = onFavoriteClick,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                            contentDescription = "Like",
+                            tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
-            // Sleep Timer indicator - M3 Expressive style
+            Spacer(modifier = Modifier.height(if (compact) 1.dp else 2.dp))
+
+            // Artist and More button (if enabled)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = song?.artist ?: "",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = 0.sp
+                    ),
+                    color = dominantColors.onBackground.copy(alpha = 0.65f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .basicMarquee(iterations = Int.MAX_VALUE)
+                        .clickable {
+                            val target = song?.artistId ?: song?.artist
+                            target?.let { onArtistClick(it) }
+                        }
+                )
+
+                if (showMoreButton) {
+                    IconButton(
+                        onClick = onMoreClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "More",
+                            tint = dominantColors.onBackground.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            // Sleep Timer indicator
             androidx.compose.animation.AnimatedVisibility(
                 visible = sleepTimerOption != com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
                 enter = fadeIn() + slideInVertically { -20 },
@@ -164,12 +239,12 @@ fun SongInfoSection(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = if (compact) 2.dp else 4.dp)
+                    modifier = Modifier.padding(top = 2.dp)
                 ) {
                     Icon(
                         imageVector = androidx.compose.material.icons.Icons.Default.Timer,
                         contentDescription = null,
-                        modifier = Modifier.size(if (compact) 14.dp else 16.dp),
+                        modifier = Modifier.size(if (compact) 12.dp else 14.dp),
                         tint = dominantColors.accent.copy(alpha = 0.9f)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -192,10 +267,9 @@ fun SongInfoSection(
                 }
             }
 
-            // Audio Quality Badge - Apple Music style
+            // Audio Quality Badge
             if (song != null) {
-                Spacer(modifier = Modifier.height(if (compact) 3.dp else 6.dp))
-
+                Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -205,15 +279,12 @@ fun SongInfoSection(
                             shape = RoundedCornerShape(4.dp)
                         )
                         .clickable { showQualityDialog = true }
-                        .padding(
-                            horizontal = if (compact) 6.dp else 8.dp,
-                            vertical = if (compact) 2.dp else 4.dp
-                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.MusicNote,
                         contentDescription = null,
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(10.dp),
                         tint = dominantColors.onBackground.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -228,88 +299,6 @@ fun SongInfoSection(
                             letterSpacing = 0.5.sp
                         ),
                         color = dominantColors.onBackground.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Like/Dislike Capsule
-            Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Dislike button
-                AnimatedContent(
-                    targetState = isDisliked,
-                    transitionSpec = {
-                        (scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow), initialScale = 0.7f) + fadeIn())
-                            .togetherWith(scaleOut(targetScale = 0.7f) + fadeOut())
-                    },
-                    label = "dislikeAnimation"
-                ) { active ->
-                    IconButton(
-                        onClick = onDislikeClick,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (active) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                            contentDescription = if (active) "Undislike" else "Dislike",
-                            tint = if (active) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                // Vertical Divider
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(20.dp)
-                        .background(dominantColors.onBackground.copy(alpha = 0.15f))
-                )
-
-                // Like button
-                AnimatedContent(
-                    targetState = isFavorite,
-                    transitionSpec = {
-                        (scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow), initialScale = 0.7f) + fadeIn())
-                            .togetherWith(scaleOut(targetScale = 0.7f) + fadeOut())
-                    },
-                    label = "likeAnimation"
-                ) { active ->
-                    IconButton(
-                        onClick = onFavoriteClick,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (active) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                            contentDescription = if (active) "Unlike" else "Like",
-                            tint = if (active) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
-            if (showMoreButton) {
-                IconButton(
-                    onClick = onMoreClick,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "More options",
-                        tint = dominantColors.onBackground.copy(alpha = 0.9f),
-                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -330,7 +319,7 @@ fun TimeLabelsWithQuality(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
-            .padding(bottom = 4.dp),
+            .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

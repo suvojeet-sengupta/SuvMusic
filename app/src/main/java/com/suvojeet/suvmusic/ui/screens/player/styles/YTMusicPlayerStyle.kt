@@ -247,13 +247,13 @@ private fun YTMusicPortraitContent(
             showMoreButton = false
         )
 
-        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
+        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.05f else 0.15f))
 
         SeekbarSection(combinedLoading, dominantColors, currentProgress, playbackInfo.isPlaying, actions, currentDuration, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments)
 
         TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
 
-        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.05f else 0.2f))
+        Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.02f else 0.08f))
 
         Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
             PlaybackControls(
@@ -415,7 +415,7 @@ private fun SeekbarSection(
     sponsorSegments: List<SponsorSegment>
 ) {
     Box(
-        modifier = Modifier.fillMaxWidth().height(60.dp),
+        modifier = Modifier.fillMaxWidth().height(44.dp),
         contentAlignment = Alignment.Center
     ) {
         if (combinedLoading) {
