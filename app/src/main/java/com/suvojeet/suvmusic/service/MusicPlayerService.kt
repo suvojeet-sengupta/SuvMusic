@@ -692,25 +692,30 @@ class MusicPlayerService : MediaLibraryService() {
                                  }
                                  
                                  android.util.Log.d("MusicPlayerService", "Switching output to: ${targetDevice?.productName ?: "Default"}")
+                                 
+                                 val wasPlaying = player.isPlaying
+                                 if (wasPlaying) player.pause()
+                                 
+                                 // Reset to default first to clear any stale routing state
+                                 player.setPreferredAudioDevice(null)
+                                 delay(100)
+                                 
+                                 // Set the new target device
                                  player.setPreferredAudioDevice(targetDevice)
+                                 
+                                 // Force buffer flush and AudioTrack recreation by seeking
+                                 player.seekTo(player.currentPosition)
                                  
                                  // Improvement (1): Reset kickstart flag so it runs again for the new device
                                  audioSinkKickstartDone = false
                                  
-                                 // "Nudge" the volume to kickstart the AudioSink on the new device
-                                 // This fixes the "No sound on switch" issue on many devices
                                  // For Bluetooth devices, we need a longer delay as the hardware handshake takes time
                                  val isBluetooth = targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
                                                   targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
                                  
-                                 val wasPlaying = player.isPlaying
+                                 delay(if (isBluetooth) 1000 else 300) // Give it a moment to switch routing
                                  
-                                 delay(if (isBluetooth) 800 else 200) // Give it a moment to switch routing
-                                 
-                                 // Forceful kickstart for Bluetooth: brief pause/resume
-                                 if (wasPlaying && isBluetooth) {
-                                     player.pause()
-                                     delay(300)
+                                 if (wasPlaying) {
                                      player.play()
                                      delay(200)
                                  }
@@ -726,7 +731,7 @@ class MusicPlayerService : MediaLibraryService() {
                                      
                                      // Second nudge for Bluetooth after a longer interval to be absolutely sure
                                      if (isBluetooth) {
-                                         delay(800)
+                                         delay(1000)
                                          player.volume = nudgeVol
                                          delay(100)
                                          player.volume = originalVol
