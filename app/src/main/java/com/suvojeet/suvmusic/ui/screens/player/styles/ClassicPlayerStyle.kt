@@ -102,10 +102,11 @@ fun ClassicPlayerStyle(
     } else {
         ClassicPortraitContent(
             song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
-            currentSeekbarStyle, sponsorSegments, audioArEnabled, isRotatingEnabled, actions,
-            onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
-            onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, player, isFullScreen,
-            isCompactHeight, onSetFullScreen, isSwitchingMode, sleepTimerOption,
+            currentSeekbarStyle, sponsorSegments, audioArEnabled, isRotatingEnabled, player,
+            isFullScreen, isCompactHeight, actions, onShowActions, onShowQueue, onShowLyrics,
+            onShowRelated, onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
+            onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
+            onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
             sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration
         )
     }
