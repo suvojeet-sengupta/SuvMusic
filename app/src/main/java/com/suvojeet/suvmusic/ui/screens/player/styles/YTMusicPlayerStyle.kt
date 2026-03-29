@@ -243,7 +243,8 @@ private fun YTMusicPortraitContent(
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
             dominantColors = dominantColors, isLoading = combinedLoading, compact = isCompactHeight,
             sleepTimerRemainingMs = sleepTimerRemainingMs,
-            sleepTimerOption = sleepTimerOption
+            sleepTimerOption = sleepTimerOption,
+            showMoreButton = false
         )
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
@@ -370,7 +371,8 @@ private fun YTMusicLandscapeContent(
                 onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
                 dominantColors = dominantColors, isLoading = combinedLoading,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
-                sleepTimerOption = sleepTimerOption
+                sleepTimerOption = sleepTimerOption,
+                showMoreButton = false
             )
             Spacer(modifier = Modifier.height(16.dp))
             
