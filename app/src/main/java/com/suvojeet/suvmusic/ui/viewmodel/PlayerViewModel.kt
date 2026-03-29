@@ -139,6 +139,9 @@ class PlayerViewModel @Inject constructor(
     private val _isFetchingRelated = MutableStateFlow(false)
     val isFetchingRelated: StateFlow<Boolean> = _isFetchingRelated.asStateFlow()
 
+    private val _selectedRelatedIndices = MutableStateFlow<Set<Int>>(emptySet())
+    val selectedRelatedIndices: StateFlow<Set<Int>> = _selectedRelatedIndices.asStateFlow()
+
     // UI Style Settings (Exposed as StateFlow to prevent flicker in PlayerScreen)
     val artworkShape: StateFlow<String> = sessionManager.artworkShapeFlow
         .stateIn(
@@ -1440,5 +1443,23 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleMultipleArtistsDialog(show: Boolean) {
         _showMultipleArtistsDialog.value = show
+    }
+
+    fun toggleRelatedSelection(index: Int) {
+        val current = _selectedRelatedIndices.value.toMutableSet()
+        if (current.contains(index)) {
+            current.remove(index)
+        } else {
+            current.add(index)
+        }
+        _selectedRelatedIndices.value = current
+    }
+
+    fun selectAllRelated() {
+        _selectedRelatedIndices.value = _relatedSongsState.value.indices.toSet()
+    }
+
+    fun clearRelatedSelection() {
+        _selectedRelatedIndices.value = emptySet()
     }
 }
