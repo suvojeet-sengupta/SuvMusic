@@ -383,7 +383,7 @@ private fun ModernQueueListItem(
             )
         } else {
             IconButton(onClick = onMoreClick) {
-                Icon(Icons.Default.MoreVert, null, tint = dominantColors.onBackground.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.MoreVert, null, tint = dominantColors.onBackground.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
             }
         }
     }
