@@ -121,6 +121,23 @@ class MusicPlayer @Inject constructor(
     
     private var deviceReceiver: android.content.BroadcastReceiver? = null
     
+    // Modern Audio Device Callback
+    private val audioDeviceCallback = object : android.media.AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
+            scope.launch {
+                delay(1000)
+                updateAvailableDevices()
+            }
+        }
+
+        override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
+            scope.launch {
+                delay(500)
+                updateAvailableDevices()
+            }
+        }
+    }
+    
     // Error recovery retry tracking to prevent infinite loops
     private var errorRetryCount = 0
     private var errorRetrySongId: String? = null
@@ -158,6 +175,7 @@ class MusicPlayer @Inject constructor(
         
         // Register receiver for device changes
         registerDeviceReceiver()
+        audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
 
         // Update homescreen widget on state changes (filtered to avoid excessive updates from progress)
         scope.launch {
@@ -258,7 +276,12 @@ class MusicPlayer @Inject constructor(
         // System state for auto-selection
         val isBluetoothActive = audioDevices.any { 
             it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
-            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO 
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+            (android.os.Build.VERSION.SDK_INT >= 31 && (
+                it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || 
+                it.type == AudioDeviceInfo.TYPE_BLE_SPEAKER ||
+                it.type == 30 // TYPE_BLE_BROADCAST
+            ))
         }
         val isWiredHeadsetConnected = audioDevices.any { 
             it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || 
@@ -297,7 +320,17 @@ class MusicPlayer @Inject constructor(
                 AudioDeviceInfo.TYPE_HDMI_ARC,
                 AudioDeviceInfo.TYPE_HDMI_EARC -> DeviceType.SPEAKER
                 AudioDeviceInfo.TYPE_AUX_LINE -> DeviceType.HEADPHONES
-                else -> DeviceType.UNKNOWN
+                else -> {
+                    if (android.os.Build.VERSION.SDK_INT >= 31 && (
+                        device.type == AudioDeviceInfo.TYPE_BLE_HEADSET || 
+                        device.type == AudioDeviceInfo.TYPE_BLE_SPEAKER ||
+                        device.type == 30 // TYPE_BLE_BROADCAST
+                    )) {
+                        DeviceType.BLUETOOTH
+                    } else {
+                        DeviceType.UNKNOWN
+                    }
+                }
             }
             
             // Skip unknown devices if they don't have a valid name to avoid "null" entries
@@ -2281,6 +2314,9 @@ class MusicPlayer @Inject constructor(
         
         controllerFuture?.let { MediaController.releaseFuture(it) }
         mediaController = null
+        
+        // Unregister modern device callback
+        audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
         
         // Unregister device receiver
         deviceReceiver?.let {
