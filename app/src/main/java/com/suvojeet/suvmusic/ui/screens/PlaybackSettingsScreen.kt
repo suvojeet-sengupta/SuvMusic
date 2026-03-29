@@ -969,12 +969,14 @@ private fun getAudioQualityLabel(quality: AudioQuality, source: MusicSource): St
             AudioQuality.LOW -> "Low (96 kbps)"
             AudioQuality.MEDIUM -> "Standard (160 kbps)"
             AudioQuality.HIGH -> "High (320 kbps)"
+            AudioQuality.AUTO -> "Auto (Adaptive)"
         }
     } else {
         when (quality) {
             AudioQuality.LOW -> "Low (48 kbps)"
             AudioQuality.MEDIUM -> "Normal (128 kbps)"
             AudioQuality.HIGH -> "High (256 kbps)"
+            AudioQuality.AUTO -> "Auto (Adaptive)"
         }
     }
 }

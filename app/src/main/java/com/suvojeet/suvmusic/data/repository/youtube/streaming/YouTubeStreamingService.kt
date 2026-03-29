@@ -66,28 +66,36 @@ class YouTubeStreamingService @Inject constructor(
      * Get audio stream URL for playback.
      * Uses user's audio quality preference and caches the result.
      */
-    suspend fun getStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getStreamUrl(videoId: String, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
         val cacheKey = "audio_$videoId"
-        streamCache.get(cacheKey)?.let { cached ->
-            if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
-                return@withContext cached.url
+        if (!forceLow) {
+            streamCache.get(cacheKey)?.let { cached ->
+                if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
+                    return@withContext cached.url
+                }
             }
+        } else {
+            streamCache.remove(cacheKey)
         }
         
         // Try primary URL
-        val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId)
+        val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, forceLow)
         if (primaryResult != null) return@withContext primaryResult
         
         // Try music fallback
         android.util.Log.d("YouTubeStreaming", "Primary resolution failed for $videoId, trying music fallback")
-        resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId)
+        resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, forceLow)
     }
 
-    private suspend fun resolveStreamWithUrl(streamUrl: String, videoId: String): String? {
+    private suspend fun resolveStreamWithUrl(streamUrl: String, videoId: String, forceLow: Boolean = false): String? {
         val cacheKey = "audio_$videoId"
         return retryWithBackoff {
             val startTime = System.currentTimeMillis()
-            var audioQuality = sessionManager.getAudioQuality()
+            var audioQuality = if (forceLow) {
+                com.suvojeet.suvmusic.data.model.AudioQuality.LOW
+            } else {
+                sessionManager.getAudioQuality()
+            }
             
             // Adaptive logic for AUTO quality
             if (audioQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
@@ -108,6 +116,7 @@ class YouTubeStreamingService @Inject constructor(
                 com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 70
                 com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 160
                 com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 512
+                com.suvojeet.suvmusic.data.model.AudioQuality.AUTO -> 160
             }
             
             val bestAudioStream = audioStreams
@@ -138,24 +147,33 @@ class YouTubeStreamingService @Inject constructor(
         val resolution: String? = null
     )
     
-    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): String? = withContext(Dispatchers.IO) {
-        getVideoStreamResult(videoId, quality)?.videoUrl
+    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
+        getVideoStreamResult(videoId, quality, forceLow)?.videoUrl
     }
     
-    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): VideoStreamResult? = withContext(Dispatchers.IO) {
-        val targetQuality = quality ?: sessionManager.getVideoQuality()
+    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): VideoStreamResult? = withContext(Dispatchers.IO) {
+        val targetQuality = if (forceLow) {
+            com.suvojeet.suvmusic.data.model.VideoQuality.LOW
+        } else {
+            quality ?: sessionManager.getVideoQuality()
+        }
         
         val videoCacheKey = "video_${videoId}_${targetQuality.name}"
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
         
-        val cachedVideo = streamCache.get(videoCacheKey)
-        val cachedAudio = streamCache.get(audioCacheKey)
-        
-        if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
-            return@withContext VideoStreamResult(
-                videoUrl = cachedVideo.url,
-                audioUrl = cachedAudio?.url
-            )
+        if (forceLow) {
+            streamCache.remove(videoCacheKey)
+            streamCache.remove(audioCacheKey)
+        } else {
+            val cachedVideo = streamCache.get(videoCacheKey)
+            val cachedAudio = streamCache.get(audioCacheKey)
+            
+            if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
+                return@withContext VideoStreamResult(
+                    videoUrl = cachedVideo.url,
+                    audioUrl = cachedAudio?.url
+                )
+            }
         }
 
         val primaryResult = resolveVideoWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, targetQuality)
@@ -357,5 +375,13 @@ class YouTubeStreamingService @Inject constructor(
             }
             results
         } ?: emptyList()
+    }
+
+    fun clearCacheFor(videoId: String) {
+        streamCache.remove("audio_$videoId")
+        com.suvojeet.suvmusic.data.model.VideoQuality.entries.forEach { 
+            streamCache.remove("video_${videoId}_${it.name}")
+            streamCache.remove("video_audio_${videoId}_${it.name}")
+        }
     }
 }

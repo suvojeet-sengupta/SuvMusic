@@ -261,14 +261,14 @@ class YouTubeRepository @Inject constructor(
         return searchService.getSearchSuggestions(query)
     }
 
-    suspend fun getStreamUrl(videoId: String): String? {
+    suspend fun getStreamUrl(videoId: String, forceLow: Boolean = false): String? {
         if (!networkMonitor.isCurrentlyConnected()) return null
-        return streamingService.getStreamUrl(videoId)
+        return streamingService.getStreamUrl(videoId, forceLow)
     }
 
-    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): String? = streamingService.getVideoStreamUrl(videoId, quality)
+    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): String? = streamingService.getVideoStreamUrl(videoId, quality, forceLow)
 
-    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null) = streamingService.getVideoStreamResult(videoId, quality)
+    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false) = streamingService.getVideoStreamResult(videoId, quality, forceLow)
 
     suspend fun getStreamUrlForDownload(videoId: String): Pair<String, String>? = streamingService.getStreamUrlForDownload(videoId)
 
