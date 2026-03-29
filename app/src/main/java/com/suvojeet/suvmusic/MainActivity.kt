@@ -680,18 +680,19 @@ fun SuvMusicApp(
         )
     }
 
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val navBarHeight = if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.TV) 80.dp else 0.dp
+        val miniPlayerHeight = if (showMiniPlayer) 64.dp else 0.dp
+        val snackbarBottomPadding = when {
+            isPlayerExpanded -> navBarPadding + 12.dp
+            showMiniPlayer -> miniPlayerHeight + navBarPadding + navBarHeight + 12.dp
+            else -> navBarPadding + navBarHeight + 12.dp
+        }
+
         Box(modifier = Modifier.fillMaxSize()) {
              Scaffold(
                 modifier = Modifier.fillMaxSize(),
-                snackbarHost = {
-                    SnackbarHost(hostState = snackbarHostState) { data ->
-                        Snackbar(
-                            snackbarData = data,
-                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                            contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                },
                 bottomBar = {
                     if (showBottomNav && deviceType == com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
                         Column {
@@ -861,7 +862,8 @@ fun SuvMusicApp(
                             startDestination = Destination.Home, // Always start at Home
                             // Removed sharedTransitionScope
                             deviceType = deviceType,
-                            dominantColors = currentDominantColors
+                            dominantColors = currentDominantColors,
+                            snackbarHostState = snackbarHostState
                         )
                     }
 
@@ -1042,5 +1044,14 @@ fun SuvMusicApp(
                 }
             )
         }
+
+        // Global Snackbar Host - Always on top
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = snackbarBottomPadding)
+                .zIndex(100f) // Ensure it's above everything including player sheet
+        )
     }
 }

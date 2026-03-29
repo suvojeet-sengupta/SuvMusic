@@ -101,7 +101,8 @@ fun NavGraph(
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: Any = Destination.Home,
     deviceType: DeviceType = DeviceType.Phone,
-    dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null
+    dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null,
+    snackbarHostState: androidx.compose.material3.SnackbarHostState? = null
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -495,7 +496,8 @@ fun NavGraph(
         composable<Destination.Misc> {
             MiscScreen(
                 onBack = { navController.popBackStack() },
-                onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders) }
+                onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders) },
+                externalSnackbarHostState = snackbarHostState
             )
         }
 
