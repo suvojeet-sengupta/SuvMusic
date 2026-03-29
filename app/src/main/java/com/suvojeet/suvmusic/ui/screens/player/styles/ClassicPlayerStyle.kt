@@ -200,7 +200,8 @@ private fun ClassicPortraitContent(
             song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
             onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
             dominantColors = dominantColors, isLoading = combinedLoading, compact = isCompactHeight,
-            sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption
+            sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption,
+            isClassic = true
         )
 
         Spacer(modifier = Modifier.weight(if (isCompactHeight) 0.1f else 0.4f))
@@ -282,7 +283,8 @@ private fun ClassicLandscapeContent(
                 song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
                 onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
                 dominantColors = dominantColors, isLoading = combinedLoading,
-                sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption
+                sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption,
+                isClassic = true
             )
             Spacer(modifier = Modifier.height(16.dp))
             
