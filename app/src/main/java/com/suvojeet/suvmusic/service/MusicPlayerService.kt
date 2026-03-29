@@ -680,12 +680,28 @@ class MusicPlayerService : MediaLibraryService() {
                                  
                                  // "Nudge" the volume to kickstart the AudioSink on the new device
                                  // This fixes the "No sound on switch" issue on many devices
-                                 delay(150) // Give it a moment to switch routing
+                                 // For Bluetooth devices, we need a longer delay as the hardware handshake takes time
+                                 val isBluetooth = targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
+                                                  targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                                 
+                                 delay(if (isBluetooth) 600 else 200) // Give it a moment to switch routing
+                                 
                                  if (player.isPlaying) {
                                      val originalVol = player.volume
-                                     player.volume = 0.95f * originalVol
-                                     delay(100)
+                                     // Ensure we always have a delta, even if muted or at max
+                                     val nudgeVol = if (originalVol > 0.1f) originalVol * 0.95f else originalVol + 0.05f
+                                     
+                                     player.volume = nudgeVol
+                                     delay(150)
                                      player.volume = originalVol
+                                     
+                                     // Second nudge for Bluetooth after a longer interval to be absolutely sure
+                                     if (isBluetooth) {
+                                         delay(500)
+                                         player.volume = nudgeVol
+                                         delay(100)
+                                         player.volume = originalVol
+                                     }
                                  }
                             }
                         }

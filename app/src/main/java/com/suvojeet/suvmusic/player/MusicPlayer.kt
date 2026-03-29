@@ -108,6 +108,8 @@ class MusicPlayer @Inject constructor(
     
     // Track manually selected device ID to persist selection across refreshes
     private var manualSelectedDeviceId: String? = null
+    private var manualSelectedDeviceName: String? = null
+    private var lastManualSelectionTime: Long = 0L
     
     // Cache for resolved video IDs for non-YouTube songs (SongId -> VideoId)
     // Fix: Unbounded Memory Leak -> Use LruCache with max size 100
@@ -321,8 +323,16 @@ class MusicPlayer @Inject constructor(
         // Logic: specific manual selection > auto system selection
         
         var devicesWithSelection = rawDevices.map { device ->
+            // Try to match by ID first, then by name if it's a recent manual selection
+            // (IDs can change on some devices during routing handshakes)
+            val isManualMatch = if (manualSelectedDeviceId != null) {
+                device.id == manualSelectedDeviceId || 
+                (System.currentTimeMillis() - lastManualSelectionTime < 10000 && 
+                 device.name == manualSelectedDeviceName)
+            } else false
+
             val isSelected = if (manualSelectedDeviceId != null) {
-                device.id == manualSelectedDeviceId
+                isManualMatch
             } else {
                 when (device.type) {
                     DeviceType.PHONE -> autoSelectPhone
@@ -337,12 +347,33 @@ class MusicPlayer @Inject constructor(
         // 4. Validate selection
         // If manual selection is active but the device is no longer available (not found in list),
         // or if no device is selected at all, fallback to auto/default.
-        val hasSelection = devicesWithSelection.any { it.isSelected }
+        var hasSelection = devicesWithSelection.any { it.isSelected }
         
-        if (!hasSelection) {
+        // Add a grace period (10 seconds) before clearing manual selection
+        // This prevents flickering back to phone speaker while Bluetooth is still handshake-ing
+        val isInGracePeriod = manualSelectedDeviceId != null && (System.currentTimeMillis() - lastManualSelectionTime < 10000)
+
+        // If we are in grace period but device isn't in list, MANUALLY add it to the list
+        // so the UI stays stable and shows it as "Connecting/Active"
+        if (!hasSelection && isInGracePeriod && manualSelectedDeviceId != null && manualSelectedDeviceName != null) {
+            val placeholderDevice = OutputDevice(
+                id = manualSelectedDeviceId!!,
+                name = manualSelectedDeviceName!!,
+                type = DeviceType.BLUETOOTH, // Assume Bluetooth for grace period issues
+                isSelected = true
+            )
+            // Add at correct position or replace if same name exists
+            val newList = devicesWithSelection.toMutableList()
+            newList.add(placeholderDevice)
+            devicesWithSelection = newList
+            hasSelection = true
+        }
+
+        if (!hasSelection && !isInGracePeriod) {
             // Manual device lost or auto-logic failed -> Reset manual and use auto logic
             if (manualSelectedDeviceId != null) {
                 manualSelectedDeviceId = null
+                manualSelectedDeviceName = null
                 
                 // Also tell service to reset to default routing since manual device is gone
                 mediaController?.sendCustomCommand(
@@ -369,6 +400,13 @@ class MusicPlayer @Inject constructor(
             }
         }
         
+        // If we are in grace period but device isn't in list, keep the "selected" state for the UI
+        // so the user doesn't see it jump back immediately
+        if (!hasSelection && isInGracePeriod) {
+             // Just update available devices but don't clear manualSelectedDeviceId yet
+        }
+
+        
         val selectedDevice = devicesWithSelection.find { it.isSelected }
         _playerState.update { it.copy(availableDevices = devicesWithSelection, selectedDevice = selectedDevice) }
     }
@@ -376,6 +414,8 @@ class MusicPlayer @Inject constructor(
     fun switchOutputDevice(device: OutputDevice) {
         // Update manual preference
         manualSelectedDeviceId = device.id
+        manualSelectedDeviceName = device.name
+        lastManualSelectionTime = System.currentTimeMillis()
         
         // Send command to service to switch output device (ExoPlayer routing)
         val args = android.os.Bundle().apply {
