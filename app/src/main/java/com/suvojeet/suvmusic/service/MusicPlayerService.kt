@@ -376,7 +376,7 @@ class MusicPlayerService : MediaLibraryService() {
                                 if (p.playWhenReady) {
                                     val currentVol = p.volume
                                     // Micro-toggle volume to "kickstart" the AudioSink
-                                    p.volume = 0.99f * currentVol
+                                    p.volume = if (currentVol > 0.1f) currentVol * 0.99f else currentVol + 0.01f
                                     delay(50)
                                     p.volume = currentVol
                                 }
@@ -401,6 +401,25 @@ class MusicPlayerService : MediaLibraryService() {
                         }
                     }
 
+                }
+
+                @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+                override fun onAudioSinkError(player: androidx.media3.common.Player, audioSinkError: Exception) {
+                    super.onAudioSinkError(player, audioSinkError)
+                    android.util.Log.e("MusicPlayerService", "AudioSink Error: ${audioSinkError.message}", audioSinkError)
+                    
+                    // If AudioTrack failed to initialize (common on Bluetooth switch race conditions)
+                    // we attempt a recovery by resetting the player's target device or re-preparing.
+                    serviceScope.launch {
+                        delay(500)
+                        val p = mediaLibrarySession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@launch
+                        if (p.playbackState != Player.STATE_IDLE) {
+                            android.util.Log.i("MusicPlayerService", "Attempting AudioSink recovery...")
+                            val wasPlaying = p.playWhenReady
+                            p.prepare() // Re-prepare to force AudioSink recreation
+                            if (wasPlaying) p.play()
+                        }
+                    }
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -684,9 +703,19 @@ class MusicPlayerService : MediaLibraryService() {
                                  val isBluetooth = targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
                                                   targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
                                  
-                                 delay(if (isBluetooth) 600 else 200) // Give it a moment to switch routing
+                                 val wasPlaying = player.isPlaying
                                  
-                                 if (player.isPlaying) {
+                                 delay(if (isBluetooth) 800 else 200) // Give it a moment to switch routing
+                                 
+                                 // Forceful kickstart for Bluetooth: brief pause/resume
+                                 if (wasPlaying && isBluetooth) {
+                                     player.pause()
+                                     delay(300)
+                                     player.play()
+                                     delay(200)
+                                 }
+
+                                 if (player.isPlaying || wasPlaying) {
                                      val originalVol = player.volume
                                      // Ensure we always have a delta, even if muted or at max
                                      val nudgeVol = if (originalVol > 0.1f) originalVol * 0.95f else originalVol + 0.05f
@@ -697,7 +726,7 @@ class MusicPlayerService : MediaLibraryService() {
                                      
                                      // Second nudge for Bluetooth after a longer interval to be absolutely sure
                                      if (isBluetooth) {
-                                         delay(500)
+                                         delay(800)
                                          player.volume = nudgeVol
                                          delay(100)
                                          player.volume = originalVol
