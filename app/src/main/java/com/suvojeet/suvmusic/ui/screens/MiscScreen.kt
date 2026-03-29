@@ -73,11 +73,12 @@ fun MiscScreen(
     onBack: () -> Unit,
     onLyricsProvidersClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
-    backupViewModel: BackupViewModel = hiltViewModel()
+    backupViewModel: BackupViewModel = hiltViewModel(),
+    externalSnackbarHostState: SnackbarHostState? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backupState by backupViewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = externalSnackbarHostState ?: remember { SnackbarHostState() }
 
     val createBackupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
@@ -109,7 +110,13 @@ fun MiscScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.statusBars,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { 
+            // Only show local SnackbarHost if no external one is provided
+            // Actually, if we use the external state, it will be shown by MainActivity's host
+            if (externalSnackbarHostState == null) {
+                SnackbarHost(snackbarHostState)
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text("Misc", fontWeight = FontWeight.Bold) },
