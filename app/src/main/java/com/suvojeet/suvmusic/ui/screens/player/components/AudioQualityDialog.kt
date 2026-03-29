@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
@@ -19,7 +20,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.suvojeet.suvmusic.ui.components.DominantColors
-
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 
 @Composable
@@ -32,7 +32,7 @@ fun AudioQualityDialog(
         Dialog(
             onDismissRequest = onDismiss,
             properties = DialogProperties(
-                usePlatformDefaultWidth = false, // Allow custom width
+                usePlatformDefaultWidth = false,
                 dismissOnBackPress = true,
                 dismissOnClickOutside = true
             )
@@ -40,15 +40,15 @@ fun AudioQualityDialog(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp), // Screen padding
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(SquircleShape),
-                    color = dominantColors.primary, // Match player background
-                    tonalElevation = 8.dp
+                    color = dominantColors.primary.copy(alpha = 0.98f),
+                    tonalElevation = 12.dp
                 ) {
                     Column(
                         modifier = Modifier
@@ -56,103 +56,119 @@ fun AudioQualityDialog(
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Header with Close Button
+                        // Header with Premium Style
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Audio Quality",
-                                style = MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = dominantColors.onBackground
-                            )
+                            Column {
+                                Text(
+                                    text = "Audio Fidelity",
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = (-0.5).sp
+                                    ),
+                                    color = dominantColors.onBackground
+                                )
+                                Text(
+                                    text = "Technical Specifications",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = dominantColors.onBackground.copy(alpha = 0.5f)
+                                )
+                            }
                             
                             IconButton(
                                 onClick = onDismiss,
                                 modifier = Modifier
                                     .size(36.dp)
                                     .background(
-                                        color = dominantColors.onBackground.copy(alpha = 0.1f),
-                                        shape = SquircleShape
+                                        color = dominantColors.onBackground.copy(alpha = 0.05f),
+                                        shape = CircleShape
                                     )
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
                                     contentDescription = "Close",
                                     tint = dominantColors.onBackground,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(28.dp))
+                        
+                        // Active Quality Badge
+                        Surface(
+                            color = dominantColors.accent.copy(alpha = 0.1f),
+                            shape = SquircleShape,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(SquircleShape)
+                                        .background(dominantColors.accent.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = dominantColors.accent
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "Opus Audio Stream",
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = dominantColors.onBackground
+                                    )
+                                    Text(
+                                        text = "160kbps • Variable Bitrate",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = dominantColors.accent
+                                    )
+                                }
                             }
                         }
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        // Badge Display
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .background(
-                                    color = dominantColors.accent.copy(alpha = 0.15f),
-                                    shape = SquircleShape
-                                )
-                                .padding(horizontal = 16.dp, vertical = 10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = dominantColors.accent
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "Opus • 160kbps VBR",
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                ),
-                                color = dominantColors.accent
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        // Description
+                        // Information Content
                         Text(
-                            text = "SuvMusic uses YouTube's DASH (Dynamic Adaptive Streaming over HTTP) infrastructure to fetch the highest fidelity audio streams.",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                lineHeight = 26.sp
+                            text = "SuvMusic utilizes YouTube's DASH infrastructure to deliver studio-quality audio streams with zero compromise on fidelity.",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                lineHeight = 22.sp
                             ),
-                            color = dominantColors.onBackground.copy(alpha = 0.85f),
-                            textAlign = TextAlign.Center
+                            color = dominantColors.onBackground.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
                         )
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        // Key Benefits
+                        // Technical Highlights
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            QualityBenefitItem(
-                                title = "High Fidelity (itag 251)",
-                                description = "Standard HQ Opus at ~160kbps. Matches or beats legacy 320kbps MP3 in clarity and frequency range.",
-                                dominantColors = dominantColors
-                            )
-                            QualityBenefitItem(
-                                title = "DASH Optimization",
-                                description = "Dynamic adaptive streaming ensures seamless playback while maintaining 128kbps (itag 140) as a high-quality fallback.",
-                                dominantColors = dominantColors
-                            )
+                            TechnicalItem("Lossless Container", "WebM encapsulation for minimal overhead.", dominantColors)
+                            TechnicalItem("High Bitrate", "Maximum Opus itags available (251).", dominantColors)
                         }
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // Got it button
+                        // Confirm Button
                         Button(
                             onClick = onDismiss,
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = dominantColors.accent,
                                 contentColor = Color.White
@@ -160,9 +176,10 @@ fun AudioQualityDialog(
                             shape = SquircleShape
                         ) {
                             Text(
-                                text = "Got it",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold
+                                text = "Dismiss",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
                                 )
                             )
                         }
@@ -174,40 +191,22 @@ fun AudioQualityDialog(
 }
 
 @Composable
-private fun QualityBenefitItem(
+private fun TechnicalItem(
     title: String,
-    description: String,
+    desc: String,
     dominantColors: DominantColors
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .padding(top = 6.dp)
                 .size(6.dp)
-                .background(dominantColors.accent, RoundedCornerShape(3.dp))
+                .clip(CircleShape)
+                .background(dominantColors.accent)
         )
-        
         Spacer(modifier = Modifier.width(12.dp))
-        
         Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold
-                ),
-                color = dominantColors.onBackground
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    lineHeight = 18.sp
-                ),
-                color = dominantColors.onBackground.copy(alpha = 0.6f)
-            )
+            Text(title, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = dominantColors.onBackground)
+            Text(desc, style = MaterialTheme.typography.labelSmall, color = dominantColors.onBackground.copy(alpha = 0.5f))
         }
     }
 }
