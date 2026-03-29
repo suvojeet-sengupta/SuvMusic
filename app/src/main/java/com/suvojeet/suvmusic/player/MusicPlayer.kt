@@ -194,6 +194,27 @@ class MusicPlayer @Inject constructor(
 
                     // Bluetooth Autoplay
                     if (intent?.action == android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED) {
+                        // Improvement (5): Safe Volume Ducking
+                        // Prevent ear damage if Bluetooth device connects with high volume
+                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                        val volumePercent = currentVolume.toFloat() / maxVolume
+                        
+                        if (volumePercent > 0.7f) {
+                            android.util.Log.i("MusicPlayer", "Safe Volume: Ducking volume from ${ (volumePercent * 100).toInt() }% to 50%")
+                            val targetVolume = (maxVolume * 0.5f).toInt()
+                            
+                            // Smoothly duck volume over 1 second
+                            scope.launch {
+                                var v = currentVolume
+                                while (v > targetVolume) {
+                                    v--
+                                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
+                                    delay(50)
+                                }
+                            }
+                        }
+
                         if (sessionManager.isBluetoothAutoplayEnabled()) {
                             // Check if we have media to play
                             if (_playerState.value.queue.isNotEmpty() && !_playerState.value.isPlaying) {
@@ -845,6 +866,10 @@ class MusicPlayer @Inject constructor(
                     android.util.Log.d("MusicPlayer", "Attempting recovery (attempt $errorRetryCount/3) for: ${currentSong.id}")
                     
                     scope.launch {
+                        // Improvement (2): Exponential Backoff
+                        val backoffDelay = (800L * (1 shl (errorRetryCount - 1))).coerceAtMost(5000L)
+                        delay(backoffDelay)
+                        
                         // If Audio Sink or Decoder error occurred, switching modes often fixes it (Audio <-> Video)
                         // as it forces a complete reset of the decoder and audio track.
                         // NOTE: isParseError (3003/3004) is excluded — those are race condition artifacts,
@@ -874,13 +899,15 @@ class MusicPlayer @Inject constructor(
                                  ) 
                              }
                              resolvedVideoIds.remove(currentSong.id)
+                        } else if (isExpiredUrl && currentSong.source == SongSource.YOUTUBE) {
+                             // Improvement (2): 403 Forbidden Search Fallback
+                             // Clear cached ID to force a fresh search resolution
+                             resolvedVideoIds.remove(currentSong.id)
+                             _playerState.update { it.copy(isLoading = true, error = "Stream expired, finding alternative...") }
                         } else {
                              _playerState.update { it.copy(isLoading = true, error = null) }
                         }
 
-                        // Exponential backoff
-                        delay(800L * errorRetryCount)
-                        
                         val resumePosition = _playerState.value.currentPosition
                         
                         try {

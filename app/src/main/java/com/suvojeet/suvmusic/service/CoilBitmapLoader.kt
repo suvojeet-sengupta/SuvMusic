@@ -29,7 +29,26 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
     // 320px is the standard maximum for MediaSession metadata on many Android versions.
     // Reducing from 512px to 320px prevents MediaMetadata$Builder.scaleBitmap from being called
     // by the system, which is often where the "recycled source" crash occurs.
-    private val DEFAULT_BITMAP_SIZE = 320
+    // Improvement (3): Further reduce to 256px for Android Auto to save memory on head units.
+    private val DEFAULT_BITMAP_SIZE = if (isAndroidAuto()) 256 else 320
+
+    /**
+     * Detect if the current session is Android Auto.
+     */
+    private fun isAndroidAuto(): Boolean {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+            // Android Auto often presents as a specific device type or brand in some versions,
+            // but a more reliable way is to check the system UI mode or specific broadcast intents.
+            // For this loader, we'll check if any output device is a "Car" or if the 
+            // configuration is in car mode.
+            val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+            uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_CAR
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
         val future = SettableFuture.create<Bitmap>()
