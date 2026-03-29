@@ -153,7 +153,15 @@ private fun ClassicPortraitContent(
         modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = if (isCompactHeight) 16.dp else 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        ClassicTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = onRecenterAr)
+        ClassicTopBar(
+            onBack = actions.onBack,
+            dominantColors = dominantColors,
+            isVideoMode = playerState.isVideoMode,
+            isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
+            onVideoToggle = actions.onToggleVideoMode,
+            audioArEnabled = audioArEnabled,
+            onRecenter = onRecenterAr
+        )
 
         Spacer(modifier = Modifier.weight(1f))
         
@@ -257,7 +265,15 @@ private fun ClassicLandscapeContent(
             )
         }
         Column(modifier = Modifier.weight(0.55f).fillMaxHeight().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            ClassicTopBar(onBack = actions.onBack, dominantColors = dominantColors, audioArEnabled = audioArEnabled, onRecenter = { })
+            ClassicTopBar(
+                onBack = actions.onBack,
+                dominantColors = dominantColors,
+                isVideoMode = playerState.isVideoMode,
+                isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
+                onVideoToggle = actions.onToggleVideoMode,
+                audioArEnabled = audioArEnabled,
+                onRecenter = { }
+            )
             Spacer(modifier = Modifier.height(8.dp))
             SongInfoSection(
                 song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
@@ -296,12 +312,21 @@ private fun ClassicLandscapeContent(
 // Internal Classic Components
 
 @Composable
-private fun ClassicTopBar(onBack: () -> Unit, dominantColors: DominantColors, audioArEnabled: Boolean, onRecenter: () -> Unit) {
+private fun ClassicTopBar(
+    onBack: () -> Unit,
+    dominantColors: DominantColors,
+    isVideoMode: Boolean = false,
+    isYouTubeSong: Boolean = false,
+    onVideoToggle: () -> Unit = {},
+    audioArEnabled: Boolean = false,
+    onRecenter: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Back Button
         Box(
             modifier = Modifier.size(44.dp).clip(SquircleShape).background(dominantColors.onBackground.copy(alpha = 0.1f)).clickable(onClick = onBack),
             contentAlignment = Alignment.Center
@@ -309,11 +334,57 @@ private fun ClassicTopBar(onBack: () -> Unit, dominantColors: DominantColors, au
             Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "Close", tint = dominantColors.onBackground, modifier = Modifier.size(28.dp))
         }
 
-        Text(
-            text = "NOW PLAYING", style = MaterialTheme.typography.labelLarge, color = dominantColors.onBackground.copy(alpha = 0.8f),
-            fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp
-        )
+        // Center Switch or Title
+        if (isYouTubeSong) {
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                    .padding(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                        .clickable { if (isVideoMode) onVideoToggle() }
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Audio",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                        fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                        .clickable { if (!isVideoMode) onVideoToggle() }
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Video",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                        fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = "NOW PLAYING",
+                style = MaterialTheme.typography.labelLarge,
+                color = dominantColors.onBackground.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp
+            )
+        }
 
+        // Right side
         if (audioArEnabled) {
             Box(modifier = Modifier.size(44.dp).clip(SquircleShape).background(dominantColors.onBackground.copy(alpha = 0.1f)).clickable(onClick = onRecenter), contentAlignment = Alignment.Center) {
                 Icon(imageVector = Icons.Default.Refresh, contentDescription = "Recenter Audio", tint = dominantColors.onBackground, modifier = Modifier.size(22.dp))
