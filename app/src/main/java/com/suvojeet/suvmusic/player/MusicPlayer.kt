@@ -191,7 +191,11 @@ class MusicPlayer @Inject constructor(
             override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
                 // Small delay to allow system to update device list
                 scope.launch {
-                    delay(1000)
+                    delay(2000)
+                    updateAvailableDevices()
+                    
+                    // Second attempt after longer delay for slower devices
+                    delay(3000)
                     updateAvailableDevices()
 
                     // Bluetooth Autoplay
