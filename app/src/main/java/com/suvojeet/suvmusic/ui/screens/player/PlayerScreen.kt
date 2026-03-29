@@ -116,6 +116,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.ErrorOutline
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.ui.screens.player.FullScreenVideoPlayer
 
@@ -592,12 +593,92 @@ fun PortraitPlayerContent(
                         }
                     }
                 } else {
-                    AlbumArtwork(
-                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
-                        isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
-                        onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
-                        onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        AlbumArtwork(
+                            imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
+                            isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
+                            onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
+                            onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
+                        )
+                        
+                        // Improvement: Visual Error Overlay
+                        AnimatedVisibility(
+                            visible = playerState.error != null,
+                            enter = fadeIn() + scaleIn(),
+                            exit = fadeOut() + scaleOut()
+                        ) {
+                            val errorText = playerState.error ?: ""
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth(currentArtworkSize.fraction * 0.85f)
+                                    .padding(16.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                color = Color.Black.copy(alpha = 0.75f),
+                                contentColor = Color.White,
+                                tonalElevation = 8.dp
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.ErrorOutline,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                    
+                                    Text(
+                                        text = "Playback Error",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                    
+                                    Text(
+                                        text = errorText,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 3,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        androidx.compose.material3.OutlinedButton(
+                                            onClick = {
+                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                val clip = android.content.ClipData.newPlainText("SuvMusic Error", errorText)
+                                                clipboardManager.setPrimaryClip(clip)
+                                                Toast.makeText(context, "Error copied to clipboard", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                                        ) {
+                                            Text("Copy", color = Color.White)
+                                        }
+                                        
+                                        androidx.compose.material3.Button(
+                                            onClick = { 
+                                                // Trigger a manual re-play of the current song to retry resolution
+                                                if (song != null) actions.onPlayPause() 
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                                containerColor = dominantColors.accent
+                                            )
+                                        ) {
+                                            Text("Retry")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -742,12 +823,92 @@ fun LandscapePlayerContent(
                         }
                     }
                 } else {
-                    AlbumArtwork(
-                        imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
-                        isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
-                        onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
-                        onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        AlbumArtwork(
+                            imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
+                            isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
+                            onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
+                            onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id
+                        )
+                        
+                        // Improvement: Visual Error Overlay
+                        AnimatedVisibility(
+                            visible = playerState.error != null,
+                            enter = fadeIn() + scaleIn(),
+                            exit = fadeOut() + scaleOut()
+                        ) {
+                            val errorText = playerState.error ?: ""
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth(currentArtworkSize.fraction * 0.85f)
+                                    .padding(16.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                color = Color.Black.copy(alpha = 0.75f),
+                                contentColor = Color.White,
+                                tonalElevation = 8.dp
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.ErrorOutline,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                    
+                                    Text(
+                                        text = "Playback Error",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                    
+                                    Text(
+                                        text = errorText,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 3,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        androidx.compose.material3.OutlinedButton(
+                                            onClick = {
+                                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                val clip = android.content.ClipData.newPlainText("SuvMusic Error", errorText)
+                                                clipboardManager.setPrimaryClip(clip)
+                                                Toast.makeText(context, "Error copied to clipboard", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                                        ) {
+                                            Text("Copy", color = Color.White)
+                                        }
+                                        
+                                        androidx.compose.material3.Button(
+                                            onClick = { 
+                                                // Trigger a manual re-play of the current song to retry resolution
+                                                if (song != null) actions.onPlayPause() 
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                                containerColor = dominantColors.accent
+                                            )
+                                        ) {
+                                            Text("Retry")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

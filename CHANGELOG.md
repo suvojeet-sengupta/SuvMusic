@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.4.0] - 2026-03-29 (Hotfix)
+
+### Fixed
+- **Shuffle Integrity**: Resolved a critical issue where shuffle mode would cause rapid song skipping or "Source Errors."
+- **Audio Output Switching**: Fixed playback failing to resume or becoming silent when switching between Bluetooth and speakers.
+- **UI Transitions**: Eliminated artwork style flicker when expanding the Mini Player.
+
+### Added
+- **Visual Error Feedback**: Introduced a modern, expressive error overlay on the Player screen with "Copy Error" and "Retry" actions for easier troubleshooting.
+
+### Improved
+- **Intelligent Recovery**: Implemented exponential backoff for network retries and automatic search fallback for expired YouTube streams (403/410 errors).
+- **Battery & Efficiency**: Optimized battery life with Dynamic Audio Offload and reduced memory usage for Android Auto thumbnails.
+- **Safe Volume**: Added "Safe Volume Ducking" to prevent sudden loud volume when connecting Bluetooth devices.
+- **Backup Efficiency**: Optimized cloud backup rules to exclude large cache files, ensuring faster and more reliable device transfers.
+
 ## [2.1.3.0] - 2026-03-25
 
 ### Added
