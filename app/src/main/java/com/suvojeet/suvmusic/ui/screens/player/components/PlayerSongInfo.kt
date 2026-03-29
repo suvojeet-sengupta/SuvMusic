@@ -157,15 +157,15 @@ fun SongInfoSection(
                             .padding(horizontal = 2.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Dislike button
+                        // Like button
                         IconButton(
-                            onClick = onDislikeClick,
+                            onClick = onFavoriteClick,
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                                contentDescription = "Dislike",
-                                tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
+                                imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                                contentDescription = "Like",
+                                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -178,15 +178,15 @@ fun SongInfoSection(
                                 .background(dominantColors.onBackground.copy(alpha = 0.15f))
                         )
 
-                        // Like button
+                        // Dislike button
                         IconButton(
-                            onClick = onFavoriteClick,
+                            onClick = onDislikeClick,
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                                contentDescription = "Like",
-                                tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                                imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                                contentDescription = "Dislike",
+                                tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -324,15 +324,15 @@ fun SongInfoSection(
                         .padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Dislike button
+                    // Like button
                     IconButton(
-                        onClick = onDislikeClick,
+                        onClick = onFavoriteClick,
                         modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
-                            contentDescription = "Dislike",
-                            tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
+                            imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                            contentDescription = "Like",
+                            tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -345,15 +345,15 @@ fun SongInfoSection(
                             .background(dominantColors.onBackground.copy(alpha = 0.15f))
                     )
 
-                    // Like button
+                    // Dislike button
                     IconButton(
-                        onClick = onFavoriteClick,
+                        onClick = onDislikeClick,
                         modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                            contentDescription = "Like",
-                            tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
+                            imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                            contentDescription = "Dislike",
+                            tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
                             modifier = Modifier.size(20.dp)
                         )
                     }
