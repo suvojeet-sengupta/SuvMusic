@@ -318,7 +318,7 @@ fun SongInfoSection(
                     imageVector = Icons.Filled.MoreVert,
                     contentDescription = "More options",
                     tint = dominantColors.onBackground.copy(alpha = 0.9f),
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

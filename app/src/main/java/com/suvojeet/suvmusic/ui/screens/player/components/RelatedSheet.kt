@@ -262,7 +262,7 @@ private fun ModernRelatedListItem(
                     Icons.Default.MoreVert,
                     contentDescription = "More",
                     tint = dominantColors.onBackground.copy(alpha = 0.3f),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
