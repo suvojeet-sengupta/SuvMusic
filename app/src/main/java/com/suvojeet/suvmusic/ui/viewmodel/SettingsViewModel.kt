@@ -126,6 +126,7 @@ data class SettingsUiState(
     val iosLiquidGlassEnabled: Boolean = false,
     val miniPlayerAlpha: Float = 0f,
     val miniPlayerStyle: com.suvojeet.suvmusic.data.model.MiniPlayerStyle = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.YT_MUSIC,
+    val playerStyle: com.suvojeet.suvmusic.data.model.PlayerStyle = com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC,
     val homeSectionsVisibility: Set<String> = com.suvojeet.suvmusic.data.SessionManager.DEFAULT_HOME_SECTIONS,
     val downloadLocation: String? = null,
     val loggingEnabled: Boolean = false,
@@ -530,6 +531,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.playerStyleFlow.collect { style ->
+                _uiState.update { it.copy(playerStyle = style) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.homeSectionsVisibilityFlow.collect { sections ->
                 _uiState.update { it.copy(homeSectionsVisibility = sections) }
             }
@@ -627,6 +634,7 @@ class SettingsViewModel @Inject constructor(
             val iosLiquidGlassEnabled = sessionManager.isIosLiquidGlassEnabled()
             val miniPlayerAlpha = sessionManager.getMiniPlayerAlpha()
             val miniPlayerStyle = sessionManager.getMiniPlayerStyle()
+            val playerStyle = sessionManager.getPlayerStyle()
             val homeSectionsVisibility = sessionManager.getHomeSectionsVisibility()
             val downloadLocation = sessionManager.getDownloadLocation()
             val loggingEnabled = sessionManager.isLoggingEnabled()
@@ -708,6 +716,7 @@ class SettingsViewModel @Inject constructor(
                     iosLiquidGlassEnabled = iosLiquidGlassEnabled,
                     miniPlayerAlpha = miniPlayerAlpha,
                     miniPlayerStyle = miniPlayerStyle,
+                    playerStyle = playerStyle,
                     homeSectionsVisibility = homeSectionsVisibility,
                     downloadLocation = downloadLocation,
                     loggingEnabled = loggingEnabled
@@ -1330,6 +1339,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setMiniPlayerStyle(style)
             _uiState.update { it.copy(miniPlayerStyle = style) }
+        }
+    }
+
+    fun setPlayerStyle(style: com.suvojeet.suvmusic.data.model.PlayerStyle) {
+        viewModelScope.launch {
+            sessionManager.setPlayerStyle(style)
+            _uiState.update { it.copy(playerStyle = style) }
         }
     }
 
