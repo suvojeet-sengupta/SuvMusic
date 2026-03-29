@@ -414,6 +414,7 @@ fun SuvMusicApp(
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
     val relatedSongs by playerViewModel.relatedSongsState.collectAsStateWithLifecycle(initialValue = emptyList())
     val isFetchingRelated by playerViewModel.isFetchingRelated.collectAsStateWithLifecycle(initialValue = false)
+    val selectedRelatedIndices by playerViewModel.selectedRelatedIndices.collectAsStateWithLifecycle(initialValue = emptySet())
     val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO)
 
     val artistCredits by playerViewModel.artistCredits.collectAsStateWithLifecycle(initialValue = emptyList<ArtistCreditInfo>())
@@ -908,6 +909,7 @@ fun SuvMusicApp(
                     isFetchingLyrics = isFetchingLyrics,
                     relatedSongs = relatedSongs,
                     isFetchingRelated = isFetchingRelated,
+                    selectedRelatedIndices = selectedRelatedIndices,
                     comments = comments,
                     isFetchingComments = isFetchingComments,
                     isLoggedIn = isLoggedIn,
@@ -972,6 +974,15 @@ fun SuvMusicApp(
                     },
                     onPlayRelated = { song ->
                         playerViewModel.startRadio(song, null)
+                    },
+                    onToggleRelatedSelection = { playerViewModel.toggleRelatedSelection(it) },
+                    onSelectAllRelated = { playerViewModel.selectAllRelated() },
+                    onClearRelatedSelection = { playerViewModel.clearRelatedSelection() },
+                    onAddRelatedToQueue = { songs ->
+                        songs.forEach { playerViewModel.addToQueue(it) }
+                    },
+                    onAddRelatedToPlaylist = { songs ->
+                        playlistManagementViewModel.showAddToPlaylistSheet(songs)
                     }
                 )
 
