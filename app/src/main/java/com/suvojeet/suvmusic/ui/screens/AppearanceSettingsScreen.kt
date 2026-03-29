@@ -76,8 +76,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.PlayerStyle
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.util.dpadFocusable
+import kotlinx.coroutines.launch
 
 val PlayerStyle.label: String
     get() = when (this) {
@@ -345,7 +349,47 @@ fun AppearanceSettingsScreen(
     
     // App Theme Bottom Sheet
     if (showAppThemeSheet) {
-... (existing AppTheme sheet content) ...
+        ModalBottomSheet(
+            onDismissRequest = { showAppThemeSheet = false },
+            sheetState = appThemeSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "App Theme",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
+                
+                AppTheme.entries.forEach { theme ->
+                    ListItem(
+                        headlineContent = { Text(theme.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.appTheme == theme,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setAppTheme(theme)
+                                    scope.launch {
+                                        appThemeSheetState.hide()
+                                        showAppThemeSheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 
