@@ -234,6 +234,34 @@ fun SongInfoSection(
                 }
             }
             
+            // Artist Radio Badge
+            if (song?.album?.startsWith("Artist Radio:") == true) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(dominantColors.accent.copy(alpha = 0.15f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Radio,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = dominantColors.accent
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Artist Radio",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        ),
+                        color = dominantColors.accent
+                    )
+                }
+            }
+            
             // ... rest of the column content (sleep timer, quality)
             
             // Sleep Timer indicator
