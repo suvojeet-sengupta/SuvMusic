@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -74,78 +75,92 @@ fun ModernQueueView(
     onClearQueue: () -> Unit,
     dominantColors: DominantColors,
     animatedBackgroundEnabled: Boolean = true,
-    isDarkTheme: Boolean = true
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     val haptic = LocalHapticFeedback.current
     val isSelectionMode = selectedQueueIndices.isNotEmpty()
+    
+    val backgroundColor = if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
+    val contentColor = if (isDarkTheme) Color.White else Color.Black
+    val secondaryContentColor = contentColor.copy(alpha = 0.6f)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(dominantColors.primary.copy(alpha = 0.98f))
+            .background(backgroundColor)
     ) {
+        // Gradient Overlay for subtle color tint
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            dominantColors.primary.copy(alpha = if (isDarkTheme) 0.15f else 0.1f),
+                            backgroundColor
+                        )
+                    )
+                )
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // Refined Modern Header
+            // Refined Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 if (isSelectionMode) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onClearSelection,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        ) {
-                            Icon(Icons.Default.Close, "Close", tint = dominantColors.onBackground, modifier = Modifier.size(20.dp))
+                        IconButton(onClick = onClearSelection) {
+                            Icon(Icons.Default.Close, "Close", tint = contentColor)
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "${selectedQueueIndices.size} Selected",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                            color = dominantColors.onBackground
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = contentColor
                         )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HeaderActionButton(Icons.Default.SelectAll, onSelectAll, dominantColors)
-                        HeaderActionButton(Icons.Default.PlaylistAdd, { 
+                    Row {
+                        IconButton(onClick = onSelectAll) {
+                            Icon(Icons.Default.SelectAll, null, tint = contentColor)
+                        }
+                        IconButton(onClick = { 
                             val selectedSongs = selectedQueueIndices.mapNotNull { index ->
                                 if (index < queue.size) queue[index] else null
                             }
                             onAddToPlaylistClick(selectedSongs) 
-                        }, dominantColors)
-                        HeaderActionButton(Icons.Default.Delete, { onRemoveItems(selectedQueueIndices.toList()) }, dominantColors, isError = true)
+                        }) {
+                            Icon(Icons.Default.PlaylistAdd, null, tint = contentColor)
+                        }
+                        IconButton(onClick = { onRemoveItems(selectedQueueIndices.toList()) }) {
+                            Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground, modifier = Modifier.size(28.dp))
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = contentColor, modifier = Modifier.size(32.dp))
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Playing Next",
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
-                            color = dominantColors.onBackground
+                            "Up Next",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = contentColor
                         )
                     }
                     
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onClearQueue) {
-                            Icon(Icons.Default.DeleteSweep, "Clear", tint = dominantColors.onBackground.copy(alpha = 0.6f))
+                            Icon(Icons.Default.DeleteSweep, "Clear", tint = secondaryContentColor)
                         }
                         IconButton(onClick = { if (queue.isNotEmpty()) onToggleSelection(if (currentIndex >= 0) currentIndex else 0) }) {
                             Icon(Icons.Default.Checklist, "Select", tint = dominantColors.accent)
@@ -156,13 +171,13 @@ fun ModernQueueView(
 
             // Hero Now Playing Card
             if (!isSelectionMode && currentSong != null) {
-                HeroNowPlayingCard(currentSong, isPlaying, isFavorite, onToggleLike, { onMoreClick(currentSong) }, dominantColors)
-                Spacer(modifier = Modifier.height(16.dp))
+                HeroNowPlayingCard(currentSong, isPlaying, isFavorite, onToggleLike, { onMoreClick(currentSong) }, dominantColors, isDarkTheme, contentColor)
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Infinite Play Toggle Section
+            // Autoplay Toggle Row
             if (!isSelectionMode) {
-                AutoplayToggleRow(isAutoplayEnabled, onToggleAutoplay, dominantColors)
+                AutoplayToggleRow(isAutoplayEnabled, onToggleAutoplay, dominantColors, isDarkTheme, contentColor)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -174,7 +189,7 @@ fun ModernQueueView(
                 modifier = Modifier.weight(1f)
             ) {
                 if (playedSongs.isNotEmpty()) {
-                    item { SectionDivider("HISTORY", dominantColors) }
+                    item { SectionDivider("HISTORY", secondaryContentColor) }
                     itemsIndexed(playedSongs, key = { index, s -> "history_${s.id}_$index" }) { index, song ->
                         ModernQueueListItem(
                             song = song,
@@ -185,13 +200,16 @@ fun ModernQueueView(
                             onClick = { if (isSelectionMode) onToggleSelection(index) else onSongClick(index) },
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(index) },
                             onMoreClick = { onMoreClick(song) },
-                            dominantColors = dominantColors
+                            dominantColors = dominantColors,
+                            isDarkTheme = isDarkTheme,
+                            contentColor = contentColor,
+                            secondaryContentColor = secondaryContentColor
                         )
                     }
                 }
 
                 if (currentSong != null) {
-                    item { SectionDivider("NOW PLAYING", dominantColors) }
+                    item { SectionDivider("NOW PLAYING", secondaryContentColor) }
                     item(key = "current_${currentSong.id}") {
                         ModernQueueListItem(
                             song = currentSong,
@@ -202,13 +220,16 @@ fun ModernQueueView(
                             onClick = { if (isSelectionMode) onToggleSelection(currentIndex) else onPlayPause() },
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(currentIndex) },
                             onMoreClick = { onMoreClick(currentSong) },
-                            dominantColors = dominantColors
+                            dominantColors = dominantColors,
+                            isDarkTheme = isDarkTheme,
+                            contentColor = contentColor,
+                            secondaryContentColor = secondaryContentColor
                         )
                     }
                 }
 
                 if (upNextSongs.isNotEmpty()) {
-                    item { SectionDivider(if (isRadioMode || isAutoplayEnabled) "UPCOMING (AUTOPLAY)" else "UP NEXT", dominantColors) }
+                    item { SectionDivider(if (isRadioMode || isAutoplayEnabled) "UPCOMING (AUTOPLAY)" else "UP NEXT", secondaryContentColor) }
                     itemsIndexed(upNextSongs, key = { indexInList, s -> "next_${s.id}_$indexInList" }) { indexInList, song ->
                         val actualIndex = currentIndex + 1 + indexInList
                         ModernQueueListItem(
@@ -220,7 +241,10 @@ fun ModernQueueView(
                             onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(actualIndex) },
                             onMoreClick = { onMoreClick(song) },
-                            dominantColors = dominantColors
+                            dominantColors = dominantColors,
+                            isDarkTheme = isDarkTheme,
+                            contentColor = contentColor,
+                            secondaryContentColor = secondaryContentColor
                         )
                     }
                 }
@@ -238,25 +262,20 @@ fun ModernQueueView(
 }
 
 @Composable
-private fun HeaderActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, dominantColors: DominantColors, isError: Boolean = false) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        modifier = Modifier.size(36.dp),
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = if (isError) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) else dominantColors.onBackground.copy(alpha = 0.05f),
-            contentColor = if (isError) MaterialTheme.colorScheme.error else dominantColors.onBackground
-        )
-    ) {
-        Icon(icon, null, modifier = Modifier.size(18.dp))
-    }
-}
-
-@Composable
-private fun HeroNowPlayingCard(song: Song, isPlaying: Boolean, isFavorite: Boolean, onToggleLike: () -> Unit, onMoreClick: () -> Unit, dominantColors: DominantColors) {
+private fun HeroNowPlayingCard(
+    song: Song, 
+    isPlaying: Boolean, 
+    isFavorite: Boolean, 
+    onToggleLike: () -> Unit, 
+    onMoreClick: () -> Unit, 
+    dominantColors: DominantColors,
+    isDarkTheme: Boolean,
+    contentColor: Color
+) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-        shape = SquircleShape,
-        color = dominantColors.accent.copy(alpha = 0.1f),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = contentColor.copy(alpha = 0.05f),
         border = null
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -264,11 +283,11 @@ private fun HeroNowPlayingCard(song: Song, isPlaying: Boolean, isFavorite: Boole
                 AsyncImage(
                     model = song.thumbnailUrl,
                     contentDescription = null,
-                    modifier = Modifier.size(64.dp).clip(SquircleShape),
+                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
                 if (isPlaying) {
-                    Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.3f), SquircleShape), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                         NowPlayingAnimation(color = Color.White, isPlaying = true)
                     }
                 }
@@ -276,47 +295,52 @@ private fun HeroNowPlayingCard(song: Song, isPlaying: Boolean, isFavorite: Boole
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "NOW PLAYING",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp, fontWeight = FontWeight.Black),
-                    color = dominantColors.accent
-                )
-                Text(
                     song.title,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = dominantColors.onBackground,
+                    color = contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     song.artist,
                     style = MaterialTheme.typography.bodySmall,
-                    color = dominantColors.onBackground.copy(alpha = 0.6f),
+                    color = contentColor.copy(alpha = 0.6f),
                     maxLines = 1
                 )
             }
             IconButton(onClick = onToggleLike) {
-                Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground)
+                Icon(
+                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, 
+                    contentDescription = null, 
+                    tint = if (isFavorite) dominantColors.accent else contentColor.copy(alpha = 0.7f)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AutoplayToggleRow(enabled: Boolean, onToggle: () -> Unit, dominantColors: DominantColors) {
+private fun AutoplayToggleRow(enabled: Boolean, onToggle: () -> Unit, dominantColors: DominantColors, isDarkTheme: Boolean, contentColor: Color) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).clickable { onToggle() },
-        shape = SquircleShape,
-        color = dominantColors.onBackground.copy(alpha = 0.03f)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { onToggle() },
+        shape = RoundedCornerShape(12.dp),
+        color = contentColor.copy(alpha = 0.05f)
     ) {
         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.QueueMusic, null, tint = if (enabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Filled.QueueMusic, null, tint = if (enabled) dominantColors.accent else contentColor.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Infinite Play", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = dominantColors.onBackground)
+                Text("Autoplay", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = contentColor)
             }
             Switch(
                 checked = enabled, onCheckedChange = { onToggle() },
-                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = dominantColors.accent, uncheckedThumbColor = dominantColors.onBackground.copy(alpha = 0.3f), uncheckedTrackColor = dominantColors.onBackground.copy(alpha = 0.08f), uncheckedBorderColor = Color.Transparent),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White, 
+                    checkedTrackColor = dominantColors.accent, 
+                    uncheckedThumbColor = contentColor.copy(alpha = 0.3f), 
+                    uncheckedTrackColor = contentColor.copy(alpha = 0.08f), 
+                    uncheckedBorderColor = Color.Transparent
+                ),
                 modifier = Modifier.scale(0.7f)
             )
         }
@@ -324,12 +348,12 @@ private fun AutoplayToggleRow(enabled: Boolean, onToggle: () -> Unit, dominantCo
 }
 
 @Composable
-private fun SectionDivider(title: String, dominantColors: DominantColors) {
+private fun SectionDivider(title: String, color: Color) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Black),
-        color = dominantColors.onBackground.copy(alpha = 0.3f),
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
+        color = color,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
     )
 }
 
@@ -337,13 +361,14 @@ private fun SectionDivider(title: String, dominantColors: DominantColors) {
 @Composable
 private fun ModernQueueListItem(
     song: Song, isCurrent: Boolean, isPlaying: Boolean, isSelected: Boolean, isSelectionMode: Boolean,
-    onClick: () -> Unit, onLongClick: () -> Unit, onMoreClick: () -> Unit, dominantColors: DominantColors
+    onClick: () -> Unit, onLongClick: () -> Unit, onMoreClick: () -> Unit, 
+    dominantColors: DominantColors, isDarkTheme: Boolean, contentColor: Color, secondaryContentColor: Color
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(SquircleShape)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(8.dp),
@@ -352,10 +377,10 @@ private fun ModernQueueListItem(
         Box {
             AsyncImage(
                 model = song.thumbnailUrl, contentDescription = null,
-                modifier = Modifier.size(52.dp).clip(SquircleShape), contentScale = ContentScale.Crop
+                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop
             )
             if (isCurrent && isPlaying) {
-                Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.4f), SquircleShape), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
                     NowPlayingAnimation(color = dominantColors.accent, isPlaying = true)
                 }
             }
@@ -365,25 +390,25 @@ private fun ModernQueueListItem(
             Text(
                 text = song.title,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = if (isCurrent) dominantColors.accent else dominantColors.onBackground,
+                color = if (isCurrent) dominantColors.accent else contentColor,
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = dominantColors.onBackground.copy(alpha = 0.5f),
+                color = secondaryContentColor,
                 maxLines = 1
             )
         }
         if (isSelectionMode) {
             Checkbox(
                 checked = isSelected, onCheckedChange = { onClick() },
-                colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent, uncheckedColor = dominantColors.onBackground.copy(alpha = 0.3f)),
+                colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent),
                 modifier = Modifier.scale(0.85f)
             )
         } else {
             IconButton(onClick = onMoreClick) {
-                Icon(Icons.Default.MoreVert, null, tint = dominantColors.onBackground.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.MoreVert, null, tint = secondaryContentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
             }
         }
     }

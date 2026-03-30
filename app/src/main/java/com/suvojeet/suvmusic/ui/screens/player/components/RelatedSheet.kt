@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -51,63 +53,78 @@ fun RelatedSheet(
     
     val isSelectionMode = selectedIndices.isNotEmpty()
     val haptic = LocalHapticFeedback.current
+    val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+    
+    val backgroundColor = if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
+    val contentColor = if (isDarkTheme) Color.White else Color.Black
+    val secondaryContentColor = contentColor.copy(alpha = 0.6f)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(dominantColors.primary.copy(alpha = 0.98f))
+            .background(backgroundColor)
     ) {
+        // Gradient Overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            dominantColors.primary.copy(alpha = if (isDarkTheme) 0.15f else 0.1f),
+                            backgroundColor
+                        )
+                    )
+                )
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // Refined Modern Header
+            // Refined Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 if (isSelectionMode) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onClearSelection,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        ) {
-                            Icon(Icons.Default.Close, "Close", tint = dominantColors.onBackground, modifier = Modifier.size(20.dp))
+                        IconButton(onClick = onClearSelection) {
+                            Icon(Icons.Default.Close, "Close", tint = contentColor)
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "${selectedIndices.size} Selected",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                            color = dominantColors.onBackground
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = contentColor
                         )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HeaderActionButton(Icons.Default.SelectAll, onSelectAll, dominantColors)
-                        HeaderActionButton(Icons.AutoMirrored.Filled.PlaylistAdd, onAddSelectedToPlaylist, dominantColors)
-                        HeaderActionButton(Icons.Default.Add, onAddSelectedToQueue, dominantColors)
+                    Row {
+                        IconButton(onClick = onSelectAll) {
+                            Icon(Icons.Default.SelectAll, null, tint = contentColor)
+                        }
+                        IconButton(onClick = onAddSelectedToPlaylist) {
+                            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null, tint = contentColor)
+                        }
+                        IconButton(onClick = onAddSelectedToQueue) {
+                            Icon(Icons.Default.Add, null, tint = contentColor)
+                        }
                     }
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = dominantColors.onBackground, modifier = Modifier.size(28.dp))
+                        IconButton(onClick = onClose) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = contentColor, modifier = Modifier.size(32.dp))
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Related Songs",
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
-                            color = dominantColors.onBackground
+                            "Related",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = contentColor
                         )
                     }
                 }
@@ -118,12 +135,12 @@ fun RelatedSheet(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = dominantColors.accent, strokeWidth = 3.dp, modifier = Modifier.size(40.dp))
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Finding similar music...", style = MaterialTheme.typography.bodyMedium, color = dominantColors.onBackground.copy(alpha = 0.5f))
+                        Text("Finding similar music...", style = MaterialTheme.typography.bodyMedium, color = secondaryContentColor)
                     }
                 }
             } else if (relatedSongs.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No related songs found", color = dominantColors.onBackground.copy(alpha = 0.4f))
+                    Text("No related songs found", color = secondaryContentColor.copy(alpha = 0.5f))
                 }
             } else {
                 LazyColumn(
@@ -132,10 +149,10 @@ fun RelatedSheet(
                 ) {
                     item {
                         Text(
-                            "BASED ON YOUR CURRENT PLAYBACK",
-                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Black),
-                            color = dominantColors.onBackground.copy(alpha = 0.3f),
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                            "RECOMMENDATIONS",
+                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
+                            color = secondaryContentColor,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                         )
                     }
                     itemsIndexed(relatedSongs, key = { _, song -> song.id }) { index, song ->
@@ -155,26 +172,14 @@ fun RelatedSheet(
                                 onToggleSelection(index)
                             },
                             onMoreClick = { onMoreClick(song) },
-                            dominantColors = dominantColors
+                            dominantColors = dominantColors,
+                            contentColor = contentColor,
+                            secondaryContentColor = secondaryContentColor
                         )
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HeaderActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, dominantColors: DominantColors) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        modifier = Modifier.size(36.dp),
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = dominantColors.onBackground.copy(alpha = 0.05f),
-            contentColor = dominantColors.onBackground
-        )
-    ) {
-        Icon(icon, null, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -187,13 +192,15 @@ private fun ModernRelatedListItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit,
-    dominantColors: DominantColors
+    dominantColors: DominantColors,
+    contentColor: Color,
+    secondaryContentColor: Color
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(SquircleShape)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
             .combinedClickable(
                 onClick = onClick,
@@ -207,16 +214,16 @@ private fun ModernRelatedListItem(
                 model = song.thumbnailUrl,
                 contentDescription = null,
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(SquircleShape),
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(4.dp)),
                 contentScale = ContentScale.Crop
             )
             
             if (isSelected) {
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(SquircleShape)
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(4.dp))
                         .background(Color.Black.copy(alpha = 0.4f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -236,14 +243,14 @@ private fun ModernRelatedListItem(
             Text(
                 text = song.title,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = dominantColors.onBackground,
+                color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = dominantColors.onBackground.copy(alpha = 0.5f),
+                color = secondaryContentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -253,7 +260,7 @@ private fun ModernRelatedListItem(
             Checkbox(
                 checked = isSelected,
                 onCheckedChange = { onClick() },
-                colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent, uncheckedColor = dominantColors.onBackground.copy(alpha = 0.3f)),
+                colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent),
                 modifier = Modifier.scale(0.85f)
             )
         } else {
@@ -261,7 +268,7 @@ private fun ModernRelatedListItem(
                 Icon(
                     Icons.Default.MoreVert,
                     contentDescription = "More",
-                    tint = dominantColors.onBackground.copy(alpha = 0.3f),
+                    tint = secondaryContentColor.copy(alpha = 0.5f),
                     modifier = Modifier.size(18.dp)
                 )
             }
