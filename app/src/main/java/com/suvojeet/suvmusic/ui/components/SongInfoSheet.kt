@@ -49,14 +49,12 @@ fun SongInfoSheet(
     audioCodec: String? = null,
     audioBitrate: Int? = null,
     dominantColors: DominantColors? = null,
+    isDarkTheme: Boolean = isSystemInDarkTheme(),
     viewModel: SongInfoViewModel = hiltViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
     val releaseDate by viewModel.releaseDate.collectAsState()
-    
-    // Explicitly check if the system is in dark theme
-    val isDarkTheme = isSystemInDarkTheme()
     
     // Get high resolution thumbnail URL
     val highResThumbnail = remember(song.thumbnailUrl, song.id) {
