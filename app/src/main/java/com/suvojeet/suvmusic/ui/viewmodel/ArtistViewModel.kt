@@ -30,6 +30,7 @@ data class ArtistUiState(
     val error: ArtistError? = null,
     val isSubscribing: Boolean = false,
     val isStartingRadio: Boolean = false,
+    val radioStatus: String? = null,
     val showMultipleArtistsDialog: Boolean = false,
     val currentArtistCredits: List<ArtistCreditInfo> = emptyList()
 )
@@ -181,23 +182,43 @@ class ArtistViewModel @Inject constructor(
         }
     }
 
-    fun startRadio(onPlaylistReady: (String) -> Unit) {
+    fun startRadio(onPlaylistReady: (List<Song>) -> Unit) {
         val currentArtist = _uiState.value.artist ?: return
         
         viewModelScope.launch {
-            _uiState.update { it.copy(isStartingRadio = true) }
-            // Try to get radio ID from artist page
-            var radioId = currentArtist.channelId?.let { youTubeRepository.getArtistRadioId(it) }
-            
-            // Fallback: search for "Artist Name Radio" or just play top songs
-            if (radioId == null) {
-                // For now, if we can't find specific radio, we can just return
-                 _uiState.update { it.copy(isStartingRadio = false) }
-                 return@launch
+            _uiState.update { 
+                it.copy(
+                    isStartingRadio = true,
+                    radioStatus = "Connecting with ${currentArtist.name} radio station..."
+                ) 
             }
             
-            _uiState.update { it.copy(isStartingRadio = false) }
-            onPlaylistReady(radioId)
+            try {
+                // 1. Get radio ID
+                val radioId = currentArtist.channelId?.let { youTubeRepository.getArtistRadioId(it) }
+                
+                if (radioId != null) {
+                    // 2. Fetch songs from this radio/playlist
+                    _uiState.update { it.copy(radioStatus = "Creating radio station...") }
+                    val playlist = youTubeRepository.getPlaylist(radioId)
+                    
+                    if (playlist.songs.isNotEmpty()) {
+                        // Tag songs as part of Artist Radio
+                        val radioSongs = playlist.songs.map { song ->
+                            song.copy(album = "Artist Radio: ${currentArtist.name}")
+                        }
+                        onPlaylistReady(radioSongs)
+                    } else {
+                        onPlaylistReady(currentArtist.songs)
+                    }
+                } else {
+                    onPlaylistReady(currentArtist.songs)
+                }
+            } catch (e: Exception) {
+                onPlaylistReady(currentArtist.songs)
+            } finally {
+                _uiState.update { it.copy(isStartingRadio = false, radioStatus = null) }
+            }
         }
     }
 }
