@@ -40,6 +40,10 @@ import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 @Composable
 fun AlbumScreen(
@@ -54,6 +58,7 @@ fun AlbumScreen(
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
     val album = uiState.album
+    val haptic = LocalHapticFeedback.current
 
     // Check if we are in dark theme based on background luminance
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -198,6 +203,9 @@ fun AlbumScreen(
                         AlbumSongItem(
                             song = song,
                             trackNumber = index + 1,
+                            itemIndex = index,
+                            totalSongs = album.songs.size,
+                            onReorder = { from, to -> viewModel.reorderSong(from, to) },
                             onClick = { onSongClick(album.songs, index) },
                             onMoreClick = { 
                                 selectedSong = song
@@ -627,14 +635,21 @@ private fun ActionButton(
 private fun AlbumSongItem(
     song: Song,
     trackNumber: Int,
+    itemIndex: Int = 0,
+    totalSongs: Int = 0,
+    onReorder: (Int, Int) -> Unit = { _, _ -> },
     onClick: () -> Unit,
     onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color
 ) {
+    var offsetY by remember { mutableStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .offset(y = offsetY.dp / 8)
             .dpadFocusable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -680,6 +695,34 @@ private fun AlbumSongItem(
             )
         }
         
+        // Drag Handle (On the right)
+        Icon(
+            imageVector = Icons.Default.DragHandle,
+            contentDescription = "Reorder",
+            tint = secondaryContentColor.copy(alpha = 0.4f),
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .size(24.dp)
+                .pointerInput(Unit) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                        onDragEnd = { offsetY = 0f },
+                        onDragCancel = { offsetY = 0f },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetY += dragAmount.y
+                            if (offsetY > 50f && itemIndex < totalSongs - 1) {
+                                onReorder(itemIndex, itemIndex + 1)
+                                offsetY = 0f
+                            } else if (offsetY < -50f && itemIndex > 0) {
+                                onReorder(itemIndex, itemIndex - 1)
+                                offsetY = 0f
+                            }
+                        }
+                    )
+                }
+        )
+
         // More Options
         IconButton(onClick = onMoreClick) {
             Icon(
