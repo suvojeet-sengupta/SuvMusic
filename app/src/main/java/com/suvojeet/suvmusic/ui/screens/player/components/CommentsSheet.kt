@@ -52,14 +52,23 @@ fun CommentsSheet(
     onPostComment: (String) -> Unit = {},
     isLoadingMore: Boolean = false,
     onLoadMore: () -> Unit = {},
-    dominantColors: DominantColors? = null
+    dominantColors: DominantColors? = null,
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     if (isVisible) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         
-        // Use provided dominant colors or fall back to MaterialTheme
-        val backgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surfaceContainerHigh
-        val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+        // Determine colors based on theme and dominant colors
+        val backgroundColor = if (isDarkTheme) {
+            dominantColors?.secondary ?: MaterialTheme.colorScheme.surfaceContainerHigh
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
+        val contentColor = if (isDarkTheme) {
+            dominantColors?.onBackground ?: Color.White
+        } else {
+            Color.Black
+        }
         val finalAccentColor = dominantColors?.accent ?: accentColor
         
         ModalBottomSheet(

@@ -139,16 +139,24 @@ fun EqualizerSheet(
     initialPreamp: Float = 0f,
     initialBassBoost: Float = 0f,
     initialVirtualizer: Float = 0f,
-    dominantColors: DominantColors? = null
+    dominantColors: DominantColors? = null,
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val haptic = LocalHapticFeedback.current
-    
+
     // Determine colors
-    val finalBackgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
-    val finalContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val finalBackgroundColor = if (isDarkTheme) {
+        dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    val finalContentColor = if (isDarkTheme) {
+        dominantColors?.onBackground ?: Color.White
+    } else {
+        Color.Black
+    }
     val finalAccentColor = dominantColors?.accent ?: dominantColor
-    
     if (isVisible) {
         // State management
         var isEnabled by remember(initialEnabled) { mutableStateOf(initialEnabled) }

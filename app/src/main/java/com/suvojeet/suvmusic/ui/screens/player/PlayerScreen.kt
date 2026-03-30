@@ -649,7 +649,8 @@ fun BoxScope.OverlaysContent(
                     Toast.makeText(context, "Please allow 'Modify System Settings' permission", Toast.LENGTH_LONG).show()
                     ringtoneViewModel.ringtoneHelper.requestSettingsPermission(context)
                 }
-            }
+            },
+            isDarkTheme = isAppInDarkTheme
             )
     }
 
@@ -658,7 +659,8 @@ fun BoxScope.OverlaysContent(
         isVisible = activeOverlay is PlayerOverlay.Comments, comments = state.comments, isLoading = state.isFetchingComments,
         onDismiss = { if (currentOverlay is PlayerOverlay.Comments) onOverlayChange(PlayerOverlay.None) }, accentColor = dominantColors.accent, isLoggedIn = state.isLoggedIn,
         isPostingComment = state.isPostingComment, onPostComment = actions.onPostComment, isLoadingMore = state.isLoadingMoreComments, onLoadMore = actions.onLoadMoreComments,
-        dominantColors = dominantColors
+        dominantColors = dominantColors,
+        isDarkTheme = isAppInDarkTheme
     )
 
     if (song != null) {
@@ -669,7 +671,8 @@ fun BoxScope.OverlaysContent(
             onArtistClick = actions.onArtistClick, 
             audioCodec = playerState.audioCodec, 
             audioBitrate = playerState.audioBitrate,
-            dominantColors = dominantColors
+            dominantColors = dominantColors,
+            isDarkTheme = isAppInDarkTheme
         )
     }
 
@@ -684,7 +687,8 @@ fun BoxScope.OverlaysContent(
         onSelectOption = actions.onSetSleepTimer, 
         onDismiss = { if (currentOverlay is PlayerOverlay.SleepTimer) onOverlayChange(PlayerOverlay.None) }, 
         accentColor = dominantColors.accent,
-        dominantColors = dominantColors
+        dominantColors = dominantColors,
+        isDarkTheme = isAppInDarkTheme
     )
 
     if (activeOverlay is PlayerOverlay.Equalizer) {
@@ -704,7 +708,8 @@ fun BoxScope.OverlaysContent(
             initialPreamp = eqPreamp, 
             initialBassBoost = bassBoost, 
             initialVirtualizer = virtualizer,
-            dominantColors = dominantColors
+            dominantColors = dominantColors,
+            isDarkTheme = isAppInDarkTheme
         )
     }
 
@@ -714,7 +719,8 @@ fun BoxScope.OverlaysContent(
         currentPitch = playerState.pitch,
         onDismiss = { if (currentOverlay is PlayerOverlay.PlaybackSpeed) onOverlayChange(PlayerOverlay.None) },
         onApply = { speed, pitch -> actions.onSetPlaybackParameters(speed, pitch) },
-        dominantColors = dominantColors
+        dominantColors = dominantColors,
+        isDarkTheme = isAppInDarkTheme
     )
 
     OutputDeviceSheet(
@@ -724,7 +730,8 @@ fun BoxScope.OverlaysContent(
         onDismiss = { if (currentOverlay is PlayerOverlay.OutputDevice) onOverlayChange(PlayerOverlay.None) },
         onRefreshDevices = { actions.onRefreshDevices() },
         accentColor = dominantColors.accent,
-        dominantColors = dominantColors
+        dominantColors = dominantColors,
+        isDarkTheme = isAppInDarkTheme
     )
 
     // Ringtone Dialogs

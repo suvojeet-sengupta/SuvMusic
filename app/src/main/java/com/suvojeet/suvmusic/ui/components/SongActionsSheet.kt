@@ -65,13 +65,22 @@ fun SongActionsSheet(
     isFromQueue: Boolean = false,
     isCurrentlyPlaying: Boolean = false,
     showShare: Boolean = true,
-    dominantColors: DominantColors? = null
+    dominantColors: DominantColors? = null,
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     
-    val backgroundColor = dominantColors?.primary?.copy(alpha = 0.98f) ?: MaterialTheme.colorScheme.surface
-    val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val backgroundColor = if (isDarkTheme) {
+        dominantColors?.primary?.copy(alpha = 0.98f) ?: MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    val contentColor = if (isDarkTheme) {
+        dominantColors?.onBackground ?: Color.White
+    } else {
+        Color.Black
+    }
     val accentColor = dominantColors?.accent ?: MaterialTheme.colorScheme.primary
     
     val shareSong = androidx.compose.runtime.remember(song) {

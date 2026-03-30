@@ -37,13 +37,22 @@ fun OutputDeviceSheet(
     onDismiss: () -> Unit,
     onRefreshDevices: () -> Unit = {},
     accentColor: Color = MaterialTheme.colorScheme.primary,
-    dominantColors: DominantColors? = null
+    dominantColors: DominantColors? = null,
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Determine colors
-    val finalBackgroundColor = dominantColors?.primary?.copy(alpha = 0.98f) ?: MaterialTheme.colorScheme.surface
-    val finalContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val finalBackgroundColor = if (isDarkTheme) {
+        dominantColors?.primary?.copy(alpha = 0.98f) ?: MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    val finalContentColor = if (isDarkTheme) {
+        dominantColors?.onBackground ?: Color.White
+    } else {
+        Color.Black
+    }
     val finalAccentColor = dominantColors?.accent ?: accentColor
 
     LaunchedEffect(isVisible) {

@@ -66,13 +66,22 @@ fun SleepTimerSheet(
     onDismiss: () -> Unit,
     accentColor: Color = MaterialTheme.colorScheme.primary,
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
-    dominantColors: DominantColors? = null
+    dominantColors: DominantColors? = null,
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
     // Determine colors
-    val finalBackgroundColor = dominantColors?.secondary ?: backgroundColor
-    val finalContentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val finalBackgroundColor = if (isDarkTheme) {
+        dominantColors?.secondary ?: backgroundColor
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    val finalContentColor = if (isDarkTheme) {
+        dominantColors?.onBackground ?: Color.White
+    } else {
+        Color.Black
+    }
     val finalAccentColor = dominantColors?.accent ?: accentColor
 
     // State for custom timer dialog
