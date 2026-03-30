@@ -645,14 +645,8 @@ fun NavGraph(
                         )
                     )
                 },
-                onStartRadio = { radioId ->
-                     navController.navigate(
-                         Destination.Playlist(
-                             playlistId = radioId,
-                             name = null, // Navigation will fetch details or use generic "Radio"
-                             thumbnailUrl = null
-                         )
-                     )
+                onStartRadio = { songs ->
+                    onPlaySong(songs, 0)
                 }
             )
         }
