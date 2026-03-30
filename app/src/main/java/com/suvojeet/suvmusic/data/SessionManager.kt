@@ -168,6 +168,7 @@ class SessionManager @Inject constructor(
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
         private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
         private val IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY = booleanPreferencesKey("ignore_audio_focus_during_calls")
+        private val INCOGNITO_MODE_KEY = booleanPreferencesKey("incognito_mode_enabled")
         private val AUTORESUME_AFTER_CALL_KEY = booleanPreferencesKey("autoresume_after_call")
         
         private val BLUETOOTH_AUTOPLAY_ENABLED_KEY = booleanPreferencesKey("bluetooth_autoplay_enabled")
@@ -1129,6 +1130,21 @@ class SessionManager @Inject constructor(
     suspend fun setYouTubeHistorySyncEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- Incognito Mode ---
+
+    suspend fun isIncognitoModeEnabled(): Boolean =
+        context.dataStore.data.first()[INCOGNITO_MODE_KEY] ?: false
+
+    val incognitoModeEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[INCOGNITO_MODE_KEY] ?: false
+    }
+
+    suspend fun setIncognitoModeEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[INCOGNITO_MODE_KEY] = enabled
         }
     }
 

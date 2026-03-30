@@ -1,7 +1,13 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,8 +21,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -25,25 +34,34 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
+import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
+import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
  * Recents screen showing listening history with YT Music-inspired UI.
+ * Now includes Incognito Mode and Multi-select functionality.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun RecentsScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onBack: () -> Unit,
-    viewModel: RecentsViewModel = hiltViewModel()
+    viewModel: RecentsViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
 ) {
     val recentlyPlayed by viewModel.recentSongs.collectAsState()
+    val selectedSongIds by viewModel.selectedSongs.collectAsState()
+    val incognitoModeEnabled by viewModel.incognitoModeEnabled.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val haptic = LocalHapticFeedback.current
     
     val filteredHistory = remember(recentlyPlayed, searchQuery) {
         if (searchQuery.isEmpty()) recentlyPlayed
@@ -53,93 +71,111 @@ fun RecentsScreen(
         }
     }
 
+    val isSelectionMode = selectedSongIds.isNotEmpty()
+
     if (showClearConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showClearConfirmDialog = false },
-            title = {
-                Text(
-                    text = "Clear history?",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "This will remove all songs from your listening history. This action cannot be undone.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
+            title = { Text("Clear history?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) },
+            text = { Text("This will remove all songs from your listening history. This action cannot be undone.", style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.clearHistory()
-                        showClearConfirmDialog = false
-                    }
-                ) {
-                    Text(
-                        text = "Clear All",
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
+                TextButton(onClick = { viewModel.clearHistory(); showClearConfirmDialog = false }) {
+                    Text("Clear All", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showClearConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            dismissButton = { TextButton(onClick = { showClearConfirmDialog = false }) { Text("Cancel") } },
+            shape = RoundedCornerShape(28.dp)
         )
     }
     
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = {
-                    Text(
-                        text = "History",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    if (recentlyPlayed.isNotEmpty()) {
-                        IconButton(onClick = { showClearConfirmDialog = true }) {
-                            Icon(Icons.Default.DeleteOutline, "Clear")
+            if (isSelectionMode) {
+                TopAppBar(
+                    title = { Text("${selectedSongIds.size} selected") },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.clearSelection() }) {
+                            Icon(Icons.Default.Clear, "Clear Selection")
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            val selectedSongs = recentlyPlayed
+                                .filter { selectedSongIds.contains(it.song.id) }
+                                .map { it.song }
+                            playlistViewModel.showAddToPlaylistSheet(selectedSongs)
+                        }) {
+                            Icon(Icons.Default.PlaylistAdd, "Add to Playlist")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
                 )
-            )
+            } else {
+                LargeTopAppBar(
+                    title = { Text(text = "History", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        // Incognito Mode Toggle
+                        IconButton(onClick = { viewModel.setIncognitoMode(!incognitoModeEnabled) }) {
+                            Icon(
+                                imageVector = if (incognitoModeEnabled) Icons.Default.Ghost else Icons.Default.Visibility,
+                                contentDescription = "Incognito Mode",
+                                tint = if (incognitoModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        if (recentlyPlayed.isNotEmpty()) {
+                            IconButton(onClick = { showClearConfirmDialog = true }) {
+                                Icon(Icons.Default.DeleteOutline, "Clear")
+                            }
+                        }
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            }
         }
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier = Modifier.fillMaxSize().padding(paddingValues)
         ) {
+            // Incognito Indicator
+            AnimatedVisibility(
+                visible = incognitoModeEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.Ghost, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(
+                            text = "Incognito Mode is on. Your listening history is not being saved.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Search history") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = if (searchQuery.isNotEmpty()) {
@@ -155,60 +191,43 @@ fun RecentsScreen(
             )
 
             if (filteredHistory.isEmpty()) {
-                // Empty state
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Text(
-                            text = if (searchQuery.isEmpty()) "No history yet" else "No results found",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Icon(imageVector = Icons.Default.History, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                        Text(text = if (searchQuery.isEmpty()) "No history yet" else "No results found", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
-                // Group by Today, Yesterday, and dates
-                val groupedByDate = filteredHistory.groupBy { recent ->
-                    getDateLabel(recent.playedAt)
-                }
+                val groupedByDate = filteredHistory.groupBy { getDateLabel(it.playedAt) }
                 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 120.dp)
-                ) {
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp)) {
                     groupedByDate.forEach { (dateLabel, items) ->
-                        // Date header
                         item {
                             Text(
                                 text = dateLabel,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                ),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
                             )
                         }
                         
-                        // Songs for that date
                         items(items) { recent ->
+                            val isSelected = selectedSongIds.contains(recent.song.id)
                             val allSongsInHistory = recentlyPlayed.map { it.song }
                             val indexInAll = allSongsInHistory.indexOf(recent.song)
                             
                             RecentSongItem(
                                 recent = recent,
-                                onClick = { onSongClick(allSongsInHistory, indexInAll) }
+                                isSelected = isSelected,
+                                isSelectionMode = isSelectionMode,
+                                onClick = { 
+                                    if (isSelectionMode) viewModel.toggleSelection(recent.song.id)
+                                    else onSongClick(allSongsInHistory, indexInAll)
+                                },
+                                onLongClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    viewModel.toggleSelection(recent.song.id)
+                                }
                             )
                         }
                     }
@@ -216,59 +235,75 @@ fun RecentsScreen(
             }
         }
     }
+
+    // Add to Playlist Sheet
+    val playlistMgmtState by playlistViewModel.uiState.collectAsState()
+    if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSongs.isNotEmpty()) {
+        AddToPlaylistSheet(
+            songs = playlistMgmtState.selectedSongs,
+            isVisible = true,
+            playlists = playlistMgmtState.userPlaylists,
+            isLoading = playlistMgmtState.isLoadingPlaylists || playlistMgmtState.isAddingSong,
+            onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
+            onAddToPlaylist = { playlistId -> 
+                playlistViewModel.addSongsToPlaylist(playlistId)
+                viewModel.clearSelection()
+            },
+            onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() }
+        )
+    }
+
+    if (playlistMgmtState.showCreatePlaylistDialog) {
+        CreatePlaylistDialog(
+            isVisible = true,
+            isCreating = playlistMgmtState.isCreatingPlaylist,
+            onDismiss = { playlistViewModel.hideCreatePlaylistDialog() },
+            onCreate = { title, desc, private, sync -> playlistViewModel.createPlaylist(title, desc, private, sync) },
+            isLoggedIn = true
+        )
+    }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun RecentSongItem(
     recent: RecentlyPlayed,
-    onClick: () -> Unit
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Thumbnail
-        AsyncImage(
-            model = recent.song.thumbnailUrl,
-            contentDescription = null,
-            modifier = Modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            contentScale = ContentScale.Crop
-        )
-        
-        // Song info
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = recent.song.title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
+        Box(contentAlignment = Alignment.Center) {
+            AsyncImage(
+                model = recent.song.thumbnailUrl,
+                contentDescription = null,
+                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(4.dp)),
+                contentScale = ContentScale.Crop,
+                alpha = if (isSelected) 0.5f else 1f
             )
-            Text(
-                text = "${recent.song.artist} • ${getTimeLabel(recent.playedAt)}",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (isSelected) {
+                Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            }
         }
         
-        IconButton(onClick = { /* More options */ }) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp)
-            )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(text = recent.song.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = "${recent.song.artist} • ${getTimeLabel(recent.playedAt)}", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        
+        if (!isSelectionMode) {
+            IconButton(onClick = { /* More options */ }) {
+                Icon(imageVector = Icons.Default.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+            }
         }
     }
 }
@@ -277,11 +312,9 @@ private fun getDateLabel(timestamp: Long): String {
     val calendar = Calendar.getInstance()
     val today = calendar.get(Calendar.DAY_OF_YEAR)
     val year = calendar.get(Calendar.YEAR)
-    
     val playedCalendar = Calendar.getInstance().apply { timeInMillis = timestamp }
     val playedDay = playedCalendar.get(Calendar.DAY_OF_YEAR)
     val playedYear = playedCalendar.get(Calendar.YEAR)
-    
     return when {
         today == playedDay && year == playedYear -> "Today"
         today - playedDay == 1 && year == playedYear -> "Yesterday"
