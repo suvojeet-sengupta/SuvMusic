@@ -125,7 +125,7 @@ fun RecentsScreen(
                         // Incognito Mode Toggle
                         IconButton(onClick = { viewModel.setIncognitoMode(!incognitoModeEnabled) }) {
                             Icon(
-                                imageVector = if (incognitoModeEnabled) Icons.Default.Ghost else Icons.Default.Visibility,
+                                imageVector = if (incognitoModeEnabled) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                 contentDescription = "Incognito Mode",
                                 tint = if (incognitoModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -161,7 +161,7 @@ fun RecentsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.Ghost, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Icon(Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                         Text(
                             text = "Incognito Mode is on. Your listening history is not being saved.",
                             style = MaterialTheme.typography.bodySmall,
@@ -183,10 +183,11 @@ fun RecentsScreen(
                 } else null,
                 shape = CircleShape,
                 singleLine = true,
-                colors = TextFieldDefaults.outlinedTextFieldColors(
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                     unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 )
             )
 
