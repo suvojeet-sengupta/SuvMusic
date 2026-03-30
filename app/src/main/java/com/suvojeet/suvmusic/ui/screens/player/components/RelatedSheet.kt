@@ -47,13 +47,13 @@ fun RelatedSheet(
     onSongClick: (Song) -> Unit,
     onMoreClick: (Song) -> Unit,
     onClose: () -> Unit,
-    dominantColors: DominantColors
+    dominantColors: DominantColors,
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     if (!isVisible) return
     
     val isSelectionMode = selectedIndices.isNotEmpty()
     val haptic = LocalHapticFeedback.current
-    val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
     
     val backgroundColor = if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
     val contentColor = if (isDarkTheme) Color.White else Color.Black

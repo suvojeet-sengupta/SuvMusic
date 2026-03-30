@@ -607,7 +607,8 @@ fun BoxScope.OverlaysContent(
             },
             onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromRelated = true)) },
             onClose = { if (currentOverlay is PlayerOverlay.Related) onOverlayChange(PlayerOverlay.None) },
-            dominantColors = dominantColors
+            dominantColors = dominantColors,
+            isDarkTheme = isAppInDarkTheme
         )
     }
 
