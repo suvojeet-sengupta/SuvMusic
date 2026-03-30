@@ -245,7 +245,9 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
         val fallbacks = mutableListOf<Uri>()
         
         // Check for Google/YouTube thumbnail pattern
-        if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com") || uriString.contains("ytimg.com")) {
+        if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com") || 
+            uriString.contains("ytimg.com") || uriString.contains("youtube.com")) {
+            
             // If it's maxresdefault, try sddefault then hqdefault
             if (uriString.contains("maxresdefault")) {
                 fallbacks.add(Uri.parse(uriString.replace("maxresdefault", "sddefault")))
@@ -256,10 +258,17 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 fallbacks.add(Uri.parse(uriString.replace("sddefault", "hqdefault")))
             }
             
-            // Retry with resizing if it's a googleusercontent/ggpht image
-            if (uriString.contains("=w")) {
-                // Try a standard size
-                fallbacks.add(Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")))
+            // Handle googleusercontent/ggpht image resizing fallbacks
+            if (uriString.contains("=w") || uriString.contains("=s")) {
+                // Try smaller standard sizes
+                if (uriString.contains("=w")) {
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")))
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w256-h256")))
+                }
+                if (uriString.contains("=s")) {
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=s\\d+"), "=s544")))
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=s\\d+"), "=s256")))
+                }
             }
         }
         return fallbacks
