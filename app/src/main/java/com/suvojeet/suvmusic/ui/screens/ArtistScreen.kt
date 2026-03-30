@@ -58,12 +58,22 @@ fun ArtistScreen(
     onSeeAllAlbumsClick: () -> Unit,
     onSeeAllSinglesClick: () -> Unit,
     onArtistClick: (ArtistPreview) -> Unit,
+    onArtistIdClick: (String) -> Unit = {},
     onPlaylistClick: (Playlist) -> Unit,
     onStartRadio: (String) -> Unit,
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
+
+    if (uiState.showMultipleArtistsDialog) {
+        MultipleArtistsDialog(
+            artists = uiState.currentArtistCredits,
+            onArtistClick = onArtistIdClick,
+            onDismiss = { viewModel.toggleMultipleArtistsDialog(false) },
+            dominantColors = DominantColors(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.onSurface)
+        )
+    }
 
     // Calculate scroll offset for sticky header fading
     val headerAlpha by remember {
@@ -159,7 +169,10 @@ fun ArtistScreen(
                             TopSongRow(
                                 index = index + 1,
                                 song = song,
-                                onClick = { onSongClick(artist.songs, index) }
+                                onClick = { onSongClick(artist.songs, index) },
+                                onArtistClick = {
+                                    viewModel.fetchArtistCreditsAndShow(song.artist, song.source)
+                                }
                             )
                         }
                     }
@@ -580,7 +593,8 @@ fun LatestReleaseSection(
 fun TopSongRow(
     index: Int,
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onArtistClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Row(
@@ -625,14 +639,23 @@ fun TopSongRow(
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = formatDuration(song.duration),
+                text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { onArtistClick() }
             )
         }
         
-        // Options like duration or menu could go here
+        // Duration
+        Text(
+            text = formatDuration(song.duration),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        
         Icon(
             imageVector = Icons.Default.MoreVert,
             contentDescription = null,
