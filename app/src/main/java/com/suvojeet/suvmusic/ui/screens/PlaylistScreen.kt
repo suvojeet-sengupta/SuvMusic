@@ -1004,6 +1004,18 @@ private fun SongListItem(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Drag Handle (Material Design 3 style)
+        if (isEditable && !isSelectionMode) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Reorder",
+                tint = subtitleColor.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .size(20.dp)
+            )
+        }
+
         // Selection Indicator (Radio button style)
         if (isSelectionMode) {
             androidx.compose.material3.Checkbox(
