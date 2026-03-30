@@ -1,5 +1,10 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -117,6 +122,8 @@ fun ArtistScreen(
             }
             uiState.artist != null -> {
                 val currentArtist = uiState.artist!!
+                val surfaceColor = MaterialTheme.colorScheme.surface
+                val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
                 LazyColumn(
                     state = scrollState,
@@ -337,7 +344,7 @@ fun ArtistScreen(
                         .background(
                             lerp(
                                 Color.Transparent,
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                surfaceColor.copy(alpha = 0.85f),
                                 headerAlpha
                             )
                         )
@@ -363,7 +370,7 @@ fun ArtistScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cd_back),
-                            tint = lerp(Color.White, MaterialTheme.colorScheme.onSurface, headerAlpha)
+                            tint = lerp(Color.White, onSurfaceColor, headerAlpha)
                         )
                     }
                     

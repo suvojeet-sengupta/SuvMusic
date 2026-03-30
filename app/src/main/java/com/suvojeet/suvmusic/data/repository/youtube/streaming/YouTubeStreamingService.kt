@@ -6,7 +6,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
-import org.schabi.newpipe.extractor.InfoItemsPage
+import org.schabi.newpipe.extractor.ListExtractor
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -351,23 +351,13 @@ class YouTubeStreamingService @Inject constructor(
             streamExtractor.fetchPage()
 
             val results = mutableListOf<Song>()
-            var itemsPage = streamExtractor.relatedItems
+            val itemsPage = streamExtractor.relatedItems
             
-            // Fetch first page
+            // Fetch related items from the current page
             if (itemsPage != null) {
-                itemsPage.items.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
-                    mapToSong(item)
-                }.let { results.addAll(it) }
-                
-                // Fetch second page if available to increase the count
-                if (itemsPage.hasNextPage()) {
-                    try {
-                        val secondPage = streamExtractor.getPage(itemsPage.nextPage)
-                        secondPage.items.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
-                            mapToSong(item)
-                        }.let { results.addAll(it) }
-                    } catch (e: Exception) {
-                        // Ignore second page errors, return what we have
+                for (item in itemsPage.items) {
+                    if (item is StreamInfoItem) {
+                        mapToSong(item)?.let { results.add(it) }
                     }
                 }
             }
