@@ -220,7 +220,6 @@ fun PlayerScreen(
     val isSwitchingMode by playerViewModel.isSwitchingMode.collectAsStateWithLifecycle()
     
     // Queue Selection & Sections
-    val historySongs by playerViewModel.historySongs.collectAsStateWithLifecycle()
     val upNextSongs by playerViewModel.upNextSongs.collectAsStateWithLifecycle()
     val selectedQueueIndices by playerViewModel.selectedQueueIndices.collectAsStateWithLifecycle()
     
@@ -545,7 +544,7 @@ fun BoxScope.OverlaysContent(
         exit = slideOutVertically { it }
     ) {
         ModernQueueView(
-            currentSong = song, queue = playerState.queue, playedSongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+            currentSong = song, queue = playerState.queue, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
             onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
             currentIndex = playerState.currentIndex, isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
             isAutoplayEnabled = playerState.isAutoplayEnabled, isFavorite = playerState.isLiked, isRadioMode = state.isRadioMode, isLoadingMore = state.isLoadingMoreSongs,

@@ -45,7 +45,6 @@ import com.suvojeet.suvmusic.util.dpadFocusable
 fun ModernQueueView(
     currentSong: Song?,
     queue: List<Song>,
-    playedSongs: List<Song>,
     upNextSongs: List<Song>,
     selectedQueueIndices: Set<Int>,
     onToggleSelection: (Int) -> Unit,
@@ -188,26 +187,6 @@ fun ModernQueueView(
                 contentPadding = PaddingValues(bottom = 24.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                if (playedSongs.isNotEmpty()) {
-                    item { SectionDivider("HISTORY", secondaryContentColor) }
-                    itemsIndexed(playedSongs, key = { index, s -> "history_${s.id}_$index" }) { index, song ->
-                        ModernQueueListItem(
-                            song = song,
-                            isCurrent = false,
-                            isPlaying = false,
-                            isSelected = selectedQueueIndices.contains(index),
-                            isSelectionMode = isSelectionMode,
-                            onClick = { if (isSelectionMode) onToggleSelection(index) else onSongClick(index) },
-                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(index) },
-                            onMoreClick = { onMoreClick(song) },
-                            dominantColors = dominantColors,
-                            isDarkTheme = isDarkTheme,
-                            contentColor = contentColor,
-                            secondaryContentColor = secondaryContentColor
-                        )
-                    }
-                }
-
                 if (currentSong != null) {
                     item { SectionDivider("NOW PLAYING", secondaryContentColor) }
                     item(key = "current_${currentSong.id}") {
