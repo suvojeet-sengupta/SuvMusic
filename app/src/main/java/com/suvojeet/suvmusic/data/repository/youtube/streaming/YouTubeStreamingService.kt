@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.InfoItemsPage
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -350,31 +351,43 @@ class YouTubeStreamingService @Inject constructor(
             streamExtractor.fetchPage()
 
             val results = mutableListOf<Song>()
-            val itemsPage = streamExtractor.relatedItems
+            var itemsPage = streamExtractor.relatedItems
             
+            // Fetch first page
             if (itemsPage != null) {
-                for (item in itemsPage.items) {
-                    if (item is StreamInfoItem) {
-                        try {
-                            val id = item.url?.substringAfter("v=")?.substringBefore("&") 
-                                ?: item.url?.substringAfter("youtu.be/")?.substringBefore("?")
-                            
-                            if (id != null) {
-                                Song.fromYouTube(
-                                    videoId = id,
-                                    title = item.name ?: "Unknown",
-                                    artist = item.uploaderName ?: "Unknown Artist",
-                                    album = "",
-                                    duration = item.duration * 1000L,
-                                    thumbnailUrl = item.thumbnails.lastOrNull()?.url
-                                )?.let { results.add(it) }
-                            }
-                        } catch (e: Exception) {}
+                itemsPage.items.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
+                    mapToSong(item)
+                }.let { results.addAll(it) }
+                
+                // Fetch second page if available to increase the count
+                if (itemsPage.hasNextPage()) {
+                    try {
+                        val secondPage = streamExtractor.getPage(itemsPage.nextPage)
+                        secondPage.items.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
+                            mapToSong(item)
+                        }.let { results.addAll(it) }
+                    } catch (e: Exception) {
+                        // Ignore second page errors, return what we have
                     }
                 }
             }
             results
         } ?: emptyList()
+    }
+
+    private fun mapToSong(item: StreamInfoItem): Song? {
+        val id = item.url?.substringAfter("v=")?.substringBefore("&")
+            ?: item.url?.substringAfter("youtu.be/")?.substringBefore("?")
+            ?: return null
+
+        return Song.fromYouTube(
+            videoId = id,
+            title = item.name ?: "Unknown",
+            artist = item.uploaderName ?: "Unknown Artist",
+            album = "",
+            duration = item.duration * 1000L,
+            thumbnailUrl = item.thumbnails.lastOrNull()?.url
+        )
     }
 
     fun clearCacheFor(videoId: String) {
