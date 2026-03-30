@@ -54,6 +54,8 @@ fun SongInfoSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
     val releaseDate by viewModel.releaseDate.collectAsState()
+    
+    // Explicitly check if the system is in dark theme
     val isDarkTheme = isSystemInDarkTheme()
     
     // Get high resolution thumbnail URL
@@ -92,7 +94,7 @@ fun SongInfoSheet(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                finalDominantColors.primary.copy(alpha = 0.15f),
+                                finalDominantColors.primary.copy(alpha = if (isDarkTheme) 0.15f else 0.1f),
                                 if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
                             )
                         )
@@ -118,7 +120,7 @@ fun SongInfoSheet(
                             modifier = Modifier
                                 .size(100.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .shadow(8.dp),
+                                .shadow(if (isDarkTheme) 8.dp else 4.dp),
                             contentScale = ContentScale.Crop
                         )
                         
@@ -131,7 +133,7 @@ fun SongInfoSheet(
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = (-0.5).sp
                                 ),
-                                color = finalDominantColors.onBackground,
+                                color = if (isDarkTheme) Color.White else Color.Black,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -154,7 +156,7 @@ fun SongInfoSheet(
                                 Text(
                                     text = song.album!!,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = finalDominantColors.onBackground.copy(alpha = 0.5f),
+                                    color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.5f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -169,9 +171,9 @@ fun SongInfoSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = finalDominantColors.onBackground.copy(alpha = 0.05f),
+                        color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f),
                         shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, finalDominantColors.onBackground.copy(alpha = 0.05f))
+                        border = BorderStroke(1.dp, (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             val stats = listOf(
@@ -192,7 +194,7 @@ fun SongInfoSheet(
                                     Text(
                                         text = label,
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = finalDominantColors.onBackground.copy(alpha = 0.5f)
+                                        color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.5f)
                                     )
                                     Text(
                                         text = value,
@@ -222,7 +224,7 @@ fun SongInfoSheet(
                                 artist = artist,
                                 onArtistClick = onArtistClick,
                                 accentColor = finalDominantColors.accent,
-                                onBackground = finalDominantColors.onBackground
+                                isDarkTheme = isDarkTheme
                             )
                         }
                     }
@@ -236,17 +238,17 @@ fun SongInfoSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = finalDominantColors.onBackground.copy(alpha = 0.05f),
+                        color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f),
                         shape = RoundedCornerShape(20.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            InfoRow(Icons.Default.CalendarMonth, "Released", song.releaseDate ?: releaseDate ?: "Unknown", finalDominantColors.onBackground)
+                            InfoRow(Icons.Default.CalendarMonth, "Released", song.releaseDate ?: releaseDate ?: "Unknown", isDarkTheme)
                             if (!song.album.isNullOrBlank()) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = finalDominantColors.onBackground.copy(alpha = 0.05f))
-                                InfoRow(Icons.Default.Album, "Album", song.album!!, finalDominantColors.onBackground)
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
+                                InfoRow(Icons.Default.Album, "Album", song.album!!, isDarkTheme)
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = finalDominantColors.onBackground.copy(alpha = 0.05f))
-                            InfoRow(Icons.Default.Copyright, "Copyright", "© ${song.artist}", finalDominantColors.onBackground)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
+                            InfoRow(Icons.Default.Copyright, "Copyright", "© ${song.artist}", isDarkTheme)
                         }
                     }
 
@@ -258,7 +260,7 @@ fun SongInfoSheet(
                             letterSpacing = 1.sp,
                             fontWeight = FontWeight.Bold
                         ),
-                        color = finalDominantColors.onBackground.copy(alpha = 0.3f),
+                        color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.3f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -286,13 +288,13 @@ private fun ArtistRow(
     artist: ArtistCreditInfo,
     onArtistClick: (String) -> Unit,
     accentColor: Color,
-    onBackground: Color
+    isDarkTheme: Boolean
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(onBackground.copy(alpha = 0.05f))
+            .background((if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
             .clickable(enabled = artist.artistId != null) { artist.artistId?.let { onArtistClick(it) } }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -312,12 +314,12 @@ private fun ArtistRow(
             Text(
                 text = artist.name,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = onBackground
+                color = if (isDarkTheme) Color.White else Color.Black
             )
             Text(
                 text = artist.role,
                 style = MaterialTheme.typography.labelMedium,
-                color = onBackground.copy(alpha = 0.5f)
+                color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.5f)
             )
         }
         
@@ -333,18 +335,18 @@ private fun ArtistRow(
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, label: String, value: String, onBackground: Color) {
+private fun InfoRow(icon: ImageVector, label: String, value: String, isDarkTheme: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = onBackground.copy(alpha = 0.4f),
+            tint = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.4f),
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = onBackground.copy(alpha = 0.4f))
-            Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = onBackground)
+            Text(text = label, style = MaterialTheme.typography.labelSmall, color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.4f))
+            Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = if (isDarkTheme) Color.White else Color.Black)
         }
     }
 }
