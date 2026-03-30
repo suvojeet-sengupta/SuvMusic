@@ -482,7 +482,7 @@ fun PlayerScreen(
                     state = state, actions = actions.copy(onClearQueue = { playerViewModel.clearQueue() }), activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
                     dominantColors = dominantColors, playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
                     ringtoneViewModel = hiltViewModel<RingtoneViewModel>(), // Explicit type for clarity and to fix inference errors
-                    historySongs = historySongs, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+                    upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
                     isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
                     volumeSliderEnabled = volumeSliderEnabled, volumeKeyEvents = volumeKeyEvents,
                     lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
@@ -517,7 +517,7 @@ fun PiPPlayerContent(song: com.suvojeet.suvmusic.core.model.Song?, isVideoMode: 
 fun BoxScope.OverlaysContent(
     state: PlayerScreenState, actions: PlayerScreenActions, activeOverlay: PlayerOverlay, onOverlayChange: (PlayerOverlay) -> Unit,
     dominantColors: DominantColors, playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel,
-    playlistViewModel: PlaylistManagementViewModel, ringtoneViewModel: RingtoneViewModel, historySongs: List<com.suvojeet.suvmusic.core.model.Song>,
+    playlistViewModel: PlaylistManagementViewModel, ringtoneViewModel: RingtoneViewModel,
     upNextSongs: List<com.suvojeet.suvmusic.core.model.Song>, selectedQueueIndices: Set<Int>, isAppInDarkTheme: Boolean,
     animatedBackgroundEnabled: Boolean, volumeSliderEnabled: Boolean, volumeKeyEvents: SharedFlow<Unit>?,
     lyricsTextPosition: com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition, lyricsAnimationType: com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType,
