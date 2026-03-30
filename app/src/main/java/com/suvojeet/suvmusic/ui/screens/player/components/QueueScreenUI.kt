@@ -40,6 +40,11 @@ import androidx.compose.foundation.combinedClickable
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
 
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ModernQueueView(
@@ -78,6 +83,7 @@ fun ModernQueueView(
 ) {
     val haptic = LocalHapticFeedback.current
     val isSelectionMode = selectedQueueIndices.isNotEmpty()
+    val scope = rememberCoroutineScope()
     
     val backgroundColor = if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
     val contentColor = if (isDarkTheme) Color.White else Color.Black
@@ -199,6 +205,8 @@ fun ModernQueueView(
                             onClick = { if (isSelectionMode) onToggleSelection(currentIndex) else onPlayPause() },
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(currentIndex) },
                             onMoreClick = { onMoreClick(currentSong) },
+                            onDragMove = { from, to -> onMoveItem(from, to) },
+                            itemIndex = currentIndex,
                             dominantColors = dominantColors,
                             isDarkTheme = isDarkTheme,
                             contentColor = contentColor,
@@ -220,6 +228,8 @@ fun ModernQueueView(
                             onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(actualIndex) },
                             onMoreClick = { onMoreClick(song) },
+                            onDragMove = { from, to -> onMoveItem(from, to) },
+                            itemIndex = actualIndex,
                             dominantColors = dominantColors,
                             isDarkTheme = isDarkTheme,
                             contentColor = contentColor,
@@ -341,29 +351,24 @@ private fun SectionDivider(title: String, color: Color) {
 private fun ModernQueueListItem(
     song: Song, isCurrent: Boolean, isPlaying: Boolean, isSelected: Boolean, isSelectionMode: Boolean,
     onClick: () -> Unit, onLongClick: () -> Unit, onMoreClick: () -> Unit, 
+    onDragMove: (Int, Int) -> Unit, itemIndex: Int,
     dominantColors: DominantColors, isDarkTheme: Boolean, contentColor: Color, secondaryContentColor: Color
 ) {
+    var offsetY by remember { mutableStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 2.dp)
+            .offset(y = offsetY.dp / 8) // Visual feedback for dragging (scaled down)
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Drag Handle
-        if (!isSelectionMode && !isCurrent) {
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = "Reorder",
-                tint = secondaryContentColor.copy(alpha = 0.4f),
-                modifier = Modifier
-                    .padding(end = 12.dp)
-                    .size(20.dp)
-            )
-        } else if (isSelectionMode) {
+        if (isSelectionMode) {
              Checkbox(
                 checked = isSelected, onCheckedChange = { onClick() },
                 colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent),
@@ -395,6 +400,36 @@ private fun ModernQueueListItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = secondaryContentColor,
                 maxLines = 1
+            )
+        }
+        
+        // Drag Handle (Shown by default on the right)
+        if (!isSelectionMode && !isCurrent) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Reorder",
+                tint = secondaryContentColor.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .size(24.dp)
+                    .pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                            onDragEnd = { offsetY = 0f },
+                            onDragCancel = { offsetY = 0f },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                offsetY += dragAmount.y
+                                if (offsetY > 50f) {
+                                    onDragMove(itemIndex, itemIndex + 1)
+                                    offsetY = 0f
+                                } else if (offsetY < -50f) {
+                                    onDragMove(itemIndex, itemIndex - 1)
+                                    offsetY = 0f
+                                }
+                            }
+                        )
+                    }
             )
         }
         
