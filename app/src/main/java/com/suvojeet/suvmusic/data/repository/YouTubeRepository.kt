@@ -282,14 +282,12 @@ class YouTubeRepository @Inject constructor(
     suspend fun getSongDetails(videoId: String): Song? = streamingService.getSongDetails(videoId)
 
     suspend fun getRelatedSongs(videoId: String): List<Song> {
-        // Try internal API first (official Up Next/Radio)
-        val internalResults = searchService.getRelatedSongs(videoId)
-        val results = if (internalResults.isNotEmpty()) {
-            internalResults
-        } else {
-            // Fallback to extractor related items (NewPipe)
-            streamingService.getRelatedItems(videoId)
-        }
+        // Fetch from multiple sources to increase the number of related songs
+        val internalResults = try { searchService.getRelatedSongs(videoId) } catch (e: Exception) { emptyList() }
+        val streamingResults = try { streamingService.getRelatedItems(videoId) } catch (e: Exception) { emptyList() }
+        
+        // Combine all results
+        val results = internalResults + streamingResults
         
         // Comprehensive deduplication: by ID and by Title/Artist fingerprint
         val seenIds = mutableSetOf<String>()
