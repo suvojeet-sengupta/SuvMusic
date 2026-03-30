@@ -197,7 +197,8 @@ class ArtistViewModel @Inject constructor(
             try {
                 // 1. Get radio ID
                 val radioId = currentArtist.channelId?.let { youTubeRepository.getArtistRadioId(it) }
-                
+                val allSongs = mutableListOf<Song>()
+
                 if (radioId != null) {
                     // 2. Fetch songs from this radio/playlist
                     _uiState.update { it.copy(radioStatus = "Creating radio station...") }
@@ -208,10 +209,21 @@ class ArtistViewModel @Inject constructor(
                         val radioSongs = playlist.songs.map { song ->
                             song.copy(album = "Artist Radio: ${currentArtist.name}")
                         }
-                        onPlaylistReady(radioSongs)
-                    } else {
-                        onPlaylistReady(currentArtist.songs)
+                        allSongs.addAll(radioSongs)
                     }
+                }
+                
+                // 3. Supplement with more tracks from artist profile and search if needed
+                if (allSongs.size < 20) {
+                    _uiState.update { it.copy(radioStatus = "Searching for more ${currentArtist.name} tracks...") }
+                    val topSongs = youTubeRepository.getArtistTopSongs(currentArtist.name, currentArtist.id)
+                    allSongs.addAll(topSongs.filter { song -> 
+                        allSongs.none { it.id == song.id }
+                    })
+                }
+
+                if (allSongs.isNotEmpty()) {
+                    onPlaylistReady(allSongs.distinctBy { it.id })
                 } else {
                     onPlaylistReady(currentArtist.songs)
                 }
