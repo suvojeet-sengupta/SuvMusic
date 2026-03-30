@@ -153,4 +153,17 @@ class AlbumViewModel @Inject constructor(
             downloadRepository.downloadSong(song)
         }
     }
+
+    fun reorderSong(fromIndex: Int, toIndex: Int) {
+        val currentAlbum = _uiState.value.album ?: return
+        val songs = currentAlbum.songs.toMutableList()
+        if (fromIndex !in songs.indices || toIndex !in songs.indices) return
+        
+        val movedSong = songs.removeAt(fromIndex)
+        songs.add(toIndex, movedSong)
+        
+        _uiState.update { 
+            it.copy(album = currentAlbum.copy(songs = songs))
+        }
+    }
 }

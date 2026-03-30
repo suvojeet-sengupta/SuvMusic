@@ -52,6 +52,10 @@ import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 @Composable
 fun PlaylistScreen(
@@ -66,6 +70,7 @@ fun PlaylistScreen(
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val playlist = uiState.playlist
 
     // Check if we are in dark theme based on background luminance (consistent with PlayerScreen)
@@ -350,6 +355,7 @@ fun PlaylistScreen(
                                 }
                             },
                             onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 viewModel.toggleSongSelection(song)
                             },
                             onMoreClick = { 
@@ -939,19 +945,20 @@ private fun SelectionTopBar(
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onCloseClick) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close selection",
-                tint = contentColor
+        TextButton(onClick = onCloseClick) {
+            Text(
+                text = "Done",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary
             )
         }
-        
+
         Text(
             text = "$selectedCount selected",
             style = MaterialTheme.typography.titleMedium,
             color = contentColor,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center
         )
 
         IconButton(onClick = onMoveToTopClick) {
@@ -961,7 +968,7 @@ private fun SelectionTopBar(
                 tint = contentColor
             )
         }
-        
+
         IconButton(onClick = onDeleteClick) {
             Icon(
                 imageVector = Icons.Default.Delete,
@@ -969,8 +976,7 @@ private fun SelectionTopBar(
                 tint = MaterialTheme.colorScheme.error
             )
         }
-    }
-}
+    }}
 
 @Composable
 private fun SongListItem(
@@ -987,6 +993,9 @@ private fun SongListItem(
     titleColor: Color,
     subtitleColor: Color
 ) {
+    var offsetY by remember { mutableStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+
     val backgroundColor by androidx.compose.animation.animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
                       else Color.Transparent,
@@ -996,6 +1005,7 @@ private fun SongListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .offset(y = offsetY.dp / 8)
             .background(backgroundColor)
             .combinedClickable(
                 onClick = onClick,
@@ -1004,18 +1014,6 @@ private fun SongListItem(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Drag Handle (Material Design 3 style)
-        if (isEditable && !isSelectionMode) {
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = "Reorder",
-                tint = subtitleColor.copy(alpha = 0.4f),
-                modifier = Modifier
-                    .padding(end = 12.dp)
-                    .size(20.dp)
-            )
-        }
-
         // Selection Indicator (Radio button style)
         if (isSelectionMode) {
             androidx.compose.material3.Checkbox(
@@ -1063,6 +1061,36 @@ private fun SongListItem(
                 color = subtitleColor.copy(alpha = 0.6f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+        
+        // Drag Handle (Shown only in selection mode)
+        if (isEditable && isSelectionMode) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Reorder",
+                tint = subtitleColor.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .size(24.dp)
+                    .pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                            onDragEnd = { offsetY = 0f },
+                            onDragCancel = { offsetY = 0f },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                offsetY += dragAmount.y
+                                if (offsetY > 50f && index < totalSongs - 1) {
+                                    onReorder?.invoke(index, index + 1)
+                                    offsetY = 0f
+                                } else if (offsetY < -50f && index > 0) {
+                                    onReorder?.invoke(index, index - 1)
+                                    offsetY = 0f
+                                }
+                            }
+                        )
+                    }
             )
         }
         
