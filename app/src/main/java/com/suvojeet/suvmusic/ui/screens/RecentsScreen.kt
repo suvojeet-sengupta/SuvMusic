@@ -41,6 +41,9 @@ import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
+import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
+import android.text.format.DateUtils
+
 /**
  * Recents screen showing listening history with YT Music-inspired UI.
  * Now includes Incognito Mode and Multi-select functionality.
@@ -56,9 +59,14 @@ fun RecentsScreen(
     val recentlyPlayed by viewModel.recentSongs.collectAsState()
     val selectedSongIds by viewModel.selectedSongs.collectAsState()
     val incognitoModeEnabled by viewModel.incognitoModeEnabled.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     
     var searchQuery by remember { mutableStateOf("") }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
+    
+    // Song Menu State
+    var showSongMenu by remember { mutableStateOf(false) }
+    var selectedSong: Song? by remember { mutableStateOf(null) }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val haptic = LocalHapticFeedback.current
@@ -199,20 +207,27 @@ fun RecentsScreen(
                     }
                 }
             } else {
-                val groupedByDate = filteredHistory.groupBy { getDateLabel(it.playedAt) }
+                val groupedByDate = remember(filteredHistory) {
+                    filteredHistory.groupBy { getDateLabel(it.playedAt) }
+                }
                 
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp)) {
                     groupedByDate.forEach { (dateLabel, items) ->
-                        item {
-                            Text(
-                                text = dateLabel,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
-                            )
+                        stickyHeader {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.background
+                            ) {
+                                Text(
+                                    text = dateLabel,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
                         }
                         
-                        items(items) { recent ->
+                        items(items, key = { "${it.song.id}_${it.playedAt}" }) { recent ->
                             val isSelected = selectedSongIds.contains(recent.song.id)
                             val allSongsInHistory = recentlyPlayed.map { it.song }
                             val indexInAll = allSongsInHistory.indexOf(recent.song)
@@ -228,6 +243,10 @@ fun RecentsScreen(
                                 onLongClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     viewModel.toggleSelection(recent.song.id)
+                                },
+                                onMoreClick = {
+                                    selectedSong = recent.song
+                                    showSongMenu = true
                                 }
                             )
                         }
@@ -235,6 +254,26 @@ fun RecentsScreen(
                 }
             }
         }
+    }
+
+    // Song Menu
+    if (showSongMenu && selectedSong != null) {
+        SongMenuBottomSheet(
+            isVisible = true,
+            onDismiss = { showSongMenu = false },
+            song = selectedSong!!,
+            onPlayNext = { /* handled by navigation/player */ },
+            onAddToQueue = { /* handled by navigation/player */ },
+            onAddToPlaylist = { playlistViewModel.showAddToPlaylistSheet(selectedSong!!) },
+            onDownload = { viewModel.downloadSong(selectedSong!!) },
+            onShare = { 
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, "Listen to ${selectedSong!!.title} by ${selectedSong!!.artist} on SuvMusic")
+                }
+                context.startActivity(android.content.Intent.createChooser(shareIntent, "Share song"))
+            }
+        )
     }
 
     // Add to Playlist Sheet
@@ -272,7 +311,8 @@ private fun RecentSongItem(
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onMoreClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -302,7 +342,7 @@ private fun RecentSongItem(
         }
         
         if (!isSelectionMode) {
-            IconButton(onClick = { /* More options */ }) {
+            IconButton(onClick = onMoreClick) {
                 Icon(imageVector = Icons.Default.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
             }
         }
@@ -317,12 +357,13 @@ private fun getDateLabel(timestamp: Long): String {
     val playedDay = playedCalendar.get(Calendar.DAY_OF_YEAR)
     val playedYear = playedCalendar.get(Calendar.YEAR)
     return when {
-        today == playedDay && year == playedYear -> "Today"
-        today - playedDay == 1 && year == playedYear -> "Yesterday"
+        DateUtils.isToday(timestamp) -> "Today"
+        DateUtils.isToday(timestamp + DateUtils.DAY_IN_MILLIS) -> "Yesterday"
         year == playedYear -> SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date(timestamp))
         else -> SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(Date(timestamp))
     }
 }
+
 
 private fun getTimeLabel(timestamp: Long): String {
     return SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(timestamp))

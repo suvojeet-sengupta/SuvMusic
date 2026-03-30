@@ -21,7 +21,8 @@ import kotlinx.coroutines.flow.update
 
 @HiltViewModel
 class RecentsViewModel @Inject constructor(
-    private val repository: ListeningHistoryRepository
+    private val repository: ListeningHistoryRepository,
+    private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
 ) : ViewModel() {
 
     val incognitoModeEnabled: StateFlow<Boolean> = repository.sessionManager.privacyModeEnabledFlow
@@ -43,6 +44,12 @@ class RecentsViewModel @Inject constructor(
     fun setIncognitoMode(enabled: Boolean) {
         viewModelScope.launch {
             repository.sessionManager.setPrivacyModeEnabled(enabled)
+        }
+    }
+
+    fun downloadSong(song: Song) {
+        viewModelScope.launch {
+            downloadRepository.downloadSong(song)
         }
     }
 
