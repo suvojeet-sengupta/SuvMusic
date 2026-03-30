@@ -9,6 +9,7 @@ import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
+import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,12 +24,14 @@ enum class ArtistError {
     UNKNOWN
 }
 
-    data class ArtistUiState(
+data class ArtistUiState(
     val artist: Artist? = null,
     val isLoading: Boolean = false,
     val error: ArtistError? = null,
     val isSubscribing: Boolean = false,
-    val isStartingRadio: Boolean = false
+    val isStartingRadio: Boolean = false,
+    val showMultipleArtistsDialog: Boolean = false,
+    val currentArtistCredits: List<ArtistCreditInfo> = emptyList()
 )
 
 @HiltViewModel
@@ -47,6 +50,54 @@ class ArtistViewModel @Inject constructor(
 
     init {
         loadArtist()
+    }
+
+    fun toggleMultipleArtistsDialog(show: Boolean, credits: List<ArtistCreditInfo> = emptyList()) {
+        _uiState.update { 
+            it.copy(
+                showMultipleArtistsDialog = show,
+                currentArtistCredits = if (show) credits else emptyList()
+            ) 
+        }
+    }
+
+    fun fetchArtistCreditsAndShow(artistString: String, source: com.suvojeet.suvmusic.core.model.SongSource) {
+        viewModelScope.launch {
+            val names = parseArtistNames(artistString)
+            
+            // Show dialog with placeholders immediately if multiple artists
+            if (names.size > 1) {
+                val placeholders = names.map { name ->
+                    ArtistCreditInfo(name, "Vocals", null, null)
+                }
+                toggleMultipleArtistsDialog(true, placeholders)
+                
+                // Fetch thumbnails in background
+                val updatedCredits = names.map { name ->
+                    try {
+                        val results = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
+                            jioSaavnRepository.searchArtists(name)
+                        } else {
+                            youTubeRepository.searchArtists(name)
+                        }
+                        val match = results.firstOrNull { it.name.contains(name, true) || name.contains(it.name, true) } ?: results.firstOrNull()
+                        ArtistCreditInfo(name, "Vocals", match?.thumbnailUrl, match?.id)
+                    } catch (e: Exception) {
+                        ArtistCreditInfo(name, "Vocals", null, null)
+                    }
+                }
+                _uiState.update { it.copy(currentArtistCredits = updatedCredits) }
+            } else {
+                // Only one artist, handle directly or do nothing if already on that artist's page
+                // But usually we don't need a dialog for 1 artist.
+            }
+        }
+    }
+
+    private fun parseArtistNames(artistString: String): List<String> {
+        return artistString.split(",", "&", " feat.", " ft.", ";")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
     }
 
     fun loadArtist() {
