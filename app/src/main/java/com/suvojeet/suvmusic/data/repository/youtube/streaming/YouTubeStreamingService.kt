@@ -331,14 +331,13 @@ class YouTubeStreamingService @Inject constructor(
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
-            Song(
-                id = videoId,
+            Song.fromYouTube(
+                videoId = videoId,
                 title = streamExtractor.name ?: "Unknown",
                 artist = streamExtractor.uploaderName ?: "Unknown Artist",
                 album = "",
                 thumbnailUrl = streamExtractor.thumbnails.maxByOrNull { it.width * it.height }?.url,
                 duration = streamExtractor.length * 1000,
-                source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                 releaseDate = streamExtractor.textualUploadDate
             )
         }

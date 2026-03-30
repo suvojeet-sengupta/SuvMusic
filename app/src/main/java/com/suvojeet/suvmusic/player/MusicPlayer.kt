@@ -2379,7 +2379,7 @@ class MusicPlayer @Inject constructor(
     private fun getHighResThumbnail(url: String?): String? {
         return url?.let {
             when {
-                it.contains("ytimg.com") -> it
+                it.contains("ytimg.com") || it.contains("youtube.com") -> it
                     .replace("hqdefault", "maxresdefault")
                     .replace("mqdefault", "maxresdefault")
                     .replace("sddefault", "maxresdefault")
