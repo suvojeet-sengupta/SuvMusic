@@ -160,13 +160,13 @@ fun SongInfoSection(
                         // Like button
                         IconButton(
                             onClick = onFavoriteClick,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(42.dp)
                         ) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                                 contentDescription = "Like",
                                 tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
 
@@ -174,20 +174,20 @@ fun SongInfoSection(
                         Box(
                             modifier = Modifier
                                 .width(1.dp)
-                                .height(18.dp)
+                                .height(20.dp)
                                 .background(dominantColors.onBackground.copy(alpha = 0.15f))
                         )
 
                         // Dislike button
                         IconButton(
                             onClick = onDislikeClick,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(42.dp)
                         ) {
                             Icon(
                                 imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
                                 contentDescription = "Dislike",
                                 tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
@@ -327,13 +327,13 @@ fun SongInfoSection(
                     // Like button
                     IconButton(
                         onClick = onFavoriteClick,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(44.dp)
                     ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                             contentDescription = "Like",
                             tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
@@ -341,20 +341,20 @@ fun SongInfoSection(
                     Box(
                         modifier = Modifier
                             .width(1.dp)
-                            .height(20.dp)
+                            .height(24.dp)
                             .background(dominantColors.onBackground.copy(alpha = 0.15f))
                     )
 
                     // Dislike button
                     IconButton(
                         onClick = onDislikeClick,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(44.dp)
                     ) {
                         Icon(
                             imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
                             contentDescription = "Dislike",
                             tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
