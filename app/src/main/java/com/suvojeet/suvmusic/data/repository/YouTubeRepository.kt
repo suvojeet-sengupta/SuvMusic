@@ -284,12 +284,30 @@ class YouTubeRepository @Inject constructor(
     suspend fun getRelatedSongs(videoId: String): List<Song> {
         // Try internal API first (official Up Next/Radio)
         val internalResults = searchService.getRelatedSongs(videoId)
-        if (internalResults.isNotEmpty()) {
-            return internalResults
+        val results = if (internalResults.isNotEmpty()) {
+            internalResults
+        } else {
+            // Fallback to extractor related items (NewPipe)
+            streamingService.getRelatedItems(videoId)
         }
         
-        // Fallback to extractor related items (NewPipe)
-        return streamingService.getRelatedItems(videoId)
+        // Comprehensive deduplication: by ID and by Title/Artist fingerprint
+        val seenIds = mutableSetOf<String>()
+        val seenFingerprints = mutableSetOf<String>()
+        val fingerprintRegex = Regex("[^a-z0-9]")
+        
+        return results.filter { song ->
+            val id = song.id
+            val title = song.title.lowercase().replace(fingerprintRegex, "")
+            val artist = song.artist.lowercase().replace(fingerprintRegex, "")
+            val fingerprint = "$title|$artist"
+            
+            val isNewId = seenIds.add(id)
+            val isNewFingerprint = seenFingerprints.add(fingerprint)
+            
+            // Only keep if both ID and Title/Artist are new
+            isNewId && isNewFingerprint
+        }
     }
 
     /**
