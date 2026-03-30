@@ -478,101 +478,146 @@ private fun AlbumHeader(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Actions Row (Download, Save, Play, Share, More)
+        // YT Music inspired Play/Shuffle Buttons
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Play Button
+            Button(
+                onClick = onPlayAll,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = PillShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkTheme) Color.White else Color.Black,
+                    contentColor = if (isDarkTheme) Color.Black else Color.White
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Play",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+
+            // Shuffle Button
+            Button(
+                onClick = onShufflePlay,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = PillShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    contentColor = contentColor
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Shuffle,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Shuffle",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Actions Row (Download, Save, Share, More)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Download Button
-            BounceButton(
+            ActionButton(
+                icon = Icons.Default.Download,
+                label = "Download",
                 onClick = onDownload,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Download,
-                    contentDescription = "Download Album",
-                    tint = contentColor
-                )
-            }
+                contentColor = contentColor,
+                isDarkTheme = isDarkTheme
+            )
 
             // Save Button (Heart)
-            BounceButton(
+            ActionButton(
+                icon = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                label = "Library",
                 onClick = onToggleSave,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
-                    tint = if (isSaved) MaterialTheme.colorScheme.primary else contentColor
-                )
-            }
-            
-            // Play Button (Large Central)
-            BounceButton(
-                onClick = onPlayAll,
-                size = 72.dp,
-                shape = CircleShape,
-                modifier = Modifier
-                    .shadow(elevation = 12.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
+                contentColor = if (isSaved) MaterialTheme.colorScheme.primary else contentColor,
+                isDarkTheme = isDarkTheme
+            )
             
             // Share Button
-            BounceButton(
+            ActionButton(
+                icon = Icons.Default.Share,
+                label = "Share",
                 onClick = onShare,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    tint = contentColor
-                )
-            }
+                contentColor = contentColor,
+                isDarkTheme = isDarkTheme
+            )
             
             // More Button
-            BounceButton(
+            ActionButton(
+                icon = Icons.Default.MoreVert,
+                label = "More",
                 onClick = onMoreClick,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More",
-                    tint = contentColor
-                )
-            }
+                contentColor = contentColor,
+                isDarkTheme = isDarkTheme
+            )
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ActionButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    contentColor: Color,
+    isDarkTheme: Boolean
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor.copy(alpha = 0.7f)
+        )
     }
 }
 
