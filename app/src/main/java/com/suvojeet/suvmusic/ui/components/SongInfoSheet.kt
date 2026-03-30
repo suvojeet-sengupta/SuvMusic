@@ -77,7 +77,7 @@ fun SongInfoSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = Color.Black.copy(alpha = 0.95f),
+            containerColor = if (isDarkTheme) Color.Black.copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface,
             dragHandle = { 
                 BottomSheetDefaults.DragHandle(
                     color = finalDominantColors.onBackground.copy(alpha = 0.2f)
@@ -93,7 +93,7 @@ fun SongInfoSheet(
                         Brush.verticalGradient(
                             colors = listOf(
                                 finalDominantColors.primary.copy(alpha = 0.15f),
-                                Color.Black
+                                if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
                             )
                         )
                     )
@@ -131,7 +131,7 @@ fun SongInfoSheet(
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = (-0.5).sp
                                 ),
-                                color = Color.White,
+                                color = finalDominantColors.onBackground,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -154,7 +154,7 @@ fun SongInfoSheet(
                                 Text(
                                     text = song.album!!,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.5f),
+                                    color = finalDominantColors.onBackground.copy(alpha = 0.5f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -169,9 +169,9 @@ fun SongInfoSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = Color.White.copy(alpha = 0.05f),
+                        color = finalDominantColors.onBackground.copy(alpha = 0.05f),
                         shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+                        border = BorderStroke(1.dp, finalDominantColors.onBackground.copy(alpha = 0.05f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             val stats = listOf(
@@ -192,7 +192,7 @@ fun SongInfoSheet(
                                     Text(
                                         text = label,
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = Color.White.copy(alpha = 0.5f)
+                                        color = finalDominantColors.onBackground.copy(alpha = 0.5f)
                                     )
                                     Text(
                                         text = value,
@@ -221,7 +221,8 @@ fun SongInfoSheet(
                             ArtistRow(
                                 artist = artist,
                                 onArtistClick = onArtistClick,
-                                accentColor = finalDominantColors.accent
+                                accentColor = finalDominantColors.accent,
+                                onBackground = finalDominantColors.onBackground
                             )
                         }
                     }
@@ -235,17 +236,17 @@ fun SongInfoSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = Color.White.copy(alpha = 0.05f),
+                        color = finalDominantColors.onBackground.copy(alpha = 0.05f),
                         shape = RoundedCornerShape(20.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            InfoRow(Icons.Default.CalendarMonth, "Released", song.releaseDate ?: releaseDate ?: "Unknown")
+                            InfoRow(Icons.Default.CalendarMonth, "Released", song.releaseDate ?: releaseDate ?: "Unknown", finalDominantColors.onBackground)
                             if (!song.album.isNullOrBlank()) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.05f))
-                                InfoRow(Icons.Default.Album, "Album", song.album!!)
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = finalDominantColors.onBackground.copy(alpha = 0.05f))
+                                InfoRow(Icons.Default.Album, "Album", song.album!!, finalDominantColors.onBackground)
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.05f))
-                            InfoRow(Icons.Default.Copyright, "Copyright", "© ${song.artist}")
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = finalDominantColors.onBackground.copy(alpha = 0.05f))
+                            InfoRow(Icons.Default.Copyright, "Copyright", "© ${song.artist}", finalDominantColors.onBackground)
                         }
                     }
 
@@ -257,7 +258,7 @@ fun SongInfoSheet(
                             letterSpacing = 1.sp,
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color.White.copy(alpha = 0.3f),
+                        color = finalDominantColors.onBackground.copy(alpha = 0.3f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -284,13 +285,14 @@ private fun SectionHeader(text: String, color: Color) {
 private fun ArtistRow(
     artist: ArtistCreditInfo,
     onArtistClick: (String) -> Unit,
-    accentColor: Color
+    accentColor: Color,
+    onBackground: Color
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.05f))
+            .background(onBackground.copy(alpha = 0.05f))
             .clickable(enabled = artist.artistId != null) { artist.artistId?.let { onArtistClick(it) } }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -310,12 +312,12 @@ private fun ArtistRow(
             Text(
                 text = artist.name,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
+                color = onBackground
             )
             Text(
                 text = artist.role,
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                color = onBackground.copy(alpha = 0.5f)
             )
         }
         
@@ -331,18 +333,18 @@ private fun ArtistRow(
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, label: String, value: String) {
+private fun InfoRow(icon: ImageVector, label: String, value: String, onBackground: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.4f),
+            tint = onBackground.copy(alpha = 0.4f),
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.4f))
-            Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+            Text(text = label, style = MaterialTheme.typography.labelSmall, color = onBackground.copy(alpha = 0.4f))
+            Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = onBackground)
         }
     }
 }
