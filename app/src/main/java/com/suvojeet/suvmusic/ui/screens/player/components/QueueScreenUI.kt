@@ -353,6 +353,24 @@ private fun ModernQueueListItem(
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Drag Handle
+        if (!isSelectionMode && !isCurrent) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Reorder",
+                tint = secondaryContentColor.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .size(20.dp)
+            )
+        } else if (isSelectionMode) {
+             Checkbox(
+                checked = isSelected, onCheckedChange = { onClick() },
+                colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent),
+                modifier = Modifier.padding(end = 8.dp).scale(0.85f)
+            )
+        }
+
         Box {
             AsyncImage(
                 model = song.thumbnailUrl, contentDescription = null,
@@ -379,13 +397,8 @@ private fun ModernQueueListItem(
                 maxLines = 1
             )
         }
-        if (isSelectionMode) {
-            Checkbox(
-                checked = isSelected, onCheckedChange = { onClick() },
-                colors = CheckboxDefaults.colors(checkedColor = dominantColors.accent),
-                modifier = Modifier.scale(0.85f)
-            )
-        } else {
+        
+        if (!isSelectionMode) {
             IconButton(onClick = onMoreClick) {
                 Icon(Icons.Default.MoreVert, null, tint = secondaryContentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
             }
