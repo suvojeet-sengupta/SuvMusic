@@ -956,8 +956,8 @@ class YouTubeRepository @Inject constructor(
             var pageCount = 0
             // Reduce pagination for auto-mix playlists to prevent AA callback timeouts
             val isAutoMix = playlistId.startsWith("RD") || playlistId.startsWith("RTM")
-            val maxPages = if (isAutoMix) 2 else 100
-            while (continuationToken != null && pageCount < maxPages) { // Auto-mixes: 2 pages max (~100 songs)
+            val maxPages = if (isAutoMix) 5 else 100
+            while (continuationToken != null && pageCount < maxPages) { // Auto-mixes: 5 pages (~250 songs)
                 val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parseSongsFromInternalJson(continuationResponse)
@@ -3195,6 +3195,35 @@ class YouTubeRepository @Inject constructor(
             e.printStackTrace()
             null
         }
+    }
+
+    /**
+     * Get a broad collection of top songs for an artist.
+     * Merges songs from artist profile and a targeted search.
+     */
+    suspend fun getArtistTopSongs(artistName: String, artistId: String): List<Song> = withContext(Dispatchers.IO) {
+        val allSongs = mutableListOf<Song>()
+        
+        try {
+            // 1. Get songs from artist profile
+            getArtist(artistId)?.let { artist ->
+                allSongs.addAll(artist.songs)
+                allSongs.addAll(artist.videos)
+            }
+            
+            // 2. Supplement with targeted search
+            val searchResults = search(artistName, FILTER_SONGS)
+            // Filter search results to ensure they belong to the artist
+            val relevantSearchResults = searchResults.filter { song ->
+                song.artist.contains(artistName, ignoreCase = true)
+            }
+            allSongs.addAll(relevantSearchResults)
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        allSongs.distinctBy { it.id }
     }
 
     /**
