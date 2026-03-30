@@ -2385,10 +2385,11 @@ class MusicPlayer @Inject constructor(
                     .replace("sddefault", "maxresdefault")
                     .replace("default", "maxresdefault")
                     .replace(Regex("w\\d+-h\\d+"), "w544-h544")
-                it.contains("lh3.googleusercontent.com") -> 
+                it.contains("lh3.googleusercontent.com") || it.contains("yt3.ggpht.com") || it.contains("googleusercontent.com") -> 
                     it.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
                       .replace(Regex("=s\\d+"), "=s544")
-                else -> it
+                      .replace(Regex("=w\\d+"), "=w544")
+                else -> it.replace(Regex("w\\d+-h\\d+"), "w544-h544")
             }
         }
     }
