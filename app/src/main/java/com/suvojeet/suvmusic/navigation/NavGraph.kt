@@ -175,7 +175,7 @@ fun NavGraph(
                                 )
                             )
                         },
-                        onRecentsClick = {
+                        onHistoryClick = {
                             navController.navigate(Destination.Recents)
                         },
                         onExploreClick = { browseId, title ->
@@ -210,7 +210,7 @@ fun NavGraph(
                                 )
                             )
                         },
-                        onRecentsClick = {
+                        onHistoryClick = {
                             navController.navigate(Destination.Recents)
                         },
                         onListenTogetherClick = {
