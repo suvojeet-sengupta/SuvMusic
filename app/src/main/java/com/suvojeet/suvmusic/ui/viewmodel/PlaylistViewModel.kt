@@ -743,6 +743,26 @@ class PlaylistViewModel @Inject constructor(
         clearSelection()
     }
 
+    fun playNextSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentPlaylist = _uiState.value.playlist ?: return
+        val selectedSongs = currentPlaylist.songs.filter { (it.setVideoId ?: it.id) in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.playNext(selectedSongs)
+            clearSelection()
+        }
+    }
+
+    fun addToQueueSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentPlaylist = _uiState.value.playlist ?: return
+        val selectedSongs = currentPlaylist.songs.filter { (it.setVideoId ?: it.id) in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.addToQueue(selectedSongs)
+            clearSelection()
+        }
+    }
+
     fun removeSelectedSongs() {
         val selectedIds = _uiState.value.selectedSongIds
         if (selectedIds.isEmpty()) return
