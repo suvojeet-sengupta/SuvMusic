@@ -45,6 +45,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.ui.platform.LocalDensity
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ModernQueueView(
@@ -343,13 +349,6 @@ private fun SectionDivider(title: String, color: Color) {
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
     )
 }
-
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
-
-import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
