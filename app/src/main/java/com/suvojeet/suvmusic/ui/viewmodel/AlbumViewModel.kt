@@ -156,20 +156,23 @@ class AlbumViewModel @Inject constructor(
         }
     }
 
-    fun reorderSong(fromIndex: Int, toIndex: Int) {
-        val currentAlbum = _uiState.value.album ?: return
-        val songs = currentAlbum.songs.toMutableList()
-        if (fromIndex !in songs.indices || toIndex !in songs.indices) return
-        
-        val movedSong = songs.removeAt(fromIndex)
-        songs.add(toIndex, movedSong)
-        
-        _uiState.update { 
-            it.copy(album = currentAlbum.copy(songs = songs))
+    fun toggleSongSelection(song: Song) {
+        val currentSelected = _uiState.value.selectedSongIds.toMutableSet()
+        if (currentSelected.contains(song.id)) {
+            currentSelected.remove(song.id)
+        } else {
+            currentSelected.add(song.id)
         }
+        _uiState.update { it.copy(
+            selectedSongIds = currentSelected,
+            isSelectionMode = currentSelected.isNotEmpty()
+        ) }
     }
-}
-       isSelectionMode = false
+
+    fun clearSelection() {
+        _uiState.update { it.copy(
+            selectedSongIds = emptySet(),
+            isSelectionMode = false
         ) }
     }
 
