@@ -487,9 +487,17 @@ class PlayerViewModel @Inject constructor(
     fun playNext(song: Song) {
         musicPlayer.playNext(listOf(song))
     }
+
+    fun playNext(songs: List<Song>) {
+        musicPlayer.playNext(songs)
+    }
     
     fun addToQueue(song: Song) {
         musicPlayer.addToQueue(listOf(song))
+    }
+
+    fun addToQueue(songs: List<Song>) {
+        musicPlayer.addToQueue(songs)
     }
     
     fun play() {

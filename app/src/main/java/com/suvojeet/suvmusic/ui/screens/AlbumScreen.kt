@@ -253,7 +253,7 @@ fun AlbumScreen(
                             onAddToQueueClick = { viewModel.addToQueueSelectedSongs() },
                             onAddToPlaylistClick = { 
                                 val selectedSongs = album.songs.filter { it.id in uiState.selectedSongIds }
-                                playlistViewModel.addSongsToPlaylist(selectedSongs)
+                                playlistViewModel.showAddToPlaylistSheet(selectedSongs)
                             },
                             onMoveToTopClick = { /* Not applicable for album */ },
                             contentColor = contentColor,
