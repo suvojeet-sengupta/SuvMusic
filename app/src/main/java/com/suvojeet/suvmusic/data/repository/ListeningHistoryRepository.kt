@@ -14,7 +14,7 @@ import javax.inject.Singleton
 @Singleton
 class ListeningHistoryRepository @Inject constructor(
     private val listeningHistoryDao: ListeningHistoryDao,
-    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
+    val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     
     /**

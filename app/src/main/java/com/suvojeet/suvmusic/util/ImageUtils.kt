@@ -18,9 +18,10 @@ object ImageUtils {
             url.contains("ytimg.com") -> url
                 .replace(Regex("(hqdefault|mqdefault|sddefault|default|maxresdefault)\\.jpg"), "hqdefault.jpg")
                 .replace(W_H_REGEX, sizeStr)
-            url.contains("lh3.googleusercontent.com") || url.contains("yt3.ggpht.com") ->
+            url.contains("lh3.googleusercontent.com") || url.contains("yt3.ggpht.com") || url.contains("googleusercontent.com") ->
                 url.replace(GOOGLE_W_H_REGEX, googleSizeStr)
                     .replace(GOOGLE_S_REGEX, googleSStr)
+                    .replace(W_REGEX, wSizeStr)
             else -> url.replace(W_H_REGEX, sizeStr)
                 .replace(W_REGEX, wSizeStr)
         }

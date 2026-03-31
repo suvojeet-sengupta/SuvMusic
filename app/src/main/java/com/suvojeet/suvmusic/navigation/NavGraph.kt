@@ -101,7 +101,8 @@ fun NavGraph(
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: Any = Destination.Home,
     deviceType: DeviceType = DeviceType.Phone,
-    dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null
+    dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null,
+    snackbarHostState: androidx.compose.material3.SnackbarHostState? = null
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -174,7 +175,7 @@ fun NavGraph(
                                 )
                             )
                         },
-                        onRecentsClick = {
+                        onHistoryClick = {
                             navController.navigate(Destination.Recents)
                         },
                         onExploreClick = { browseId, title ->
@@ -209,7 +210,7 @@ fun NavGraph(
                                 )
                             )
                         },
-                        onRecentsClick = {
+                        onHistoryClick = {
                             navController.navigate(Destination.Recents)
                         },
                         onListenTogetherClick = {
@@ -495,7 +496,8 @@ fun NavGraph(
         composable<Destination.Misc> {
             MiscScreen(
                 onBack = { navController.popBackStack() },
-                onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders) }
+                onLyricsProvidersClick = { navController.navigate(Destination.LyricsProviders) },
+                externalSnackbarHostState = snackbarHostState
             )
         }
 
@@ -631,6 +633,9 @@ fun NavGraph(
                 onArtistClick = { artist ->
                     navController.navigate(Destination.Artist(artist.id))
                 },
+                onArtistIdClick = { artistId ->
+                    navController.navigate(Destination.Artist(artistId))
+                },
                 onPlaylistClick = { playlist ->
                     navController.navigate(
                         Destination.Playlist(
@@ -640,14 +645,8 @@ fun NavGraph(
                         )
                     )
                 },
-                onStartRadio = { radioId ->
-                     navController.navigate(
-                         Destination.Playlist(
-                             playlistId = radioId,
-                             name = null, // Navigation will fetch details or use generic "Radio"
-                             thumbnailUrl = null
-                         )
-                     )
+                onStartRadio = { songs ->
+                    onPlaySong(songs, 0)
                 }
             )
         }

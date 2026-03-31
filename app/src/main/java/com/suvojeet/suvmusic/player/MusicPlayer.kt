@@ -67,7 +67,8 @@ class MusicPlayer @Inject constructor(
     private val musicHapticsManager: MusicHapticsManager,
     private val ttsManager: TTSManager,
     private val spatialAudioProcessor: SpatialAudioProcessor,
-    private val nativeSpatialAudio: NativeSpatialAudio
+    private val nativeSpatialAudio: NativeSpatialAudio,
+    private val streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
 ) {
     
     // ... (existing properties)
@@ -108,6 +109,8 @@ class MusicPlayer @Inject constructor(
     
     // Track manually selected device ID to persist selection across refreshes
     private var manualSelectedDeviceId: String? = null
+    private var manualSelectedDeviceName: String? = null
+    private var lastManualSelectionTime: Long = 0L
     
     // Cache for resolved video IDs for non-YouTube songs (SongId -> VideoId)
     // Fix: Unbounded Memory Leak -> Use LruCache with max size 100
@@ -118,6 +121,23 @@ class MusicPlayer @Inject constructor(
     private var currentSongStartPosition: Long = 0L
     
     private var deviceReceiver: android.content.BroadcastReceiver? = null
+    
+    // Modern Audio Device Callback
+    private val audioDeviceCallback = object : android.media.AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
+            scope.launch {
+                delay(1000)
+                updateAvailableDevices()
+            }
+        }
+
+        override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
+            scope.launch {
+                delay(500)
+                updateAvailableDevices()
+            }
+        }
+    }
     
     // Error recovery retry tracking to prevent infinite loops
     private var errorRetryCount = 0
@@ -156,6 +176,7 @@ class MusicPlayer @Inject constructor(
         
         // Register receiver for device changes
         registerDeviceReceiver()
+        audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
 
         // Update homescreen widget on state changes (filtered to avoid excessive updates from progress)
         scope.launch {
@@ -189,7 +210,11 @@ class MusicPlayer @Inject constructor(
             override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
                 // Small delay to allow system to update device list
                 scope.launch {
-                    delay(1000)
+                    delay(2000)
+                    updateAvailableDevices()
+                    
+                    // Second attempt after longer delay for slower devices
+                    delay(3000)
                     updateAvailableDevices()
 
                     // Bluetooth Autoplay
@@ -250,8 +275,20 @@ class MusicPlayer @Inject constructor(
         val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         
         // System state for auto-selection
-        val isBluetoothActive = audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn
-        val isWiredHeadsetConnected = audioManager.isWiredHeadsetOn
+        val isBluetoothActive = audioDevices.any { 
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+            (android.os.Build.VERSION.SDK_INT >= 31 && (
+                it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || 
+                it.type == AudioDeviceInfo.TYPE_BLE_SPEAKER ||
+                it.type == 30 // TYPE_BLE_BROADCAST
+            ))
+        }
+        val isWiredHeadsetConnected = audioDevices.any { 
+            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || 
+            it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+            it.type == AudioDeviceInfo.TYPE_USB_HEADSET
+        }
         val autoSelectPhone = !isBluetoothActive && !isWiredHeadsetConnected
 
         // 1. Add Phone Speaker as the primary internal output
@@ -284,7 +321,17 @@ class MusicPlayer @Inject constructor(
                 AudioDeviceInfo.TYPE_HDMI_ARC,
                 AudioDeviceInfo.TYPE_HDMI_EARC -> DeviceType.SPEAKER
                 AudioDeviceInfo.TYPE_AUX_LINE -> DeviceType.HEADPHONES
-                else -> DeviceType.UNKNOWN
+                else -> {
+                    if (android.os.Build.VERSION.SDK_INT >= 31 && (
+                        device.type == AudioDeviceInfo.TYPE_BLE_HEADSET || 
+                        device.type == AudioDeviceInfo.TYPE_BLE_SPEAKER ||
+                        device.type == 30 // TYPE_BLE_BROADCAST
+                    )) {
+                        DeviceType.BLUETOOTH
+                    } else {
+                        DeviceType.UNKNOWN
+                    }
+                }
             }
             
             // Skip unknown devices if they don't have a valid name to avoid "null" entries
@@ -321,8 +368,16 @@ class MusicPlayer @Inject constructor(
         // Logic: specific manual selection > auto system selection
         
         var devicesWithSelection = rawDevices.map { device ->
+            // Try to match by ID first, then by name if it's a recent manual selection
+            // (IDs can change on some devices during routing handshakes)
+            val isManualMatch = if (manualSelectedDeviceId != null) {
+                device.id == manualSelectedDeviceId || 
+                (System.currentTimeMillis() - lastManualSelectionTime < 10000 && 
+                 device.name == manualSelectedDeviceName)
+            } else false
+
             val isSelected = if (manualSelectedDeviceId != null) {
-                device.id == manualSelectedDeviceId
+                isManualMatch
             } else {
                 when (device.type) {
                     DeviceType.PHONE -> autoSelectPhone
@@ -337,12 +392,33 @@ class MusicPlayer @Inject constructor(
         // 4. Validate selection
         // If manual selection is active but the device is no longer available (not found in list),
         // or if no device is selected at all, fallback to auto/default.
-        val hasSelection = devicesWithSelection.any { it.isSelected }
+        var hasSelection = devicesWithSelection.any { it.isSelected }
         
-        if (!hasSelection) {
+        // Add a grace period (10 seconds) before clearing manual selection
+        // This prevents flickering back to phone speaker while Bluetooth is still handshake-ing
+        val isInGracePeriod = manualSelectedDeviceId != null && (System.currentTimeMillis() - lastManualSelectionTime < 10000)
+
+        // If we are in grace period but device isn't in list, MANUALLY add it to the list
+        // so the UI stays stable and shows it as "Connecting/Active"
+        if (!hasSelection && isInGracePeriod && manualSelectedDeviceId != null && manualSelectedDeviceName != null) {
+            val placeholderDevice = OutputDevice(
+                id = manualSelectedDeviceId!!,
+                name = manualSelectedDeviceName!!,
+                type = DeviceType.BLUETOOTH, // Assume Bluetooth for grace period issues
+                isSelected = true
+            )
+            // Add at correct position or replace if same name exists
+            val newList = devicesWithSelection.toMutableList()
+            newList.add(placeholderDevice)
+            devicesWithSelection = newList
+            hasSelection = true
+        }
+
+        if (!hasSelection && !isInGracePeriod) {
             // Manual device lost or auto-logic failed -> Reset manual and use auto logic
             if (manualSelectedDeviceId != null) {
                 manualSelectedDeviceId = null
+                manualSelectedDeviceName = null
                 
                 // Also tell service to reset to default routing since manual device is gone
                 mediaController?.sendCustomCommand(
@@ -369,6 +445,13 @@ class MusicPlayer @Inject constructor(
             }
         }
         
+        // If we are in grace period but device isn't in list, keep the "selected" state for the UI
+        // so the user doesn't see it jump back immediately
+        if (!hasSelection && isInGracePeriod) {
+             // Just update available devices but don't clear manualSelectedDeviceId yet
+        }
+
+        
         val selectedDevice = devicesWithSelection.find { it.isSelected }
         _playerState.update { it.copy(availableDevices = devicesWithSelection, selectedDevice = selectedDevice) }
     }
@@ -376,6 +459,8 @@ class MusicPlayer @Inject constructor(
     fun switchOutputDevice(device: OutputDevice) {
         // Update manual preference
         manualSelectedDeviceId = device.id
+        manualSelectedDeviceName = device.name
+        lastManualSelectionTime = System.currentTimeMillis()
         
         // Send command to service to switch output device (ExoPlayer routing)
         val args = android.os.Bundle().apply {
@@ -1184,6 +1269,9 @@ class MusicPlayer @Inject constructor(
     }
     
     private var saveCounter = 0
+    private var bufferingStartWallTime = 0L
+    private val MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE = 3000L // 3 seconds
+    private var hasTriedLowQualityForCurrent = false
     
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
@@ -1193,13 +1281,47 @@ class MusicPlayer @Inject constructor(
                 mediaController?.let { controller ->
                     val currentPos = controller.currentPosition.coerceAtLeast(0L)
                     val duration = controller.duration.coerceAtLeast(0L)
+                    val bufferedPercentage = controller.bufferedPercentage
+                    val playbackState = controller.playbackState
                     
-                    _playerState.update { 
-                        it.copy(
-                            currentPosition = currentPos,
-                            duration = duration,
-                            bufferedPercentage = controller.bufferedPercentage
-                        )
+                    if (playbackState == Player.STATE_BUFFERING) {
+                        if (bufferingStartWallTime == 0L) bufferingStartWallTime = System.currentTimeMillis()
+                        val bufferingDuration = System.currentTimeMillis() - bufferingStartWallTime
+                        if (bufferingDuration > MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE && !hasTriedLowQualityForCurrent) {
+                            val currentQuality = sessionManager.getAudioQuality()
+                            if (currentQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
+                                // Downscale: Clear cache and re-trigger play with forceLow
+                                _playerState.value.currentSong?.let { song ->
+                                    android.util.Log.i("MusicPlayer", "Buffering too long in AUTO mode. Downscaling to LOW quality for ${song.title}")
+                                    streamingService.clearCacheFor(song.id)
+                                    hasTriedLowQualityForCurrent = true
+                                    bufferingStartWallTime = 0L
+                                    
+                                    // Re-play current song to force resolution with new quality
+                                    scope.launch {
+                                        playSong(song, _playerState.value.queue, _playerState.value.currentIndex, forceLow = true)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        bufferingStartWallTime = 0L
+                    }
+
+                    val currentState = _playerState.value
+                    // Only update if significant change (position > 500ms diff or meta change)
+                    val shouldUpdate = kotlin.math.abs(currentState.currentPosition - currentPos) > 500 ||
+                                     currentState.duration != duration ||
+                                     currentState.bufferedPercentage != bufferedPercentage
+                    
+                    if (shouldUpdate) {
+                        _playerState.update { 
+                            it.copy(
+                                currentPosition = currentPos,
+                                duration = duration,
+                                bufferedPercentage = bufferedPercentage
+                            )
+                        }
                     }
                     
                     // Save playback state every ~5 seconds (25 iterations * 200ms = 5s)
@@ -1449,10 +1571,15 @@ class MusicPlayer @Inject constructor(
     
     private var playJob: Job? = null
 
-    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true) {
+    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true, forceLow: Boolean = false) {
         // Cancel any pending play request
         playJob?.cancel()
         currentResolutionJob?.cancel()
+        
+        // Reset downscale tracking for new song (unless we ARE downscaling)
+        if (!forceLow) {
+            hasTriedLowQualityForCurrent = false
+        }
         
         // IMMEDIATELY pause current playback for instant response
         mediaController?.pause()
@@ -1476,7 +1603,7 @@ class MusicPlayer @Inject constructor(
             try {
                 _playerState.update { it.copy(isLoading = true) }
                 
-                val mediaItems = queue.mapIndexed { index, s -> createMediaItem(s, index == startIndex) }
+                val mediaItems = queue.mapIndexed { index, s -> createMediaItem(s, index == startIndex, forceLow = (index == startIndex && forceLow)) }
                 mediaController?.let { controller ->
                     controller.setMediaItems(mediaItems, startIndex, 0L)
                     controller.prepare()
@@ -1494,7 +1621,7 @@ class MusicPlayer @Inject constructor(
         }
     }
     
-    private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true): MediaItem {
+    private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true, forceLow: Boolean = false): MediaItem {
         var audioStreamUrl: String? = null
         
         val uri = when (song.source) {
@@ -1522,7 +1649,7 @@ class MusicPlayer @Inject constructor(
                         val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
                             resolvedVideoIds.put(song.id, it) 
                         }
-                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality, forceLow = forceLow)
                         if (videoResult != null) {
                             audioStreamUrl = videoResult.audioUrl
                             videoResult.videoUrl
@@ -1531,10 +1658,10 @@ class MusicPlayer @Inject constructor(
                         }
                     } else {
                         // Retry once if first attempt fails
-                        youTubeRepository.getStreamUrl(song.id)
+                        youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
                             ?: run {
                                 kotlinx.coroutines.delay(500)
-                                youTubeRepository.getStreamUrl(song.id)
+                                youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
                             }
                             // Bug Fix: Use placeholder URI instead of empty string
                             ?: "https://placeholder.invalid/${song.id}"
@@ -2231,6 +2358,9 @@ class MusicPlayer @Inject constructor(
         controllerFuture?.let { MediaController.releaseFuture(it) }
         mediaController = null
         
+        // Unregister modern device callback
+        audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
+        
         // Unregister device receiver
         deviceReceiver?.let {
             try {
@@ -2249,16 +2379,17 @@ class MusicPlayer @Inject constructor(
     private fun getHighResThumbnail(url: String?): String? {
         return url?.let {
             when {
-                it.contains("ytimg.com") -> it
+                it.contains("ytimg.com") || it.contains("youtube.com") -> it
                     .replace("hqdefault", "maxresdefault")
                     .replace("mqdefault", "maxresdefault")
                     .replace("sddefault", "maxresdefault")
                     .replace("default", "maxresdefault")
                     .replace(Regex("w\\d+-h\\d+"), "w544-h544")
-                it.contains("lh3.googleusercontent.com") -> 
+                it.contains("lh3.googleusercontent.com") || it.contains("yt3.ggpht.com") || it.contains("googleusercontent.com") -> 
                     it.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
                       .replace(Regex("=s\\d+"), "=s544")
-                else -> it
+                      .replace(Regex("=w\\d+"), "=w544")
+                else -> it.replace(Regex("w\\d+-h\\d+"), "w544-h544")
             }
         }
     }

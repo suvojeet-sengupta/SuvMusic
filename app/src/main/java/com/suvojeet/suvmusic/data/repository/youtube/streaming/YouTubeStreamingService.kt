@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.ListExtractor
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,7 +18,8 @@ import javax.inject.Singleton
 @Suppress("DEPRECATION")
 @Singleton
 class YouTubeStreamingService @Inject constructor(
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor
 ) {
     private val ytService: org.schabi.newpipe.extractor.StreamingService by lazy {
         ServiceList.all().find { it.serviceInfo.name == "YouTube" }
@@ -65,28 +67,45 @@ class YouTubeStreamingService @Inject constructor(
      * Get audio stream URL for playback.
      * Uses user's audio quality preference and caches the result.
      */
-    suspend fun getStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getStreamUrl(videoId: String, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
         val cacheKey = "audio_$videoId"
-        streamCache.get(cacheKey)?.let { cached ->
-            if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
-                return@withContext cached.url
+        if (!forceLow) {
+            streamCache.get(cacheKey)?.let { cached ->
+                if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
+                    return@withContext cached.url
+                }
             }
+        } else {
+            streamCache.remove(cacheKey)
         }
         
         // Try primary URL
-        val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId)
+        val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, forceLow)
         if (primaryResult != null) return@withContext primaryResult
         
         // Try music fallback
         android.util.Log.d("YouTubeStreaming", "Primary resolution failed for $videoId, trying music fallback")
-        resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId)
+        resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, forceLow)
     }
 
-    private suspend fun resolveStreamWithUrl(streamUrl: String, videoId: String): String? {
+    private suspend fun resolveStreamWithUrl(streamUrl: String, videoId: String, forceLow: Boolean = false): String? {
         val cacheKey = "audio_$videoId"
         return retryWithBackoff {
             val startTime = System.currentTimeMillis()
-            val audioQuality = sessionManager.getAudioQuality()
+            var audioQuality = if (forceLow) {
+                com.suvojeet.suvmusic.data.model.AudioQuality.LOW
+            } else {
+                sessionManager.getAudioQuality()
+            }
+            
+            // Adaptive logic for AUTO quality
+            if (audioQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
+                audioQuality = if (networkMonitor.isOnWifi()) {
+                    com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM
+                } else {
+                    com.suvojeet.suvmusic.data.model.AudioQuality.LOW
+                }
+            }
             
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
@@ -98,6 +117,7 @@ class YouTubeStreamingService @Inject constructor(
                 com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 70
                 com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 160
                 com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 512
+                com.suvojeet.suvmusic.data.model.AudioQuality.AUTO -> 160
             }
             
             val bestAudioStream = audioStreams
@@ -128,24 +148,33 @@ class YouTubeStreamingService @Inject constructor(
         val resolution: String? = null
     )
     
-    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): String? = withContext(Dispatchers.IO) {
-        getVideoStreamResult(videoId, quality)?.videoUrl
+    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
+        getVideoStreamResult(videoId, quality, forceLow)?.videoUrl
     }
     
-    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): VideoStreamResult? = withContext(Dispatchers.IO) {
-        val targetQuality = quality ?: sessionManager.getVideoQuality()
+    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): VideoStreamResult? = withContext(Dispatchers.IO) {
+        val targetQuality = if (forceLow) {
+            com.suvojeet.suvmusic.data.model.VideoQuality.LOW
+        } else {
+            quality ?: sessionManager.getVideoQuality()
+        }
         
         val videoCacheKey = "video_${videoId}_${targetQuality.name}"
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
         
-        val cachedVideo = streamCache.get(videoCacheKey)
-        val cachedAudio = streamCache.get(audioCacheKey)
-        
-        if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
-            return@withContext VideoStreamResult(
-                videoUrl = cachedVideo.url,
-                audioUrl = cachedAudio?.url
-            )
+        if (forceLow) {
+            streamCache.remove(videoCacheKey)
+            streamCache.remove(audioCacheKey)
+        } else {
+            val cachedVideo = streamCache.get(videoCacheKey)
+            val cachedAudio = streamCache.get(audioCacheKey)
+            
+            if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
+                return@withContext VideoStreamResult(
+                    videoUrl = cachedVideo.url,
+                    audioUrl = cachedAudio?.url
+                )
+            }
         }
 
         val primaryResult = resolveVideoWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, targetQuality)
@@ -164,10 +193,21 @@ class YouTubeStreamingService @Inject constructor(
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
 
         return retryWithBackoff {
+            var quality = targetQuality
+            
+            // Adaptive logic for AUTO quality
+            if (quality == com.suvojeet.suvmusic.data.model.VideoQuality.AUTO) {
+                quality = if (networkMonitor.isOnWifi()) {
+                    com.suvojeet.suvmusic.data.model.VideoQuality.MEDIUM
+                } else {
+                    com.suvojeet.suvmusic.data.model.VideoQuality.LOW
+                }
+            }
+            
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
-            val targetResolution = targetQuality.maxResolution
+            val targetResolution = quality.maxResolution
             var result: VideoStreamResult? = null
             
             if (targetResolution >= 720) {
@@ -291,14 +331,13 @@ class YouTubeStreamingService @Inject constructor(
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
             streamExtractor.fetchPage()
             
-            Song(
-                id = videoId,
+            Song.fromYouTube(
+                videoId = videoId,
                 title = streamExtractor.name ?: "Unknown",
                 artist = streamExtractor.uploaderName ?: "Unknown Artist",
                 album = "",
                 thumbnailUrl = streamExtractor.thumbnails.maxByOrNull { it.width * it.height }?.url,
                 duration = streamExtractor.length * 1000,
-                source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                 releaseDate = streamExtractor.textualUploadDate
             )
         }
@@ -313,28 +352,38 @@ class YouTubeStreamingService @Inject constructor(
             val results = mutableListOf<Song>()
             val itemsPage = streamExtractor.relatedItems
             
+            // Fetch related items from the current page
             if (itemsPage != null) {
                 for (item in itemsPage.items) {
                     if (item is StreamInfoItem) {
-                        try {
-                            val id = item.url?.substringAfter("v=")?.substringBefore("&") 
-                                ?: item.url?.substringAfter("youtu.be/")?.substringBefore("?")
-                            
-                            if (id != null) {
-                                Song.fromYouTube(
-                                    videoId = id,
-                                    title = item.name ?: "Unknown",
-                                    artist = item.uploaderName ?: "Unknown Artist",
-                                    album = "",
-                                    duration = item.duration * 1000L,
-                                    thumbnailUrl = item.thumbnails.lastOrNull()?.url
-                                )?.let { results.add(it) }
-                            }
-                        } catch (e: Exception) {}
+                        mapToSong(item)?.let { results.add(it) }
                     }
                 }
             }
             results
         } ?: emptyList()
+    }
+
+    private fun mapToSong(item: StreamInfoItem): Song? {
+        val id = item.url?.substringAfter("v=")?.substringBefore("&")
+            ?: item.url?.substringAfter("youtu.be/")?.substringBefore("?")
+            ?: return null
+
+        return Song.fromYouTube(
+            videoId = id,
+            title = item.name ?: "Unknown",
+            artist = item.uploaderName ?: "Unknown Artist",
+            album = "",
+            duration = item.duration * 1000L,
+            thumbnailUrl = item.thumbnails.lastOrNull()?.url
+        )
+    }
+
+    fun clearCacheFor(videoId: String) {
+        streamCache.remove("audio_$videoId")
+        com.suvojeet.suvmusic.data.model.VideoQuality.entries.forEach { 
+            streamCache.remove("video_${videoId}_${it.name}")
+            streamCache.remove("video_audio_${videoId}_${it.name}")
+        }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
@@ -19,8 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -44,6 +47,9 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.BounceButton
 import com.suvojeet.suvmusic.ui.components.NewReleaseCard
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
+import com.suvojeet.suvmusic.ui.components.player.MultipleArtistsDialog
+import com.suvojeet.suvmusic.ui.components.rememberDominantColors
+import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistError
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
@@ -58,12 +64,29 @@ fun ArtistScreen(
     onSeeAllAlbumsClick: () -> Unit,
     onSeeAllSinglesClick: () -> Unit,
     onArtistClick: (ArtistPreview) -> Unit,
+    onArtistIdClick: (String) -> Unit = {},
     onPlaylistClick: (Playlist) -> Unit,
-    onStartRadio: (String) -> Unit,
+    onStartRadio: (List<Song>) -> Unit,
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
+    val isDark = isSystemInDarkTheme()
+    
+    val artist = uiState.artist
+    val dominantColors = rememberDominantColors(
+        imageUrl = artist?.thumbnailUrl,
+        isDarkTheme = isDark
+    )
+
+    if (uiState.showMultipleArtistsDialog) {
+        MultipleArtistsDialog(
+            artists = uiState.currentArtistCredits,
+            onArtistClick = onArtistIdClick,
+            onDismiss = { viewModel.toggleMultipleArtistsDialog(false) },
+            dominantColors = dominantColors
+        )
+    }
 
     // Calculate scroll offset for sticky header fading
     val headerAlpha by remember {
@@ -71,8 +94,7 @@ fun ArtistScreen(
             val firstVisibleItemIndex = scrollState.firstVisibleItemIndex
             val firstVisibleItemScrollOffset = scrollState.firstVisibleItemScrollOffset
             if (firstVisibleItemIndex == 0) {
-                // Fade in alpha as we scroll past the first 200px
-                min(1f, firstVisibleItemScrollOffset / 500f)
+                min(1f, firstVisibleItemScrollOffset / 400f)
             } else {
                 1f
             }
@@ -99,7 +121,9 @@ fun ArtistScreen(
                 )
             }
             uiState.artist != null -> {
-                val artist = uiState.artist!!
+                val currentArtist = uiState.artist!!
+                val surfaceColor = MaterialTheme.colorScheme.surface
+                val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
                 LazyColumn(
                     state = scrollState,
@@ -109,20 +133,21 @@ fun ArtistScreen(
                     // Immersive Header
                     item {
                         ImmersiveArtistHeader(
-                            artist = artist,
+                            artist = currentArtist,
+                            dominantColors = dominantColors,
                             onPlayAll = {
-                                if (artist.songs.isNotEmpty()) {
-                                    onSongClick(artist.songs, 0)
+                                if (currentArtist.songs.isNotEmpty()) {
+                                    onSongClick(currentArtist.songs, 0)
                                 }
                             },
                             onShuffle = {
-                                if (artist.songs.isNotEmpty()) {
-                                    val randomIndex = artist.songs.indices.random()
-                                    onSongClick(artist.songs, randomIndex)
+                                if (currentArtist.songs.isNotEmpty()) {
+                                    val randomIndex = currentArtist.songs.indices.random()
+                                    onSongClick(currentArtist.songs, randomIndex)
                                 }
                             },
                             onSubscribe = viewModel::toggleSubscribe,
-                            isSubscribed = artist.isSubscribed,
+                            isSubscribed = currentArtist.isSubscribed,
                             isSubscribing = uiState.isSubscribing,
                             onStartRadio = { viewModel.startRadio(onStartRadio) }
                         )
@@ -131,59 +156,64 @@ fun ArtistScreen(
                     // Content Sections
                     
                     // Latest Release
-                    val latestRelease = (artist.albums + artist.singles)
+                    val latestRelease = (currentArtist.albums + currentArtist.singles)
                          .maxByOrNull { it.year ?: "0" }
                     if (latestRelease != null) {
                         item {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
                             LatestReleaseSection(
-                                artistName = artist.name,
+                                artistName = currentArtist.name,
                                 album = latestRelease,
-                                isSingle = artist.singles.contains(latestRelease),
+                                isSingle = currentArtist.singles.contains(latestRelease),
+                                dominantColors = dominantColors,
                                 onClick = { onAlbumClick(latestRelease) }
                             )
                         }
                     }
 
                     // Top Songs
-                    if (artist.songs.isNotEmpty()) {
+                    if (currentArtist.songs.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(32.dp))
-                            Spacer(modifier = Modifier.height(32.dp))
-                            SectionHeader(title = stringResource(R.string.header_top_songs))
-                            Spacer(modifier = Modifier.height(8.dp))
+                            SectionHeader(title = stringResource(R.string.header_top_songs), dominantColors = dominantColors)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                         
-                        itemsIndexed(artist.songs.take(5), key = { index, song -> "${song.id}_$index" }) { index, song ->
+                        itemsIndexed(currentArtist.songs.take(5), key = { index, song -> "${song.id}_$index" }) { index, song ->
                             TopSongRow(
                                 index = index + 1,
                                 song = song,
-                                onClick = { onSongClick(artist.songs, index) }
+                                dominantColors = dominantColors,
+                                onClick = { onSongClick(currentArtist.songs, index) },
+                                onArtistClick = {
+                                    viewModel.fetchArtistCreditsAndShow(song.artist, song.source)
+                                }
                             )
                         }
                     }
 
                     // Discography - Albums
-                    if (artist.albums.isNotEmpty()) {
+                    if (currentArtist.albums.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(32.dp))
                             SectionHeader(
                                 title = stringResource(R.string.header_albums),
-                                showSeeAll = artist.albums.size > 5,
+                                showSeeAll = currentArtist.albums.size > 5,
+                                dominantColors = dominantColors,
                                 onSeeAllClick = onSeeAllAlbumsClick
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(artist.albums, key = { it.id }) { album ->
+                                items(currentArtist.albums, key = { it.id }) { album ->
                                     ArtistContentCard(
                                         title = album.title,
                                         subtitle = album.year,
                                         imageUrl = album.thumbnailUrl,
+                                        dominantColors = dominantColors,
                                         onClick = { onAlbumClick(album) }
                                     )
                                 }
@@ -192,25 +222,27 @@ fun ArtistScreen(
                     }
 
                     // Discography - Singles & EPs
-                    if (artist.singles.isNotEmpty()) {
+                    if (currentArtist.singles.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(32.dp))
                             SectionHeader(
                                 title = stringResource(R.string.header_singles_eps),
-                                showSeeAll = artist.singles.size > 5,
+                                showSeeAll = currentArtist.singles.size > 5,
+                                dominantColors = dominantColors,
                                 onSeeAllClick = onSeeAllSinglesClick
                             )
                             Spacer(modifier = Modifier.height(16.dp))
 
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(artist.singles, key = { it.id }) { single ->
+                                items(currentArtist.singles, key = { it.id }) { single ->
                                     ArtistContentCard(
                                         title = single.title,
                                         subtitle = single.year,
                                         imageUrl = single.thumbnailUrl,
+                                        dominantColors = dominantColors,
                                         onClick = { onAlbumClick(single) }
                                     )
                                 }
@@ -219,20 +251,21 @@ fun ArtistScreen(
                     }
                     
                     // Videos
-                    if (artist.videos.isNotEmpty()) {
+                    if (currentArtist.videos.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(32.dp))
-                            SectionHeader(title = stringResource(R.string.header_videos))
+                            SectionHeader(title = stringResource(R.string.header_videos), dominantColors = dominantColors)
                             Spacer(modifier = Modifier.height(16.dp))
 
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                itemsIndexed(artist.videos) { index, video ->
+                                itemsIndexed(currentArtist.videos) { index, video ->
                                     ArtistVideoCard(
                                         video = video,
-                                        onClick = { onSongClick(artist.videos, index) } // Assuming video plays like a song
+                                        dominantColors = dominantColors,
+                                        onClick = { onSongClick(currentArtist.videos, index) }
                                     )
                                 }
                             }
@@ -240,21 +273,22 @@ fun ArtistScreen(
                     }
 
                     // Featured On
-                    if (artist.featuredPlaylists.isNotEmpty()) {
+                    if (currentArtist.featuredPlaylists.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(32.dp))
-                            SectionHeader(title = stringResource(R.string.header_featured_on))
+                            SectionHeader(title = stringResource(R.string.header_featured_on), dominantColors = dominantColors)
                             Spacer(modifier = Modifier.height(16.dp))
 
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(artist.featuredPlaylists, key = { it.id }) { playlist ->
+                                items(currentArtist.featuredPlaylists, key = { it.id }) { playlist ->
                                     ArtistContentCard(
                                         title = playlist.title,
-                                        subtitle = "Playlist", // Or author if available
+                                        subtitle = "Playlist",
                                         imageUrl = playlist.thumbnailUrl,
+                                        dominantColors = dominantColors,
                                         onClick = { onPlaylistClick(playlist) },
                                         shape = RoundedCornerShape(8.dp)
                                     )
@@ -264,19 +298,20 @@ fun ArtistScreen(
                     }
 
                     // Fans Also Like
-                    if (artist.relatedArtists.isNotEmpty()) {
+                    if (currentArtist.relatedArtists.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(32.dp))
-                            SectionHeader(title = stringResource(R.string.header_fans_also_like))
+                            SectionHeader(title = stringResource(R.string.header_fans_also_like), dominantColors = dominantColors)
                             Spacer(modifier = Modifier.height(16.dp))
 
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(artist.relatedArtists, key = { it.id }) { related ->
+                                items(currentArtist.relatedArtists, key = { it.id }) { related ->
                                     ArtistCircleCard(
                                         artist = related,
+                                        dominantColors = dominantColors,
                                         onClick = { onArtistClick(related) }
                                     )
                                 }
@@ -285,78 +320,104 @@ fun ArtistScreen(
                     }
 
                     // About
-                    if (!artist.description.isNullOrBlank()) {
+                    if (!currentArtist.description.isNullOrBlank()) {
                         item {
-                            Spacer(modifier = Modifier.height(32.dp))
-                            SectionHeader(title = stringResource(R.string.header_about_artist, artist.name))
+                            Spacer(modifier = Modifier.height(40.dp))
+                            SectionHeader(title = stringResource(R.string.header_about_artist, currentArtist.name), dominantColors = dominantColors)
                             Spacer(modifier = Modifier.height(16.dp))
                             AboutArtistCard(
-                                artist = artist,
+                                artist = currentArtist,
+                                dominantColors = dominantColors,
                                 onClick = { /* Expand bio if needed */ }
                             )
                         }
                     }
                 }
 
-                // Sticky Top Bar
+                // Glassy Sticky Top Bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp) // Height including status bar
+                        .height(84.dp)
+                        .graphicsLayer { alpha = headerAlpha }
+                        .blur(radius = 20.dp * headerAlpha)
                         .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.background.copy(alpha = headerAlpha),
-                                    MaterialTheme.colorScheme.background.copy(alpha = min(0.9f, headerAlpha)),
-                                    Color.Transparent
-                                )
+                            lerp(
+                                Color.Transparent,
+                                surfaceColor.copy(alpha = 0.85f),
+                                headerAlpha
                             )
                         )
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(84.dp)
+                        .statusBarsPadding()
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
+                    IconButton(
+                        onClick = onBackClick,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(
+                                color = if (headerAlpha < 0.3f) Color.Black.copy(alpha = 0.2f) else Color.Transparent
+                            )
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .dpadFocusable(
-                                    onClick = onBackClick,
-                                    shape = CircleShape,
-                                )
-                                .size(40.dp)
-                                .background(
-                                    color = if (headerAlpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent,
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.cd_back),
-                                tint = lerp(Color.White, MaterialTheme.colorScheme.onBackground, headerAlpha)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        AnimatedVisibility(
-                            visible = headerAlpha > 0.8f,
-                            enter = fadeIn(),
-                            exit = fadeOut()
-                        ) {
-                            Text(
-                                text = artist.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_back),
+                            tint = lerp(Color.White, onSurfaceColor, headerAlpha)
+                        )
                     }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    AnimatedVisibility(
+                        visible = headerAlpha > 0.8f,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Text(
+                            text = currentArtist.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        // Radio Loading Overlay
+        AnimatedVisibility(
+            visible = uiState.isStartingRadio,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable(enabled = false) {},
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = dominantColors.accent)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = uiState.radioStatus ?: "Connecting...",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
                 }
             }
         }
@@ -366,6 +427,7 @@ fun ArtistScreen(
 @Composable
 fun ImmersiveArtistHeader(
     artist: Artist,
+    dominantColors: DominantColors,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
     onSubscribe: () -> Unit,
@@ -377,15 +439,15 @@ fun ImmersiveArtistHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(420.dp) // Taller, more immersive header
+            .height(400.dp) // Reduced height
     ) {
         val highResThumbnail = artist.thumbnailUrl?.let { url ->
-            url.replace(Regex("w\\d+-h\\d+"), "w1200-h1200") // Get higher res
+            url.replace(Regex("w\\d+-h\\d+"), "w1200-h1200")
                 .replace(Regex("=w\\d+"), "=w1200")
                 .replace(Regex("=s\\d+"), "=s1200")
         }
 
-        // Background Image
+        // Background Image with Parallax-ready feel
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(highResThumbnail)
@@ -396,7 +458,7 @@ fun ImmersiveArtistHeader(
             contentScale = ContentScale.Crop
         )
 
-        // Gradient Overlay
+        // Multi-layered Gradient Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -404,142 +466,150 @@ fun ImmersiveArtistHeader(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.2f),
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.8f),
+                            Color.Transparent,
+                            dominantColors.primary.copy(alpha = 0.4f),
+                            dominantColors.primary.copy(alpha = 0.8f),
                             MaterialTheme.colorScheme.background
-                        ),
-                        startY = 0f,
-                        endY = Float.POSITIVE_INFINITY
+                        )
                     )
                 )
         )
 
-        // Content
+        // Artist Info & Actions
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .padding(horizontal = 24.dp, vertical = 24.dp)
                 .fillMaxWidth()
         ) {
             
-            // Channel/Verified Badge (if applicable, mocking structure)
             if (artist.subscribers != null) {
                  Row(
                      verticalAlignment = Alignment.CenterVertically,
-                     modifier = Modifier.padding(bottom = 8.dp)
+                     modifier = Modifier
+                         .clip(RoundedCornerShape(50))
+                         .background(dominantColors.accent.copy(alpha = 0.2f))
+                         .padding(horizontal = 8.dp, vertical = 4.dp)
                  ) {
                      Icon(
-                         imageVector = Icons.Default.CheckCircle,
+                         imageVector = Icons.Default.Verified,
                          contentDescription = null,
-                         tint = MaterialTheme.colorScheme.primary, // Dominant color usage
-                         modifier = Modifier.size(16.dp)
+                         tint = dominantColors.accent,
+                         modifier = Modifier.size(14.dp)
                      )
-                     Spacer(modifier = Modifier.width(6.dp))
+                     Spacer(modifier = Modifier.width(4.dp))
                      Text(
-                         text = "Verified Artist", // Use string resource in real app if available
-                         style = MaterialTheme.typography.labelMedium,
-                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-                         fontWeight = FontWeight.Medium
+                         text = "Official Artist",
+                         style = MaterialTheme.typography.labelSmall,
+                         color = Color.White.copy(alpha = 0.9f),
+                         fontWeight = FontWeight.Bold
                      )
                  }
             }
 
-            // Artist Name
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = artist.name,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp
+                style = MaterialTheme.typography.headlineLarge.copy( // Reduced from displayLarge
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-1.5).sp,
+                    lineHeight = 44.sp
                 ),
-                color = MaterialTheme.colorScheme.onBackground,
+                color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Listeners/Subscribers
             if (artist.subscribers != null) {
                 Text(
-                    text = "${artist.subscribers} subscribers",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    text = "${artist.subscribers} fans",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Action Buttons
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                 // Play Button (Prominent)
                 BounceButton(
                     onClick = onPlayAll,
-                    size = 56.dp,
+                    size = 56.dp, // Reduced from 64
                     shape = CircleShape,
-                    modifier = Modifier.background(MaterialTheme.colorScheme.primary, CircleShape)
+                    modifier = Modifier.background(dominantColors.accent, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = stringResource(R.string.action_play),
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = if (dominantColors.accent.luminance() > 0.5f) Color.Black else Color.White,
                         modifier = Modifier.size(32.dp)
                     )
                 }
                 
-                // Shuffle Button
-                BounceButton(
-                    onClick = onShuffle,
-                    size = 48.dp,
-                    shape = SquircleShape,
-                    modifier = Modifier.background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), SquircleShape)
+                Row(
+                    modifier = Modifier
+                        .height(48.dp) // Reduced from 56
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.15f)),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                         imageVector = Icons.Default.Shuffle,
-                         contentDescription = stringResource(R.string.action_shuffle),
-                         tint = MaterialTheme.colorScheme.onBackground
+                    IconButton(
+                        onClick = onShuffle,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    ) {
+                        Icon(
+                             imageVector = Icons.Default.Shuffle,
+                             contentDescription = stringResource(R.string.action_shuffle),
+                             tint = Color.White,
+                             modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    VerticalDivider(
+                        modifier = Modifier.height(20.dp).width(1.dp),
+                        color = Color.White.copy(alpha = 0.2f)
                     )
-                }
 
-                // Radio Button
-                BounceButton(
-                    onClick = onStartRadio,
-                    size = 48.dp,
-                    shape = SquircleShape,
-                    modifier = Modifier.background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), SquircleShape)
-                ) {
-                     Icon(
-                         imageVector = Icons.Default.Radio,
-                         contentDescription = stringResource(R.string.action_start_radio),
-                         tint = MaterialTheme.colorScheme.onBackground
-                     )
-                }
-
-                // Follow Button
-                 Button(
-                     onClick = onSubscribe,
-                     shape = SquircleShape,
-                     colors = ButtonDefaults.buttonColors(
-                         containerColor = if (isSubscribed) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primary,
-                         contentColor = if (isSubscribed) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimary
-                     ),
-                     modifier = Modifier.height(48.dp).dpadFocusable(onClick = onSubscribe, shape = SquircleShape)
-                 ) {
-                     if (isSubscribing) {
-                         LoadingIndicator(
-                         modifier = Modifier.size(16.dp),
-                         color = LocalContentColor.current
-                     )
-                     } else {
-                         Text(
-                             text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),
-                             fontWeight = FontWeight.Bold,
-                             fontSize = 12.sp,
-                             letterSpacing = 1.sp
+                    IconButton(
+                        onClick = onStartRadio,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    ) {
+                         Icon(
+                             imageVector = Icons.Default.Radio,
+                             contentDescription = stringResource(R.string.action_start_radio),
+                             tint = Color.White,
+                             modifier = Modifier.size(20.dp)
                          )
-                     }
-                 }
+                    }
+                }
+
+                Button(
+                    onClick = onSubscribe,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSubscribed) Color.White.copy(alpha = 0.2f) else Color.White,
+                        contentColor = if (isSubscribed) Color.White else Color.Black
+                    ),
+                    modifier = Modifier.height(48.dp).weight(1f)
+                ) {
+                    if (isSubscribing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = if (isSubscribed) Color.White else Color.Black,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
         }
     }
@@ -550,29 +620,67 @@ fun LatestReleaseSection(
     artistName: String,
     album: Album,
     isSingle: Boolean,
+    dominantColors: DominantColors,
     onClick: () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Text(
-            text = "New from $artistName", // Use string resource in production ideally
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            text = "Latest from $artistName",
+            style = MaterialTheme.typography.titleMedium, // Reduced
+            fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.onBackground
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        NewReleaseCard(
-            title = album.title,
-            subtitle = buildString {
-                append(if (isSingle) stringResource(R.string.badge_single) else stringResource(R.string.badge_album))
-                if (album.year != null) append(" • ${album.year}")
-            },
-            imageUrl = album.thumbnailUrl,
+        Surface(
             onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-        )
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp), // Reduced
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = album.thumbnailUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp) // Reduced from 100
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = album.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = buildString {
+                            append(if (isSingle) "Single" else "Album")
+                            if (album.year != null) append(" • ${album.year}")
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = dominantColors.accent,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }
 
@@ -580,26 +688,27 @@ fun LatestReleaseSection(
 fun TopSongRow(
     index: Int,
     song: Song,
-    onClick: () -> Unit
+    dominantColors: DominantColors,
+    onClick: () -> Unit,
+    onArtistClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .dpadFocusable(onClick = onClick, shape = SquircleShape)
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 8.dp), // Reduced
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Index
         Text(
             text = index.toString(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium, // Reduced
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.width(28.dp),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold
         )
 
-        // Thumbnail
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(song.thumbnailUrl)
@@ -607,38 +716,51 @@ fun TopSongRow(
                 .build(),
             contentDescription = null,
             modifier = Modifier
-                .size(48.dp)
-                .clip(SquircleShape),
+                .size(48.dp) // Reduced from 52
+                .clip(RoundedCornerShape(10.dp)),
             contentScale = ContentScale.Crop
         )
         
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        // Info
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge, // Reduced
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = formatDuration(song.duration),
+                text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                color = dominantColors.accent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { onArtistClick() },
+                fontWeight = FontWeight.Medium
             )
         }
         
-        // Options like duration or menu could go here
-        Icon(
-            imageVector = Icons.Default.MoreVert,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+        Text(
+            text = formatDuration(song.duration),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
+        
+        IconButton(
+            onClick = { /* More options */ },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
@@ -648,14 +770,16 @@ fun ArtistContentCard(
     title: String,
     subtitle: String?,
     imageUrl: String?,
+    dominantColors: DominantColors,
     onClick: () -> Unit,
-    shape: androidx.compose.ui.graphics.Shape = SquircleShape
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(14.dp)
 ) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
-            .width(160.dp)
-            .dpadFocusable(onClick = onClick, shape = shape)
+            .width(140.dp) // Reduced from 164
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -664,28 +788,27 @@ fun ArtistContentCard(
                 .build(),
             contentDescription = null,
             modifier = Modifier
-                .size(160.dp)
-                .clip(shape) // Squircle for albums/singles
+                .size(140.dp)
+                .clip(shape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
         )
         if (subtitle != null) {
-            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -694,13 +817,14 @@ fun ArtistContentCard(
 @Composable
 fun ArtistCircleCard(
     artist: ArtistPreview,
+    dominantColors: DominantColors,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
-            .width(140.dp)
-            .dpadFocusable(onClick = onClick, shape = CircleShape),
+            .width(110.dp) // Reduced from 132
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
@@ -710,16 +834,16 @@ fun ArtistCircleCard(
                 .build(),
             contentDescription = null,
             modifier = Modifier
-                .size(140.dp)
+                .size(110.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = artist.name,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -732,19 +856,21 @@ fun ArtistCircleCard(
 @Composable
 fun ArtistVideoCard(
     video: Song,
+    dominantColors: DominantColors,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
-            .width(280.dp) // Wider for 16:9 video look
-            .dpadFocusable(onClick = onClick, shape = SquircleShape)
+            .width(240.dp) // Reduced from 280
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f/9f)
-                .clip(SquircleShape)
+                .clip(RoundedCornerShape(16.dp))
                 .background(Color.Black)
         ) {
             AsyncImage(
@@ -753,22 +879,25 @@ fun ArtistVideoCard(
                     .crossfade(true)
                     .build(),
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(0.8f),
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
             
-            // Play icon overlay
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                  Icon(
                      imageVector = Icons.Default.PlayCircleFilled,
                      contentDescription = null,
                      tint = Color.White.copy(alpha = 0.9f),
-                     modifier = Modifier.size(48.dp)
+                     modifier = Modifier.size(40.dp)
                  )
             }
         }
@@ -777,17 +906,17 @@ fun ArtistVideoCard(
         
         Text(
             text = video.title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
         )
         
         Text(
-            text = "Video", // or duration if available
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            text = "Music Video",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -795,6 +924,7 @@ fun ArtistVideoCard(
 @Composable
 fun AboutArtistCard(
     artist: Artist,
+    dominantColors: DominantColors,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -802,66 +932,53 @@ fun AboutArtistCard(
          modifier = Modifier
              .fillMaxWidth()
              .padding(horizontal = 20.dp)
-             .height(300.dp) // Fixed height for visual consistency
-             .dpadFocusable(onClick = onClick, shape = SquircleShape)
-             .clip(SquircleShape)
+             .height(280.dp) // Reduced from 320
+             .clip(RoundedCornerShape(24.dp)) // Reduced from 32
+             .clickable(onClick = onClick)
      ) {
-         // Background Image (dimmed)
-         val thumbnailUrl = artist.thumbnailUrl
-         if (thumbnailUrl != null) {
-              val highResThumbnail = thumbnailUrl.replace(Regex("w\\d+-h\\d+"), "w800-h800")
-              AsyncImage(
-                  model = ImageRequest.Builder(context)
-                      .data(highResThumbnail)
-                      .crossfade(true)
-                      .build(),
-                  contentDescription = null,
-                  modifier = Modifier.fillMaxSize().blur(radius = 0.dp), // Clear image
-                  contentScale = ContentScale.Crop
-              )
-              
-              // Dark gradient overlay for text readability
-              Box(
-                  modifier = Modifier
-                      .fillMaxSize()
-                      .background(
-                          Brush.verticalGradient(
-                              colors = listOf(
-                                  Color.Transparent,
-                                  Color.Black.copy(alpha = 0.5f),
-                                  Color.Black.copy(alpha = 0.8f)
-                              )
-                          )
-                      )
-              )
-         } else {
-              Box(
-                  modifier = Modifier
-                      .fillMaxSize()
-                      .background(MaterialTheme.colorScheme.surfaceVariant)
-              )
-         }
+         AsyncImage(
+             model = ImageRequest.Builder(context)
+                 .data(artist.thumbnailUrl)
+                 .crossfade(true)
+                 .build(),
+             contentDescription = null,
+             modifier = Modifier.fillMaxSize(),
+             contentScale = ContentScale.Crop
+         )
          
-         // Text Content
+         Box(
+             modifier = Modifier
+                 .fillMaxSize()
+                 .background(
+                     Brush.verticalGradient(
+                         colors = listOf(
+                             Color.Transparent,
+                             Color.Black.copy(alpha = 0.4f),
+                             Color.Black.copy(alpha = 0.9f)
+                         )
+                     )
+                 )
+         )
+         
          Column(
              modifier = Modifier
                  .align(Alignment.BottomStart)
                  .padding(24.dp)
          ) {
              Text(
-                 text = "${artist.views ?: "Hundreds of"} monthly listeners", // Mocking data if not available
-                 style = MaterialTheme.typography.titleMedium,
-                 fontWeight = FontWeight.Bold,
-                 color = if (artist.thumbnailUrl != null) Color.White else MaterialTheme.colorScheme.onSurface
+                 text = "${artist.views ?: "Millions of"} monthly listeners",
+                 style = MaterialTheme.typography.bodyLarge,
+                 fontWeight = FontWeight.Black,
+                 color = Color.White
              )
-             Spacer(modifier = Modifier.height(12.dp))
+             Spacer(modifier = Modifier.height(8.dp))
              Text(
-                 text = artist.description ?: "",
+                 text = artist.description ?: "Biography currently unavailable.",
                  style = MaterialTheme.typography.bodyMedium,
-                 color = if (artist.thumbnailUrl != null) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                 color = Color.White.copy(alpha = 0.8f),
                  maxLines = 3,
                  overflow = TextOverflow.Ellipsis,
-                 lineHeight = 22.sp
+                 lineHeight = 20.sp
              )
          }
      }
@@ -871,6 +988,7 @@ fun AboutArtistCard(
 @Composable
 fun SectionHeader(
     title: String,
+    dominantColors: DominantColors,
     showSeeAll: Boolean = false,
     onSeeAllClick: () -> Unit = {}
 ) {
@@ -879,21 +997,27 @@ fun SectionHeader(
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Bottom
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), // Larger, more evident headers
+            style = MaterialTheme.typography.titleLarge.copy( // Reduced from headlineMedium
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-0.5).sp
+            ),
             color = MaterialTheme.colorScheme.onBackground
         )
         
         if (showSeeAll) {
-            TextButton(onClick = onSeeAllClick) {
+            TextButton(
+                onClick = onSeeAllClick,
+                colors = ButtonDefaults.textButtonColors(contentColor = dominantColors.accent),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            ) {
                 Text(
                     text = stringResource(R.string.action_see_all),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, // Subtler "See all"
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -981,9 +1105,11 @@ private fun ArtistErrorView(
     }
 }
 
-// Helper tuple class
 data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
+private fun Color.luminance(): Float {
+    return 0.299f * red + 0.587f * green + 0.114f * blue
+}
 
 private fun formatDuration(durationMillis: Long): String {
     val minutes = (durationMillis / 1000) / 60

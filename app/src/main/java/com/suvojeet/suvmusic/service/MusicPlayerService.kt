@@ -156,6 +156,18 @@ class MusicPlayerService : MediaLibraryService() {
         }
     }
 
+    private var lastCustomLayout: List<CommandButton>? = null
+    private var fadeJob: kotlinx.coroutines.Job? = null
+    private val FADE_IN_DURATION_MS = 500L
+
+    private fun updateCustomLayout() {
+        val newLayout = getCustomLayout()
+        if (lastCustomLayout != newLayout) {
+            lastCustomLayout = newLayout
+            mediaLibrarySession?.setCustomLayout(newLayout)
+        }
+    }
+
     private fun updateLikedState() {
         val currentSongId = mediaLibrarySession?.player?.currentMediaItem?.mediaId ?: return
         serviceScope.launch {
@@ -164,7 +176,7 @@ class MusicPlayerService : MediaLibraryService() {
                 val likedSongs = youTubeRepository.getLikedMusic()
                 isCurrentSongLiked = likedSongs.any { it.id == currentSongId }
                 
-                mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                updateCustomLayout()
             } catch (e: Exception) {
                 android.util.Log.e("MusicPlayerService", "Failed to update liked state", e)
             }
@@ -182,10 +194,10 @@ class MusicPlayerService : MediaLibraryService() {
         
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15_000,  // minBufferMs — keep healthy buffer to prevent rebuffering
-                50_000,  // maxBufferMs — larger max for gapless + preload
-                500,     // bufferForPlaybackMs ← WAS 2500, now starts playing after 0.5s
-                1_500    // bufferForPlaybackAfterRebufferMs ← WAS 5000
+                10_000,  // minBufferMs
+                50_000,  // maxBufferMs
+                2_500,   // bufferForPlaybackMs
+                5_000    // bufferForPlaybackAfterRebufferMs
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .setBackBuffer(10_000, true) // Increase back buffer slightly for seeking back
@@ -299,7 +311,7 @@ class MusicPlayerService : MediaLibraryService() {
             addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     super.onMediaItemTransition(mediaItem, reason)
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                     mediaItem?.let { item ->
                         val videoId = item.mediaId
                         if (videoId.isNotEmpty()) {
@@ -354,7 +366,7 @@ class MusicPlayerService : MediaLibraryService() {
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     super.onIsPlayingChanged(isPlaying)
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                     audioARManager.setPlaying(isPlaying)
                     if (isPlaying) {
                         startSponsorBlockMonitoring()
@@ -364,24 +376,17 @@ class MusicPlayerService : MediaLibraryService() {
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                     
                     // Bug Fix: Some devices have a "Silent Handshake" issue where AudioTrack 
                     // is ready but doesn't produce sound until gain is updated.
                     if (playbackState == Player.STATE_READY) {
                         if (!audioSinkKickstartDone) {
+                            startFadeIn()
                             audioSinkKickstartDone = true
-                            serviceScope.launch {
-                                val p = mediaLibrarySession?.player ?: return@launch
-                                if (p.playWhenReady) {
-                                    val currentVol = p.volume
-                                    // Micro-toggle volume to "kickstart" the AudioSink
-                                    p.volume = 0.99f * currentVol
-                                    delay(50)
-                                    p.volume = currentVol
-                                }
-                            }
                         }
+                    } else if (playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_IDLE) {
+                         audioSinkKickstartDone = false
                     }
 
                     // Only auto-skip if this was a REAL end, not a failed placeholder
@@ -400,13 +405,57 @@ class MusicPlayerService : MediaLibraryService() {
                             p.play()
                         }
                     }
+                }
 
+                private fun startFadeIn() {
+                    fadeJob?.cancel()
+                    fadeJob = serviceScope.launch {
+                        val p = mediaLibrarySession?.player ?: return@launch
+                        val originalVolume = 1.0f
+                        var currentFadeVolume = 0.0f
+                        
+                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            p.volume = 0.0f
+                        }
+                        
+                        val steps = 10
+                        val stepDelay = FADE_IN_DURATION_MS / steps
+                        val volumeStep = originalVolume / steps
+                        
+                        for (i in 1..steps) {
+                            delay(stepDelay)
+                            currentFadeVolume += volumeStep
+                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                p.volume = currentFadeVolume.coerceAtMost(originalVolume)
+                            }
+                        }
+                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            p.volume = originalVolume
+                        }
+                    }
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     super.onPlayerError(error)
                     android.util.Log.e("MusicPlayerService", "Playback error: ${error.message}", error)
                     
+                    // Recovery for AudioSink issues (common on Bluetooth switches)
+                    // Check if the error is related to audio track initialization or sink issues
+                    val isAudioSinkError = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
+                                         error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED
+                    
+                    if (isAudioSinkError) {
+                        android.util.Log.i("MusicPlayerService", "Detected AudioSink error, attempting recovery...")
+                        serviceScope.launch {
+                            delay(500)
+                            val p = mediaLibrarySession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@launch
+                            val wasPlaying = p.playWhenReady
+                            p.prepare() 
+                            if (wasPlaying) p.play()
+                        }
+                        return
+                    }
+
                     // Only auto-skip on REAL errors, not placeholder URI failures.
                     // Placeholder failures are handled by the resolution coroutine in MusicPlayer.
                     val currentUri = mediaLibrarySession?.player
@@ -467,11 +516,11 @@ class MusicPlayerService : MediaLibraryService() {
                 }
                 
                 override fun onRepeatModeChanged(repeatMode: Int) {
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                 }
 
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-                    mediaLibrarySession?.setCustomLayout(getCustomLayout())
+                    updateCustomLayout()
                 }
             })
         }
@@ -625,7 +674,7 @@ class MusicPlayerService : MediaLibraryService() {
 
             override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
                 super.onPostConnect(session, controller)
-                session.setCustomLayout(getCustomLayout())
+                updateCustomLayout()
             }
 
             override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo, customCommand: androidx.media3.session.SessionCommand, args: android.os.Bundle): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
@@ -641,7 +690,7 @@ class MusicPlayerService : MediaLibraryService() {
                                      youTubeRepository.rateSong(currentSongId, "LIKE")
                                      isCurrentSongLiked = true
                                  }
-                                 session.setCustomLayout(getCustomLayout())
+                                 updateCustomLayout()
                              }
                          }
                     }
@@ -657,40 +706,86 @@ class MusicPlayerService : MediaLibraryService() {
                         session.player.shuffleModeEnabled = !session.player.shuffleModeEnabled
                     }
                     "SET_OUTPUT_DEVICE" -> {
-                        val deviceId = args.getString("DEVICE_ID")
-                        val player = session.player as? ExoPlayer
-                        if (player != null) {
-                            serviceScope.launch {
-                                 val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
-                                 val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-                                 
-                                 val targetDevice = if (deviceId == null || deviceId == "default") {
-                                     null // Clear preference
-                                 } else if (deviceId == "phone_speaker") {
-                                     devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                                 } else {
-                                     devices.find { it.id.toString() == deviceId }
-                                 }
-                                 
-                                 android.util.Log.d("MusicPlayerService", "Switching output to: ${targetDevice?.productName ?: "Default"}")
-                                 player.setPreferredAudioDevice(targetDevice)
-                                 
-                                 // Improvement (1): Reset kickstart flag so it runs again for the new device
-                                 audioSinkKickstartDone = false
-                                 
-                                 // "Nudge" the volume to kickstart the AudioSink on the new device
-                                 // This fixes the "No sound on switch" issue on many devices
-                                 delay(150) // Give it a moment to switch routing
-                                 if (player.isPlaying) {
-                                     val originalVol = player.volume
-                                     player.volume = 0.95f * originalVol
-                                     delay(100)
-                                     player.volume = originalVol
-                                 }
-                            }
-                        }
-                    }
+                       val deviceId = args.getString("DEVICE_ID")
+                       val player = session.player as? ExoPlayer
+                       if (player != null) {
+                           serviceScope.launch {
+                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                                val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
 
+                                val targetDevice = if (deviceId == null || deviceId == "default") {
+                                    null // Clear preference
+                                } else if (deviceId == "phone_speaker") {
+                                    devices.find { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                                } else {
+                                    devices.find { it.id.toString() == deviceId }
+                                }
+
+                                android.util.Log.d("MusicPlayerService", "Switching output to: ${targetDevice?.productName ?: "Default"}")
+
+                                val wasPlaying = player.isPlaying
+
+                                // 1. Force Audio System to Normal Mode
+                                // (Prevents system from being stuck in "Communication Mode" which blocks some media routing)
+                                audioManager.mode = android.media.AudioManager.MODE_NORMAL
+
+                                // 2. Clear current routing
+                                player.setPreferredAudioDevice(null)
+                                delay(150)
+
+                                // 3. Set the new target device
+                                player.setPreferredAudioDevice(targetDevice)
+
+                                // 4. Reset kickstart flag so it runs again for the new device
+                                audioSinkKickstartDone = false
+
+                                // For Bluetooth devices, we need a longer delay as the hardware handshake takes time
+                                val isBluetooth = targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
+                                                 targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                                                 (android.os.Build.VERSION.SDK_INT >= 31 && (
+                                                     targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET || 
+                                                     targetDevice?.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER
+                                                 ))
+
+                                // 5. Force buffer flush by seeking
+                                player.seekTo(player.currentPosition)
+
+                                delay(if (isBluetooth) 1200 else 400) // Give it a moment to switch routing
+
+                                // 6. Forceful wake-up if it was playing
+                                if (wasPlaying) {
+                                    player.pause()
+                                    delay(300)
+                                    player.play()
+                                }
+
+                                // 7. Multi-step volume nudge sequence
+                                if (player.isPlaying || wasPlaying) {
+                                    val originalVol = player.volume
+                                    val nudgeVol = if (originalVol > 0.1f) originalVol * 0.95f else originalVol + 0.05f
+
+                                    // Immediate nudge
+                                    player.volume = nudgeVol
+                                    delay(150)
+                                    player.volume = originalVol
+
+                                    if (isBluetooth) {
+                                        // Secondary nudge after more time
+                                        delay(800)
+                                        player.volume = nudgeVol
+                                        delay(150)
+                                        player.volume = originalVol
+
+                                        // Tertiary check: if still silent (or to be safe) toggle play/pause one more time
+                                        delay(500)
+                                        player.pause()
+                                        delay(200)
+                                        player.play()
+                                    }
+                                }
+                           }
+                       }
+                    }
                     COMMAND_START_RADIO -> {
                         val currentVideoId = session.player.currentMediaItem?.mediaId
                         if (!currentVideoId.isNullOrBlank()) {
