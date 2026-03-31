@@ -307,7 +307,7 @@ fun SettingsScreen(
                     HorizontalDivider()
 
                     SettingsSwitchItem(
-                        icon = Icons.Default.Incognito,
+                        icon = Icons.Filled.Incognito,
                         title = "Privacy Mode",
                         subtitle = "Stop history & activity sharing",
                         checked = uiState.privacyModeEnabled,
@@ -1062,6 +1062,6 @@ private fun SettingsSwitchItem(
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
-}lts.colors(containerColor = Color.Transparent)
+}faults.colors(containerColor = Color.Transparent)
     )
 }
