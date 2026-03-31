@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HeadsetMic
-import androidx.compose.material.icons.filled.Incognito
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.MusicNote
@@ -49,6 +48,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
@@ -308,7 +308,7 @@ fun SettingsScreen(
                     HorizontalDivider()
 
                     SettingsSwitchItem(
-                        icon = Icons.Filled.Incognito,
+                        icon = Icons.Default.VisibilityOff,
                         title = "Privacy Mode",
                         subtitle = "Stop history & activity sharing",
                         checked = uiState.privacyModeEnabled,
