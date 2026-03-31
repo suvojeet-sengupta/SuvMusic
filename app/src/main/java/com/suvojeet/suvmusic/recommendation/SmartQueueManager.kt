@@ -27,10 +27,10 @@ class SmartQueueManager @Inject constructor(
         private const val TAG = "SmartQueueManager"
 
         /** Minimum songs to keep ahead in the queue */
-        const val MIN_LOOKAHEAD = 3
+        const val MIN_LOOKAHEAD = 15
 
         /** How many songs to fetch per batch */
-        const val BATCH_SIZE = 10
+        const val BATCH_SIZE = 25
 
         /** Maximum retries for finding new songs */
         private const val MAX_SEED_RETRIES = 3
@@ -61,6 +61,7 @@ class SmartQueueManager @Inject constructor(
         if (!isRadioMode && !isAutoplayEnabled) return@withContext emptyList()
         
         val remainingSongs = queue.size - currentIndex - 1
+        // Keep at least 15 songs ahead
         if (remainingSongs >= MIN_LOOKAHEAD) return@withContext emptyList()
 
         Log.d(TAG, "Queue health check: $remainingSongs songs remaining, fetching more...")
@@ -68,9 +69,9 @@ class SmartQueueManager @Inject constructor(
         val existingIds = queue.map { it.id }.toSet()
         var seedId = lastSeedId ?: currentSong.id
         var attempt = 0
-        var newSongs = emptyList<Song>()
+        var allNewSongs = mutableListOf<Song>()
 
-        while (newSongs.isEmpty() && attempt < MAX_SEED_RETRIES) {
+        while (allNewSongs.size < BATCH_SIZE && attempt < MAX_SEED_RETRIES) {
             attempt++
 
             // Use RecommendationEngine's smart up-next logic
@@ -80,24 +81,27 @@ class SmartQueueManager @Inject constructor(
                 recommendationEngine.getUpNext(currentSong, queue, BATCH_SIZE)
             }
 
-            newSongs = candidates.filter { it.id !in existingIds }
+            val filtered = candidates.filter { it.id !in existingIds && it.id !in allNewSongs.map { s -> s.id } }
+            allNewSongs.addAll(filtered)
 
-            if (newSongs.isEmpty()) {
+            if (filtered.isEmpty()) {
                 // Try different seed — use a random song from the middle of the queue
                 val midIndex = (queue.size / 2).coerceIn(0, queue.size - 1)
                 seedId = queue.getOrNull(midIndex)?.id ?: currentSong.id
                 Log.d(TAG, "No new songs from seed, trying alternative seed (attempt $attempt)")
+            } else {
+                seedId = filtered.last().id
             }
         }
 
-        if (newSongs.isNotEmpty()) {
-            lastSeedId = newSongs.last().id
-            Log.d(TAG, "Fetched ${newSongs.size} new songs for queue")
+        if (allNewSongs.isNotEmpty()) {
+            lastSeedId = allNewSongs.last().id
+            Log.d(TAG, "Fetched ${allNewSongs.size} new songs for queue")
         } else {
             Log.w(TAG, "Could not find new songs after $MAX_SEED_RETRIES attempts")
         }
 
-        newSongs
+        allNewSongs
     }
 
     /**
@@ -116,7 +120,8 @@ class SmartQueueManager @Inject constructor(
         val existingIds = mutableSetOf(seedSong.id)
         initialQueue.forEach { existingIds.add(it.id) }
 
-        val songs = recommendationEngine.getUpNext(seedSong, initialQueue, 30)
+        // Fetch up to 50 songs for initial queue
+        val songs = recommendationEngine.getUpNext(seedSong, initialQueue, 50)
         val filtered = songs.filter { it.id !in existingIds }
 
         if (filtered.isNotEmpty()) {
