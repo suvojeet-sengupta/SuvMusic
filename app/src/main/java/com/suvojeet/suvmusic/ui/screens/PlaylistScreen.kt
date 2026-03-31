@@ -932,7 +932,7 @@ private fun ActionButton(
 }
 
 @Composable
-private fun SelectionTopBar(
+fun SelectionTopBar(
     selectedCount: Int,
     onCloseClick: () -> Unit,
     onDeleteClick: () -> Unit,
