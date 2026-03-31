@@ -57,7 +57,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -1023,7 +1022,7 @@ private fun LazyItemScope.SongListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .animateItemPlacement()
+            .animateItem()
             .graphicsLayer {
                 this.translationY = offsetY
                 this.scaleX = scale
@@ -1113,12 +1112,15 @@ private fun LazyItemScope.SongListItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                if (offsetY > 40f && currentIndexState < totalSongs - 1) {
+                                val threshold = with(density) { 64.dp.toPx() }
+                                if (offsetY > threshold && currentIndexState < totalSongs - 1) {
                                     onReorderState?.invoke(currentIndexState, currentIndexState + 1)
-                                    offsetY = 0f
-                                } else if (offsetY < -40f && currentIndexState > 0) {
+                                    offsetY -= threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else if (offsetY < -threshold && currentIndexState > 0) {
                                     onReorderState?.invoke(currentIndexState, currentIndexState - 1)
-                                    offsetY = 0f
+                                    offsetY += threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                             }
                         )
