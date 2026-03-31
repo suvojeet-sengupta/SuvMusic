@@ -788,14 +788,14 @@ private fun LazyItemScope.AlbumSongItem(
             )
         }
         
-        // Drag Handle (Shown only in selection mode)
-        if (isSelectionMode) {
+        // Actions Row
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Drag Handle (Always shown for immediate reordering)
             Icon(
                 imageVector = Icons.Default.DragHandle,
                 contentDescription = "Reorder",
                 tint = secondaryContentColor.copy(alpha = 0.4f),
                 modifier = Modifier
-                    .padding(start = 8.dp)
                     .size(36.dp)
                     .padding(8.dp)
                     .pointerInput(Unit) {
@@ -829,14 +829,16 @@ private fun LazyItemScope.AlbumSongItem(
                         )
                     }
             )
-        } else {
-            // More Options
-            IconButton(onClick = onMoreClick) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More options",
-                    tint = secondaryContentColor.copy(alpha = 0.7f)
-                )
+
+            // More Options (Shown when NOT in selection mode)
+            if (!isSelectionMode) {
+                IconButton(onClick = onMoreClick) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = secondaryContentColor.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
