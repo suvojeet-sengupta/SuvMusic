@@ -199,7 +199,7 @@ fun AlbumScreen(
                     }
                     
                     // Song List
-                    itemsIndexed(album.songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
+                    itemsIndexed(album.songs, key = { _, song -> song.id }) { index, song ->
                         AlbumSongItem(
                             song = song,
                             trackNumber = index + 1,
@@ -645,6 +645,10 @@ private fun AlbumSongItem(
 ) {
     var offsetY by remember { mutableStateOf(0f) }
     val haptic = LocalHapticFeedback.current
+    
+    // Remember updated values for indices to prevent stale state capture in the drag lambda
+    val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
+    val onReorderState by androidx.compose.runtime.rememberUpdatedState(onReorder)
 
     Row(
         modifier = Modifier
@@ -711,15 +715,14 @@ private fun AlbumSongItem(
                         onDrag = { change, dragAmount ->
                             change.consume()
                             offsetY += dragAmount.y
-                            if (offsetY > 50f && itemIndex < totalSongs - 1) {
-                                onReorder(itemIndex, itemIndex + 1)
+                            if (offsetY > 50f && currentIndexState < totalSongs - 1) {
+                                onReorderState(currentIndexState, currentIndexState + 1)
                                 offsetY = 0f
-                            } else if (offsetY < -50f && itemIndex > 0) {
-                                onReorder(itemIndex, itemIndex - 1)
+                            } else if (offsetY < -50f && currentIndexState > 0) {
+                                onReorderState(currentIndexState, currentIndexState - 1)
                                 offsetY = 0f
                             }
-                        }
-                    )
+                        }                    )
                 }
         )
 

@@ -337,7 +337,7 @@ fun PlaylistScreen(
                     }
                 } else {
                     // Song List
-                    itemsIndexed(playlist.songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
+                    itemsIndexed(playlist.songs, key = { _, song -> song.setVideoId ?: song.id }) { index, song ->
                         val isSelected = uiState.selectedSongIds.contains(song.setVideoId ?: song.id)
                         SongListItem(
                             song = song,
@@ -995,6 +995,10 @@ private fun SongListItem(
 ) {
     var offsetY by remember { mutableStateOf(0f) }
     val haptic = LocalHapticFeedback.current
+    
+    // Remember updated values for indices to prevent stale state capture in the drag lambda
+    val currentIndexState by androidx.compose.runtime.rememberUpdatedState(index)
+    val onReorderState by androidx.compose.runtime.rememberUpdatedState(onReorder)
 
     val backgroundColor by androidx.compose.animation.animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
@@ -1081,11 +1085,11 @@ private fun SongListItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                if (offsetY > 50f && index < totalSongs - 1) {
-                                    onReorder?.invoke(index, index + 1)
+                                if (offsetY > 50f && currentIndexState < totalSongs - 1) {
+                                    onReorderState?.invoke(currentIndexState, currentIndexState + 1)
                                     offsetY = 0f
-                                } else if (offsetY < -50f && index > 0) {
-                                    onReorder?.invoke(index, index - 1)
+                                } else if (offsetY < -50f && currentIndexState > 0) {
+                                    onReorderState?.invoke(currentIndexState, currentIndexState - 1)
                                     offsetY = 0f
                                 }
                             }
