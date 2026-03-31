@@ -203,7 +203,6 @@ fun ModernQueueView(
                             isSelected = selectedQueueIndices.contains(currentIndex),
                             isSelectionMode = isSelectionMode,
                             onClick = { if (isSelectionMode) onToggleSelection(currentIndex) else onPlayPause() },
-                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(currentIndex) },
                             onMoreClick = { onMoreClick(currentSong) },
                             onDragMove = { from, to -> onMoveItem(from, to) },
                             itemIndex = currentIndex,
@@ -226,7 +225,6 @@ fun ModernQueueView(
                             isSelected = selectedQueueIndices.contains(actualIndex),
                             isSelectionMode = isSelectionMode,
                             onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
-                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggleSelection(actualIndex) },
                             onMoreClick = { onMoreClick(song) },
                             onDragMove = { from, to -> onMoveItem(from, to) },
                             itemIndex = actualIndex,
@@ -350,7 +348,7 @@ private fun SectionDivider(title: String, color: Color) {
 @Composable
 private fun ModernQueueListItem(
     song: Song, isCurrent: Boolean, isPlaying: Boolean, isSelected: Boolean, isSelectionMode: Boolean,
-    onClick: () -> Unit, onLongClick: () -> Unit, onMoreClick: () -> Unit, 
+    onClick: () -> Unit, onMoreClick: () -> Unit, 
     onDragMove: (Int, Int) -> Unit, itemIndex: Int,
     dominantColors: DominantColors, isDarkTheme: Boolean, contentColor: Color, secondaryContentColor: Color
 ) {
@@ -368,7 +366,7 @@ private fun ModernQueueListItem(
             .offset(y = offsetY.dp / 8) // Visual feedback for dragging (scaled down)
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .clickable(onClick = onClick)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -424,10 +422,10 @@ private fun ModernQueueListItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                if (offsetY > 50f) {
+                                if (offsetY > 40f) {
                                     onDragMoveState(currentIndexState, currentIndexState + 1)
                                     offsetY = 0f
-                                } else if (offsetY < -50f) {
+                                } else if (offsetY < -40f) {
                                     onDragMoveState(currentIndexState, currentIndexState - 1)
                                     offsetY = 0f
                                 }
