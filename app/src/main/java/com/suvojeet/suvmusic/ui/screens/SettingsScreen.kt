@@ -307,7 +307,7 @@ fun SettingsScreen(
                     HorizontalDivider()
 
                     SettingsSwitchItem(
-                        icon = Icons.Default.Warning,
+                        icon = Icons.Default.Incognito,
                         title = "Privacy Mode",
                         subtitle = "Stop history & activity sharing",
                         checked = uiState.privacyModeEnabled,
@@ -1061,5 +1061,7 @@ private fun SettingsSwitchItem(
             .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}lts.colors(containerColor = Color.Transparent)
     )
 }
