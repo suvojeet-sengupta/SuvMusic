@@ -144,6 +144,19 @@ fun ModernQueueView(
                         IconButton(onClick = onSelectAll) {
                             Icon(Icons.Default.SelectAll, null, tint = contentColor)
                         }
+                        
+                        IconButton(onClick = { 
+                            val selectedSongs = selectedQueueIndices.mapNotNull { index ->
+                                if (index < queue.size) queue[index] else null
+                            }
+                            if (selectedSongs.isNotEmpty()) {
+                                onPlayNext(selectedSongs)
+                                onClearSelection()
+                            }
+                        }) {
+                            Icon(Icons.Default.PlaylistPlay, null, tint = contentColor)
+                        }
+
                         IconButton(onClick = { 
                             val selectedSongs = selectedQueueIndices.mapNotNull { index ->
                                 if (index < queue.size) queue[index] else null
@@ -482,6 +495,18 @@ private fun LazyItemScope.ModernQueueListItem(
                                 }
                             }
                         )
+                    }
+            )
+        }
+        
+        if (!isSelectionMode) {
+            IconButton(onClick = onMoreClick) {
+                Icon(Icons.Default.MoreVert, null, tint = secondaryContentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+               )
                     }
             )
         }

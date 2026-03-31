@@ -385,6 +385,15 @@ fun PlaylistScreen(
                         selectedCount = uiState.selectedSongIds.size,
                         onCloseClick = { viewModel.clearSelection() },
                         onDeleteClick = { viewModel.removeSelectedSongs() },
+                        onPlayNextClick = { viewModel.playNextSelectedSongs() },
+                        onAddToQueueClick = { viewModel.addToQueueSelectedSongs() },
+                        onAddToPlaylistClick = { 
+                            val selectedSongs = playlist.songs.filter { (it.setVideoId ?: it.id) in uiState.selectedSongIds }
+                            selectedSong = null // Clear single selection
+                            // Trigger playlist selection sheet for multiple songs
+                            // (We need to ensure showMediaMenu or similar works for multiple)
+                            playlistViewModel.addSongsToPlaylist(selectedSongs)
+                        },
                         onMoveToTopClick = { viewModel.moveSelectedSongs(0) },
                         contentColor = contentColor,
                         isDarkTheme = isDarkTheme
@@ -936,12 +945,15 @@ fun SelectionTopBar(
     selectedCount: Int,
     onCloseClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onPlayNextClick: () -> Unit = {},
+    onAddToQueueClick: () -> Unit = {},
+    onAddToPlaylistClick: () -> Unit = {},
     onMoveToTopClick: () -> Unit = {},
     contentColor: Color,
     isDarkTheme: Boolean
 ) {
     val scrolledColor = if (isDarkTheme) Color(0xFF1D1D1D).copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f)
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -950,21 +962,30 @@ fun SelectionTopBar(
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextButton(onClick = onCloseClick) {
-            Text(
-                text = "Done",
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.primary
-            )
+        IconButton(onClick = onCloseClick) {
+            Icon(Icons.Default.Close, contentDescription = "Close", tint = contentColor)
         }
 
         Text(
-            text = "$selectedCount selected",
-            style = MaterialTheme.typography.titleMedium,
+            text = "$selectedCount",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = contentColor,
-            modifier = Modifier.weight(1f),
-            textAlign = TextAlign.Center
+            modifier = Modifier.padding(start = 8.dp)
         )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        IconButton(onClick = onPlayNextClick) {
+            Icon(Icons.Default.PlaylistPlay, "Play Next", tint = contentColor)
+        }
+
+        IconButton(onClick = onAddToQueueClick) {
+            Icon(Icons.Default.QueueMusic, "Add to Queue", tint = contentColor)
+        }
+
+        IconButton(onClick = onAddToPlaylistClick) {
+            Icon(Icons.Default.PlaylistAdd, "Add to Playlist", tint = contentColor)
+        }
 
         IconButton(onClick = onMoveToTopClick) {
             Icon(
@@ -981,7 +1002,8 @@ fun SelectionTopBar(
                 tint = MaterialTheme.colorScheme.error
             )
         }
-    }}
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
