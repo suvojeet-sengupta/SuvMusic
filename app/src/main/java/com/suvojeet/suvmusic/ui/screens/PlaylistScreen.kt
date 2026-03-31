@@ -345,7 +345,6 @@ fun PlaylistScreen(
                         val isSelected = uiState.selectedSongIds.contains(song.setVideoId ?: song.id)
                         SongListItem(
                             song = song,
-                            isEditable = uiState.isEditable,
                             isSelected = isSelected,
                             isSelectionMode = uiState.isSelectionMode,
                             onReorder = { fromIndex, toIndex -> viewModel.reorderSong(fromIndex, toIndex) },
@@ -1009,7 +1008,6 @@ fun SelectionTopBar(
 @Composable
 private fun LazyItemScope.SongListItem(
     song: Song,
-    isEditable: Boolean = false,
     isSelected: Boolean = false,
     isSelectionMode: Boolean = false,
     onReorder: ((from: Int, to: Int) -> Unit)? = null,
@@ -1151,7 +1149,7 @@ private fun LazyItemScope.SongListItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                val threshold = with(density) { 64.dp.toPx() }
+                                val threshold = with(density) { 60.dp.toPx() }
                                 if (offsetY > threshold && currentIndexState < totalSongs - 1) {
                                     onReorderState?.invoke(currentIndexState, currentIndexState + 1)
                                     offsetY -= threshold
@@ -1165,10 +1163,8 @@ private fun LazyItemScope.SongListItem(
                         )
                     }
             )
-        }
-        
-        // More Options
-        if (!isSelectionMode) {
+        } else {
+            // More Options
             IconButton(onClick = onMoreClick) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
