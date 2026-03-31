@@ -354,10 +354,6 @@ fun PlaylistScreen(
                                     onSongClick(playlist.songs, index) 
                                 }
                             },
-                            onLongClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.toggleSongSelection(song)
-                            },
                             onMoreClick = { 
                                 selectedSong = song
                                 showSongMenu = true 
@@ -988,7 +984,6 @@ private fun SongListItem(
     index: Int = 0,
     totalSongs: Int = 0,
     onClick: () -> Unit,
-    onLongClick: () -> Unit = {},
     onMoreClick: () -> Unit = {},
     titleColor: Color,
     subtitleColor: Color
@@ -1011,10 +1006,7 @@ private fun SongListItem(
             .fillMaxWidth()
             .offset(y = offsetY.dp / 8)
             .background(backgroundColor)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1085,10 +1077,10 @@ private fun SongListItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                if (offsetY > 50f && currentIndexState < totalSongs - 1) {
+                                if (offsetY > 40f && currentIndexState < totalSongs - 1) {
                                     onReorderState?.invoke(currentIndexState, currentIndexState + 1)
                                     offsetY = 0f
-                                } else if (offsetY < -50f && currentIndexState > 0) {
+                                } else if (offsetY < -40f && currentIndexState > 0) {
                                     onReorderState?.invoke(currentIndexState, currentIndexState - 1)
                                     offsetY = 0f
                                 }
