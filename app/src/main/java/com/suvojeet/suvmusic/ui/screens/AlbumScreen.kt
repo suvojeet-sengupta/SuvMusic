@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.platform.LocalDensity
@@ -674,7 +673,7 @@ private fun LazyItemScope.AlbumSongItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .animateItemPlacement()
+            .animateItem()
             .graphicsLayer {
                 this.translationY = offsetY
                 this.scaleX = scale
@@ -753,12 +752,15 @@ private fun LazyItemScope.AlbumSongItem(
                         onDrag = { change, dragAmount ->
                             change.consume()
                             offsetY += dragAmount.y
-                            if (offsetY > 40f && currentIndexState < totalSongs - 1) {
+                            val threshold = with(density) { 60.dp.toPx() }
+                            if (offsetY > threshold && currentIndexState < totalSongs - 1) {
                                 onReorderState(currentIndexState, currentIndexState + 1)
-                                offsetY = 0f
-                            } else if (offsetY < -40f && currentIndexState > 0) {
+                                offsetY -= threshold
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            } else if (offsetY < -threshold && currentIndexState > 0) {
                                 onReorderState(currentIndexState, currentIndexState - 1)
-                                offsetY = 0f
+                                offsetY += threshold
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             }
                         }
                     )

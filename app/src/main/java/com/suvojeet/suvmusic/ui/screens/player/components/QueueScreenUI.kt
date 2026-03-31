@@ -47,7 +47,6 @@ import kotlinx.coroutines.launch
 
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.platform.LocalDensity
@@ -382,7 +381,7 @@ private fun LazyItemScope.ModernQueueListItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 2.dp)
-            .animateItemPlacement() // Essential for smooth reordering animation
+            .animateItem() // Essential for smooth reordering animation
             .graphicsLayer {
                 this.translationY = offsetY
                 this.scaleX = scale
@@ -458,12 +457,15 @@ private fun LazyItemScope.ModernQueueListItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                if (offsetY > 40f) {
+                                val threshold = with(density) { 56.dp.toPx() }
+                                if (offsetY > threshold) {
                                     onDragMoveState(currentIndexState, currentIndexState + 1)
-                                    offsetY = 0f
-                                } else if (offsetY < -40f) {
+                                    offsetY -= threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else if (offsetY < -threshold) {
                                     onDragMoveState(currentIndexState, currentIndexState - 1)
-                                    offsetY = 0f
+                                    offsetY += threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                             }
                         )
