@@ -207,13 +207,27 @@ fun AlbumScreen(
                     
                     // Song List
                     itemsIndexed(album.songs, key = { _, song -> song.id }) { index, song ->
+                        val isSelected = uiState.selectedSongIds.contains(song.id)
                         AlbumSongItem(
                             song = song,
                             trackNumber = index + 1,
                             itemIndex = index,
                             totalSongs = album.songs.size,
+                            isSelected = isSelected,
+                            isSelectionMode = uiState.isSelectionMode,
                             onReorder = { from, to -> viewModel.reorderSong(from, to) },
-                            onClick = { onSongClick(album.songs, index) },
+                            onClick = { 
+                                if (uiState.isSelectionMode) {
+                                    viewModel.toggleSongSelection(song)
+                                } else {
+                                    onSongClick(album.songs, index) 
+                                }
+                            },
+                            onLongClick = {
+                                if (!uiState.isSelectionMode) {
+                                    viewModel.toggleSongSelection(song)
+                                }
+                            },
                             onMoreClick = { 
                                 selectedSong = song
                                 showSongMenu = true 
@@ -230,13 +244,24 @@ fun AlbumScreen(
                     enter = androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
                     exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { -it })
                 ) {
-                    AlbumTopBar(
-                        title = album.title,
-                        isScrolled = isScrolled,
-                        onBackClick = onBackClick,
-                        isDarkTheme = isDarkTheme,
-                        contentColor = contentColor
-                    )
+                    if (uiState.isSelectionMode) {
+                        SelectionTopBar(
+                            selectedCount = uiState.selectedSongIds.size,
+                            onCloseClick = { viewModel.clearSelection() },
+                            onDeleteClick = { /* Maybe delete from library? */ },
+                            onMoveToTopClick = { /* Maybe move in album? */ },
+                            contentColor = contentColor,
+                            isDarkTheme = isDarkTheme
+                        )
+                    } else {
+                        AlbumTopBar(
+                            title = album.title,
+                            isScrolled = isScrolled,
+                            onBackClick = onBackClick,
+                            isDarkTheme = isDarkTheme,
+                            contentColor = contentColor
+                        )
+                    }
                 }
                 
                 // Media Menu Bottom Sheet
@@ -645,8 +670,11 @@ private fun LazyItemScope.AlbumSongItem(
     trackNumber: Int,
     itemIndex: Int = 0,
     totalSongs: Int = 0,
+    isSelected: Boolean = false,
+    isSelectionMode: Boolean = false,
     onReorder: (Int, Int) -> Unit = { _, _ -> },
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color
@@ -670,6 +698,12 @@ private fun LazyItemScope.AlbumSongItem(
     val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
     val onReorderState by androidx.compose.runtime.rememberUpdatedState(onReorder)
 
+    val backgroundColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                      else Color.Transparent,
+        label = "ItemSelectionBackground"
+    )
+
     @OptIn(ExperimentalFoundationApi::class)
     Row(
         modifier = Modifier
@@ -687,40 +721,26 @@ private fun LazyItemScope.AlbumSongItem(
                 this.clip = true
                 this.shape = SquircleShape
             }
-            .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { 
-                        isDragging = true
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
-                    },
-                    onDragEnd = { 
-                        isDragging = false
-                        offsetY = 0f 
-                    },
-                    onDragCancel = { 
-                        isDragging = false
-                        offsetY = 0f 
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        offsetY += dragAmount.y
-                        val threshold = with(density) { 60.dp.toPx() }
-                        if (offsetY > threshold && currentIndexState < totalSongs - 1) {
-                            onReorderState(currentIndexState, currentIndexState + 1)
-                            offsetY -= threshold
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        } else if (offsetY < -threshold && currentIndexState > 0) {
-                            onReorderState(currentIndexState, currentIndexState - 1)
-                            offsetY += threshold
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        }
-                    }
-                )
-            }
-            .clickable(onClick = onClick)
+            .background(backgroundColor)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Selection Indicator
+        if (isSelectionMode) {
+            androidx.compose.material3.Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
+
         // Song Thumbnail
         Box(
             modifier = Modifier
@@ -762,53 +782,55 @@ private fun LazyItemScope.AlbumSongItem(
             )
         }
         
-        // Drag Handle (On the right)
-        Icon(
-            imageVector = Icons.Default.DragHandle,
-            contentDescription = "Reorder",
-            tint = secondaryContentColor.copy(alpha = 0.4f),
-            modifier = Modifier
-                .padding(horizontal = 8.dp)
-                .size(24.dp)
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { 
-                            isDragging = true
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
-                        },
-                        onDragEnd = { 
-                            isDragging = false
-                            offsetY = 0f 
-                        },
-                        onDragCancel = { 
-                            isDragging = false
-                            offsetY = 0f 
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            offsetY += dragAmount.y
-                            val threshold = with(density) { 60.dp.toPx() }
-                            if (offsetY > threshold && currentIndexState < totalSongs - 1) {
-                                onReorderState(currentIndexState, currentIndexState + 1)
-                                offsetY -= threshold
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            } else if (offsetY < -threshold && currentIndexState > 0) {
-                                onReorderState(currentIndexState, currentIndexState - 1)
-                                offsetY += threshold
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                        }
-                    )
-                }
-        )
-
-        // More Options
-        IconButton(onClick = onMoreClick) {
+        // Drag Handle (Shown only in selection mode)
+        if (isSelectionMode) {
             Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More options",
-                tint = secondaryContentColor.copy(alpha = 0.7f)
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Reorder",
+                tint = secondaryContentColor.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .size(24.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { 
+                                isDragging = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                            },
+                            onDragEnd = { 
+                                isDragging = false
+                                offsetY = 0f 
+                            },
+                            onDragCancel = { 
+                                isDragging = false
+                                offsetY = 0f 
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                offsetY += dragAmount.y
+                                val threshold = with(density) { 60.dp.toPx() }
+                                if (offsetY > threshold && currentIndexState < totalSongs - 1) {
+                                    onReorderState(currentIndexState, currentIndexState + 1)
+                                    offsetY -= threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else if (offsetY < -threshold && currentIndexState > 0) {
+                                    onReorderState(currentIndexState, currentIndexState - 1)
+                                    offsetY += threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            }
+                        )
+                    }
             )
+        } else {
+            // More Options
+            IconButton(onClick = onMoreClick) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More options",
+                    tint = secondaryContentColor.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }

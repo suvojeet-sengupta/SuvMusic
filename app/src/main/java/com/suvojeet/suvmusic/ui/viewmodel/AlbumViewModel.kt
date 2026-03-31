@@ -20,7 +20,9 @@ data class AlbumUiState(
     val album: Album? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val selectedSongIds: Set<String> = emptySet(),
+    val isSelectionMode: Boolean = false
 )
 
 @HiltViewModel
@@ -152,6 +154,23 @@ class AlbumViewModel @Inject constructor(
         viewModelScope.launch {
             downloadRepository.downloadSong(song)
         }
+    }
+
+    fun reorderSong(fromIndex: Int, toIndex: Int) {
+        val currentAlbum = _uiState.value.album ?: return
+        val songs = currentAlbum.songs.toMutableList()
+        if (fromIndex !in songs.indices || toIndex !in songs.indices) return
+        
+        val movedSong = songs.removeAt(fromIndex)
+        songs.add(toIndex, movedSong)
+        
+        _uiState.update { 
+            it.copy(album = currentAlbum.copy(songs = songs))
+        }
+    }
+}
+       isSelectionMode = false
+        ) }
     }
 
     fun reorderSong(fromIndex: Int, toIndex: Int) {

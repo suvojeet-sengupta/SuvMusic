@@ -359,6 +359,11 @@ fun PlaylistScreen(
                                     onSongClick(playlist.songs, index) 
                                 }
                             },
+                            onLongClick = {
+                                if (!uiState.isSelectionMode) {
+                                    viewModel.toggleSongSelection(song)
+                                }
+                            },
                             onMoreClick = { 
                                 selectedSong = song
                                 showSongMenu = true 
@@ -990,6 +995,7 @@ private fun LazyItemScope.SongListItem(
     index: Int = 0,
     totalSongs: Int = 0,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onMoreClick: () -> Unit = {},
     titleColor: Color,
     subtitleColor: Color
@@ -1036,40 +1042,14 @@ private fun LazyItemScope.SongListItem(
                 this.clip = true
                 this.shape = SquircleShape
             }
-            .pointerInput(Unit) {
-                if (isEditable) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { 
-                            isDragging = true
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
-                        },
-                        onDragEnd = { 
-                            isDragging = false
-                            offsetY = 0f 
-                        },
-                        onDragCancel = { 
-                            isDragging = false
-                            offsetY = 0f 
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            offsetY += dragAmount.y
-                            val threshold = with(density) { 64.dp.toPx() }
-                            if (offsetY > threshold && currentIndexState < totalSongs - 1) {
-                                onReorderState?.invoke(currentIndexState, currentIndexState + 1)
-                                offsetY -= threshold
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            } else if (offsetY < -threshold && currentIndexState > 0) {
-                                onReorderState?.invoke(currentIndexState, currentIndexState - 1)
-                                offsetY += threshold
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                        }
-                    )
-                }
-            }
             .background(backgroundColor)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
