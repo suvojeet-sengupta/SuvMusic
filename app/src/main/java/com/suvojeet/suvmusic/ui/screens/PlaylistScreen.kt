@@ -1125,7 +1125,7 @@ private fun LazyItemScope.SongListItem(
         }
         
         // Drag Handle (Shown only in selection mode)
-        if (isEditable && isSelectionMode) {
+        if (isSelectionMode) {
             Icon(
                 imageVector = Icons.Default.DragHandle,
                 contentDescription = "Reorder",
