@@ -676,8 +676,7 @@ private fun LazyItemScope.AlbumSongItem(
             .fillMaxWidth()
             .animateItem(
                 placementSpec = if (isDragging) null else androidx.compose.animation.core.spring(
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-                    visibilityThreshold = androidx.compose.ui.unit.IntOffset.VisibilityThreshold
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                 )
             )
             .graphicsLayer {

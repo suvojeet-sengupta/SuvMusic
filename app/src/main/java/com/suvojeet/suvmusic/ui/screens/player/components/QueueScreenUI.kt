@@ -384,8 +384,7 @@ private fun LazyItemScope.ModernQueueListItem(
             .padding(horizontal = 8.dp, vertical = 2.dp)
             .animateItem(
                 placementSpec = if (isDragging) null else androidx.compose.animation.core.spring(
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-                    visibilityThreshold = androidx.compose.ui.unit.IntOffset.VisibilityThreshold
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                 )
             )
             .graphicsLayer {
