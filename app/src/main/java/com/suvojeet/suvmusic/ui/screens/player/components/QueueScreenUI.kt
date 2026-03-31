@@ -378,6 +378,7 @@ private fun LazyItemScope.ModernQueueListItem(
     val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
     val onDragMoveState by androidx.compose.runtime.rememberUpdatedState(onDragMove)
     
+    @OptIn(ExperimentalFoundationApi::class)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -395,41 +396,17 @@ private fun LazyItemScope.ModernQueueListItem(
                 this.clip = true
                 this.shape = RoundedCornerShape(12.dp)
             }
-            .pointerInput(Unit) {
-                if (!isCurrent) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { 
-                            isDragging = true
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
-                        },
-                        onDragEnd = { 
-                            isDragging = false
-                            offsetY = 0f 
-                        },
-                        onDragCancel = { 
-                            isDragging = false
-                            offsetY = 0f 
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            offsetY += dragAmount.y
-                            val threshold = with(density) { 56.dp.toPx() }
-                            if (offsetY > threshold) {
-                                onDragMoveState(currentIndexState, currentIndexState + 1)
-                                offsetY -= threshold
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            } else if (offsetY < -threshold) {
-                                onDragMoveState(currentIndexState, currentIndexState - 1)
-                                offsetY += threshold
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                        }
-                    )
-                }
-            }
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    if (!isCurrent) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onClick() // Toggle selection
+                    }
+                }
+            )
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -468,8 +445,8 @@ private fun LazyItemScope.ModernQueueListItem(
             )
         }
         
-        // Drag Handle (Shown by default on the right)
-        if (!isSelectionMode && !isCurrent) {
+        // Drag Handle (Shown only in selection mode or by default on the right if NOT current)
+        if (!isCurrent) {
             Icon(
                 imageVector = Icons.Default.DragHandle,
                 contentDescription = "Reorder",
