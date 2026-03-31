@@ -82,6 +82,8 @@ fun ModernQueueView(
     onRemoveItems: (List<Int>) -> Unit,
     onSaveAsPlaylist: (String, String, Boolean, Boolean) -> Unit,
     onAddToPlaylistClick: (List<Song>) -> Unit,
+    onPlayNext: (List<Song>) -> Unit,
+    onAddToQueue: (List<Song>) -> Unit,
     onClearQueue: () -> Unit,
     dominantColors: DominantColors,
     animatedBackgroundEnabled: Boolean = true,
@@ -155,6 +157,18 @@ fun ModernQueueView(
                             }
                         }) {
                             Icon(Icons.Default.PlaylistPlay, null, tint = contentColor)
+                        }
+
+                        IconButton(onClick = { 
+                            val selectedSongs = selectedQueueIndices.mapNotNull { index ->
+                                if (index < queue.size) queue[index] else null
+                            }
+                            if (selectedSongs.isNotEmpty()) {
+                                onAddToQueue(selectedSongs)
+                                onClearSelection()
+                            }
+                        }) {
+                            Icon(Icons.Default.AddToQueue, null, tint = contentColor)
                         }
 
                         IconButton(onClick = { 
@@ -495,18 +509,6 @@ private fun LazyItemScope.ModernQueueListItem(
                                 }
                             }
                         )
-                    }
-            )
-        }
-        
-        if (!isSelectionMode) {
-            IconButton(onClick = onMoreClick) {
-                Icon(Icons.Default.MoreVert, null, tint = secondaryContentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-            }
-        }
-    }
-}
-               )
                     }
             )
         }

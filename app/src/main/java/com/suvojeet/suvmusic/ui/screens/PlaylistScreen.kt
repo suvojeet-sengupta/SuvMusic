@@ -392,7 +392,7 @@ fun PlaylistScreen(
                             selectedSong = null // Clear single selection
                             // Trigger playlist selection sheet for multiple songs
                             // (We need to ensure showMediaMenu or similar works for multiple)
-                            playlistViewModel.addSongsToPlaylist(selectedSongs)
+                            playlistMgmtViewModel.showAddToPlaylistSheet(selectedSongs)
                         },
                         onMoveToTopClick = { viewModel.moveSelectedSongs(0) },
                         contentColor = contentColor,
