@@ -56,6 +56,10 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.ExperimentalFoundationApi
 
 @Composable
 fun PlaylistScreen(
@@ -973,14 +977,6 @@ private fun SelectionTopBar(
             )
         }
     }}
-
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.ui.graphics.graphicsLayer
-
-import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
