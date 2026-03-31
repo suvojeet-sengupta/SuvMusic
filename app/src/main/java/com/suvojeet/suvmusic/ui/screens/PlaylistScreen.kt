@@ -974,8 +974,17 @@ private fun SelectionTopBar(
         }
     }}
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.ui.graphics.graphicsLayer
+
+import androidx.compose.ui.platform.LocalDensity
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SongListItem(
+private fun LazyItemScope.SongListItem(
     song: Song,
     isEditable: Boolean = false,
     isSelected: Boolean = false,
@@ -991,6 +1000,7 @@ private fun SongListItem(
     var offsetY by remember { mutableStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
     
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isDragging) 1.05f else 1f,
@@ -1018,12 +1028,12 @@ private fun SongListItem(
             .fillMaxWidth()
             .animateItemPlacement()
             .graphicsLayer {
-                translationY = offsetY
-                scaleX = scale
-                scaleY = scale
-                shadowElevation = elevation.toPx()
-                clip = true
-                shape = SquircleShape
+                this.translationY = offsetY
+                this.scaleX = scale
+                this.scaleY = scale
+                this.shadowElevation = with(density) { elevation.toPx() }
+                this.clip = true
+                this.shape = SquircleShape
             }
             .background(backgroundColor)
             .clickable(onClick = onClick)

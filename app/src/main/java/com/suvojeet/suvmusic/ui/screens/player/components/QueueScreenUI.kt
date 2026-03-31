@@ -344,9 +344,16 @@ private fun SectionDivider(title: String, color: Color) {
     )
 }
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+
+import androidx.compose.ui.platform.LocalDensity
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ModernQueueListItem(
+private fun LazyItemScope.ModernQueueListItem(
     song: Song, isCurrent: Boolean, isPlaying: Boolean, isSelected: Boolean, isSelectionMode: Boolean,
     onClick: () -> Unit, onMoreClick: () -> Unit, 
     onDragMove: (Int, Int) -> Unit, itemIndex: Int,
@@ -355,6 +362,7 @@ private fun ModernQueueListItem(
     var offsetY by remember { mutableStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
     
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isDragging) 1.05f else 1f,
@@ -376,12 +384,12 @@ private fun ModernQueueListItem(
             .padding(horizontal = 8.dp, vertical = 2.dp)
             .animateItemPlacement() // Essential for smooth reordering animation
             .graphicsLayer {
-                translationY = offsetY
-                scaleX = scale
-                scaleY = scale
-                shadowElevation = elevation.toPx()
-                clip = true
-                shape = RoundedCornerShape(12.dp)
+                this.translationY = offsetY
+                this.scaleX = scale
+                this.scaleY = scale
+                this.shadowElevation = with(density) { elevation.toPx() }
+                this.clip = true
+                this.shape = RoundedCornerShape(12.dp)
             }
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
