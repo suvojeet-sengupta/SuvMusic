@@ -20,7 +20,9 @@ data class AlbumUiState(
     val album: Album? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val selectedSongIds: Set<String> = emptySet(),
+    val isSelectionMode: Boolean = false
 )
 
 @HiltViewModel
@@ -151,6 +153,59 @@ class AlbumViewModel @Inject constructor(
     fun downloadSong(song: Song) {
         viewModelScope.launch {
             downloadRepository.downloadSong(song)
+        }
+    }
+
+    fun toggleSongSelection(song: Song) {
+        val currentSelected = _uiState.value.selectedSongIds.toMutableSet()
+        if (currentSelected.contains(song.id)) {
+            currentSelected.remove(song.id)
+        } else {
+            currentSelected.add(song.id)
+        }
+        _uiState.update { it.copy(
+            selectedSongIds = currentSelected,
+            isSelectionMode = currentSelected.isNotEmpty()
+        ) }
+    }
+
+    fun clearSelection() {
+        _uiState.update { it.copy(
+            selectedSongIds = emptySet(),
+            isSelectionMode = false
+        ) }
+    }
+
+    fun playNextSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentAlbum = _uiState.value.album ?: return
+        val selectedSongs = currentAlbum.songs.filter { it.id in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.playNext(selectedSongs)
+            clearSelection()
+        }
+    }
+
+    fun addToQueueSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentAlbum = _uiState.value.album ?: return
+        val selectedSongs = currentAlbum.songs.filter { it.id in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.addToQueue(selectedSongs)
+            clearSelection()
+        }
+    }
+
+    fun reorderSong(fromIndex: Int, toIndex: Int) {
+        val currentAlbum = _uiState.value.album ?: return
+        val songs = currentAlbum.songs.toMutableList()
+        if (fromIndex !in songs.indices || toIndex !in songs.indices) return
+        
+        val movedSong = songs.removeAt(fromIndex)
+        songs.add(toIndex, movedSong)
+        
+        _uiState.update { 
+            it.copy(album = currentAlbum.copy(songs = songs))
         }
     }
 }
