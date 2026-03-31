@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HeadsetMic
+import androidx.compose.material.icons.filled.Incognito
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.MusicNote
@@ -1061,7 +1062,5 @@ private fun SettingsSwitchItem(
             .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}faults.colors(containerColor = Color.Transparent)
     )
 }
