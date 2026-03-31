@@ -53,6 +53,7 @@ import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -1030,6 +1031,38 @@ private fun LazyItemScope.SongListItem(
                 this.shadowElevation = with(density) { elevation.toPx() }
                 this.clip = true
                 this.shape = SquircleShape
+            }
+            .pointerInput(Unit) {
+                if (isEditable) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { 
+                            isDragging = true
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                        },
+                        onDragEnd = { 
+                            isDragging = false
+                            offsetY = 0f 
+                        },
+                        onDragCancel = { 
+                            isDragging = false
+                            offsetY = 0f 
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetY += dragAmount.y
+                            val threshold = with(density) { 64.dp.toPx() }
+                            if (offsetY > threshold && currentIndexState < totalSongs - 1) {
+                                onReorderState?.invoke(currentIndexState, currentIndexState + 1)
+                                offsetY -= threshold
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            } else if (offsetY < -threshold && currentIndexState > 0) {
+                                onReorderState?.invoke(currentIndexState, currentIndexState - 1)
+                                offsetY += threshold
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        }
+                    )
+                }
             }
             .background(backgroundColor)
             .clickable(onClick = onClick)
