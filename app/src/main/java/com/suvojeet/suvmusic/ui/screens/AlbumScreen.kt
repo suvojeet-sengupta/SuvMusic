@@ -654,7 +654,7 @@ private fun AlbumSongItem(
         modifier = Modifier
             .fillMaxWidth()
             .offset(y = offsetY.dp / 8)
-            .dpadFocusable(onClick = onClick)
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -715,10 +715,10 @@ private fun AlbumSongItem(
                         onDrag = { change, dragAmount ->
                             change.consume()
                             offsetY += dragAmount.y
-                            if (offsetY > 50f && currentIndexState < totalSongs - 1) {
+                            if (offsetY > 40f && currentIndexState < totalSongs - 1) {
                                 onReorderState(currentIndexState, currentIndexState + 1)
                                 offsetY = 0f
-                            } else if (offsetY < -50f && currentIndexState > 0) {
+                            } else if (offsetY < -40f && currentIndexState > 0) {
                                 onReorderState(currentIndexState, currentIndexState - 1)
                                 offsetY = 0f
                             }
