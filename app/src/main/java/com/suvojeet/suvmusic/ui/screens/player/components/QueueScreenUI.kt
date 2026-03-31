@@ -217,7 +217,7 @@ fun ModernQueueView(
 
                 if (upNextSongs.isNotEmpty()) {
                     item { SectionDivider(if (isRadioMode || isAutoplayEnabled) "UPCOMING (AUTOPLAY)" else "UP NEXT", secondaryContentColor) }
-                    itemsIndexed(upNextSongs, key = { indexInList, s -> "next_${s.id}_$indexInList" }) { indexInList, song ->
+                    itemsIndexed(upNextSongs, key = { _, s -> s.id }) { indexInList, song ->
                         val actualIndex = currentIndex + 1 + indexInList
                         ModernQueueListItem(
                             song = song,
@@ -357,6 +357,10 @@ private fun ModernQueueListItem(
     var offsetY by remember { mutableStateOf(0f) }
     val haptic = LocalHapticFeedback.current
     
+    // Remember updated values for indices to prevent stale state capture in the drag lambda
+    val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
+    val onDragMoveState by androidx.compose.runtime.rememberUpdatedState(onDragMove)
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -421,10 +425,10 @@ private fun ModernQueueListItem(
                                 change.consume()
                                 offsetY += dragAmount.y
                                 if (offsetY > 50f) {
-                                    onDragMove(itemIndex, itemIndex + 1)
+                                    onDragMoveState(currentIndexState, currentIndexState + 1)
                                     offsetY = 0f
                                 } else if (offsetY < -50f) {
-                                    onDragMove(itemIndex, itemIndex - 1)
+                                    onDragMoveState(currentIndexState, currentIndexState - 1)
                                     offsetY = 0f
                                 }
                             }
