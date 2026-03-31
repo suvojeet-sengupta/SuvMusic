@@ -553,6 +553,8 @@ fun BoxScope.OverlaysContent(
             onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
             onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show() } },
             onAddToPlaylistClick = { playlistViewModel.showAddToPlaylistSheet(it) },
+            onPlayNext = { playerViewModel.playNext(it) },
+            onAddToQueue = { playerViewModel.addToQueue(it) },
             onClearQueue = actions.onClearQueue,
             dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
         )

@@ -248,8 +248,14 @@ fun AlbumScreen(
                         SelectionTopBar(
                             selectedCount = uiState.selectedSongIds.size,
                             onCloseClick = { viewModel.clearSelection() },
-                            onDeleteClick = { /* Maybe delete from library? */ },
-                            onMoveToTopClick = { /* Maybe move in album? */ },
+                            onDeleteClick = { /* Not applicable for album */ },
+                            onPlayNextClick = { viewModel.playNextSelectedSongs() },
+                            onAddToQueueClick = { viewModel.addToQueueSelectedSongs() },
+                            onAddToPlaylistClick = { 
+                                val selectedSongs = album.songs.filter { it.id in uiState.selectedSongIds }
+                                playlistViewModel.addSongsToPlaylist(selectedSongs)
+                            },
+                            onMoveToTopClick = { /* Not applicable for album */ },
                             contentColor = contentColor,
                             isDarkTheme = isDarkTheme
                         )

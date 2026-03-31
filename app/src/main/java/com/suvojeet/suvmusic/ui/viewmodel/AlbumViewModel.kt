@@ -176,6 +176,26 @@ class AlbumViewModel @Inject constructor(
         ) }
     }
 
+    fun playNextSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentAlbum = _uiState.value.album ?: return
+        val selectedSongs = currentAlbum.songs.filter { it.id in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.playNext(selectedSongs)
+            clearSelection()
+        }
+    }
+
+    fun addToQueueSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentAlbum = _uiState.value.album ?: return
+        val selectedSongs = currentAlbum.songs.filter { it.id in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.addToQueue(selectedSongs)
+            clearSelection()
+        }
+    }
+
     fun reorderSong(fromIndex: Int, toIndex: Int) {
         val currentAlbum = _uiState.value.album ?: return
         val songs = currentAlbum.songs.toMutableList()
