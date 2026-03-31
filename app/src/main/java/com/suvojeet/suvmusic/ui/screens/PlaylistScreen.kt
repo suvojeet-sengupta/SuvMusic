@@ -1131,8 +1131,9 @@ private fun LazyItemScope.SongListItem(
                 contentDescription = "Reorder",
                 tint = subtitleColor.copy(alpha = 0.4f),
                 modifier = Modifier
-                    .padding(start = 12.dp)
-                    .size(24.dp)
+                    .padding(start = 8.dp)
+                    .size(36.dp)
+                    .padding(8.dp)
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragStart = { 
