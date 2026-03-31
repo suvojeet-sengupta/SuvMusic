@@ -989,7 +989,18 @@ private fun SongListItem(
     subtitleColor: Color
 ) {
     var offsetY by remember { mutableStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+    
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isDragging) 1.05f else 1f,
+        label = "DragScale"
+    )
+    
+    val elevation by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isDragging) 8.dp else 0.dp,
+        label = "DragElevation"
+    )
     
     // Remember updated values for indices to prevent stale state capture in the drag lambda
     val currentIndexState by androidx.compose.runtime.rememberUpdatedState(index)
@@ -1001,10 +1012,19 @@ private fun SongListItem(
         label = "ItemSelectionBackground"
     )
 
+    @OptIn(ExperimentalFoundationApi::class)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = offsetY.dp / 8)
+            .animateItemPlacement()
+            .graphicsLayer {
+                translationY = offsetY
+                scaleX = scale
+                scaleY = scale
+                shadowElevation = elevation.toPx()
+                clip = true
+                shape = SquircleShape
+            }
             .background(backgroundColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -1071,9 +1091,18 @@ private fun SongListItem(
                     .size(24.dp)
                     .pointerInput(Unit) {
                         detectDragGesturesAfterLongPress(
-                            onDragStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-                            onDragEnd = { offsetY = 0f },
-                            onDragCancel = { offsetY = 0f },
+                            onDragStart = { 
+                                isDragging = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                            },
+                            onDragEnd = { 
+                                isDragging = false
+                                offsetY = 0f 
+                            },
+                            onDragCancel = { 
+                                isDragging = false
+                                offsetY = 0f 
+                            },
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y

@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -644,16 +645,36 @@ private fun AlbumSongItem(
     secondaryContentColor: Color
 ) {
     var offsetY by remember { mutableStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+    
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isDragging) 1.05f else 1f,
+        label = "DragScale"
+    )
+    
+    val elevation by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isDragging) 8.dp else 0.dp,
+        label = "DragElevation"
+    )
     
     // Remember updated values for indices to prevent stale state capture in the drag lambda
     val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
     val onReorderState by androidx.compose.runtime.rememberUpdatedState(onReorder)
 
+    @OptIn(ExperimentalFoundationApi::class)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = offsetY.dp / 8)
+            .animateItemPlacement()
+            .graphicsLayer {
+                translationY = offsetY
+                scaleX = scale
+                scaleY = scale
+                shadowElevation = elevation.toPx()
+                clip = true
+                shape = SquircleShape
+            }
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -709,9 +730,18 @@ private fun AlbumSongItem(
                 .size(24.dp)
                 .pointerInput(Unit) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-                        onDragEnd = { offsetY = 0f },
-                        onDragCancel = { offsetY = 0f },
+                        onDragStart = { 
+                            isDragging = true
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                        },
+                        onDragEnd = { 
+                            isDragging = false
+                            offsetY = 0f 
+                        },
+                        onDragCancel = { 
+                            isDragging = false
+                            offsetY = 0f 
+                        },
                         onDrag = { change, dragAmount ->
                             change.consume()
                             offsetY += dragAmount.y
@@ -722,7 +752,8 @@ private fun AlbumSongItem(
                                 onReorderState(currentIndexState, currentIndexState - 1)
                                 offsetY = 0f
                             }
-                        }                    )
+                        }
+                    )
                 }
         )
 
