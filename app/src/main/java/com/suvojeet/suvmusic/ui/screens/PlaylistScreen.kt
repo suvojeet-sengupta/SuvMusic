@@ -52,7 +52,7 @@ import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -1096,7 +1096,7 @@ private fun LazyItemScope.SongListItem(
                     .padding(start = 12.dp)
                     .size(24.dp)
                     .pointerInput(Unit) {
-                        detectDragGesturesAfterLongPress(
+                        detectDragGestures(
                             onDragStart = { 
                                 isDragging = true
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
