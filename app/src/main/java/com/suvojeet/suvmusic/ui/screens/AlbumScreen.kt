@@ -42,6 +42,7 @@ import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -681,6 +682,36 @@ private fun LazyItemScope.AlbumSongItem(
                 this.shadowElevation = with(density) { elevation.toPx() }
                 this.clip = true
                 this.shape = SquircleShape
+            }
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { 
+                        isDragging = true
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                    },
+                    onDragEnd = { 
+                        isDragging = false
+                        offsetY = 0f 
+                    },
+                    onDragCancel = { 
+                        isDragging = false
+                        offsetY = 0f 
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        offsetY += dragAmount.y
+                        val threshold = with(density) { 60.dp.toPx() }
+                        if (offsetY > threshold && currentIndexState < totalSongs - 1) {
+                            onReorderState(currentIndexState, currentIndexState + 1)
+                            offsetY -= threshold
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        } else if (offsetY < -threshold && currentIndexState > 0) {
+                            onReorderState(currentIndexState, currentIndexState - 1)
+                            offsetY += threshold
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    }
+                )
             }
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),

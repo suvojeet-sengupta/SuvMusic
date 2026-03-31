@@ -41,6 +41,7 @@ import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
 
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -389,6 +390,38 @@ private fun LazyItemScope.ModernQueueListItem(
                 this.shadowElevation = with(density) { elevation.toPx() }
                 this.clip = true
                 this.shape = RoundedCornerShape(12.dp)
+            }
+            .pointerInput(Unit) {
+                if (!isCurrent) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { 
+                            isDragging = true
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                        },
+                        onDragEnd = { 
+                            isDragging = false
+                            offsetY = 0f 
+                        },
+                        onDragCancel = { 
+                            isDragging = false
+                            offsetY = 0f 
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetY += dragAmount.y
+                            val threshold = with(density) { 56.dp.toPx() }
+                            if (offsetY > threshold) {
+                                onDragMoveState(currentIndexState, currentIndexState + 1)
+                                offsetY -= threshold
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            } else if (offsetY < -threshold) {
+                                onDragMoveState(currentIndexState, currentIndexState - 1)
+                                offsetY += threshold
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        }
+                    )
+                }
             }
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
