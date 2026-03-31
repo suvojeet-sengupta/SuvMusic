@@ -1023,7 +1023,12 @@ private fun LazyItemScope.SongListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .animateItem()
+            .animateItem(
+                placementSpec = if (isDragging) null else androidx.compose.animation.core.spring(
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                    visibilityThreshold = androidx.compose.ui.unit.IntOffset.VisibilityThreshold
+                )
+            )
             .graphicsLayer {
                 this.translationY = offsetY
                 this.scaleX = scale

@@ -382,7 +382,12 @@ private fun LazyItemScope.ModernQueueListItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 2.dp)
-            .animateItem() // Essential for smooth reordering animation
+            .animateItem(
+                placementSpec = if (isDragging) null else androidx.compose.animation.core.spring(
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                    visibilityThreshold = androidx.compose.ui.unit.IntOffset.VisibilityThreshold
+                )
+            )
             .graphicsLayer {
                 this.translationY = offsetY
                 this.scaleX = scale
