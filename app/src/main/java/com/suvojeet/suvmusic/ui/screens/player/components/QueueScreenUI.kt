@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.platform.LocalDensity
