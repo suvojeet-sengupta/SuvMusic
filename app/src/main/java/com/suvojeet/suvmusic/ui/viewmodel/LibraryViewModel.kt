@@ -441,6 +441,29 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun renamePlaylist(playlistId: String, newName: String) {
+        if (newName.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val isLocal = libraryRepository.getPlaylistById(playlistId) != null || playlistId.startsWith("local_")
+                val success = if (isLocal) {
+                    libraryRepository.updatePlaylistName(playlistId, newName)
+                    true
+                } else {
+                    youTubeRepository.renamePlaylist(playlistId, newName)
+                }
+
+                if (success) {
+                    refresh()
+                } else {
+                    _uiState.update { it.copy(error = "Failed to rename playlist") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to rename: ${e.message}") }
+            }
+        }
+    }
+
     fun shufflePlay(playlistId: String) {
         viewModelScope.launch {
             try {
