@@ -95,6 +95,9 @@ import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.MediaMenuBottomSheet
+import com.suvojeet.suvmusic.ui.components.RenamePlaylistDialog
+import com.suvojeet.suvmusic.ui.components.DeletePlaylistDialog
+import com.suvojeet.suvmusic.ui.components.ExportPlaylistDialog
 import com.suvojeet.suvmusic.ui.components.MusicCard
 import com.suvojeet.suvmusic.ui.screens.ImportPlaylistScreen
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryFilter
@@ -125,6 +128,8 @@ fun LibraryScreen(
     var showPlaylistMenu by remember { mutableStateOf(false) }
     var selectedPlaylist: PlaylistDisplayItem? by remember { mutableStateOf(null) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     // Add Menu State
     var showAddMenu by remember { mutableStateOf(false) }
@@ -342,13 +347,19 @@ fun LibraryScreen(
     // Playlist Menu Bottom Sheet
     if (showPlaylistMenu && selectedPlaylist != null) {
         val playlist = selectedPlaylist!!
+        val isUserPlaylist = playlist.id.startsWith("local_") || 
+                            playlist.uploaderName == "You" || 
+                            playlist.uploaderName == "YouTube User" ||
+                            playlist.uploaderName.contains("You", ignoreCase = true) ||
+                            uiState.userPlaylists.any { it.id == playlist.id }
+
         MediaMenuBottomSheet(
             isVisible = showPlaylistMenu,
             onDismiss = { showPlaylistMenu = false },
             title = playlist.name,
             subtitle = "${playlist.songCount} songs",
             thumbnailUrl = playlist.thumbnailUrl,
-            isUserPlaylist = playlist.id.startsWith("PL") || playlist.id.startsWith("VL"),
+            isUserPlaylist = isUserPlaylist,
             onShuffle = { viewModel.shufflePlay(playlist.id) },
             onStartRadio = { viewModel.shufflePlay(playlist.id) }, // You might want a real radio here
             onPlayNext = { viewModel.playNext(playlist.id) },
@@ -365,14 +376,41 @@ fun LibraryScreen(
                 context.startActivity(shareIntent)
             },
             onExport = { showExportDialog = true },
-            onRename = { },
-            onDelete = { viewModel.deletePlaylist(playlist.id) }
+            onRename = { showRenameDialog = true },
+            onDelete = { showDeleteDialog = true }
+        )
+    }
+
+    // Rename Playlist Dialog
+    if (showRenameDialog && selectedPlaylist != null) {
+        RenamePlaylistDialog(
+            isVisible = showRenameDialog,
+            currentName = selectedPlaylist!!.name,
+            isRenaming = false, // UI handles it
+            onDismiss = { showRenameDialog = false },
+            onRename = { newName ->
+                viewModel.renamePlaylist(selectedPlaylist!!.id, newName)
+                showRenameDialog = false
+            }
+        )
+    }
+
+    // Delete Playlist Dialog
+    if (showDeleteDialog && selectedPlaylist != null) {
+        DeletePlaylistDialog(
+            isVisible = showDeleteDialog,
+            playlistTitle = selectedPlaylist!!.name,
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                viewModel.deletePlaylist(selectedPlaylist!!.id)
+                showDeleteDialog = false
+            }
         )
     }
 
     // Export Playlist Dialog
     if (showExportDialog && selectedPlaylist != null) {
-        com.suvojeet.suvmusic.ui.components.ExportPlaylistDialog(
+        ExportPlaylistDialog(
             isVisible = showExportDialog,
             onDismiss = { showExportDialog = false },
             onExportM3U = { viewModel.exportPlaylistToM3U(context, selectedPlaylist!!) },
