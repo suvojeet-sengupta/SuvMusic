@@ -56,7 +56,6 @@ fun MediaMenuBottomSheet(
     title: String,
     subtitle: String, // e.g. "48 songs"
     thumbnailUrl: String?,
-    isUserPlaylist: Boolean = false,
     onShuffle: () -> Unit,
     onStartRadio: () -> Unit,
     onPlayNext: () -> Unit,
@@ -65,8 +64,8 @@ fun MediaMenuBottomSheet(
     onDownload: () -> Unit,
     onShare: () -> Unit,
     onExport: (() -> Unit)? = null,
-    onRename: () -> Unit = {},
-    onDelete: () -> Unit = {},
+    onRename: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     showShare: Boolean = true
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -206,14 +205,16 @@ fun MediaMenuBottomSheet(
                     )
                 }
                 
-                if (isUserPlaylist) {
+                if (onRename != null) {
                     MenuActionItem(
                         icon = Icons.Default.Edit,
                         title = "Edit playlist",
                         subtitle = "Rename playlist",
                         onClick = { onRename(); onDismiss() }
                     )
-                    
+                }
+                
+                if (onDelete != null) {
                     MenuActionItem(
                         icon = Icons.Default.Delete,
                         title = "Delete playlist",
