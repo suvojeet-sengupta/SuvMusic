@@ -416,7 +416,6 @@ fun PlaylistScreen(
                     title = playlist.title,
                     subtitle = "${playlist.songs.size} songs",
                     thumbnailUrl = playlist.thumbnailUrl,
-                    isUserPlaylist = uiState.isEditable,
                     onShuffle = { onShufflePlay(playlist.songs) },
                     onStartRadio = { onShufflePlay(playlist.songs) },
                     onPlayNext = { viewModel.playNext(playlist.songs) },
