@@ -347,19 +347,12 @@ fun LibraryScreen(
     // Playlist Menu Bottom Sheet
     if (showPlaylistMenu && selectedPlaylist != null) {
         val playlist = selectedPlaylist!!
-        val isUserPlaylist = playlist.id.startsWith("local_") || 
-                            playlist.uploaderName == "You" || 
-                            playlist.uploaderName == "YouTube User" ||
-                            playlist.uploaderName.contains("You", ignoreCase = true) ||
-                            uiState.userPlaylists.any { it.id == playlist.id }
-
         MediaMenuBottomSheet(
             isVisible = showPlaylistMenu,
             onDismiss = { showPlaylistMenu = false },
             title = playlist.name,
             subtitle = "${playlist.songCount} songs",
             thumbnailUrl = playlist.thumbnailUrl,
-            isUserPlaylist = isUserPlaylist,
             onShuffle = { viewModel.shufflePlay(playlist.id) },
             onStartRadio = { viewModel.shufflePlay(playlist.id) }, // You might want a real radio here
             onPlayNext = { viewModel.playNext(playlist.id) },
