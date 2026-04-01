@@ -400,8 +400,9 @@ fun LibraryScreen(
         DeletePlaylistDialog(
             isVisible = showDeleteDialog,
             playlistTitle = selectedPlaylist!!.name,
+            isDeleting = false,
             onDismiss = { showDeleteDialog = false },
-            onConfirm = {
+            onDelete = {
                 viewModel.deletePlaylist(selectedPlaylist!!.id)
                 showDeleteDialog = false
             }
