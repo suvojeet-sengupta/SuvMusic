@@ -2276,7 +2276,7 @@ class YouTubeRepository @Inject constructor(
         try {
             val playlists = mutableListOf<PlaylistDisplayItem>()
             
-            // 1. Add Local Playlists
+            // 1. Add Local Playlists (Always available)
             try {
                 val localPlaylists = libraryRepository.getSavedPlaylists().firstOrNull() ?: emptyList()
                 localPlaylists.forEach { item ->
@@ -2297,53 +2297,23 @@ class YouTubeRepository @Inject constructor(
 
             if (!sessionManager.isLoggedIn()) return@withContext playlists
             
-            val response = fetchInternalApi("FEmusic_liked_playlists")
-            if (response.isEmpty()) return@withContext playlists
+            // 2. Fetch User Playlists from YouTube
+            // We use getUserPlaylists which already handles FEmusic_liked_playlists and parsing
+            val ytPlaylists = getUserPlaylists(autoSave = false)
             
-            val json = JSONObject(response)
-            
-            // Parse the response to get user playlists
-            val contents = json.optJSONObject("contents")
-                ?.optJSONObject("singleColumnBrowseResultsRenderer")
-                ?.optJSONArray("tabs")
-                ?.optJSONObject(0)
-                ?.optJSONObject("tabRenderer")
-                ?.optJSONObject("content")
-                ?.optJSONObject("sectionListRenderer")
-                ?.optJSONArray("contents")
-            
-            contents?.let { contentArray ->
-                for (i in 0 until contentArray.length()) {
-                    val section = contentArray.optJSONObject(i)
-                    val gridRenderer = section?.optJSONObject("gridRenderer")
-                        ?: section?.optJSONObject("musicShelfRenderer")
-                    
-                    val items = gridRenderer?.optJSONArray("items")
-                        ?: gridRenderer?.optJSONArray("contents")
-                    
-                    items?.let { itemArray ->
-                        for (j in 0 until itemArray.length()) {
-                            val item = itemArray.optJSONObject(j)
-                            val musicItem = item?.optJSONObject("musicTwoRowItemRenderer")
-                                ?: item?.optJSONObject("musicResponsiveListItemRenderer")
-                            
-                            val playlist = musicItem?.let { parsePlaylistItem(it) }
-                            if (playlist != null) {
-                                // Filter out auto-generated playlists and only show user-created ones
-                                val playlistId = playlist.id
-                                val isUserCreated = playlist.uploaderName == "You" || 
-                                                  playlist.uploaderName == "YouTube User" ||
-                                                  playlist.uploaderName.contains("You", ignoreCase = true)
-                                                  
-                                if (!playlistId.startsWith("RDAMPL") && 
-                                    !playlistId.startsWith("LM") &&
-                                    playlistId.isNotEmpty() &&
-                                    isUserCreated) {
-                                    playlists.add(playlist)
-                                }
-                            }
-                        }
-                    }
+            ytPlaylists.forEach { playlist ->
+                // Filter out auto-generated playlists and only show user-created ones
+                val playlistId = playlist.id
+                val isUserCreated = playlist.uploaderName == "You" || 
+                                  playlist.uploaderName == "YouTube User" ||
+                                  playlist.uploaderName.contains("You", ignoreCase = true) ||
+                                  playlist.uploaderName.contains(sessionManager.getUserName() ?: "", ignoreCase = true)
+                                  
+                if (!playlistId.startsWith("RDAMPL") && 
+                    !playlistId.startsWith("LM") &&
+                    playlistId.isNotEmpty() &&
+                    isUserCreated) {
+                    playlists.add(playlist)
                 }
             }
             
