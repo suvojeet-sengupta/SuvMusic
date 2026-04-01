@@ -204,10 +204,17 @@ fun SongInfoSection(
             ) {
                 Text(
                     text = song?.artist ?: "",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = 0.sp
-                    ),
+                    style = if (compact) {
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = 0.sp
+                        )
+                    } else {
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = 0.sp
+                        )
+                    },
                     color = dominantColors.onBackground.copy(alpha = 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
