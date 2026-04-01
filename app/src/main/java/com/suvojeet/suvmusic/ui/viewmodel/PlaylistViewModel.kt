@@ -299,6 +299,8 @@ class PlaylistViewModel @Inject constructor(
                     isLoading = false
                 )
             }
+            // Re-check editability now that we have author info
+            checkEditable()
             // Re-apply current sort if any
             applySort()
         } catch (e: Exception) {
@@ -367,9 +369,20 @@ class PlaylistViewModel @Inject constructor(
                 val userPlaylists = youTubeRepository.getUserEditablePlaylists()
                 val isYtEditable = userPlaylists.any { it.id == playlistId }
                 
-                _uiState.update { it.copy(isEditable = isLocal || isYtEditable || playlistId == "LM") }
+                // Fallback: If not in the "editable" list but uploader is "You", it's likely editable
+                val playlistAuthor = _uiState.value.playlist?.author
+                val isAuthorYou = playlistAuthor == "You" || 
+                                 playlistAuthor == "YouTube User" || 
+                                 playlistAuthor?.contains("You", ignoreCase = true) == true
+
+                _uiState.update { it.copy(isEditable = isLocal || isYtEditable || isAuthorYou || playlistId == "LM") }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isEditable = false) }
+                // If uploader is "You", still try to enable editing even if API check fails
+                val playlistAuthor = _uiState.value.playlist?.author
+                val isAuthorYou = playlistAuthor == "You" || 
+                                 playlistAuthor == "YouTube User" || 
+                                 playlistAuthor?.contains("You", ignoreCase = true) == true
+                _uiState.update { it.copy(isEditable = isAuthorYou || playlistId == "LM") }
             }
         }
     }
