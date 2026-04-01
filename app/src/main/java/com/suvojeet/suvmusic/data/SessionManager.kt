@@ -72,6 +72,7 @@ class SessionManager @Inject constructor(
 
     companion object {
         private val COOKIES_KEY = stringPreferencesKey("cookies")
+        private val USER_NAME_KEY = stringPreferencesKey("user_name")
         private val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
         private val AUDIO_QUALITY_KEY = stringPreferencesKey("audio_quality")
         private val GAPLESS_PLAYBACK_KEY = booleanPreferencesKey("gapless_playback")
@@ -1509,11 +1510,13 @@ class SessionManager @Inject constructor(
         
         saveStoredAccounts(accounts)
         saveUserAvatar(avatarUrl)
+        saveUserName(name)
     }
     
     suspend fun switchAccount(account: StoredAccount) {
         encryptedPrefs.edit().putString("cookies", account.cookies).apply()
         saveUserAvatar(account.avatarUrl)
+        saveUserName(account.name)
         setAuthUserIndex(account.authUserIndex)
         saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl, account.authUserIndex)
         _isLoggedInFlow.value = isLoggedIn()
@@ -1646,6 +1649,8 @@ class SessionManager @Inject constructor(
         }
         context.dataStore.edit { preferences ->
             preferences.remove(COOKIES_KEY)
+            preferences.remove(USER_NAME_KEY)
+            preferences.remove(USER_AVATAR_KEY)
         }
         _isLoggedInFlow.value = false
     }
@@ -1663,6 +1668,19 @@ class SessionManager @Inject constructor(
 
     val userAvatarFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[USER_AVATAR_KEY]
+    }
+
+    suspend fun getUserName(): String? = 
+        context.dataStore.data.first()[USER_NAME_KEY]
+    
+    suspend fun saveUserName(name: String) {
+        context.dataStore.edit { preferences ->
+            preferences[USER_NAME_KEY] = name
+        }
+    }
+
+    val userNameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[USER_NAME_KEY]
     }
 
     suspend fun getAuthUserIndex(): Int =
