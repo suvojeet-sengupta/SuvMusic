@@ -2300,6 +2300,7 @@ class YouTubeRepository @Inject constructor(
             // 2. Fetch User Playlists from YouTube
             // We use getUserPlaylists which already handles FEmusic_liked_playlists and parsing
             val ytPlaylists = getUserPlaylists(autoSave = false)
+            val userName = sessionManager.getUserName() ?: ""
             
             ytPlaylists.forEach { playlist ->
                 // Filter out auto-generated playlists and only show user-created ones
@@ -2307,7 +2308,7 @@ class YouTubeRepository @Inject constructor(
                 val isUserCreated = playlist.uploaderName == "You" || 
                                   playlist.uploaderName == "YouTube User" ||
                                   playlist.uploaderName.contains("You", ignoreCase = true) ||
-                                  playlist.uploaderName.contains(sessionManager.getUserName() ?: "", ignoreCase = true)
+                                  playlist.uploaderName.contains(userName, ignoreCase = true)
                                   
                 if (!playlistId.startsWith("RDAMPL") && 
                     !playlistId.startsWith("LM") &&
