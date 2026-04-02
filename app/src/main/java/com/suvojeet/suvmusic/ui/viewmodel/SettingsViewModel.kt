@@ -80,6 +80,7 @@ data class SettingsUiState(
     val lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
     val lyricsLineSpacing: Float = 1.5f,
     val lyricsFontSize: Float = 26f,
+    val lyricsBlur: Float = 2.5f,
     // Audio Offload
     val audioOffloadEnabled: Boolean = false,
     // Volume Boost
@@ -355,6 +356,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.lyricsBlurFlow.collect { blur ->
+                _uiState.update { it.copy(lyricsBlur = blur) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.audioOffloadEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(audioOffloadEnabled = enabled) }
             }
@@ -612,6 +619,7 @@ class SettingsViewModel @Inject constructor(
             val discordUseDetails = sessionManager.isDiscordUseDetailsEnabled()
             val lyricsLineSpacing = sessionManager.getLyricsLineSpacing()
             val lyricsFontSize = sessionManager.getLyricsFontSize()
+            val lyricsBlur = sessionManager.getLyricsBlur()
             val preferredLyricsProvider = sessionManager.getPreferredLyricsProvider()
             val lyricsTextPosition = sessionManager.getLyricsTextPosition()
             val lyricsAnimationType = sessionManager.getLyricsAnimationType()
@@ -678,6 +686,7 @@ class SettingsViewModel @Inject constructor(
                     lyricsAnimationType = lyricsAnimationType,
                     lyricsLineSpacing = lyricsLineSpacing,
                     lyricsFontSize = lyricsFontSize,
+                    lyricsBlur = lyricsBlur,
                     audioOffloadEnabled = audioOffloadEnabled,
                     volumeBoostEnabled = volumeBoostEnabled,
                     volumeBoostAmount = volumeBoostAmount,
@@ -955,6 +964,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setLyricsFontSize(size)
             _uiState.update { it.copy(lyricsFontSize = size) }
+        }
+    }
+
+    fun setLyricsBlur(blur: Float) {
+        viewModelScope.launch {
+            sessionManager.setLyricsBlur(blur)
+            _uiState.update { it.copy(lyricsBlur = blur) }
         }
     }
     
