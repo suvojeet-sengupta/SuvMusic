@@ -102,7 +102,7 @@ fun LyricsScreen(
     lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
     lyricsLineSpacing: Float = 1.5f,
     lyricsFontSize: Float = 26f,
-    lyricsBlur: Float = 4.0f,
+    lyricsBlur: Float = 2.5f,
     onLineSpacingChange: (Float) -> Unit = {},
     onFontSizeChange: (Float) -> Unit = {},
     onBlurChange: (Float) -> Unit = {},
@@ -1051,7 +1051,7 @@ fun LyricsList(
     animationType: LyricsAnimationType = LyricsAnimationType.WORD,
     fontSize: Float = 24f,
     lineSpacingMultiplier: Float = 1.5f,
-    blurIntensity: Float = 4.0f
+    blurIntensity: Float = 2.5f
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
