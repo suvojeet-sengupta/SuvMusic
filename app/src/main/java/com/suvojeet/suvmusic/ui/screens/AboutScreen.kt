@@ -1,31 +1,15 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import android.widget.Toast
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.*
@@ -33,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -63,8 +46,6 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
-    val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
-    var showPasswordDialog by remember { mutableStateOf(false) }
     
     val colorScheme = MaterialTheme.colorScheme
     val primaryColor = colorScheme.primary
@@ -149,7 +130,7 @@ fun AboutScreen(
                 ) {
                     val versionName = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME
                     Text(
-                        text = if (isDeveloperMode) "v$versionName • Dev Mode" else "Version $versionName",
+                        text = "Version $versionName",
                         style = MaterialTheme.typography.labelLarge,
                         color = primaryColor,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -215,8 +196,6 @@ fun AboutScreen(
                         modifier = Modifier.padding(24.dp).fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val uriHandler = LocalUriHandler.current
-                        
                         Box(
                             modifier = Modifier
                                 .size(96.dp)
@@ -258,7 +237,7 @@ fun AboutScreen(
                         
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub, onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") })
-                            SocialIconBadge(icon = androidx.compose.material.icons.Icons.Filled.Language, onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/") })
+                            SocialIconBadge(icon = Icons.Default.Language, onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/") })
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Instagram, onClick = { uriHandler.openUri("https://www.instagram.com/suvojeet__sengupta?igsh=MWhyMXE4YzhxaDVvNg==") })
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram, onClick = { uriHandler.openUri("https://t.me/suvojeet_sengupta") })
                         }
@@ -295,10 +274,10 @@ fun AboutScreen(
                                     .background(primaryColor.copy(alpha = 0.1f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(androidx.compose.material.icons.Icons.Filled.Language, null, tint = primaryColor, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Language, null, tint = primaryColor, modifier = Modifier.size(20.dp))
                             }
                         },
-                        trailingContent = { Icon(androidx.compose.material.icons.Icons.Filled.OpenInNew, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
+                        trailingContent = { Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
                         modifier = Modifier
                             .dpadFocusable(onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/") }, shape = SquircleShape)
                             .clip(SquircleShape),
@@ -318,10 +297,10 @@ fun AboutScreen(
                                     .background(primaryColor.copy(alpha = 0.1f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(androidx.compose.material.icons.Icons.Filled.Security, null, tint = primaryColor, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Security, null, tint = primaryColor, modifier = Modifier.size(20.dp))
                             }
                         },
-                        trailingContent = { Icon(androidx.compose.material.icons.Icons.Filled.OpenInNew, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
+                        trailingContent = { Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
                         modifier = Modifier
                             .dpadFocusable(onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html") }, shape = SquircleShape)
                             .clip(SquircleShape),
@@ -347,6 +326,10 @@ fun AboutScreen(
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
                         modifier = Modifier
                             .dpadFocusable(onClick = onHowItWorksClick, shape = SquircleShape)
+                            .clip(SquircleShape),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
@@ -445,30 +428,4 @@ private fun SocialIconBadge(icon: ImageVector, onClick: () -> Unit) {
     ) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
     }
-}
-
-@Composable
-private fun DeveloperModeListItem(isDeveloperMode: Boolean, primaryColor: Color, onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text("Developer Mode", fontWeight = FontWeight.SemiBold) },
-        supportingContent = { Text(if (isDeveloperMode) "HQ Audio enabled" else "Tap to unlock extra features") },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(if (isDeveloperMode) Color(0xFF4CAF50).copy(alpha = 0.1f) else primaryColor.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(if (isDeveloperMode) Icons.Default.LockOpen else Icons.Default.Security, null, tint = if (isDeveloperMode) Color(0xFF4CAF50) else primaryColor, modifier = Modifier.size(20.dp))
-            }
-        },
-        trailingContent = {
-            if (isDeveloperMode) {
-                Switch(checked = true, onCheckedChange = { onClick() }, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF4CAF50)))
-            }
-        },
-        modifier = Modifier.clickable(onClick = onClick).clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
 }

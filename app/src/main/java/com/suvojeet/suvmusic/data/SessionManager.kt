@@ -129,6 +129,7 @@ class SessionManager @Inject constructor(
         private val LYRICS_ANIMATION_TYPE_KEY = stringPreferencesKey("lyrics_animation_type")
         private val LYRICS_LINE_SPACING_KEY = floatPreferencesKey("lyrics_line_spacing")
         private val LYRICS_FONT_SIZE_KEY = floatPreferencesKey("lyrics_font_size")
+        private val LYRICS_BLUR_KEY = floatPreferencesKey("lyrics_blur")
 
         private val PLAYER_CACHE_LIMIT_KEY = longPreferencesKey("player_cache_limit")
         private val PLAYER_CACHE_AUTO_CLEAR_INTERVAL_KEY = intPreferencesKey("player_cache_auto_clear_interval")
@@ -932,6 +933,19 @@ class SessionManager @Inject constructor(
     suspend fun setLyricsFontSize(size: Float) {
         context.dataStore.edit { preferences ->
             preferences[LYRICS_FONT_SIZE_KEY] = size
+        }
+    }
+
+    suspend fun getLyricsBlur(): Float =
+        context.dataStore.data.first()[LYRICS_BLUR_KEY] ?: 4.0f
+
+    val lyricsBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[LYRICS_BLUR_KEY] ?: 4.0f
+    }
+
+    suspend fun setLyricsBlur(blur: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[LYRICS_BLUR_KEY] = blur
         }
     }
 
