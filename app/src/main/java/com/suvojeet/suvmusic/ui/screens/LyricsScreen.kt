@@ -206,20 +206,20 @@ fun LyricsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            // Reorganized Header
+            // Reorganized Header - More compact to give space for lyrics
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Left side actions
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     BounceButton(
                         onClick = { showSettingsSheet = true },
-                        modifier = Modifier.size(44.dp),
-                        shape = RoundedCornerShape(14.dp)
+                        modifier = Modifier.size(40.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) { isPressed ->
                         Box(
                             modifier = Modifier
@@ -231,15 +231,15 @@ fun LyricsScreen(
                                 imageVector = Icons.Filled.Tune,
                                 contentDescription = "Settings",
                                 tint = animatedTextColor,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
 
                     BounceButton(
                         onClick = { showShareSheet = true },
-                        modifier = Modifier.size(44.dp),
-                        shape = RoundedCornerShape(14.dp)
+                        modifier = Modifier.size(40.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) { isPressed ->
                         Box(
                             modifier = Modifier
@@ -251,17 +251,47 @@ fun LyricsScreen(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
                                 tint = animatedTextColor,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
 
-                // Center/Right - Close Button
+                // Center - Song Info (Title & Artist)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = songTitle,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = animatedTextColor,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = artistName,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = animatedTextColor.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+
+                // Right - Close Button
                 BounceButton(
                     onClick = onClose,
-                    modifier = Modifier.size(44.dp),
-                    shape = RoundedCornerShape(14.dp)
+                    modifier = Modifier.size(40.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) { isPressed ->
                     Box(
                         modifier = Modifier
@@ -273,41 +303,12 @@ fun LyricsScreen(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
                             tint = animatedTextColor,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
             
-            // Song Info Header - Refined Typography
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = songTitle,
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = animatedTextColor,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1
-                )
-                Text(
-                    text = artistName,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = animatedTextColor.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-
             // Content
             Box(
                 modifier = Modifier
