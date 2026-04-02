@@ -207,20 +207,30 @@ fun ModernQueueView(
                 }
             }
 
-            // Hero Now Playing Card
-            if (!isSelectionMode && currentSong != null) {
-                HeroNowPlayingCard(currentSong, isPlaying, isFavorite, onToggleLike, { onMoreClick(currentSong) }, dominantColors, isDarkTheme, contentColor)
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Autoplay Toggle Row
-            if (!isSelectionMode) {
-                AutoplayToggleRow(isAutoplayEnabled, onToggleAutoplay, dominantColors, isDarkTheme, contentColor)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
             // Queue List
             val listState = rememberLazyListState()
+            val isHeaderVisible by androidx.compose.runtime.remember {
+                androidx.compose.runtime.derivedStateOf {
+                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 100
+                }
+            }
+
+            // Hero Now Playing Card & Autoplay Toggle with Smart Hiding
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !isSelectionMode && isHeaderVisible,
+                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+            ) {
+                Column {
+                    if (currentSong != null) {
+                        HeroNowPlayingCard(currentSong, isPlaying, isFavorite, onToggleLike, { onMoreClick(currentSong) }, dominantColors, isDarkTheme, contentColor)
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    AutoplayToggleRow(isAutoplayEnabled, onToggleAutoplay, dominantColors, isDarkTheme, contentColor)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+
             LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(bottom = 24.dp),
