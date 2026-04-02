@@ -181,6 +181,7 @@ data class PlayerScreenActions(
     val onPostComment: (String) -> Unit = {},
     val onLoadMoreComments: () -> Unit = {},
     val onLyricsProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
+    val onImportLyrics: (String) -> Unit = {},
     val onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
     val onClearQueue: () -> Unit = {},
     val onListenTogetherClick: () -> Unit = {},
@@ -565,8 +566,8 @@ fun BoxScope.OverlaysContent(
         LyricsScreen(
             lyrics = state.lyrics, isFetching = state.isFetchingLyrics, currentTimeProvider = { playerState.currentPosition }, artworkUrl = song?.thumbnailUrl,
             onClose = { if (currentOverlay is PlayerOverlay.Lyrics) onOverlayChange(PlayerOverlay.None) }, isDarkTheme = isAppInDarkTheme, onSeekTo = actions.onSeekTo, songTitle = song?.title ?: "",
-            artistName = song?.artist ?: "", duration = playerState.duration, selectedProvider = state.selectedLyricsProvider,
-            enabledProviders = state.enabledLyricsProviders, onProviderChange = actions.onLyricsProviderChange, lyricsTextPosition = lyricsTextPosition,
+            artistName = song?.artist ?: "", songId = song?.id ?: "", duration = playerState.duration, selectedProvider = state.selectedLyricsProvider,
+            enabledProviders = state.enabledLyricsProviders, onProviderChange = actions.onLyricsProviderChange, onImportLyrics = actions.onImportLyrics, lyricsTextPosition = lyricsTextPosition,
             lyricsAnimationType = lyricsAnimationType, lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize,
             onLineSpacingChange = { coroutineScope.launch { sessionManager.setLyricsLineSpacing(it) } }, onFontSizeChange = { coroutineScope.launch { sessionManager.setLyricsFontSize(it) } },
             onTextPositionChange = { coroutineScope.launch { sessionManager.setLyricsTextPosition(it) } }, onAnimationTypeChange = { coroutineScope.launch { sessionManager.setLyricsAnimationType(it) } },

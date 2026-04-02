@@ -74,6 +74,13 @@ class LyricsRepository @Inject constructor(
         return providers
     }
 
+    suspend fun saveLocalLyrics(song: Song, content: String) = withContext(Dispatchers.IO) {
+        localLyricsProvider.saveLyrics(song.id, content)
+        // Clear cache for this song to force reload
+        cache.remove(getCacheKey(song.id, LyricsProviderType.LOCAL))
+        cache.remove(getCacheKey(song.id, LyricsProviderType.AUTO))
+    }
+
     suspend fun getLyrics(song: Song, providerType: LyricsProviderType = LyricsProviderType.AUTO): Lyrics? = withContext(Dispatchers.IO) {
         val cacheKey = getCacheKey(song.id, providerType)
         
