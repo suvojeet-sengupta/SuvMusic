@@ -238,6 +238,7 @@ fun PlayerScreen(
     val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
     val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsStateWithLifecycle(initialValue = 1.5f)
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 26f)
+    val lyricsBlur by sessionManager.lyricsBlurFlow.collectAsStateWithLifecycle(initialValue = 4.0f)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val albumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
@@ -487,7 +488,7 @@ fun PlayerScreen(
                     isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
                     volumeSliderEnabled = volumeSliderEnabled, volumeKeyEvents = volumeKeyEvents,
                     lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
-                    lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize,
+                    lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize, lyricsBlur = lyricsBlur,
                     sessionManager = sessionManager, coroutineScope = coroutineScope, isFullScreen = isFullScreen,
                     eqEnabled = eqEnabled, eqBands = eqBands, eqPreamp = eqPreamp, bassBoost = bassBoost, virtualizer = virtualizer
                 )
@@ -522,7 +523,7 @@ fun BoxScope.OverlaysContent(
     upNextSongs: List<com.suvojeet.suvmusic.core.model.Song>, selectedQueueIndices: Set<Int>, isAppInDarkTheme: Boolean,
     animatedBackgroundEnabled: Boolean, volumeSliderEnabled: Boolean, volumeKeyEvents: SharedFlow<Unit>?,
     lyricsTextPosition: com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition, lyricsAnimationType: com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType,
-    lyricsLineSpacing: Float, lyricsFontSize: Float, sessionManager: SessionManager, coroutineScope: kotlinx.coroutines.CoroutineScope,
+    lyricsLineSpacing: Float, lyricsFontSize: Float, lyricsBlur: Float, sessionManager: SessionManager, coroutineScope: kotlinx.coroutines.CoroutineScope,
     isFullScreen: Boolean, eqEnabled: Boolean, eqBands: FloatArray, eqPreamp: Float, bassBoost: Float, virtualizer: Float
 ) {
     val context = LocalContext.current
@@ -568,8 +569,9 @@ fun BoxScope.OverlaysContent(
             onClose = { if (currentOverlay is PlayerOverlay.Lyrics) onOverlayChange(PlayerOverlay.None) }, isDarkTheme = isAppInDarkTheme, onSeekTo = actions.onSeekTo, songTitle = song?.title ?: "",
             artistName = song?.artist ?: "", songId = song?.id ?: "", duration = playerState.duration, selectedProvider = state.selectedLyricsProvider,
             enabledProviders = state.enabledLyricsProviders, onProviderChange = actions.onLyricsProviderChange, onImportLyrics = actions.onImportLyrics, lyricsTextPosition = lyricsTextPosition,
-            lyricsAnimationType = lyricsAnimationType, lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize,
+            lyricsAnimationType = lyricsAnimationType, lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize, lyricsBlur = lyricsBlur,
             onLineSpacingChange = { coroutineScope.launch { sessionManager.setLyricsLineSpacing(it) } }, onFontSizeChange = { coroutineScope.launch { sessionManager.setLyricsFontSize(it) } },
+            onBlurChange = { coroutineScope.launch { sessionManager.setLyricsBlur(it) } },
             onTextPositionChange = { coroutineScope.launch { sessionManager.setLyricsTextPosition(it) } }, onAnimationTypeChange = { coroutineScope.launch { sessionManager.setLyricsAnimationType(it) } },
             isPlaying = playerState.isPlaying, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious
         )
