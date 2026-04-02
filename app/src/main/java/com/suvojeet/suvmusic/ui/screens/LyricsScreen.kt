@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
@@ -47,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -100,8 +102,10 @@ fun LyricsScreen(
     lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
     lyricsLineSpacing: Float = 1.5f,
     lyricsFontSize: Float = 26f,
+    lyricsBlur: Float = 4.0f,
     onLineSpacingChange: (Float) -> Unit = {},
     onFontSizeChange: (Float) -> Unit = {},
+    onBlurChange: (Float) -> Unit = {},
     onTextPositionChange: (LyricsTextPosition) -> Unit = {},
     onAnimationTypeChange: (LyricsAnimationType) -> Unit = {},
     modifier: Modifier = Modifier
@@ -396,7 +400,8 @@ fun LyricsScreen(
                         textPosition = lyricsTextPosition, // Use passed param directly
                         animationType = lyricsAnimationType, // Use passed param directly
                         fontSize = lyricsFontSize,
-                        lineSpacingMultiplier = lyricsLineSpacing
+                        lineSpacingMultiplier = lyricsLineSpacing,
+                        blurIntensity = lyricsBlur
                     )
                 }
             }
@@ -590,6 +595,17 @@ fun LyricsScreen(
                             onValueChange = onLineSpacingChange,
                             valueRange = 1.0f..2.5f,
                             icon = Icons.Default.FormatAlignLeft
+                        )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        // Blur Intensity
+                        SettingsSlider(
+                            label = "Blur Intensity",
+                            value = lyricsBlur,
+                            onValueChange = onBlurChange,
+                            valueRange = 0f..12f,
+                            icon = Icons.Default.BlurOn
                         )
                     }
 
@@ -1034,7 +1050,8 @@ fun LyricsList(
     textPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
     animationType: LyricsAnimationType = LyricsAnimationType.WORD,
     fontSize: Float = 24f,
-    lineSpacingMultiplier: Float = 1.5f
+    lineSpacingMultiplier: Float = 1.5f,
+    blurIntensity: Float = 4.0f
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
@@ -1173,7 +1190,7 @@ fun LyricsList(
                 )
 
                 val blurRadius by animateFloatAsState(
-                    targetValue = if (isActive || isSelectionMode || !lyrics.isSynced) 0f else 6f,
+                    targetValue = if (isActive || isSelectionMode || !lyrics.isSynced || activeLineIndex == -1) 0f else blurIntensity,
                     animationSpec = tween(durationMillis = 500),
                     label = "blur"
                 )
