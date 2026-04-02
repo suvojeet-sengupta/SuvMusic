@@ -937,10 +937,10 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun getLyricsBlur(): Float =
-        context.dataStore.data.first()[LYRICS_BLUR_KEY] ?: 4.0f
+        context.dataStore.data.first()[LYRICS_BLUR_KEY] ?: 2.5f
 
     val lyricsBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        preferences[LYRICS_BLUR_KEY] ?: 4.0f
+        preferences[LYRICS_BLUR_KEY] ?: 2.5f
     }
 
     suspend fun setLyricsBlur(blur: Float) {
