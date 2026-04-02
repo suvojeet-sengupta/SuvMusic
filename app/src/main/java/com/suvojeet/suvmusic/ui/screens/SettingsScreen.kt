@@ -63,6 +63,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
@@ -119,6 +120,8 @@ fun SettingsScreen(
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showAccountsSheet by remember { mutableStateOf(false) }
     var showUpdateChannelSheet by remember { mutableStateOf(false) }
+    var bugDescription by remember { mutableStateOf("") }
+    var showBugDescriptionDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     
     // Floating Player
@@ -808,7 +811,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    androidx.compose.material3.OutlinedTextField(
+                    OutlinedTextField(
                         value = bugDescription,
                         onValueChange = { bugDescription = it },
                         placeholder = { Text("e.g. App crashes when I skip songs...") },
