@@ -85,6 +85,7 @@ fun LyricsScreen(
     onSeekTo: (Long) -> Unit = {},
     songTitle: String = "",
     artistName: String = "",
+    songId: String = "",
     // New parameters
     duration: Long = 0L,
     isPlaying: Boolean = false,
@@ -94,6 +95,7 @@ fun LyricsScreen(
     selectedProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
     enabledProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
     onProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
+    onImportLyrics: (String) -> Unit = {},
     lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
     lyricsAnimationType: LyricsAnimationType = LyricsAnimationType.WORD,
     lyricsLineSpacing: Float = 1.5f,
@@ -132,11 +134,26 @@ fun LyricsScreen(
     var syncOffset by remember { mutableStateOf(0L) }
     var keepScreenOn by remember { mutableStateOf(true) } // Default to true for lyrics
     
-    // We keep local state for these to allow immediate UI updates, 
-    // but ideally they should be persisted or passed back up.
-    // For now, we'll use the passed parameters as initial values.
-    // var currentTextPosition by remember { mutableStateOf(lyricsTextPosition) }
-    // var currentAnimationType by remember { mutableStateOf(lyricsAnimationType) }
+    // File Picker for Lyrics
+    val filePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            try {
+                context.contentResolver.openInputStream(it)?.use { inputStream ->
+                    val content = inputStream.bufferedReader().readText()
+                    if (content.isNotBlank()) {
+                        onImportLyrics(content)
+                        // Switch to Local provider automatically
+                        onProviderChange(com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.LOCAL)
+                        android.widget.Toast.makeText(context, "Lyrics imported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Failed to import lyrics: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     // Keep Screen On Effect
     val currentView = androidx.compose.ui.platform.LocalView.current
@@ -340,6 +357,29 @@ fun LyricsScreen(
                             color = textColor.copy(alpha = 0.7f),
                             fontWeight = FontWeight.Medium
                         )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        BounceButton(
+                            onClick = { filePicker.launch("*/*") },
+                            modifier = Modifier.height(48.dp).padding(horizontal = 32.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) { isPressed ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(textColor.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Description, null, tint = textColor, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("Import Local Lyrics", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = textColor)
+                                }
+                            }
+                        }
                     }
                 } else {
                     // Effective time provider with sync offset
@@ -692,6 +732,45 @@ fun LyricsScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("+0.5s", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Local Lyrics Section
+                    SettingsSectionHeader(title = "Local Lyrics", icon = Icons.Default.LibraryMusic)
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .padding(20.dp)
+                    ) {
+                        Text(
+                            text = "Add your own .lrc or .txt file for this song.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        
+                        BounceButton(
+                            onClick = { filePicker.launch("*/*") },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) { isPressed ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.White.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Description, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("Import .lrc / .txt", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                                }
                             }
                         }
                     }

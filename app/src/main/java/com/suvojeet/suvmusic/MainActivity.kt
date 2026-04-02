@@ -928,6 +928,7 @@ fun SuvMusicApp(
                     onPostComment = { commentText -> playerViewModel.postComment(commentText) },
                     onLoadMoreComments = { playerViewModel.loadMoreComments() },
                     onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
+                    onImportLyrics = { playerViewModel.importLyrics(it) },
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
                     onListenTogetherClick = {
                         onCollapse()

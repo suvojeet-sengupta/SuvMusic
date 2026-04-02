@@ -113,7 +113,8 @@ class PlayerViewModel @Inject constructor(
             LyricsProviderType.SIMP_MUSIC to true,
             LyricsProviderType.LRCLIB to true,
             LyricsProviderType.JIOSAAVN to true,
-            LyricsProviderType.YOUTUBE to true
+            LyricsProviderType.YOUTUBE to true,
+            LyricsProviderType.LOCAL to true
         )
     )
     val enabledLyricsProviders: StateFlow<Map<LyricsProviderType, Boolean>> = _enabledLyricsProviders.asStateFlow()
@@ -311,9 +312,10 @@ class PlayerViewModel @Inject constructor(
                     LyricsProviderType.SIMP_MUSIC to simpMusicEnabled,
                     LyricsProviderType.LRCLIB to true,
                     LyricsProviderType.JIOSAAVN to devMode,
-                    LyricsProviderType.YOUTUBE to true
+                    LyricsProviderType.YOUTUBE to true,
+                    LyricsProviderType.LOCAL to true
                 )
-            }.collectLatest { newMap ->
+            }.collect { newMap ->
                 val previousMap = _enabledLyricsProviders.value
                 _enabledLyricsProviders.value = newMap
                 
@@ -1098,8 +1100,17 @@ class PlayerViewModel @Inject constructor(
     
     fun switchLyricsProvider(provider: LyricsProviderType) {
         _selectedLyricsProvider.value = provider
-        val currentSong = playerState.value.currentSong ?: return
-        fetchLyrics(currentSong.id, provider)
+        val song = playerState.value.currentSong ?: return
+        fetchLyrics(song.id, provider)
+    }
+
+    fun importLyrics(content: String) {
+        val song = playerState.value.currentSong ?: return
+        viewModelScope.launch {
+            lyricsRepository.saveLocalLyrics(song, content)
+            // Reload lyrics with LOCAL provider
+            switchLyricsProvider(LyricsProviderType.LOCAL)
+        }
     }
     
     private fun fetchComments(videoId: String) {
