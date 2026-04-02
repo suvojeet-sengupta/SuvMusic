@@ -1111,7 +1111,7 @@ fun LyricsList(
                 
                 // Check if we should auto-scroll
                 val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
-                val shouldAutoScroll = timeSinceInteraction > 5000 // 5 seconds delay
+                val shouldAutoScroll = timeSinceInteraction > 2500 // Reduced delay for faster response
                 
                 if (shouldAutoScroll) {
                     try {
@@ -1142,8 +1142,8 @@ fun LyricsList(
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(
-                top = 100.dp, 
-                bottom = if (isSelectionMode) 180.dp else 200.dp
+                top = 280.dp, // Higher top padding to keep current lyric more central
+                bottom = if (isSelectionMode) 180.dp else 280.dp
             ),
             modifier = Modifier.fillMaxSize()
         ) {
@@ -1152,24 +1152,30 @@ fun LyricsList(
                 val isSelected = selectedIndices.contains(index)
                 
                 // Opacity logic:
-                // Normal mode: Active=1f, Inactive=0.3f (Dimmed more for contrast)
+                // Normal mode: Active=1f, Inactive=0.25f + blur
                 // Selection mode: Selected=1f, Unselected=0.3f
                 val targetAlpha = if (isSelectionMode) {
                     if (isSelected) 1f else 0.3f
                 } else {
-                    if (isActive) 1f else 0.3f
+                    if (isActive) 1f else 0.25f
                 }
                 
                 val alpha by animateFloatAsState(
                     targetValue = targetAlpha,
-                    animationSpec = tween(durationMillis = 300), 
+                    animationSpec = tween(durationMillis = 400), 
                     label = "alpha"
                 )
                 
                 val scale by animateFloatAsState(
-                    targetValue = if (isActive && lyrics.isSynced && !isSelectionMode) 1.1f else 1f,
-                    animationSpec = tween(durationMillis = 300),
+                    targetValue = if (isActive && lyrics.isSynced && !isSelectionMode) 1.15f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
                     label = "scale"
+                )
+
+                val blurRadius by animateFloatAsState(
+                    targetValue = if (isActive || isSelectionMode || !lyrics.isSynced) 0f else 6f,
+                    animationSpec = tween(durationMillis = 500),
+                    label = "blur"
                 )
 
                 if (isSelectionMode) {
@@ -1218,18 +1224,12 @@ fun LyricsList(
                     }
                 } else {
                     // Synced Lyrics View
-                    val isActive = lyrics.isSynced && index == activeLineIndex
-                    
-                    val scale by animateFloatAsState(
-                        targetValue = if (isActive) 1.05f else 1f, // Reduced scale for smoother feel
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-                        label = "scale"
-                    )
-
                     // Word-by-word or standard line
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .scale(scale)
+                            .blur(blurRadius.dp)
                             .combinedClickable(
                                 onClick = {
                                     if (lyrics.isSynced && line.startTimeMs > 0) {
@@ -1244,7 +1244,7 @@ fun LyricsList(
                                     }
                                 }
                             )
-                            .padding(horizontal = 32.dp, vertical = 6.dp) // Even more compact for better organization
+                            .padding(horizontal = 32.dp, vertical = 10.dp)
                     ) {
                         // Use word-by-word ONLY if enabled and available
                         val words = line.words
