@@ -118,9 +118,7 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showAccountsSheet by remember { mutableStateOf(false) }
-    var showBugDescriptionDialog by remember { mutableStateOf(false) }
     var showUpdateChannelSheet by remember { mutableStateOf(false) }
-    var bugDescription by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
     
     // Floating Player
@@ -407,7 +405,6 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-
             // --- Bluetooth Section ---
             item {
                 SettingsSectionTitle("Bluetooth")
@@ -487,16 +484,6 @@ fun SettingsScreen(
                         title = "Last.fm",
                         subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music hits",
                         onClick = onLastFmClick
-                    )
-
-                    HorizontalDivider()
-
-                    val isDiscordConnected = uiState.discordToken.isNotBlank()
-                    SettingsNavigationItem(
-                        icon = Icons.Default.GraphicEq,
-                        title = "Discord RPC",
-                        subtitle = if (isDiscordConnected) "Connected" else "Connect your Discord",
-                        onClick = onDiscordClick
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
