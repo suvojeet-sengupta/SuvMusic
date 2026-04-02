@@ -48,9 +48,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -1128,23 +1131,19 @@ fun LyricsList(
                 
                 // Check if we should auto-scroll
                 val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
-                val shouldAutoScroll = timeSinceInteraction > 2500 // Reduced delay for faster response
+                val shouldAutoScroll = timeSinceInteraction > 2000 // Faster auto-resume
                 
                 if (shouldAutoScroll) {
                     try {
                         isAutoScrolling = true
                         
-                        // Calculate offset to center the item
+                        // Calculate offset to position item at 1/3 of the viewport
                         val viewportHeight = listState.layoutInfo.viewportSize.height
-                        val itemHeight = if (listState.layoutInfo.visibleItemsInfo.isNotEmpty()) {
-                            listState.layoutInfo.visibleItemsInfo.first().size
-                        } else 0
-                        
-                        val centerOffset = (viewportHeight / 2) - (itemHeight / 2)
+                        val topOffset = viewportHeight / 3 
                         
                         listState.animateScrollToItem(
                             index = index,
-                            scrollOffset = -centerOffset
+                            scrollOffset = -topOffset
                         )
                         isAutoScrolling = false
                     } catch (e: Exception) {
@@ -1159,10 +1158,24 @@ fun LyricsList(
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(
-                top = 280.dp, // Higher top padding to keep current lyric more central
-                bottom = if (isSelectionMode) 180.dp else 280.dp
+                top = 120.dp, // Reduced top padding to allow sticking higher
+                bottom = 450.dp // High bottom padding to ensure last lines can reach the top target
             ),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.15f to Color.Black,
+                            0.85f to Color.Black,
+                            1f to Color.Transparent
+                        ),
+                        blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
+                    )
+                }
         ) {
             itemsIndexed(lyrics.lines, key = { index, _ -> index }) { index, line ->
                 val isActive = if (lyrics.isSynced) index == activeLineIndex else true
@@ -1179,19 +1192,19 @@ fun LyricsList(
                 
                 val alpha by animateFloatAsState(
                     targetValue = targetAlpha,
-                    animationSpec = tween(durationMillis = 400), 
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow), 
                     label = "alpha"
                 )
                 
                 val scale by animateFloatAsState(
-                    targetValue = if (isActive && lyrics.isSynced && !isSelectionMode) 1.15f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+                    targetValue = if (isActive && lyrics.isSynced && !isSelectionMode) 1.08f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
                     label = "scale"
                 )
 
                 val blurRadius by animateFloatAsState(
                     targetValue = if (isActive || isSelectionMode || !lyrics.isSynced || activeLineIndex == -1) 0f else blurIntensity,
-                    animationSpec = tween(durationMillis = 500),
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
                     label = "blur"
                 )
 
