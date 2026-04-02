@@ -347,32 +347,9 @@ fun AboutScreen(
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(16.dp), tint = onSurfaceVariant.copy(alpha = 0.5f)) },
                         modifier = Modifier
                             .dpadFocusable(onClick = onHowItWorksClick, shape = SquircleShape)
-                            .clip(SquircleShape),
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
-                }
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // === ADVANCED SECTION ===
-            item {
-                SettingsSectionTitle("Advanced")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    DeveloperModeListItem(
-                        isDeveloperMode = isDeveloperMode,
-                        primaryColor = primaryColor,
-                        onClick = {
-                            if (!isDeveloperMode) showPasswordDialog = true
-                            else {
-                                viewModel.disableDeveloperMode()
-                                Toast.makeText(context, "Developer Mode Disabled", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    )
-                }
-                Spacer(modifier = Modifier.height(48.dp))
-            }
-            
             item {
                 Text(
                     text = "Made with ❤️ in India",
@@ -388,20 +365,6 @@ fun AboutScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
-    }
-    
-    // Password Dialog
-    if (showPasswordDialog) {
-        com.suvojeet.suvmusic.ui.components.DeveloperAccessDialog(
-            onDismiss = { showPasswordDialog = false },
-            onUnlock = { password ->
-                if (viewModel.tryUnlockDeveloperMode(password)) {
-                    showPasswordDialog = false
-                    Toast.makeText(context, "Developer Mode Enabled", Toast.LENGTH_SHORT).show()
-                    true
-                } else false
-            }
-        )
     }
 }
 
