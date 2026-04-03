@@ -135,6 +135,9 @@ androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", vers
 # Gson
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
+# Google Material
+google-material = { group = "com.google.android.material", name = "material", version = "1.12.0" }
+
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
