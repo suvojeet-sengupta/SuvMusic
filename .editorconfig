@@ -1,0 +1,72 @@
+# EditorConfig: Helps maintain consistent coding styles
+# https://editorconfig.org
+
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Kotlin files
+[*.kt]
+indent_size = 4
+ktlint_standard_indent = 4
+ktlint_standard_filename = enabled
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_parameter-list-wrapping = enabled
+ktlint_standard_trailing-comma-on-call-site = enabled
+ktlint_standard_trailing-comma-on-declaration-site = enabled
+
+# Kotlin script files
+[*.kts]
+indent_size = 4
+
+# XML files (Android layouts, manifests)
+[*.{xml,xml.dist}]
+indent_size = 4
+
+# JSON files
+[*.json]
+indent_size = 2
+
+# Gradle files
+[*.gradle.kts]
+indent_size = 4
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Shell scripts
+[*.sh]
+indent_size = 2
+
+# ProGuard/Rules files
+[*.pro]
+indent_size = 4
+
+# Specific file overrides
+[{.gitignore,.dockerignore}]
+indent_size = 2
+
+# C++ files
+[*.cpp]
+indent_size = 2
+
+# Header files
+[*.h]
+indent_size = 2
+
+# Makefile (must use tabs)
+[Makefile]
+indent_style = tab
