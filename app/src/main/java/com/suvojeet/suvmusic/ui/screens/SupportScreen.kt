@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.widget.Toast
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -228,9 +227,9 @@ fun SupportScreen(
                             val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("UPI ID", upiId)
                             clipboardManager.setPrimaryClip(clip)
-                            
+
                             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                                Toast.makeText(context, "UPI ID copied to clipboard", Toast.LENGTH_SHORT).show()
+                                com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("UPI ID copied to clipboard")
                             }
                             
                             try {

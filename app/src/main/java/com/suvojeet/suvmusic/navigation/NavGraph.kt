@@ -544,11 +544,7 @@ fun NavGraph(
                 sessionManager = sessionManager,
                 onLoginSuccess = {
                     // Show success message
-                    android.widget.Toast.makeText(
-                        navController.context,
-                        "Login Successful",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Login Successful")
 
                     // Mark onboarding as completed
                     scope.launch {
@@ -573,7 +569,7 @@ fun NavGraph(
             com.suvojeet.suvmusic.ui.screens.settings.LastFmSettingsScreen(
                 onBack = { navController.popBackStack() },
                 onLoginSuccess = { username ->
-                    android.widget.Toast.makeText(navController.context, "Connected as $username", android.widget.Toast.LENGTH_SHORT).show()
+                    com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Connected as $username")
                     navController.popBackStack()
                 }
             )
