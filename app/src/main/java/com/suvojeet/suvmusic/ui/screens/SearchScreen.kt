@@ -214,7 +214,7 @@ fun SearchScreen(
                                             }
                                             try { voiceSearchLauncher.launch(intent) }
                                             catch (e: Exception) {
-                                                android.widget.Toast.makeText(context, "Voice search not supported", android.widget.Toast.LENGTH_SHORT).show()
+                                                com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Voice search not supported")
                                             }
                                         }) {
                                             Icon(Icons.Default.Mic, "Voice Search")

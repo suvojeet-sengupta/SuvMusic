@@ -1,6 +1,5 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -117,7 +116,7 @@ fun ListenTogetherScreen(
                                 onCopyCode = { code ->
                                     scope.launch {
                                         clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText("Room Code", code)))
-                                        Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
+                                        com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Code copied")
                                     }
                                 },
                                 onSync = { viewModel.requestSync() },

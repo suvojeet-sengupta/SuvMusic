@@ -147,11 +147,11 @@ fun PlaylistScreen(
     // Handle messages from ViewModel
     androidx.compose.runtime.LaunchedEffect(uiState.successMessage, uiState.errorMessage) {
         uiState.successMessage?.let {
-            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(it)
             viewModel.clearMessages()
         }
         uiState.errorMessage?.let {
-            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            com.suvojeet.suvmusic.util.SnackbarUtil.showError(it)
             viewModel.clearMessages()
         }
     }
@@ -259,10 +259,10 @@ fun PlaylistScreen(
                         onToggleSortOrder = viewModel::toggleSortOrder,
                         onPlayAll = { onPlayAll(playlist.songs) },
                         onShufflePlay = { onShufflePlay(playlist.songs) },
-                        onToggleSave = { 
+                        onToggleSave = {
                             viewModel.toggleSaveToLibrary()
                             val message = if (uiState.isSaved) "Removed from Library" else "Saved to Library"
-                            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(message)
                         },
                         onDownload = { viewModel.downloadPlaylist(playlist) },
                         onShare = { sharePlaylist(playlist) },
