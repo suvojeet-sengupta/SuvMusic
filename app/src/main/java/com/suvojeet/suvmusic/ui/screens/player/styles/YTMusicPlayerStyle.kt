@@ -39,7 +39,6 @@ import androidx.media3.ui.PlayerView
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.widget.Toast
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.player.SleepTimerOption
@@ -517,7 +516,7 @@ private fun ErrorOverlay(
                             val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("SuvMusic Error", errorText)
                             clipboardManager.setPrimaryClip(clip)
-                            Toast.makeText(context, "Error copied to clipboard", Toast.LENGTH_SHORT).show()
+                            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Error copied to clipboard")
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),

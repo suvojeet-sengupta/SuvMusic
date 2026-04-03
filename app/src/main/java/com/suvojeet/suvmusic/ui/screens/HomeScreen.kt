@@ -139,11 +139,11 @@ fun HomeScreen(
     // Handle messages from PlaylistManagement
     androidx.compose.runtime.LaunchedEffect(playlistMgmtState.successMessage, playlistMgmtState.errorMessage) {
         playlistMgmtState.successMessage?.let {
-            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(it)
             playlistViewModel.clearMessages()
         }
         playlistMgmtState.errorMessage?.let {
-            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            com.suvojeet.suvmusic.util.SnackbarUtil.showError(it)
             playlistViewModel.clearMessages()
         }
     }
@@ -375,7 +375,7 @@ fun HomeScreen(
                                         onAlbumClick = onAlbumClick,
                                         onStartRadio = onStartRadio,
                                         onSavePlaylist = { playlist ->
-                                            android.widget.Toast.makeText(context, "Saved ${playlist.name} to Library", android.widget.Toast.LENGTH_SHORT).show()
+                                            com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved ${playlist.name} to Library")
                                         },
                                         onSongMoreClick = onSongMoreClickHandler,
                                         modifier = enterModifier

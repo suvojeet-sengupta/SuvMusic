@@ -1,7 +1,6 @@
 package com.suvojeet.suvmusic.ui.components
 
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -164,10 +163,10 @@ fun MediaMenuBottomSheet(
                     icon = Icons.Default.SkipNext,
                     title = "Play next",
                     subtitle = "Add to the top of your queue",
-                    onClick = { 
+                    onClick = {
                         onPlayNext()
-                        Toast.makeText(context, "Playing next: $title", Toast.LENGTH_SHORT).show()
-                        onDismiss() 
+                        com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Playing next: $title")
+                        onDismiss()
                     }
                 )
 
@@ -175,10 +174,10 @@ fun MediaMenuBottomSheet(
                     icon = Icons.Default.AddToQueue,
                     title = "Add to queue",
                     subtitle = "Add to the bottom of your queue",
-                    onClick = { 
+                    onClick = {
                         onAddToQueue()
-                        Toast.makeText(context, "Added to queue: $title", Toast.LENGTH_SHORT).show()
-                        onDismiss() 
+                        com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Added to queue: $title")
+                        onDismiss()
                     }
                 )
 

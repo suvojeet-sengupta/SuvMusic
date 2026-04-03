@@ -153,11 +153,11 @@ fun LyricsScreen(
                         onImportLyrics(content)
                         // Switch to Local provider automatically
                         onProviderChange(com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.LOCAL)
-                        android.widget.Toast.makeText(context, "Lyrics imported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                        com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Lyrics imported successfully")
                     }
                 }
             } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "Failed to import lyrics: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                com.suvojeet.suvmusic.util.SnackbarUtil.showError("Failed to import lyrics: ${e.message}")
             }
         }
     }
@@ -961,11 +961,9 @@ fun LyricsScreen(
                                     )
                                     
                                     if (uri != null) {
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "Lyrics saved to Documents/SuvMusic",
-                                            android.widget.Toast.LENGTH_LONG
-                                        ).show()
+                                        com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess(
+                                            "Lyrics saved to Documents/SuvMusic"
+                                        )
 
                                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                             type = "application/pdf"
