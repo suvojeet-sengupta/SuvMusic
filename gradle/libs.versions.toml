@@ -13,7 +13,7 @@ material3 = "1.5.0-alpha15"
 media3 = "1.9.2"
 mediarouter = "1.8.1"
 newpipeExtractor = "v0.26.0"
-okhttp = "5.0.0-alpha.14"
+okhttp = "5.3.0"
 coil = "3.1.0"
 hilt = "2.59.1"
 navigationCompose = "2.9.0"
@@ -35,6 +35,9 @@ kotlinxSerialization = "1.6.2"
 desugarJdkLibs = "2.0.4"
 ksp = "2.3.0"
 protobufPlugin = "0.9.6"
+coroutines = "1.9.0"
+detekt = "1.23.8"
+ktlint = "1.7.1"
 
 [libraries]
 # Core
@@ -146,6 +149,11 @@ jaudiotagger = { group = "net.jthink", name = "jaudiotagger", version.ref = "jau
 
 # Kotlinx Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
+# Coroutines
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 # Desugaring
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version.ref = "desugarJdkLibs" }
