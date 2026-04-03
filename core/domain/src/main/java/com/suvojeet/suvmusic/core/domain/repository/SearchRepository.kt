@@ -1,7 +1,9 @@
 package com.suvojeet.suvmusic.core.domain.repository
 
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.core.model.SearchResult
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.Playlist
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -10,8 +12,8 @@ import kotlinx.coroutines.flow.Flow
  */
 interface SearchRepository {
     fun searchSongs(query: String): Flow<List<Song>>
-    fun searchAlbums(query: String): Flow<List<SearchResult>>
-    fun searchArtists(query: String): Flow<List<SearchResult>>
-    fun searchPlaylists(query: String): Flow<List<SearchResult>>
+    fun searchAlbums(query: String): Flow<List<Album>>
+    fun searchArtists(query: String): Flow<List<Artist>>
+    fun searchPlaylists(query: String): Flow<List<Playlist>>
     suspend fun getSongDetails(songId: String): Song?
 }

@@ -1,8 +1,10 @@
 package com.suvojeet.suvmusic.core.domain.usecase
 
 import com.suvojeet.suvmusic.core.domain.repository.SearchRepository
-import com.suvojeet.suvmusic.core.model.SearchResult
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.Playlist
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -22,8 +24,8 @@ class SearchSongsUseCase @Inject constructor(
  */
 class SearchAlbumsUseCase @Inject constructor(
     private val searchRepository: SearchRepository
-) : UseCase<String, Flow<List<SearchResult>>> {
-    override suspend operator fun invoke(query: String): Flow<List<SearchResult>> {
+) : UseCase<String, Flow<List<Album>>> {
+    override suspend operator fun invoke(query: String): Flow<List<Album>> {
         return searchRepository.searchAlbums(query)
     }
 }
@@ -33,8 +35,8 @@ class SearchAlbumsUseCase @Inject constructor(
  */
 class SearchArtistsUseCase @Inject constructor(
     private val searchRepository: SearchRepository
-) : UseCase<String, Flow<List<SearchResult>>> {
-    override suspend operator fun invoke(query: String): Flow<List<SearchResult>> {
+) : UseCase<String, Flow<List<Artist>>> {
+    override suspend operator fun invoke(query: String): Flow<List<Artist>> {
         return searchRepository.searchArtists(query)
     }
 }
@@ -44,8 +46,8 @@ class SearchArtistsUseCase @Inject constructor(
  */
 class SearchPlaylistsUseCase @Inject constructor(
     private val searchRepository: SearchRepository
-) : UseCase<String, Flow<List<SearchResult>>> {
-    override suspend operator fun invoke(query: String): Flow<List<SearchResult>> {
+) : UseCase<String, Flow<List<Playlist>>> {
+    override suspend operator fun invoke(query: String): Flow<List<Playlist>> {
         return searchRepository.searchPlaylists(query)
     }
 }
