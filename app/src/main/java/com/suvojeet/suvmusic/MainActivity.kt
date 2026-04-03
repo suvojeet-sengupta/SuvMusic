@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
         }
         
         enableEdgeToEdge()
+        com.suvojeet.suvmusic.util.SnackbarUtil.setRootView(findViewById(android.R.id.content))
         enableMaxRefreshRate()
         
         lifecycleScope.launch {

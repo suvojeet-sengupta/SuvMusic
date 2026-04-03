@@ -222,6 +222,9 @@ dependencies {
     // Gson
     implementation(libs.gson)
 
+    // Material
+    implementation(libs.google.material)
+
     // Jsoup (HTML Parser)
     implementation(libs.jsoup)
     
