@@ -70,7 +70,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.widget.Toast
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.SessionManager
@@ -553,7 +552,7 @@ fun BoxScope.OverlaysContent(
             onBack = { if (currentOverlay is PlayerOverlay.Queue) onOverlayChange(PlayerOverlay.None) }, onSongClick = actions.onPlayFromQueue, onPlayPause = actions.onPlayPause,
             onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
             onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
-            onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show() } },
+            onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved") } },
             onAddToPlaylistClick = { playlistViewModel.showAddToPlaylistSheet(it) },
             onPlayNext = { playerViewModel.playNext(it) },
             onAddToQueue = { playerViewModel.addToQueue(it) },
@@ -650,7 +649,7 @@ fun BoxScope.OverlaysContent(
                 if (ringtoneViewModel.ringtoneHelper.hasSettingsPermission(context)) {
                     ringtoneViewModel.showTrimmer(menuSong)
                 } else {
-                    Toast.makeText(context, "Please allow 'Modify System Settings' permission", Toast.LENGTH_LONG).show()
+                    com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Please allow 'Modify System Settings' permission")
                     ringtoneViewModel.ringtoneHelper.requestSettingsPermission(context)
                 }
             },

@@ -8,7 +8,6 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 import javax.inject.Inject
@@ -38,7 +37,7 @@ class UpdateDownloader @Inject constructor(
         }
 
         downloadId = downloadManager.enqueue(request)
-        Toast.makeText(context, "Download started...", Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(context, "Download started...", android.widget.Toast.LENGTH_SHORT).show()
 
         // Register receiver for when download is complete
         context.registerReceiver(object : BroadcastReceiver() {
@@ -70,7 +69,7 @@ class UpdateDownloader @Inject constructor(
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(context, "Error starting installation: ${e.message}", Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(context, "Error starting installation: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
         }
     }
 }

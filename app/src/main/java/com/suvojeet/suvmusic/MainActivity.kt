@@ -396,11 +396,11 @@ fun SuvMusicApp(
     // Handle messages from PlaylistManagement
     LaunchedEffect(playlistManagementUiState.successMessage, playlistManagementUiState.errorMessage) {
         playlistManagementUiState.successMessage?.let {
-            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(it)
             playlistManagementViewModel.clearMessages()
         }
         playlistManagementUiState.errorMessage?.let {
-            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            com.suvojeet.suvmusic.util.SnackbarUtil.showError(it)
             playlistManagementViewModel.clearMessages()
         }
     }
@@ -459,7 +459,7 @@ fun SuvMusicApp(
                     playerViewModel.playFromLocalUri(context, event.uri)
                 }
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.ShowToast -> {
-                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                    com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(event.message)
                 }
             }
         }
