@@ -246,6 +246,7 @@ fun ModernQueueView(
                             isSelected = selectedQueueIndices.contains(currentIndex),
                             isSelectionMode = isSelectionMode,
                             onClick = { if (isSelectionMode) onToggleSelection(currentIndex) else onPlayPause() },
+                            onLongPressEnterSelection = { onToggleSelection(currentIndex) },
                             onMoreClick = { onMoreClick(currentSong) },
                             onDragMove = { from, to -> onMoveItem(from, to) },
                             itemIndex = currentIndex,
@@ -268,6 +269,7 @@ fun ModernQueueView(
                             isSelected = selectedQueueIndices.contains(actualIndex),
                             isSelectionMode = isSelectionMode,
                             onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
+                            onLongPressEnterSelection = { onToggleSelection(actualIndex) },
                             onMoreClick = { onMoreClick(song) },
                             onDragMove = { from, to -> onMoveItem(from, to) },
                             itemIndex = actualIndex,
@@ -391,7 +393,7 @@ private fun SectionDivider(title: String, color: Color) {
 @Composable
 private fun LazyItemScope.ModernQueueListItem(
     song: Song, isCurrent: Boolean, isPlaying: Boolean, isSelected: Boolean, isSelectionMode: Boolean,
-    onClick: () -> Unit, onMoreClick: () -> Unit, 
+    onClick: () -> Unit, onLongPressEnterSelection: () -> Unit, onMoreClick: () -> Unit,
     onDragMove: (Int, Int) -> Unit, itemIndex: Int,
     dominantColors: DominantColors, isDarkTheme: Boolean, contentColor: Color, secondaryContentColor: Color
 ) {
@@ -437,10 +439,9 @@ private fun LazyItemScope.ModernQueueListItem(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
-                    if (!isCurrent) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onClick() // Toggle selection
-                    }
+                    // Long press ALWAYS enters selection mode without playing the song
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongPressEnterSelection()
                 }
             )
             .padding(8.dp),
@@ -483,26 +484,24 @@ private fun LazyItemScope.ModernQueueListItem(
         
         // Drag Handle (Shown only in selection mode or by default on the right if NOT current)
         if (!isCurrent) {
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = "Reorder",
-                tint = secondaryContentColor.copy(alpha = 0.4f),
+            // Improved handle visibility with better contrast for both light and dark modes
+            Surface(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .size(24.dp)
+                    .padding(horizontal = 4.dp)
+                    .size(32.dp, 24.dp)
                     .pointerInput(Unit) {
                         detectDragGestures(
-                            onDragStart = { 
+                            onDragStart = {
                                 isDragging = true
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
-                            onDragEnd = { 
+                            onDragEnd = {
                                 isDragging = false
-                                offsetY = 0f 
+                                offsetY = 0f
                             },
-                            onDragCancel = { 
+                            onDragCancel = {
                                 isDragging = false
-                                offsetY = 0f 
+                                offsetY = 0f
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
@@ -519,8 +518,19 @@ private fun LazyItemScope.ModernQueueListItem(
                                 }
                             }
                         )
-                    }
-            )
+                    },
+                shape = RoundedCornerShape(6.dp),
+                color = secondaryContentColor.copy(alpha = if (isDarkTheme) 0.15f else 0.25f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DragHandle,
+                    contentDescription = "Reorder",
+                    tint = secondaryContentColor.copy(alpha = if (isDarkTheme) 0.6f else 0.7f),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(20.dp)
+                )
+            }
         }
         
         if (!isSelectionMode) {
