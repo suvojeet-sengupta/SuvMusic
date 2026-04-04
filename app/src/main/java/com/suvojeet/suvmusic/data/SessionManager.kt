@@ -142,6 +142,7 @@ class SessionManager @Inject constructor(
         private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
+        private val PLAYER_STYLE_KEY = stringPreferencesKey("player_style")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val SWIPE_DOWN_TO_DISMISS_ENABLED_KEY = booleanPreferencesKey("swipe_down_to_dismiss_enabled")
         private val PLAYER_ANIMATED_BACKGROUND_KEY = booleanPreferencesKey("player_animated_background")
@@ -167,6 +168,7 @@ class SessionManager @Inject constructor(
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
         private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
         private val IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY = booleanPreferencesKey("ignore_audio_focus_during_calls")
+        private val INCOGNITO_MODE_KEY = booleanPreferencesKey("incognito_mode_enabled")
         private val AUTORESUME_AFTER_CALL_KEY = booleanPreferencesKey("autoresume_after_call")
         
         private val BLUETOOTH_AUTOPLAY_ENABLED_KEY = booleanPreferencesKey("bluetooth_autoplay_enabled")
@@ -229,6 +231,9 @@ class SessionManager @Inject constructor(
     val homeSectionsVisibilityFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
         preferences[HOME_SECTIONS_VISIBILITY_KEY] ?: DEFAULT_HOME_SECTIONS
     }
+
+    suspend fun getHomeSectionsVisibility(): Set<String> =
+        context.dataStore.data.first()[HOME_SECTIONS_VISIBILITY_KEY] ?: DEFAULT_HOME_SECTIONS
 
     suspend fun setHomeSectionsVisibility(sections: Set<String>) {
         val finalSections = if (sections.isEmpty()) DEFAULT_HOME_SECTIONS else sections
@@ -745,6 +750,25 @@ class SessionManager @Inject constructor(
         }
     }
 
+    suspend fun getPlayerStyle(): com.suvojeet.suvmusic.data.model.PlayerStyle {
+        val styleName = context.dataStore.data.first()[PLAYER_STYLE_KEY]
+        return styleName?.let {
+            try { com.suvojeet.suvmusic.data.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC }
+        } ?: com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC
+    }
+
+    val playerStyleFlow: Flow<com.suvojeet.suvmusic.data.model.PlayerStyle> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_STYLE_KEY]?.let {
+            try { com.suvojeet.suvmusic.data.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC }
+        } ?: com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC
+    }
+
+    suspend fun setPlayerStyle(style: com.suvojeet.suvmusic.data.model.PlayerStyle) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYER_STYLE_KEY] = style.name
+        }
+    }
+
     suspend fun getUpdateChannel(): UpdateChannel {
         val channelName = context.dataStore.data.first()[UPDATE_CHANNEL_KEY]
         return channelName?.let {
@@ -1109,6 +1133,21 @@ class SessionManager @Inject constructor(
         }
     }
 
+    // --- Incognito Mode ---
+
+    suspend fun isIncognitoModeEnabled(): Boolean =
+        context.dataStore.data.first()[INCOGNITO_MODE_KEY] ?: false
+
+    val incognitoModeEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[INCOGNITO_MODE_KEY] ?: false
+    }
+
+    suspend fun setIncognitoModeEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[INCOGNITO_MODE_KEY] = enabled
+        }
+    }
+
     suspend fun isIgnoreAudioFocusDuringCallsEnabled(): Boolean =
         context.dataStore.data.first()[IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY] ?: false
 
@@ -1305,6 +1344,9 @@ class SessionManager @Inject constructor(
     val iosLiquidGlassEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IOS_LIQUID_GLASS_ENABLED_KEY] ?: false
     }
+
+    suspend fun isIosLiquidGlassEnabled(): Boolean =
+        context.dataStore.data.first()[IOS_LIQUID_GLASS_ENABLED_KEY] ?: false
 
     suspend fun setIosLiquidGlassEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->

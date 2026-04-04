@@ -3,13 +3,16 @@ package com.suvojeet.suvmusic.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -23,6 +26,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,6 +42,15 @@ import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
 import com.suvojeet.suvmusic.util.dpadFocusable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.ui.platform.LocalDensity
 
 @Composable
 fun AlbumScreen(
@@ -52,6 +65,7 @@ fun AlbumScreen(
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
     val album = uiState.album
+    val haptic = LocalHapticFeedback.current
 
     // Check if we are in dark theme based on background luminance
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -192,11 +206,28 @@ fun AlbumScreen(
                     }
                     
                     // Song List
-                    itemsIndexed(album.songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
+                    itemsIndexed(album.songs, key = { _, song -> song.id }) { index, song ->
+                        val isSelected = uiState.selectedSongIds.contains(song.id)
                         AlbumSongItem(
                             song = song,
                             trackNumber = index + 1,
-                            onClick = { onSongClick(album.songs, index) },
+                            itemIndex = index,
+                            totalSongs = album.songs.size,
+                            isSelected = isSelected,
+                            isSelectionMode = uiState.isSelectionMode,
+                            onReorder = { from, to -> viewModel.reorderSong(from, to) },
+                            onClick = { 
+                                if (uiState.isSelectionMode) {
+                                    viewModel.toggleSongSelection(song)
+                                } else {
+                                    onSongClick(album.songs, index) 
+                                }
+                            },
+                            onLongClick = {
+                                if (!uiState.isSelectionMode) {
+                                    viewModel.toggleSongSelection(song)
+                                }
+                            },
                             onMoreClick = { 
                                 selectedSong = song
                                 showSongMenu = true 
@@ -213,13 +244,30 @@ fun AlbumScreen(
                     enter = androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
                     exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { -it })
                 ) {
-                    AlbumTopBar(
-                        title = album.title,
-                        isScrolled = isScrolled,
-                        onBackClick = onBackClick,
-                        isDarkTheme = isDarkTheme,
-                        contentColor = contentColor
-                    )
+                    if (uiState.isSelectionMode) {
+                        SelectionTopBar(
+                            selectedCount = uiState.selectedSongIds.size,
+                            onCloseClick = { viewModel.clearSelection() },
+                            onDeleteClick = { /* Not applicable for album */ },
+                            onPlayNextClick = { viewModel.playNextSelectedSongs() },
+                            onAddToQueueClick = { viewModel.addToQueueSelectedSongs() },
+                            onAddToPlaylistClick = { 
+                                val selectedSongs = album.songs.filter { it.id in uiState.selectedSongIds }
+                                playlistViewModel.showAddToPlaylistSheet(selectedSongs)
+                            },
+                            onMoveToTopClick = { /* Not applicable for album */ },
+                            contentColor = contentColor,
+                            isDarkTheme = isDarkTheme
+                        )
+                    } else {
+                        AlbumTopBar(
+                            title = album.title,
+                            isScrolled = isScrolled,
+                            onBackClick = onBackClick,
+                            isDarkTheme = isDarkTheme,
+                            contentColor = contentColor
+                        )
+                    }
                 }
                 
                 // Media Menu Bottom Sheet
@@ -478,120 +526,227 @@ private fun AlbumHeader(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Actions Row (Download, Save, Play, Share, More)
+        // YT Music inspired Play/Shuffle Buttons
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Play Button
+            Button(
+                onClick = onPlayAll,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = PillShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkTheme) Color.White else Color.Black,
+                    contentColor = if (isDarkTheme) Color.Black else Color.White
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Play",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+
+            // Shuffle Button
+            Button(
+                onClick = onShufflePlay,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = PillShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                    contentColor = contentColor
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Shuffle,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Shuffle",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Actions Row (Download, Save, Share, More)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Download Button
-            BounceButton(
+            ActionButton(
+                icon = Icons.Default.Download,
+                label = "Download",
                 onClick = onDownload,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Download,
-                    contentDescription = "Download Album",
-                    tint = contentColor
-                )
-            }
+                contentColor = contentColor,
+                isDarkTheme = isDarkTheme
+            )
 
             // Save Button (Heart)
-            BounceButton(
+            ActionButton(
+                icon = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                label = "Library",
                 onClick = onToggleSave,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
-                    tint = if (isSaved) MaterialTheme.colorScheme.primary else contentColor
-                )
-            }
-            
-            // Play Button (Large Central)
-            BounceButton(
-                onClick = onPlayAll,
-                size = 72.dp,
-                shape = CircleShape,
-                modifier = Modifier
-                    .shadow(elevation = 12.dp, shape = CircleShape, spotColor = MaterialTheme.colorScheme.primary)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
+                contentColor = if (isSaved) MaterialTheme.colorScheme.primary else contentColor,
+                isDarkTheme = isDarkTheme
+            )
             
             // Share Button
-            BounceButton(
+            ActionButton(
+                icon = Icons.Default.Share,
+                label = "Share",
                 onClick = onShare,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    tint = contentColor
-                )
-            }
+                contentColor = contentColor,
+                isDarkTheme = isDarkTheme
+            )
             
             // More Button
-            BounceButton(
+            ActionButton(
+                icon = Icons.Default.MoreVert,
+                label = "More",
                 onClick = onMoreClick,
-                size = 48.dp,
-                shape = SquircleShape,
-                modifier = Modifier.background(
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                    shape = SquircleShape
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More",
-                    tint = contentColor
-                )
-            }
+                contentColor = contentColor,
+                isDarkTheme = isDarkTheme
+            )
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun AlbumSongItem(
+private fun ActionButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    contentColor: Color,
+    isDarkTheme: Boolean
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun LazyItemScope.AlbumSongItem(
     song: Song,
     trackNumber: Int,
+    itemIndex: Int = 0,
+    totalSongs: Int = 0,
+    isSelected: Boolean = false,
+    isSelectionMode: Boolean = false,
+    onReorder: (Int, Int) -> Unit = { _, _ -> },
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onMoreClick: () -> Unit,
     contentColor: Color,
     secondaryContentColor: Color
 ) {
+    var offsetY by remember { mutableStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isDragging) 1.05f else 1f,
+        label = "DragScale"
+    )
+    
+    val elevation by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isDragging) 8.dp else 0.dp,
+        label = "DragElevation"
+    )
+    
+    // Remember updated values for indices to prevent stale state capture in the drag lambda
+    val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
+    val onReorderState by androidx.compose.runtime.rememberUpdatedState(onReorder)
+
+    val backgroundColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                      else Color.Transparent,
+        label = "ItemSelectionBackground"
+    )
+
+    @OptIn(ExperimentalFoundationApi::class)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .dpadFocusable(onClick = onClick)
+            .animateItem(
+                placementSpec = if (isDragging) null else androidx.compose.animation.core.spring(
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                )
+            )
+            .graphicsLayer {
+                this.translationY = offsetY
+                this.scaleX = scale
+                this.scaleY = scale
+                this.shadowElevation = with(density) { elevation.toPx() }
+                this.clip = true
+                this.shape = SquircleShape
+            }
+            .background(backgroundColor)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Selection Indicator
+        if (isSelectionMode) {
+            androidx.compose.material3.Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
+
         // Song Thumbnail
         Box(
             modifier = Modifier
@@ -633,13 +788,58 @@ private fun AlbumSongItem(
             )
         }
         
-        // More Options
-        IconButton(onClick = onMoreClick) {
+        // Actions Row
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Drag Handle (Always shown for immediate reordering)
             Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More options",
-                tint = secondaryContentColor.copy(alpha = 0.7f)
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Reorder",
+                tint = secondaryContentColor.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .size(36.dp)
+                    .padding(8.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { 
+                                isDragging = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress) 
+                            },
+                            onDragEnd = { 
+                                isDragging = false
+                                offsetY = 0f 
+                            },
+                            onDragCancel = { 
+                                isDragging = false
+                                offsetY = 0f 
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                offsetY += dragAmount.y
+                                val threshold = with(density) { 60.dp.toPx() }
+                                if (offsetY > threshold && currentIndexState < totalSongs - 1) {
+                                    onReorderState(currentIndexState, currentIndexState + 1)
+                                    offsetY -= threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else if (offsetY < -threshold && currentIndexState > 0) {
+                                    onReorderState(currentIndexState, currentIndexState - 1)
+                                    offsetY += threshold
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            }
+                        )
+                    }
             )
+
+            // More Options (Shown when NOT in selection mode)
+            if (!isSelectionMode) {
+                IconButton(onClick = onMoreClick) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = secondaryContentColor.copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
     }
 }

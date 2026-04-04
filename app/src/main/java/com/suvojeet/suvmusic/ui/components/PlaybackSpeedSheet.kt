@@ -1,42 +1,26 @@
 package com.suvojeet.suvmusic.ui.components
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.suvojeet.suvmusic.ui.theme.SquircleShape
 
-import com.suvojeet.suvmusic.ui.components.DominantColors
-import androidx.compose.material3.SliderDefaults
-
-/**
- * Bottom sheet for adjusting Playback Speed and Pitch.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaybackSpeedSheet(
@@ -45,17 +29,24 @@ fun PlaybackSpeedSheet(
     currentPitch: Float,
     onDismiss: () -> Unit,
     onApply: (speed: Float, pitch: Float) -> Unit,
-    dominantColors: DominantColors? = null
+    dominantColors: DominantColors? = null,
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
-    // Local state for smooth slider interaction
     var sliderSpeed by remember(currentSpeed) { mutableFloatStateOf(currentSpeed) }
     var sliderPitch by remember(currentPitch) { mutableFloatStateOf(currentPitch) }
     
-    // Determine colors
-    val backgroundColor = dominantColors?.secondary ?: MaterialTheme.colorScheme.surface
-    val contentColor = dominantColors?.onBackground ?: MaterialTheme.colorScheme.onSurface
+    val backgroundColor = if (isDarkTheme) {
+        dominantColors?.primary?.copy(alpha = 0.98f) ?: MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    val contentColor = if (isDarkTheme) {
+        dominantColors?.onBackground ?: Color.White
+    } else {
+        Color.Black
+    }
     val accentColor = dominantColors?.accent ?: MaterialTheme.colorScheme.primary
 
     if (isVisible) {
@@ -63,148 +54,152 @@ fun PlaybackSpeedSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
             containerColor = backgroundColor,
-            contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0) }
+            contentWindowInsets = { WindowInsets(0) },
+            dragHandle = null,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(bottom = 32.dp)
             ) {
-                // Header
+                // Modern Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                        .padding(top = 24.dp, bottom = 16.dp, start = 24.dp, end = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Speed,
-                        contentDescription = "Playback Controls",
-                        tint = accentColor,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    Text(
-                        text = "Speed & Tempo",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = contentColor,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Playback Controls",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                            color = contentColor
+                        )
+                        Text(
+                            text = "Adjust speed and pitch",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = contentColor.copy(alpha = 0.5f)
+                        )
+                    }
                     
                     // Reset Button
-                    IconButton(
+                    FilledTonalButton(
                         onClick = {
                             sliderSpeed = 1.0f
                             sliderPitch = 1.0f
                             onApply(1.0f, 1.0f)
-                        }
+                        },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = contentColor.copy(alpha = 0.05f),
+                            contentColor = contentColor
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp),
+                        shape = SquircleShape
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.RestartAlt,
-                            contentDescription = "Reset",
-                            tint = contentColor.copy(alpha = 0.6f)
-                        )
+                        Icon(Icons.Default.RestartAlt, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Reset", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 }
                 
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = contentColor.copy(alpha = 0.1f))
-                
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 // Speed Control
-                Column(
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Speed",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = contentColor,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = String.format("%.2fx", sliderSpeed),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = accentColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    
-                    Slider(
-                        value = sliderSpeed,
-                        onValueChange = { 
-                            sliderSpeed = it 
-                            onApply(it, sliderPitch)
-                        },
-                        valueRange = 0.25f..3.0f,
-                        steps = 0, // Continuous
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        colors = SliderDefaults.colors(
-                            thumbColor = accentColor,
-                            activeTrackColor = accentColor,
-                            inactiveTrackColor = contentColor.copy(alpha = 0.2f)
-                        )
-                    )
-                }
+                ModernSliderSection(
+                    icon = Icons.Default.Speed,
+                    label = "Speed",
+                    value = sliderSpeed,
+                    valueDisplay = String.format("%.2fx", sliderSpeed),
+                    valueRange = 0.25f..3.0f,
+                    onValueChange = { 
+                        sliderSpeed = it 
+                        onApply(it, sliderPitch)
+                    },
+                    accentColor = accentColor,
+                    contentColor = contentColor
+                )
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // Pitch Control
-                Column(
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                             imageVector = Icons.Default.GraphicEq,
-                             contentDescription = null,
-                             modifier = Modifier.size(18.dp),
-                             tint = contentColor.copy(alpha = 0.6f)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Text(
-                            text = "Pitch",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = contentColor,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = String.format("%.2fx", sliderPitch),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = accentColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    
-                    Slider(
-                        value = sliderPitch,
-                        onValueChange = { 
-                            sliderPitch = it
-                            onApply(sliderSpeed, it)
-                        },
-                        valueRange = 0.5f..2.0f,
-                        steps = 0,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        colors = SliderDefaults.colors(
-                            thumbColor = accentColor,
-                            activeTrackColor = accentColor,
-                            inactiveTrackColor = contentColor.copy(alpha = 0.2f)
-                        )
-                    )
-                }
+                ModernSliderSection(
+                    icon = Icons.Default.GraphicEq,
+                    label = "Pitch",
+                    value = sliderPitch,
+                    valueDisplay = String.format("%.2fx", sliderPitch),
+                    valueRange = 0.5f..2.0f,
+                    onValueChange = { 
+                        sliderPitch = it
+                        onApply(sliderSpeed, it)
+                    },
+                    accentColor = accentColor,
+                    contentColor = contentColor
+                )
                 
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun ModernSliderSection(
+    icon: ImageVector,
+    label: String,
+    value: Float,
+    valueDisplay: String,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    accentColor: Color,
+    contentColor: Color
+) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(SquircleShape)
+                    .background(accentColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, modifier = Modifier.size(18.dp), tint = accentColor)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                color = contentColor,
+                modifier = Modifier.weight(1f)
+            )
+            Surface(
+                color = accentColor.copy(alpha = 0.1f),
+                shape = CircleShape
+            ) {
+                Text(
+                    text = valueDisplay,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black),
+                    color = accentColor,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = accentColor,
+                activeTrackColor = accentColor,
+                inactiveTrackColor = contentColor.copy(alpha = 0.1f)
+            )
+        )
     }
 }

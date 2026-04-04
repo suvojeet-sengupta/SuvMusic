@@ -77,10 +77,17 @@ import com.suvojeet.suvmusic.data.model.AppTheme
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
 import com.suvojeet.suvmusic.data.model.ThemeMode
+import com.suvojeet.suvmusic.data.model.PlayerStyle
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlinx.coroutines.launch
+
+val PlayerStyle.label: String
+    get() = when (this) {
+        PlayerStyle.YT_MUSIC -> "YT Music (New)"
+        PlayerStyle.CLASSIC -> "Classic (SuvMusic)"
+    }
 
 /**
  * Appearance settings screen with theme mode and dynamic color options.
@@ -97,6 +104,9 @@ fun AppearanceSettingsScreen(
     
     var showAppThemeSheet by remember { mutableStateOf(false) }
     val appThemeSheetState = rememberModalBottomSheetState()
+
+    var showPlayerStyleSheet by remember { mutableStateOf(false) }
+    val playerStyleSheetState = rememberModalBottomSheetState()
     
     var showLyricsPositionSheet by remember { mutableStateOf(false) }
     val lyricsPositionSheetState = rememberModalBottomSheetState()
@@ -238,6 +248,15 @@ fun AppearanceSettingsScreen(
                         checked = uiState.rotatingVinylAnimationEnabled,
                         onCheckedChange = { viewModel.setRotatingVinylAnimationEnabled(it) }
                     )
+
+                    HorizontalDivider()
+
+                    AppearanceNavigationItem(
+                        icon = Icons.Default.Palette,
+                        title = "Player Style",
+                        subtitle = uiState.playerStyle.label,
+                        onClick = { showPlayerStyleSheet = true }
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -361,6 +380,52 @@ fun AppearanceSettingsScreen(
                                     scope.launch {
                                         appThemeSheetState.hide()
                                         showAppThemeSheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    // Player Style Bottom Sheet
+    if (showPlayerStyleSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showPlayerStyleSheet = false },
+            sheetState = playerStyleSheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Player Style",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
+                
+                PlayerStyle.entries.forEach { style ->
+                    ListItem(
+                        headlineContent = { Text(style.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.playerStyle == style,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setPlayerStyle(style)
+                                    scope.launch {
+                                        playerStyleSheetState.hide()
+                                        showPlayerStyleSheet = false
                                     }
                                 },
                                 shape = SquircleShape

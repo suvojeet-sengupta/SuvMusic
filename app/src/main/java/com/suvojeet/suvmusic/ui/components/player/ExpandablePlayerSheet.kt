@@ -101,7 +101,8 @@ fun ExpandablePlayerSheet(
     modifier: Modifier = Modifier,
     userAlpha: Float = 0f,
     swipeDownToDismissEnabled: Boolean = true,
-    style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
+    style: MiniPlayerStyle = MiniPlayerStyle.YT_MUSIC,
+    artworkShape: String = "ROUNDED_SQUARE",
     expandedContent: @Composable (onCollapse: () -> Unit) -> Unit
 ) {
     val song = playerState.currentSong ?: return
@@ -174,6 +175,7 @@ fun ExpandablePlayerSheet(
                 onClose = onClose,
                 userAlpha = userAlpha,
                 style = style,
+                artworkShape = artworkShape,
                 onTap = {
                     coroutineScope.launch {
                         expansion.animateTo(
@@ -335,7 +337,8 @@ private fun CollapsedMiniPlayer(
     onClose: () -> Unit,
     onTap: () -> Unit,
     userAlpha: Float = 0f,
-    style: MiniPlayerStyle = MiniPlayerStyle.STANDARD,
+    style: MiniPlayerStyle = MiniPlayerStyle.YT_MUSIC,
+    artworkShape: String = "ROUNDED_SQUARE",
     modifier: Modifier = Modifier
 ) {
     when (style) {
@@ -350,6 +353,7 @@ private fun CollapsedMiniPlayer(
                 onClose = onClose,
                 onTap = onTap,
                 userAlpha = userAlpha,
+                artworkShape = artworkShape,
                 modifier = modifier
             )
         }
@@ -364,6 +368,7 @@ private fun CollapsedMiniPlayer(
                 onClose = onClose,
                 onTap = onTap,
                 userAlpha = userAlpha,
+                artworkShape = artworkShape,
                 modifier = modifier
             )
         }
@@ -378,6 +383,7 @@ private fun CollapsedMiniPlayer(
                 onClose = onClose,
                 onTap = onTap,
                 userAlpha = userAlpha,
+                artworkShape = artworkShape,
                 modifier = modifier
             )
         }

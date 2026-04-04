@@ -82,7 +82,7 @@ fun TabletHomeScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    onRecentsClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {},
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     currentSong: Song? = null,
@@ -145,10 +145,10 @@ fun TabletHomeScreen(
                     )
 
                     Row {
-                        IconButton(onClick = onRecentsClick) {
+                        IconButton(onClick = onHistoryClick) {
                             Icon(
                                 Icons.Default.History,
-                                contentDescription = "Recent",
+                                contentDescription = "History",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
