@@ -261,14 +261,14 @@ class YouTubeRepository @Inject constructor(
         return searchService.getSearchSuggestions(query)
     }
 
-    suspend fun getStreamUrl(videoId: String): String? {
+    suspend fun getStreamUrl(videoId: String, forceLow: Boolean = false): String? {
         if (!networkMonitor.isCurrentlyConnected()) return null
-        return streamingService.getStreamUrl(videoId)
+        return streamingService.getStreamUrl(videoId, forceLow)
     }
 
-    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null): String? = streamingService.getVideoStreamUrl(videoId, quality)
+    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): String? = streamingService.getVideoStreamUrl(videoId, quality, forceLow)
 
-    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null) = streamingService.getVideoStreamResult(videoId, quality)
+    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false) = streamingService.getVideoStreamResult(videoId, quality, forceLow)
 
     suspend fun getStreamUrlForDownload(videoId: String): Pair<String, String>? = streamingService.getStreamUrlForDownload(videoId)
 
@@ -282,14 +282,30 @@ class YouTubeRepository @Inject constructor(
     suspend fun getSongDetails(videoId: String): Song? = streamingService.getSongDetails(videoId)
 
     suspend fun getRelatedSongs(videoId: String): List<Song> {
-        // Try internal API first (official Up Next/Radio)
-        val internalResults = searchService.getRelatedSongs(videoId)
-        if (internalResults.isNotEmpty()) {
-            return internalResults
-        }
+        // Fetch from multiple sources to increase the number of related songs
+        val internalResults = try { searchService.getRelatedSongs(videoId) } catch (e: Exception) { emptyList() }
+        val streamingResults = try { streamingService.getRelatedItems(videoId) } catch (e: Exception) { emptyList() }
         
-        // Fallback to extractor related items (NewPipe)
-        return streamingService.getRelatedItems(videoId)
+        // Combine all results
+        val results = internalResults + streamingResults
+        
+        // Comprehensive deduplication: by ID and by Title/Artist fingerprint
+        val seenIds = mutableSetOf<String>()
+        val seenFingerprints = mutableSetOf<String>()
+        val fingerprintRegex = Regex("[^a-z0-9]")
+        
+        return results.filter { song ->
+            val id = song.id
+            val title = song.title.lowercase().replace(fingerprintRegex, "")
+            val artist = song.artist.lowercase().replace(fingerprintRegex, "")
+            val fingerprint = "$title|$artist"
+            
+            val isNewId = seenIds.add(id)
+            val isNewFingerprint = seenFingerprints.add(fingerprint)
+            
+            // Only keep if both ID and Title/Artist are new
+            isNewId && isNewFingerprint
+        }
     }
 
     /**
@@ -940,8 +956,8 @@ class YouTubeRepository @Inject constructor(
             var pageCount = 0
             // Reduce pagination for auto-mix playlists to prevent AA callback timeouts
             val isAutoMix = playlistId.startsWith("RD") || playlistId.startsWith("RTM")
-            val maxPages = if (isAutoMix) 2 else 100
-            while (continuationToken != null && pageCount < maxPages) { // Auto-mixes: 2 pages max (~100 songs)
+            val maxPages = if (isAutoMix) 5 else 100
+            while (continuationToken != null && pageCount < maxPages) { // Auto-mixes: 5 pages (~250 songs)
                 val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parseSongsFromInternalJson(continuationResponse)
@@ -2977,11 +2993,10 @@ class YouTubeRepository @Inject constructor(
                 val subtitle = extractFullSubtitle(responsiveItem)
                 if (browseId.startsWith("VL") || browseId.startsWith("PL") || browseId.startsWith("RD") || browseId == "LM") {
                     // Playlist
-                    val cleanId = if (browseId.startsWith("VL")) browseId.removePrefix("VL") else browseId
                     val playlist = PlaylistDisplayItem(
-                        id = cleanId,
+                        id = browseId,
                         name = title,
-                        url = "https://music.youtube.com/playlist?list=$cleanId",
+                        url = "https://music.youtube.com/playlist?list=$browseId",
                         uploaderName = artist, // Artist field captures second row well
                         thumbnailUrl = thumbnail,
                         songCount = extractSongCount(subtitle)
@@ -3032,11 +3047,10 @@ class YouTubeRepository @Inject constructor(
                 if (browseId.startsWith("VL") || browseId.startsWith("PL") || 
                     browseId.startsWith("RD") || browseId.startsWith("RTM") || browseId == "LM") {
                     // Playlist
-                    val cleanId = if (browseId.startsWith("VL")) browseId.removePrefix("VL") else browseId
                     val playlist = PlaylistDisplayItem(
-                        id = cleanId,
+                        id = browseId,
                         name = title,
-                        url = "https://music.youtube.com/playlist?list=$cleanId",
+                        url = "https://music.youtube.com/playlist?list=$browseId",
                         uploaderName = subtitle,
                         thumbnailUrl = thumbnail,
                          songCount = extractSongCount(subtitle)
@@ -3181,6 +3195,35 @@ class YouTubeRepository @Inject constructor(
             e.printStackTrace()
             null
         }
+    }
+
+    /**
+     * Get a broad collection of top songs for an artist.
+     * Merges songs from artist profile and a targeted search.
+     */
+    suspend fun getArtistTopSongs(artistName: String, artistId: String): List<Song> = withContext(Dispatchers.IO) {
+        val allSongs = mutableListOf<Song>()
+        
+        try {
+            // 1. Get songs from artist profile
+            getArtist(artistId)?.let { artist ->
+                allSongs.addAll(artist.songs)
+                allSongs.addAll(artist.videos)
+            }
+            
+            // 2. Supplement with targeted search
+            val searchResults = search(artistName, FILTER_SONGS)
+            // Filter search results to ensure they belong to the artist
+            val relevantSearchResults = searchResults.filter { song ->
+                song.artist.contains(artistName, ignoreCase = true)
+            }
+            allSongs.addAll(relevantSearchResults)
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        allSongs.distinctBy { it.id }
     }
 
     /**

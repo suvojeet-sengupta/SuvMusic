@@ -133,6 +133,37 @@ class PlayerViewModel @Inject constructor(
     private val _commentPostSuccess = MutableStateFlow<Boolean?>(null)
     val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
 
+    private val _relatedSongsState = MutableStateFlow<List<Song>>(emptyList())
+    val relatedSongsState: StateFlow<List<Song>> = _relatedSongsState.asStateFlow()
+
+    private val _isFetchingRelated = MutableStateFlow(false)
+    val isFetchingRelated: StateFlow<Boolean> = _isFetchingRelated.asStateFlow()
+
+    private val _selectedRelatedIndices = MutableStateFlow<Set<Int>>(emptySet())
+    val selectedRelatedIndices: StateFlow<Set<Int>> = _selectedRelatedIndices.asStateFlow()
+
+    // UI Style Settings (Exposed as StateFlow to prevent flicker in PlayerScreen)
+    val artworkShape: StateFlow<String> = sessionManager.artworkShapeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = "ROUNDED_SQUARE"
+        )
+    
+    val artworkSize: StateFlow<String> = sessionManager.artworkSizeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = "LARGE"
+        )
+    
+    val seekbarStyle: StateFlow<String> = sessionManager.seekbarStyleFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = "WAVE_LINE"
+        )
+
     val sponsorSegments: StateFlow<List<SponsorSegment>> = sponsorBlockRepository.currentSegments
     
     fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
@@ -326,15 +357,18 @@ class PlayerViewModel @Inject constructor(
                         // Clear old data synchronously to prevent stale display
                         _lyricsState.value = null
                         _commentsState.value = null
+                        _relatedSongsState.value = emptyList()
                         
                         fetchLyrics(song.id)
                         fetchComments(song.id)
+                        fetchRelatedSongs(song.id)
                         fetchArtistCredits(song.artist, song.source)
                         
                         updateDiscordPresence()
                     } else {
                         _lyricsState.value = null
                         _commentsState.value = null
+                        _relatedSongsState.value = emptyList()
                         updateDiscordPresence()
                     }
                 }
@@ -347,6 +381,20 @@ class PlayerViewModel @Inject constructor(
                 .collect { isPlaying ->
                     updateDiscordPresence()
                 }
+        }
+    }
+    
+    private fun fetchRelatedSongs(videoId: String) {
+        viewModelScope.launch {
+            _isFetchingRelated.value = true
+            try {
+                val songs = youTubeRepository.getRelatedSongs(videoId)
+                _relatedSongsState.value = songs
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Error fetching related songs", e)
+            } finally {
+                _isFetchingRelated.value = false
+            }
         }
     }
     
@@ -439,9 +487,17 @@ class PlayerViewModel @Inject constructor(
     fun playNext(song: Song) {
         musicPlayer.playNext(listOf(song))
     }
+
+    fun playNext(songs: List<Song>) {
+        musicPlayer.playNext(songs)
+    }
     
     fun addToQueue(song: Song) {
         musicPlayer.addToQueue(listOf(song))
+    }
+
+    fun addToQueue(songs: List<Song>) {
+        musicPlayer.addToQueue(songs)
     }
     
     fun play() {
@@ -1395,5 +1451,23 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleMultipleArtistsDialog(show: Boolean) {
         _showMultipleArtistsDialog.value = show
+    }
+
+    fun toggleRelatedSelection(index: Int) {
+        val current = _selectedRelatedIndices.value.toMutableSet()
+        if (current.contains(index)) {
+            current.remove(index)
+        } else {
+            current.add(index)
+        }
+        _selectedRelatedIndices.value = current
+    }
+
+    fun selectAllRelated() {
+        _selectedRelatedIndices.value = _relatedSongsState.value.indices.toSet()
+    }
+
+    fun clearRelatedSelection() {
+        _selectedRelatedIndices.value = emptySet()
     }
 }

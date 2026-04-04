@@ -119,6 +119,8 @@ class PlaylistViewModel @Inject constructor(
         if (playlistId.startsWith("local_") || playlistId == "LM" || playlistId == "CACHED_ALL") {
             viewModelScope.launch {
                 libraryRepository.getCachedPlaylistSongsFlow(playlistId).collect { songs ->
+                    if (songs == _uiState.value.originalSongs) return@collect
+
                     _uiState.update { state ->
                         val updatedPlaylist = state.playlist?.copy(songs = songs)
                         state.copy(
@@ -127,8 +129,7 @@ class PlaylistViewModel @Inject constructor(
                         )
                     }
                     applySort()
-                }
-            }
+                }            }
         }
     }
 
@@ -443,20 +444,30 @@ class PlaylistViewModel @Inject constructor(
     fun reorderSong(fromIndex: Int, toIndex: Int) {
         val currentPlaylist = _uiState.value.playlist ?: return
         val songs = currentPlaylist.songs.toMutableList()
+        if (fromIndex !in songs.indices || toIndex !in songs.indices) return
         
         // Optimistic update
         val movedSong = songs.removeAt(fromIndex)
         songs.add(toIndex, movedSong)
         
         _uiState.update { 
-            it.copy(playlist = currentPlaylist.copy(songs = songs))
+            it.copy(
+                playlist = currentPlaylist.copy(songs = songs),
+                originalSongs = songs // Update originalSongs too so SortType.CUSTOM respects it
+            )
         }
         
         viewModelScope.launch {
             val isLocal = libraryRepository.getPlaylistById(playlistId) != null || playlistId == "LM"
             if (isLocal) {
                 // Local reorder - just replace the whole list in DB
-                libraryRepository.savePlaylistSongs(playlistId, songs)
+                libraryRepository.replacePlaylistSongs(playlistId, songs)
+                return@launch
+            }
+
+            // Remote (YouTube) playlist reorder
+            if (!sessionManager.isLoggedIn()) {
+                // Not logged in, can't sync. Keep in-memory change.
                 return@launch
             }
 
@@ -468,10 +479,11 @@ class PlaylistViewModel @Inject constructor(
                 // else predecessor is the song at toIndex - 1 (in the NEW list)
                 val predecessorId = if (toIndex > 0) songs[toIndex - 1].setVideoId else null
                 
-                youTubeRepository.moveSongInPlaylist(playlistId, setVideoId, predecessorId)
-            } else {
-                // Revert if we can't move (no setVideoId)
-                loadPlaylist()
+                val success = youTubeRepository.moveSongInPlaylist(playlistId, setVideoId, predecessorId)
+                if (!success) {
+                    // Revert UI on failure (don't call loadPlaylist which shows loader)
+                    // Optionally show a message
+                }
             }
         }
     }
@@ -741,6 +753,26 @@ class PlaylistViewModel @Inject constructor(
             }
         }
         clearSelection()
+    }
+
+    fun playNextSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentPlaylist = _uiState.value.playlist ?: return
+        val selectedSongs = currentPlaylist.songs.filter { (it.setVideoId ?: it.id) in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.playNext(selectedSongs)
+            clearSelection()
+        }
+    }
+
+    fun addToQueueSelectedSongs() {
+        val selectedIds = _uiState.value.selectedSongIds
+        val currentPlaylist = _uiState.value.playlist ?: return
+        val selectedSongs = currentPlaylist.songs.filter { (it.setVideoId ?: it.id) in selectedIds }
+        if (selectedSongs.isNotEmpty()) {
+            musicPlayer.addToQueue(selectedSongs)
+            clearSelection()
+        }
     }
 
     fun removeSelectedSongs() {

@@ -29,7 +29,26 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
     // 320px is the standard maximum for MediaSession metadata on many Android versions.
     // Reducing from 512px to 320px prevents MediaMetadata$Builder.scaleBitmap from being called
     // by the system, which is often where the "recycled source" crash occurs.
-    private val DEFAULT_BITMAP_SIZE = 320
+    // Improvement (3): Further reduce to 256px for Android Auto to save memory on head units.
+    private val DEFAULT_BITMAP_SIZE = if (isAndroidAuto()) 256 else 320
+
+    /**
+     * Detect if the current session is Android Auto.
+     */
+    private fun isAndroidAuto(): Boolean {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+            // Android Auto often presents as a specific device type or brand in some versions,
+            // but a more reliable way is to check the system UI mode or specific broadcast intents.
+            // For this loader, we'll check if any output device is a "Car" or if the 
+            // configuration is in car mode.
+            val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+            uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_CAR
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
         val future = SettableFuture.create<Bitmap>()
@@ -226,7 +245,9 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
         val fallbacks = mutableListOf<Uri>()
         
         // Check for Google/YouTube thumbnail pattern
-        if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com") || uriString.contains("ytimg.com")) {
+        if (uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com") || 
+            uriString.contains("ytimg.com") || uriString.contains("youtube.com")) {
+            
             // If it's maxresdefault, try sddefault then hqdefault
             if (uriString.contains("maxresdefault")) {
                 fallbacks.add(Uri.parse(uriString.replace("maxresdefault", "sddefault")))
@@ -237,10 +258,17 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 fallbacks.add(Uri.parse(uriString.replace("sddefault", "hqdefault")))
             }
             
-            // Retry with resizing if it's a googleusercontent/ggpht image
-            if (uriString.contains("=w")) {
-                // Try a standard size
-                fallbacks.add(Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")))
+            // Handle googleusercontent/ggpht image resizing fallbacks
+            if (uriString.contains("=w") || uriString.contains("=s")) {
+                // Try smaller standard sizes
+                if (uriString.contains("=w")) {
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")))
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=w\\d+-h\\d+"), "=w256-h256")))
+                }
+                if (uriString.contains("=s")) {
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=s\\d+"), "=s544")))
+                    fallbacks.add(Uri.parse(uriString.replace(Regex("=s\\d+"), "=s256")))
+                }
             }
         }
         return fallbacks
