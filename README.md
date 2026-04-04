@@ -39,6 +39,57 @@
 
 ---
 
+## Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+| Document | Description |
+|----------|-------------|
+| [Project Overview](docs/Project%20Overview.md) | High-level project introduction and architecture overview |
+| [Getting Started](docs/Getting%20Started.md) | Setup and development environment configuration |
+| [Developer Guidelines](docs/Developer%20Guidelines.md) | Coding standards and best practices |
+
+### Architecture & Design
+
+| Document | Description |
+|----------|-------------|
+| [Application Architecture](docs/Application%20Architecture/Application%20Architecture.md) | Clean Architecture, MVVM, and modular design |
+| [Modular Architecture Design](docs/Application%20Architecture/Modular%20Architecture%20Design.md) | Multi-module project structure |
+| [Dependency Injection with Hilt](docs/Application%20Architecture/Dependency%20Injection%20with%20Hilt.md) | DI patterns and module organization |
+| [Data Flow and State Management](docs/Application%20Architecture/Data%20Flow%20and%20State%20Management.md) | Reactive state handling |
+
+### Core Systems
+
+| Document | Description |
+|----------|-------------|
+| [Music Playback System](docs/Music%20Playback%20System/Music%20Playback%20System.md) | Media3 ExoPlayer integration and playback architecture |
+| [Audio Processing Engine](docs/Audio%20Processing%20Engine/Audio%20Processing%20Engine.md) | Native C++ audio engine and DSP features |
+| [Multi-Source Streaming](docs/Multi-Source%20Streaming/Multi-Source%20Streaming.md) | YouTube, JioSaavn, and local audio integration |
+| [Lyrics System](docs/Lyrics%20System/Lyrics%20System.md) | Multi-provider lyrics fetching and display |
+| [Download Management](docs/Download%20Management/Download%20Management.md) | Background downloads and file management |
+
+### Advanced Features
+
+| Document | Description |
+|----------|-------------|
+| [Listen Together](docs/Social%20Features/Listen%20Together/Listen%20Together.md) | Real-time synchronized listening rooms |
+| [Personalization & Recommendations](docs/Personalization%20and%20Recommendations/Personalization%20and%20Recommendations.md) | Smart queue and recommendation algorithms |
+| [Social Features](docs/Social%20Features/Social%20Features.md) | Discord integration and Last.fm scrobbling |
+
+### Technical References
+
+| Document | Description |
+|----------|-------------|
+| [Native Integration](docs/Native%20Integration/Native%20Integration.md) | CMake, JNI bridge, and native audio processors |
+| [Data Management](docs/Data%20Management/Data%20Management.md) | Database schema, DAOs, and repositories |
+| [UI/UX System](docs/UI_UX%20System/UI_UX%20System.md) | Theming, navigation, and components |
+| [Testing Strategy](docs/Testing%20Strategy.md) | Unit, integration, and UI testing approaches |
+| [Performance Optimization](docs/Performance%20Optimization.md) | Optimization techniques and benchmarks |
+| [Security Considerations](docs/Security%20Considerations.md) | Security best practices and data protection |
+| [Build and Deployment](docs/Build%20and%20Deployment.md) | Build configuration and release process |
+
+---
+
 ## Core Features
 
 ### Audio Engineering & Performance
