@@ -22,3 +22,6 @@ keystore-base64.txt
 
 Metrolist/
 metroserver/
+
+# Qoder AI
+.qoder/
