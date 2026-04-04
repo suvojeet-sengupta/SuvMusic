@@ -68,9 +68,17 @@ fun PillMiniPlayer(
     onClose: () -> Unit,
     onTap: () -> Unit,
     userAlpha: Float = 0f,
+    artworkShape: String = "ROUNDED_SQUARE",
     modifier: Modifier = Modifier
 ) {
     val effectiveAlpha = 1f - userAlpha
+    
+    val artShape = when (artworkShape) {
+        "CIRCLE", "VINYL" -> CircleShape
+        "SQUARE" -> androidx.compose.ui.graphics.RectangleShape
+        else -> RoundedCornerShape(32.dp)
+    }
+
     val highResThumbnail = remember(song.thumbnailUrl) {
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
     }
@@ -186,7 +194,7 @@ fun PillMiniPlayer(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(4.dp)
-                            .clip(CircleShape)
+                            .clip(artShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {

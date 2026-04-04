@@ -122,6 +122,12 @@ data class SettingsUiState(
     val eqBands: FloatArray = FloatArray(10) { 0f },
     val forceMaxRefreshRateEnabled: Boolean = true,
     val navBarAlpha: Float = 1.0f,
+    val navBarBlur: Float = 60.0f,
+    val iosLiquidGlassEnabled: Boolean = false,
+    val miniPlayerAlpha: Float = 0f,
+    val miniPlayerStyle: com.suvojeet.suvmusic.data.model.MiniPlayerStyle = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.YT_MUSIC,
+    val playerStyle: com.suvojeet.suvmusic.data.model.PlayerStyle = com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC,
+    val homeSectionsVisibility: Set<String> = com.suvojeet.suvmusic.data.SessionManager.DEFAULT_HOME_SECTIONS,
     val downloadLocation: String? = null,
     val loggingEnabled: Boolean = false,
     val isBugReportingSessionActive: Boolean = false,
@@ -501,6 +507,42 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.navBarBlurFlow.collect { blur ->
+                _uiState.update { it.copy(navBarBlur = blur) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.iosLiquidGlassEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(iosLiquidGlassEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.miniPlayerAlphaFlow.collect { alpha ->
+                _uiState.update { it.copy(miniPlayerAlpha = alpha) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.miniPlayerStyleFlow.collect { style ->
+                _uiState.update { it.copy(miniPlayerStyle = style) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.playerStyleFlow.collect { style ->
+                _uiState.update { it.copy(playerStyle = style) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.homeSectionsVisibilityFlow.collect { sections ->
+                _uiState.update { it.copy(homeSectionsVisibility = sections) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.downloadLocationFlow.collect { location ->
                 _uiState.update { it.copy(downloadLocation = location) }
             }
@@ -588,6 +630,12 @@ class SettingsViewModel @Inject constructor(
             val eqBands = sessionManager.getEqBands()
             val forceMaxRefreshRate = sessionManager.forceMaxRefreshRateFlow.first()
             val navBarAlpha = sessionManager.getNavBarAlpha()
+            val navBarBlur = sessionManager.getNavBarBlur()
+            val iosLiquidGlassEnabled = sessionManager.isIosLiquidGlassEnabled()
+            val miniPlayerAlpha = sessionManager.getMiniPlayerAlpha()
+            val miniPlayerStyle = sessionManager.getMiniPlayerStyle()
+            val playerStyle = sessionManager.getPlayerStyle()
+            val homeSectionsVisibility = sessionManager.getHomeSectionsVisibility()
             val downloadLocation = sessionManager.getDownloadLocation()
             val loggingEnabled = sessionManager.isLoggingEnabled()
 
@@ -664,6 +712,12 @@ class SettingsViewModel @Inject constructor(
                     eqBands = eqBands,
                     forceMaxRefreshRateEnabled = forceMaxRefreshRate,
                     navBarAlpha = navBarAlpha,
+                    navBarBlur = navBarBlur,
+                    iosLiquidGlassEnabled = iosLiquidGlassEnabled,
+                    miniPlayerAlpha = miniPlayerAlpha,
+                    miniPlayerStyle = miniPlayerStyle,
+                    playerStyle = playerStyle,
+                    homeSectionsVisibility = homeSectionsVisibility,
                     downloadLocation = downloadLocation,
                     loggingEnabled = loggingEnabled
                 )
@@ -1257,6 +1311,48 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setNavBarAlpha(alpha)
             _uiState.update { it.copy(navBarAlpha = alpha) }
+        }
+    }
+
+    fun setNavBarBlur(blur: Float) {
+        viewModelScope.launch {
+            sessionManager.setNavBarBlur(blur)
+            _uiState.update { it.copy(navBarBlur = blur) }
+        }
+    }
+
+    fun setIosLiquidGlassEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setIosLiquidGlassEnabled(enabled)
+            _uiState.update { it.copy(iosLiquidGlassEnabled = enabled) }
+        }
+    }
+
+    fun setMiniPlayerAlpha(alpha: Float) {
+        viewModelScope.launch {
+            sessionManager.setMiniPlayerAlpha(alpha)
+            _uiState.update { it.copy(miniPlayerAlpha = alpha) }
+        }
+    }
+
+    fun setMiniPlayerStyle(style: com.suvojeet.suvmusic.data.model.MiniPlayerStyle) {
+        viewModelScope.launch {
+            sessionManager.setMiniPlayerStyle(style)
+            _uiState.update { it.copy(miniPlayerStyle = style) }
+        }
+    }
+
+    fun setPlayerStyle(style: com.suvojeet.suvmusic.data.model.PlayerStyle) {
+        viewModelScope.launch {
+            sessionManager.setPlayerStyle(style)
+            _uiState.update { it.copy(playerStyle = style) }
+        }
+    }
+
+    fun setHomeSectionsVisibility(sections: Set<String>) {
+        viewModelScope.launch {
+            sessionManager.setHomeSectionsVisibility(sections)
+            _uiState.update { it.copy(homeSectionsVisibility = sections) }
         }
     }
 

@@ -54,8 +54,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 order = index
             )
         }
-        libraryDao.deletePlaylistSongs(playlistId)
-        libraryDao.insertPlaylistSongs(entities)
+        libraryDao.replacePlaylistSongs(playlistId, entities)
     }
 
     override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) {
