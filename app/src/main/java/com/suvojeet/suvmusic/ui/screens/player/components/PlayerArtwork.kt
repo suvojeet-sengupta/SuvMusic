@@ -267,7 +267,7 @@ fun AlbumArtwork(
                 contentAlignment = Alignment.Center
             ) {
             // Main artwork image
-            if (imageUrl != null) {
+            if (!imageUrl.isNullOrEmpty()) {
                 // Try high-res first, fallback to original on error
                 var model by remember(imageUrl) { mutableStateOf<Any?>(getHighResThumbnail(imageUrl)) }
 
@@ -289,12 +289,43 @@ fun AlbumArtwork(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = null,
-                    modifier = Modifier.size(100.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Fallback: try to use YouTube thumbnail if songId looks like a video ID
+                val fallbackUrl = remember(songId) {
+                    if (!songId.isNullOrEmpty() && songId.length == 11) {
+                        "https://img.youtube.com/vi/$songId/maxresdefault.jpg"
+                    } else {
+                        null
+                    }
+                }
+
+                if (fallbackUrl != null) {
+                    var model by remember(fallbackUrl) { mutableStateOf<Any?>(fallbackUrl) }
+
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(model)
+                            .crossfade(true)
+                            .size(600)
+                            .listener(
+                                onError = { _, _ ->
+                                    if (model == fallbackUrl) {
+                                        model = null // Will show icon fallback
+                                    }
+                                }
+                            )
+                            .build(),
+                        contentDescription = title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(100.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             
             // Vinyl center hole overlay
