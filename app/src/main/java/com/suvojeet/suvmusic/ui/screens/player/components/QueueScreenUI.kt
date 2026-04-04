@@ -485,10 +485,12 @@ private fun LazyItemScope.ModernQueueListItem(
         // Drag Handle (Shown only in selection mode or by default on the right if NOT current)
         if (!isCurrent) {
             // Improved handle visibility with better contrast for both light and dark modes
-            Surface(
+            Box(
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
                     .size(32.dp, 24.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(secondaryContentColor.copy(alpha = if (isDarkTheme) 0.15f else 0.25f))
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragStart = {
@@ -519,16 +521,13 @@ private fun LazyItemScope.ModernQueueListItem(
                             }
                         )
                     },
-                shape = RoundedCornerShape(6.dp),
-                color = secondaryContentColor.copy(alpha = if (isDarkTheme) 0.15f else 0.25f)
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.DragHandle,
                     contentDescription = "Reorder",
                     tint = secondaryContentColor.copy(alpha = if (isDarkTheme) 0.6f else 0.7f),
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(20.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
