@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -407,9 +408,13 @@ fun SuvMusicApp(
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
+    val artworkShape by playerViewModel.artworkShape.collectAsStateWithLifecycle()
     
     val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle(initialValue = null)
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
+    val relatedSongs by playerViewModel.relatedSongsState.collectAsStateWithLifecycle(initialValue = emptyList())
+    val isFetchingRelated by playerViewModel.isFetchingRelated.collectAsStateWithLifecycle(initialValue = false)
+    val selectedRelatedIndices by playerViewModel.selectedRelatedIndices.collectAsStateWithLifecycle(initialValue = emptySet())
     val selectedLyricsProvider by playerViewModel.selectedLyricsProvider.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO)
 
     val artistCredits by playerViewModel.artistCredits.collectAsStateWithLifecycle(initialValue = emptyList<ArtistCreditInfo>())
@@ -626,71 +631,33 @@ fun SuvMusicApp(
     val deviceType = com.suvojeet.suvmusic.ui.utils.rememberDeviceType()
 
     if (showWelcomeDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { /* Prevent dismiss */ },
-            title = { 
-                androidx.compose.material3.Text(
-                    "Welcome to SuvMusic", 
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    fontSize = 22.sp
-                ) 
+        com.suvojeet.suvmusic.ui.components.WelcomeOnboardingDialog(
+            onLoginClick = {
+                showWelcomeDialog = false
+                navController.navigate(Destination.YouTubeLogin)
             },
-            text = { 
-                Column {
-                    androidx.compose.material3.Text("Experience music like never before.\n\nSuvMusic offers high-quality playback, ad-free experience, and seamless streaming from YouTube Music.")
-                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
-                    androidx.compose.material3.Text("Login to sync your library or continue as guest.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+            onContinueAsGuest = {
+                showWelcomeDialog = false
+                scope.launch {
+                    sessionManager.setOnboardingCompleted(true)
                 }
-            },
-            confirmButton = {
-                androidx.compose.material3.Button(
-                    onClick = { 
-                        showWelcomeDialog = false
-                        // Navigate to Login, which will set onboarding completed on success
-                        navController.navigate(Destination.YouTubeLogin)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    androidx.compose.material3.Text("Login with YT Music")
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { 
-                        showWelcomeDialog = false
-                         // Mark onboarding as complete and stay on Home
-                        scope.launch {
-                            sessionManager.setOnboardingCompleted(true)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    androidx.compose.material3.Text("Continue without Login")
-                }
-            },
-            icon = {
-                 androidx.compose.material3.Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
-                 )
             }
         )
     }
 
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val navBarHeight = if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.TV) 80.dp else 0.dp
+        val miniPlayerHeight = if (showMiniPlayer) 64.dp else 0.dp
+        val snackbarBottomPadding = when {
+            isPlayerExpanded -> navBarPadding + 12.dp
+            showMiniPlayer -> miniPlayerHeight + navBarPadding + navBarHeight + 12.dp
+            else -> navBarPadding + navBarHeight + 12.dp
+        }
+
         Box(modifier = Modifier.fillMaxSize()) {
              Scaffold(
                 modifier = Modifier.fillMaxSize(),
-                snackbarHost = {
-                    SnackbarHost(hostState = snackbarHostState) { data ->
-                        Snackbar(
-                            snackbarData = data,
-                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                            contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                },
                 bottomBar = {
                     if (showBottomNav && deviceType == com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
                         Column {
@@ -860,7 +827,8 @@ fun SuvMusicApp(
                             startDestination = Destination.Home, // Always start at Home
                             // Removed sharedTransitionScope
                             deviceType = deviceType,
-                            dominantColors = currentDominantColors
+                            dominantColors = currentDominantColors,
+                            snackbarHostState = snackbarHostState
                         )
                     }
 
@@ -888,6 +856,7 @@ fun SuvMusicApp(
             isExpanded = isPlayerExpanded,
             userAlpha = miniPlayerAlpha,
             style = miniPlayerStyle,
+            artworkShape = artworkShape,
             swipeDownToDismissEnabled = swipeDownToDismissEnabled,
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
@@ -899,6 +868,9 @@ fun SuvMusicApp(
                     playerState = playerState,
                     lyrics = lyrics,
                     isFetchingLyrics = isFetchingLyrics,
+                    relatedSongs = relatedSongs,
+                    isFetchingRelated = isFetchingRelated,
+                    selectedRelatedIndices = selectedRelatedIndices,
                     comments = comments,
                     isFetchingComments = isFetchingComments,
                     isLoggedIn = isLoggedIn,
@@ -960,6 +932,18 @@ fun SuvMusicApp(
                     onListenTogetherClick = {
                         onCollapse()
                         navController.navigate(Destination.ListenTogether)
+                    },
+                    onPlayRelated = { song ->
+                        playerViewModel.startRadio(song, null)
+                    },
+                    onToggleRelatedSelection = { playerViewModel.toggleRelatedSelection(it) },
+                    onSelectAllRelated = { playerViewModel.selectAllRelated() },
+                    onClearRelatedSelection = { playerViewModel.clearRelatedSelection() },
+                    onAddRelatedToQueue = { songs ->
+                        songs.forEach { playerViewModel.addToQueue(it) }
+                    },
+                    onAddRelatedToPlaylist = { songs ->
+                        playlistManagementViewModel.showAddToPlaylistSheet(songs)
                     }
                 )
 
@@ -1040,5 +1024,14 @@ fun SuvMusicApp(
                 }
             )
         }
+
+        // Global Snackbar Host - Always on top
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = snackbarBottomPadding)
+                .zIndex(100f) // Ensure it's above everything including player sheet
+        )
     }
 }

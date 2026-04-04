@@ -1,6 +1,20 @@
 {
   "releases": [
     {
+      "versionName": "2.2.0.0",
+      "versionCode": 23,
+      "date": "March 31, 2026",
+      "description": "• Immersive Artist Experience: Completely redesigned Artist screen with dynamic colors, multiple artist navigation dialog, and an enhanced Artist Radio engine.\n• Modernized Player UI: New 'YT Music' default style with a centered Audio/Video switch, compact Like/Dislike capsule, and marquee titles for long names.\n• Technical Audio Insights: Overhauled Song Info sheet now displays technical stats (bitrate, codec) with adaptive artwork-based themes.\n• Advanced History & Privacy: Grouped history by date with sticky headers, integrated Incognito mode, and dedicated multi-select management.\n• Unified Selection & Reordering: Standardized long-press selection across all lists with integrated batch actions and always-visible, touch-optimized reorder handles.\n• Related Songs & Autoplay: New Related sheet with dedicated queue management and an expanded Radio queue of 50 songs with diversity scoring.\n• Playback Excellence: Implemented reactive quality downscaling for weak networks, smooth Volume Fade-in, and advanced BLE audio routing recovery.\n• Hardware & Notifications: Fixed notification artwork for user-uploaded videos and optimized artwork fallbacks for offline playback.\n• Premium UX Polish: Redesigned theme-aware Welcome dialog, improved snackbar positioning, and haptic-feedback reordering with zero-flicker database syncing.",
+      "isMajorUpdate": true
+    },
+    {
+      "versionName": "2.1.4.0",
+      "versionCode": 22,
+      "date": "March 29, 2026",
+      "description": "• Shuffle Integrity: Resolved a critical issue where shuffle mode would cause rapid song skipping or 'Source Errors'.\n• Audio Output Switching: Fixed playback failing to resume or becoming silent when switching between Bluetooth and speakers.\n• Visual Error Feedback: Introduced a modern error overlay on the Player screen with 'Copy Error' and 'Retry' actions.\n• Intelligent Recovery: Implemented exponential backoff for network retries and automatic search fallback for expired YouTube streams.\n• Battery & Efficiency: Optimized battery life with Dynamic Audio Offload and reduced memory usage for Android Auto thumbnails.\n• Safe Volume: Added 'Safe Volume Ducking' to prevent sudden loud volume when connecting Bluetooth devices.\n• Backup Efficiency: Optimized cloud backup rules to exclude large cache files for faster transfers.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.1.3.0",
       "versionCode": 21,
       "date": "March 25, 2026",

@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
@@ -307,7 +308,7 @@ fun SettingsScreen(
                     HorizontalDivider()
 
                     SettingsSwitchItem(
-                        icon = Icons.Default.Warning,
+                        icon = Icons.Default.VisibilityOff,
                         title = "Privacy Mode",
                         subtitle = "Stop history & activity sharing",
                         checked = uiState.privacyModeEnabled,

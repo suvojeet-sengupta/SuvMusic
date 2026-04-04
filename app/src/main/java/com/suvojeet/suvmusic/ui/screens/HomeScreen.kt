@@ -86,7 +86,7 @@ fun HomeScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    onRecentsClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {},
     onListenTogetherClick: () -> Unit = {},
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
@@ -241,7 +241,7 @@ fun HomeScreen(
                                     modifier = Modifier
                                         .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
                                         .animateEnter(index = 0),
-                                    onRecentsClick = onRecentsClick,
+                                    onHistoryClick = onHistoryClick,
                                     onListenTogetherClick = onListenTogetherClick
                                 )
                             }
@@ -729,7 +729,7 @@ fun QuickAccessCard(
 @Composable
 private fun ProfileHeader(
     modifier: Modifier = Modifier,
-    onRecentsClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {},
     onListenTogetherClick: () -> Unit = {}
 ) {
     val greeting = remember { getGreeting() }
@@ -774,12 +774,12 @@ private fun ProfileHeader(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 modifier = Modifier
                     .size(40.dp)
-                    .clickable(onClick = onRecentsClick),
+                    .clickable(onClick = onHistoryClick),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.History,
-                        contentDescription = "Recents",
+                        contentDescription = "History",
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
