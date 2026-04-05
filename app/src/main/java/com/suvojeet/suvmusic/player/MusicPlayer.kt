@@ -2383,7 +2383,11 @@ class MusicPlayer @Inject constructor(
                     .replace("hqdefault", "maxresdefault")
                     .replace("mqdefault", "maxresdefault")
                     .replace("sddefault", "maxresdefault")
-                    .replace("default", "maxresdefault")
+                    // Fix: use path-aware replacement so we only upgrade the bare "default"
+                    // thumbnail (e.g. "/default.jpg") and never corrupt "maxresdefault" which
+                    // was already set by the replacements above (plain .replace("default",…)
+                    // would turn "maxresdefault" → "maxresmaxresdefault" — an invalid URL).
+                    .replace("/default.", "/maxresdefault.")
                     .replace(Regex("w\\d+-h\\d+"), "w544-h544")
                 it.contains("lh3.googleusercontent.com") || it.contains("yt3.ggpht.com") || it.contains("googleusercontent.com") -> 
                     it.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
