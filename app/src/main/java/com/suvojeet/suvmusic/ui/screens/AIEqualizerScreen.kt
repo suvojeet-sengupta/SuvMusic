@@ -185,8 +185,8 @@ fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
                 Text("AI Optimization Applied", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Bass: ${(state.bassBoost * 100).toInt()}% | Echo: ${(state.virtualizer * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
-            Text("EQ: ${state.eqBands.map { it.toInt() }.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+            Text("Bass: ${(state.safeBassBoost * 100).toInt()}% | Echo: ${(state.safeVirtualizer * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+            Text("EQ: ${state.safeEqBands.map { it.toInt() }.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
