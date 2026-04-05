@@ -278,7 +278,9 @@ class PlaylistViewModel @Inject constructor(
             } else {
                 // In YouTube mode, use getPlaylistFlow for staged loading
                 try {
+                    var emitted = false
                     youTubeRepository.getPlaylistFlow(playlistId, autoSave = true).collect { stagedPlaylist ->
+                        emitted = true
                         val finalPlaylist = stagedPlaylist.copy(
                             title = if (stagedPlaylist.title == "Unknown Playlist" && initialName != null) initialName else stagedPlaylist.title,
                             thumbnailUrl = initialThumbnail ?: stagedPlaylist.thumbnailUrl,
@@ -296,6 +298,11 @@ class PlaylistViewModel @Inject constructor(
                         }
                         applySort()
                     }
+                    
+                    if (!emitted) {
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
+                    
                     // Re-check editability now that we have author info
                     checkEditable()
                     return // Collected all, exit method
