@@ -29,6 +29,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -850,10 +853,17 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun getPlaylist(playlistId: String, autoSave: Boolean = false): Playlist = withContext(Dispatchers.IO) {
+        getPlaylistFlow(playlistId, autoSave).last()
+    }
+
+    fun getPlaylistFlow(playlistId: String, autoSave: Boolean = false): Flow<Playlist> = flow {
         // Fallback to cache if offline
         if (!networkMonitor.isCurrentlyConnected()) {
             val cachedPlaylist = getCachedPlaylist(playlistId)
-            if (cachedPlaylist != null) return@withContext cachedPlaylist
+            if (cachedPlaylist != null) {
+                emit(cachedPlaylist)
+                return@flow
+            }
         }
 
         // Handle special playlists that require authentication
@@ -865,8 +875,18 @@ class YouTubeRepository @Inject constructor(
                     val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
                     
                     val songs = mutableListOf<Song>()
-                    var json = fetchInternalApi("FEmusic_liked_videos", hl = hl)
-                    songs.addAll(parseSongsFromInternalJson(json))
+                    val json = fetchInternalApi("FEmusic_liked_videos", hl = hl)
+                    val initialSongs = parseSongsFromInternalJson(json)
+                    songs.addAll(initialSongs)
+                    
+                    var playlist = Playlist(
+                        id = playlistId,
+                        title = "Your Likes",
+                        author = "You",
+                        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
+                        songs = songs.toList()
+                    )
+                    emit(playlist)
                     
                     // Add Pagination for your likes
                     var currentJson = JSONObject(json)
@@ -878,34 +898,37 @@ class YouTubeRepository @Inject constructor(
                         val newSongs = parseSongsFromInternalJson(continuationResponse)
                         if (newSongs.isEmpty()) break
                         songs.addAll(newSongs)
+                        
+                        // Emit updates periodically (every 200 songs or so) to keep UI responsive
+                        if (pageCount % 4 == 0) {
+                            playlist = playlist.copy(songs = songs.toList())
+                            emit(playlist)
+                        }
+
                         currentJson = JSONObject(continuationResponse)
                         continuationToken = extractContinuationToken(currentJson)
                         pageCount++
                     }
 
                     if (songs.isNotEmpty()) {
-                        val playlist = Playlist(
-                            id = playlistId,
-                            title = "Your Likes",
-                            author = "You",
-                            thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
-                            songs = songs
-                        )
+                        playlist = playlist.copy(songs = songs.toList())
                         if (autoSave) libraryRepository.savePlaylist(playlist)
-                        return@withContext playlist
+                        emit(playlist)
+                        return@flow
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }
             // Return empty playlist if not logged in or API fails
-            return@withContext Playlist(
+            emit(Playlist(
                 id = playlistId,
                 title = "Your Likes",
                 author = "You",
                 thumbnailUrl = null,
                 songs = emptyList()
-            )
+            ))
+            return@flow
         }
         
         // Handle My Supermix (auto-generated radio)
@@ -926,28 +949,40 @@ class YouTubeRepository @Inject constructor(
                             thumbnailUrl = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked_music_@576.png",
                             songs = songs.take(500) // Limit to 500 songs
                         )
-                        // Don't auto-save Supermix
-                        // libraryRepository.savePlaylist(playlist) 
-                        return@withContext playlist
+                        emit(playlist)
+                        return@flow
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }
-            return@withContext Playlist(
+            emit(Playlist(
                 id = playlistId,
                 title = "My Supermix",
                 author = "YouTube Music",
                 thumbnailUrl = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked_music_@576.png",
                 songs = emptyList()
-            )
+            ))
+            return@flow
         }
 
         try {
             // Try internal API first for better metadata
             val browseId = if (playlistId.startsWith("VL")) playlistId else "VL$playlistId"
             val json = fetchInternalApi(browseId)
-            val playlist = parsePlaylistFromInternalJson(json, playlistId)
+            var playlist = parsePlaylistFromInternalJson(json, playlistId)
+            
+            // Extract total song count for better UI feedback
+            val root = JSONObject(json)
+            val header = root.optJSONObject("header")?.optJSONObject("musicDetailHeaderRenderer")
+                ?: root.optJSONObject("header")?.optJSONObject("musicResponsiveHeaderRenderer")
+            val subtitle = getRunText(header?.optJSONObject("subtitle"))
+            val totalCount = subtitle?.let { extractSongCount(it) }
+            
+            playlist = playlist.copy(totalSongCount = totalCount)
+            
+            // Emit initial 100 songs (first page)
+            emit(playlist)
             
             // Add Pagination for playlists
             val songs = playlist.songs.toMutableList()
@@ -957,12 +992,18 @@ class YouTubeRepository @Inject constructor(
             // Reduce pagination for auto-mix playlists to prevent AA callback timeouts
             val isAutoMix = playlistId.startsWith("RD") || playlistId.startsWith("RTM")
             val maxPages = if (isAutoMix) 5 else 100
-            while (continuationToken != null && pageCount < maxPages) { // Auto-mixes: 5 pages (~250 songs)
+            
+            while (continuationToken != null && pageCount < maxPages) { 
                 val continuationResponse = fetchInternalApiWithContinuation(continuationToken)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parseSongsFromInternalJson(continuationResponse)
                 if (newSongs.isEmpty()) break
                 songs.addAll(newSongs)
+                
+                // Emit update every page for normal playlists to show progress
+                playlist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
+                emit(playlist)
+
                 currentJson = JSONObject(continuationResponse)
                 continuationToken = extractContinuationToken(currentJson)
                 pageCount++
@@ -970,9 +1011,9 @@ class YouTubeRepository @Inject constructor(
 
             if (songs.isNotEmpty()) {
                 val finalPlaylist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
-                // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
                 if (autoSave) libraryRepository.savePlaylist(finalPlaylist)
-                return@withContext finalPlaylist
+                emit(finalPlaylist)
+                return@flow
             }
         } catch(e: Exception) { }
 
@@ -981,12 +1022,15 @@ class YouTubeRepository @Inject constructor(
             val urlId = if (playlistId.startsWith("VL")) playlistId.removePrefix("VL") else playlistId
             val playlistUrl = "https://www.youtube.com/playlist?list=$urlId"
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
-                ?: return@withContext Playlist(playlistId, "Error", "", null, emptyList())
+                ?: run {
+                    emit(Playlist(playlistId, "Error", "", null, emptyList()))
+                    return@flow
+                }
             
             val playlistExtractor = ytService.getPlaylistExtractor(playlistUrl)
             playlistExtractor.fetchPage()
             
-            // Get playlist metadata with proper method calls
+            // Get playlist metadata
             val playlistName = try { playlistExtractor.getName() } catch (e: Exception) { null }
             val uploaderName = try { playlistExtractor.getUploaderName() } catch (e: Exception) { null }
             val description = try { (playlistExtractor as org.schabi.newpipe.extractor.playlist.PlaylistExtractor).description.content } catch (e: Exception) { null }
@@ -997,71 +1041,46 @@ class YouTubeRepository @Inject constructor(
             val songs = mutableListOf<Song>()
             var page: org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage<StreamInfoItem>? = playlistExtractor.initialPage
             
+            var playlist = Playlist(
+                id = playlistId,
+                title = playlistName ?: "Unknown Playlist",
+                author = uploaderName ?: "YouTube",
+                thumbnailUrl = thumbnailUrl,
+                songs = emptyList(),
+                description = description
+            )
+
             while (page != null) {
                 val pageSongs = page.items
                     .filterIsInstance<StreamInfoItem>()
                     .mapNotNull { item ->
                         val videoId = extractVideoId(item.url)
                         val itemThumbnail = item.thumbnails.lastOrNull()?.url
-                            ?: "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
                         
                         Song.fromYouTube(
-                            videoId = videoId,
+                            videoId = videoId ?: return@mapNotNull null,
                             title = item.name ?: "Unknown",
-                            artist = item.uploaderName ?: "Unknown Artist",
-                            album = playlistName ?: "",
+                            artist = item.uploaderName ?: "Unknown",
+                            album = "",
                             duration = item.duration * 1000L,
                             thumbnailUrl = itemThumbnail,
-                            isMembersOnly = false
+                            setVideoId = null
                         )
                     }
                 songs.addAll(pageSongs)
+                playlist = playlist.copy(songs = songs.toList())
+                emit(playlist)
                 
-                if (page.hasNextPage()) {
-                    page = playlistExtractor.getPage(page.nextPage)
-                } else {
-                    page = null
-                }
-                
-                // Safety break for extremely large playlists in fallback mode
-                if (songs.size > 5000) break
+                if (!playlistExtractor.hasNextPage()) break
+                page = playlistExtractor.getPage(page.nextPage)
             }
             
-            if (songs.isNotEmpty()) {
-                val playlist = Playlist(
-                    id = playlistId,
-                    title = playlistName ?: songs.firstOrNull()?.album?.takeIf { it.isNotBlank() } ?: "Playlist",
-                    author = uploaderName?.takeIf { it.isNotBlank() } ?: "",
-                    thumbnailUrl = thumbnailUrl ?: songs.firstOrNull()?.thumbnailUrl,
-                    songs = songs,
-                    description = description
-                )
-                // BUG FIX (Cache): Auto-save normal playlists for fast subsequent loads
-                if (autoSave) libraryRepository.savePlaylist(playlist)
-                return@withContext playlist
-            }
-            return@withContext Playlist(
-                id = playlistId,
-                title = playlistName ?: "Playlist",
-                author = uploaderName ?: "",
-                thumbnailUrl = thumbnailUrl,
-                songs = emptyList()
-            )
+            if (autoSave && songs.isNotEmpty()) libraryRepository.savePlaylist(playlist)
+            
         } catch (e: Exception) {
-            e.printStackTrace()
-             // Final fallback: try cache one last time
-            val cachedSongs = libraryRepository.getCachedPlaylistSongs(playlistId)
-            if (cachedSongs.isNotEmpty()) {
-                val cachedPlaylist = libraryRepository.getPlaylistById(playlistId)
-                return@withContext Playlist(
-                    id = playlistId, 
-                    title = cachedPlaylist?.title ?: "Cached Playlist", 
-                    author = cachedPlaylist?.subtitle ?: "", 
-                    thumbnailUrl = cachedPlaylist?.thumbnailUrl, 
-                    songs = cachedSongs
-                )
-            }
-            Playlist(playlistId, "Error loading playlist", "", null, emptyList())
+            // Final fallback: try cache one last time
+            val cachedPlaylist = getCachedPlaylist(playlistId)
+            if (cachedPlaylist != null) emit(cachedPlaylist)
         }
     }
 
@@ -2462,13 +2481,17 @@ class YouTubeRepository @Inject constructor(
             thumbnailUrl = songs.firstOrNull()?.thumbnailUrl
         }
         
+        // Extract total song count from subtitle (e.g. "Playlist • 50 songs")
+        val totalSongCount = subtitle?.let { extractSongCount(it) }
+        
         return Playlist(
             id = playlistId,
             title = title,
             author = author,
             thumbnailUrl = thumbnailUrl,
             songs = songs,
-            description = description
+            description = description,
+            totalSongCount = totalSongCount
         )
     }
     
