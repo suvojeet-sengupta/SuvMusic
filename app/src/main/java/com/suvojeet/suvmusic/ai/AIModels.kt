@@ -8,7 +8,7 @@ enum class AIProvider {
 
 data class AudioEffectState(
     private val eqEnabled: Boolean? = true,
-    private val eqBands: List<Float>? = null,
+    private val eqBands: List<Float?>? = null,
     private val bassBoost: Float? = 0f,
     private val virtualizer: Float? = 0f,
     private val spatialEnabled: Boolean? = false,
@@ -16,7 +16,7 @@ data class AudioEffectState(
     private val limiterMakeupGain: Float? = 0f
 ) {
     val isEqEnabled get() = eqEnabled ?: true
-    val safeEqBands get() = eqBands ?: List(10) { 0f }
+    val safeEqBands: List<Float> get() = eqBands?.map { it ?: 0f } ?: List(10) { 0f }
     val safeBassBoost get() = bassBoost ?: 0f
     val safeVirtualizer get() = virtualizer ?: 0f
     val isSpatialEnabled get() = spatialEnabled ?: false
