@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,7 +20,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class LocalAudioRepository @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val sessionManager: SessionManager
 ) {
     
     companion object {
@@ -63,7 +65,13 @@ class LocalAudioRepository @Inject constructor(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         }
         
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        var selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        
+        if (sessionManager.isFilterLocalByDurationEnabled()) {
+            val thresholdMs = sessionManager.getLocalDurationFilterThreshold() * 1000L
+            selection += " AND ${MediaStore.Audio.Media.DURATION} >= $thresholdMs"
+        }
+
         val sortOrder = "$sortBy ASC"
         
         context.contentResolver.query(
@@ -213,7 +221,13 @@ class LocalAudioRepository @Inject constructor(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         }
         
-        val selection = "${MediaStore.Audio.Media.ALBUM_ID} = ?"
+        var selection = "${MediaStore.Audio.Media.ALBUM_ID} = ?"
+        
+        if (sessionManager.isFilterLocalByDurationEnabled()) {
+            val thresholdMs = sessionManager.getLocalDurationFilterThreshold() * 1000L
+            selection += " AND ${MediaStore.Audio.Media.DURATION} >= $thresholdMs"
+        }
+
         val selectionArgs = arrayOf(albumId.toString())
         
         context.contentResolver.query(
@@ -284,7 +298,13 @@ class LocalAudioRepository @Inject constructor(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         }
         
-        val selection = "${MediaStore.Audio.Media.ARTIST_ID} = ?"
+        var selection = "${MediaStore.Audio.Media.ARTIST_ID} = ?"
+        
+        if (sessionManager.isFilterLocalByDurationEnabled()) {
+            val thresholdMs = sessionManager.getLocalDurationFilterThreshold() * 1000L
+            selection += " AND ${MediaStore.Audio.Media.DURATION} >= $thresholdMs"
+        }
+
         val selectionArgs = arrayOf(artistId.toString())
         
         context.contentResolver.query(collection, AUDIO_PROJECTION, selection, selectionArgs, "${MediaStore.Audio.Media.TITLE} ASC")?.use { cursor ->
@@ -374,8 +394,14 @@ class LocalAudioRepository @Inject constructor(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         }
         
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND " +
+        var selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND " +
                 "(${MediaStore.Audio.Media.TITLE} LIKE ? OR ${MediaStore.Audio.Media.ARTIST} LIKE ?)"
+        
+        if (sessionManager.isFilterLocalByDurationEnabled()) {
+            val thresholdMs = sessionManager.getLocalDurationFilterThreshold() * 1000L
+            selection += " AND ${MediaStore.Audio.Media.DURATION} >= $thresholdMs"
+        }
+
         val selectionArgs = arrayOf("%$query%", "%$query%")
         
         val songs = mutableListOf<Song>()
