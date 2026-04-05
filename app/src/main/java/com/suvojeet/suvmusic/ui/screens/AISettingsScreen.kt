@@ -135,13 +135,20 @@ fun APIConfigSection(
     onModelChange: (String) -> Unit,
     placeholder: String
 ) {
+    // Use local states for smooth typing
+    var localApiKey by remember(apiKey) { mutableStateOf(apiKey) }
+    var localModel by remember(model) { mutableStateOf(model) }
+
     Column {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         
         OutlinedTextField(
-            value = apiKey,
-            onValueChange = onApiKeyChange,
+            value = localApiKey,
+            onValueChange = {
+                localApiKey = it
+                onApiKeyChange(it)
+            },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("API Key") },
             placeholder = { Text(placeholder) },
@@ -152,8 +159,11 @@ fun APIConfigSection(
         Spacer(modifier = Modifier.height(16.dp))
         
         OutlinedTextField(
-            value = model,
-            onValueChange = onModelChange,
+            value = localModel,
+            onValueChange = {
+                localModel = it
+                onModelChange(it)
+            },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Model Name") },
             singleLine = true,
