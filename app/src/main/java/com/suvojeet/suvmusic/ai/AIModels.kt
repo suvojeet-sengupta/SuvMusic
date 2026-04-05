@@ -7,14 +7,22 @@ enum class AIProvider {
 }
 
 data class AudioEffectState(
-    val eqEnabled: Boolean = true,
-    val eqBands: List<Float> = List(10) { 0f },
-    val bassBoost: Float = 0f,
-    val virtualizer: Float = 0f,
-    val spatialEnabled: Boolean = false,
-    val crossfeedEnabled: Boolean = true,
-    val limiterMakeupGain: Float = 0f
-)
+    private val eqEnabled: Boolean? = true,
+    private val eqBands: List<Float>? = null,
+    private val bassBoost: Float? = 0f,
+    private val virtualizer: Float? = 0f,
+    private val spatialEnabled: Boolean? = false,
+    private val crossfeedEnabled: Boolean? = true,
+    private val limiterMakeupGain: Float? = 0f
+) {
+    val isEqEnabled get() = eqEnabled ?: true
+    val safeEqBands get() = eqBands ?: List(10) { 0f }
+    val safeBassBoost get() = bassBoost ?: 0f
+    val safeVirtualizer get() = virtualizer ?: 0f
+    val isSpatialEnabled get() = spatialEnabled ?: false
+    val isCrossfeedEnabled get() = crossfeedEnabled ?: true
+    val safeLimiterMakeupGain get() = limiterMakeupGain ?: 0f
+}
 
 data class SongContext(
     val title: String,

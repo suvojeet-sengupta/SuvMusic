@@ -77,12 +77,12 @@ class AIEqualizerService @Inject constructor(
             result.onSuccess { state ->
                 _lastResult.value = state
                 addLog("Optimization complete. New parameters calculated:")
-                addLog(" EQ: ${if(state.eqEnabled) "Enabled" else "Disabled"}")
-                addLog(" Bands (dB): ${state.eqBands.map { "%.1f".format(it) }.joinToString(", ")}")
-                addLog(" Bass Boost: ${"%.2f".format(state.bassBoost)}")
-                addLog(" Virtualizer (Echo): ${"%.2f".format(state.virtualizer)}")
-                addLog(" Spatial Audio: ${if(state.spatialEnabled) "On" else "Off"}")
-                addLog(" Limiter Gain: ${"%.1f".format(state.limiterMakeupGain)} dB")
+                addLog(" EQ: ${if(state.isEqEnabled) "Enabled" else "Disabled"}")
+                addLog(" Bands (dB): ${state.safeEqBands.map { "%.1f".format(it) }.joinToString(", ")}")
+                addLog(" Bass Boost: ${"%.2f".format(state.safeBassBoost)}")
+                addLog(" Virtualizer (Echo): ${"%.2f".format(state.safeVirtualizer)}")
+                addLog(" Spatial Audio: ${if(state.isSpatialEnabled) "On" else "Off"}")
+                addLog(" Limiter Gain: ${"%.1f".format(state.safeLimiterMakeupGain)} dB")
                 
                 applySettings(state)
                 addLog("SUCCESS: All parameters pushed to the native audio engine.")
@@ -97,16 +97,16 @@ class AIEqualizerService @Inject constructor(
     }
 
     private fun applySettings(state: AudioEffectState) {
-        spatialAudioProcessor.setEqEnabled(state.eqEnabled)
-        state.eqBands.forEachIndexed { index, gain ->
+        spatialAudioProcessor.setEqEnabled(state.isEqEnabled)
+        state.safeEqBands.forEachIndexed { index, gain ->
             if (index < 10) {
                 spatialAudioProcessor.setEqBand(index, gain)
             }
         }
-        spatialAudioProcessor.setBassBoost(state.bassBoost)
-        spatialAudioProcessor.setVirtualizer(state.virtualizer)
-        spatialAudioProcessor.setSpatialEnabled(state.spatialEnabled)
-        spatialAudioProcessor.setCrossfeedEnabled(state.crossfeedEnabled)
+        spatialAudioProcessor.setBassBoost(state.safeBassBoost)
+        spatialAudioProcessor.setVirtualizer(state.safeVirtualizer)
+        spatialAudioProcessor.setSpatialEnabled(state.isSpatialEnabled)
+        spatialAudioProcessor.setCrossfeedEnabled(state.isCrossfeedEnabled)
         // Adjust limiter for makeup gain
         spatialAudioProcessor.setLimiterConfig(true, 0, false) // Simple trigger
         // In real app, setLimiterConfig would be updated to accept makeupGain directly
