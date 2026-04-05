@@ -169,6 +169,6 @@ private fun getSystemPrompt(currentStatus: AudioEffectState, songContext: SongCo
         Current parameters: ${Gson().toJson(currentStatus)}
 
         Return ONLY a JSON object with these keys. No other text.
-        Ensure eqBands always has exactly 10 values.
+        Ensure eqBands always has exactly 10 valid float values (no nulls).
     """.trimIndent()
 }
