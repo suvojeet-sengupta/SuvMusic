@@ -436,6 +436,43 @@ fun PlaylistScreen(
                 )
             }
             } // End PullToRefreshBox
+        } else {
+            // Error or empty state
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = secondaryContentColor,
+                    modifier = Modifier.size(64.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = uiState.error ?: "Could not load playlist",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = contentColor,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { viewModel.refreshPlaylist() },
+                    shape = PillShape
+                ) {
+                    Text("Retry")
+                }
+                
+                TextButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text("Go Back", color = secondaryContentColor)
+                }
+            }
         }
 
         // Song Menu
