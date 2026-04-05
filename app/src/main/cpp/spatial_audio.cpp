@@ -8,6 +8,7 @@
 #include "limiter.h"
 #include "biquad.h"
 #include "pitch_shifter.h"
+#include "spatial_audio_bridge.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -364,6 +365,31 @@ static std::mutex processingMutex;
 
 static constexpr int MAX_TOTAL_SAMPLES = 48000 * 8; // max 48kHz * 8 channels = 1 second cap
 
+#include "ai_audio_processor.h"
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nApplyAIState(JNIEnv *env, jobject thiz, 
+    jboolean eqEnabled, jfloatArray eqBands, jfloat bassBoost, jfloat virtualizer, 
+    jboolean spatialEnabled, jboolean crossfeedEnabled, jfloat limiterGain) {
+    
+    AIAudioState state;
+    state.eqEnabled = eqEnabled;
+    state.bassBoost = bassBoost;
+    state.virtualizer = virtualizer;
+    state.spatialEnabled = spatialEnabled;
+    state.crossfeedEnabled = crossfeedEnabled;
+    state.limiterMakeupGain = limiterGain;
+
+    jfloat* bands = env->GetFloatArrayElements(eqBands, nullptr);
+    for (int i = 0; i < 10; ++i) {
+        state.eqBands[i] = bands[i];
+    }
+    env->ReleaseFloatArrayElements(eqBands, bands, JNI_ABORT);
+
+    AIAudioProcessor::applyState(state);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, jobject thiz,
@@ -523,3 +549,10 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nIsSpatializerEnabled(JNIEn
     // Spatializer needs a simple isEnabled too
     return false; // For now return false or implement isEnabled in Spatializer class
 }
+
+ParametricEQ& getEngineEqualizer() { return equalizer; }
+BassBoost& getEngineBassBoost() { return bassBoost; }
+Virtualizer& getEngineVirtualizer() { return virtualizer; }
+Spatializer& getEngineSpatializer() { return spatializer; }
+Crossfeed& getEngineCrossfeed() { return crossfeed; }
+Limiter& getEngineLimiter() { return limiter; }
