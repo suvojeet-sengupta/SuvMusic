@@ -8,7 +8,9 @@ data class UpdateInfo(
     val versionCode: Int,
     val changelog: String = "",
     val downloadUrl: String,
-    val forceUpdate: Boolean
+    val forceUpdate: Boolean,
+    val size: String = "",
+    val releaseNotesUrl: String = ""
 )
 
 @Serializable

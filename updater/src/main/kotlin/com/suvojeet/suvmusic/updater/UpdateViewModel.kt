@@ -35,6 +35,8 @@ class UpdateViewModel @Inject constructor(
     private val _lastUpdated = MutableStateFlow<Long?>(null)
     val lastUpdated: StateFlow<Long?> = _lastUpdated.asStateFlow()
 
+    val downloadState = downloader.downloadState
+
     init {
         loadChangelog()
     }
