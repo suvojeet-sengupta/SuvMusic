@@ -97,18 +97,6 @@ class AIEqualizerService @Inject constructor(
     }
 
     private fun applySettings(state: AudioEffectState) {
-        spatialAudioProcessor.setEqEnabled(state.isEqEnabled)
-        state.safeEqBands.forEachIndexed { index, gain ->
-            if (index < 10) {
-                spatialAudioProcessor.setEqBand(index, gain)
-            }
-        }
-        spatialAudioProcessor.setBassBoost(state.safeBassBoost)
-        spatialAudioProcessor.setVirtualizer(state.safeVirtualizer)
-        spatialAudioProcessor.setSpatialEnabled(state.isSpatialEnabled)
-        spatialAudioProcessor.setCrossfeedEnabled(state.isCrossfeedEnabled)
-        // Adjust limiter for makeup gain
-        spatialAudioProcessor.setLimiterConfig(true, 0, false) // Simple trigger
-        // In real app, setLimiterConfig would be updated to accept makeupGain directly
+        spatialAudioProcessor.applyAIState(state)
     }
 }
