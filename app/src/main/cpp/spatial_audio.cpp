@@ -320,6 +320,10 @@ public:
         strength.store(s, std::memory_order_release);
     }
 
+    float getStrength() {
+        return strength.load(std::memory_order_acquire);
+    }
+
     void process(float* buffer, int numFrames, int numChannels) {
         float s = strength.load(std::memory_order_acquire);
         if (s <= 0.01f || numChannels < 2) return;
