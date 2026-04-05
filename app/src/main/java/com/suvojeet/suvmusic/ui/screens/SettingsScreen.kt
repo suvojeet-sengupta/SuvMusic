@@ -114,8 +114,10 @@ fun SettingsScreen(
     onCreditsClick: () -> Unit = {},
     onLastFmClick: () -> Unit = {},
     onDiscordClick: () -> Unit = {},
+    onAISettingsClick: () -> Unit = {},
     onUpdaterClick: () -> Unit = {}
-) {
+    )
+ {
     val uiState by viewModel.uiState.collectAsState()
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showAccountsSheet by remember { mutableStateOf(false) }
@@ -452,7 +454,17 @@ fun SettingsScreen(
                         subtitle = "Player UI, artwork style",
                         onClick = onCustomizationClick
                     )
-                }
+
+                    HorizontalDivider()
+
+                    SettingsNavigationItem(
+                        icon = Icons.Default.AutoAwesome,
+                        title = "AI Assistant",
+                        subtitle = "OpenAI, Anthropic, Gemini config",
+                        onClick = onAISettingsClick
+                    )
+                    }
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
 

@@ -97,6 +97,14 @@ data class SettingsUiState(
     val scrobbleDelayPercent: Float = 0.5f,
     val scrobbleMinDuration: Int = 30, // seconds
     val scrobbleDelaySeconds: Int = 180, // seconds
+    // AI
+    val openaiApiKey: String = "",
+    val openaiModel: String = "gpt-4o",
+    val anthropicApiKey: String = "",
+    val anthropicModel: String = "claude-3-5-sonnet-20240620",
+    val geminiApiKey: String = "",
+    val geminiModel: String = "gemini-1.5-pro",
+    val selectedAiProvider: String = "GEMINI",
     // Content Preferences
     val preferredLanguages: Set<String> = emptySet(),
     val youtubeHistorySyncEnabled: Boolean = false,
@@ -296,6 +304,28 @@ class SettingsViewModel @Inject constructor(
             sessionManager.keepScreenOnEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(keepScreenOn = enabled) }
             }
+        }
+
+        viewModelScope.launch {
+            sessionManager.openaiApiKeyFlow.collect { value -> _uiState.update { it.copy(openaiApiKey = value) } }
+        }
+        viewModelScope.launch {
+            sessionManager.openaiModelFlow.collect { value -> _uiState.update { it.copy(openaiModel = value) } }
+        }
+        viewModelScope.launch {
+            sessionManager.anthropicApiKeyFlow.collect { value -> _uiState.update { it.copy(anthropicApiKey = value) } }
+        }
+        viewModelScope.launch {
+            sessionManager.anthropicModelFlow.collect { value -> _uiState.update { it.copy(anthropicModel = value) } }
+        }
+        viewModelScope.launch {
+            sessionManager.geminiApiKeyFlow.collect { value -> _uiState.update { it.copy(geminiApiKey = value) } }
+        }
+        viewModelScope.launch {
+            sessionManager.geminiModelFlow.collect { value -> _uiState.update { it.copy(geminiModel = value) } }
+        }
+        viewModelScope.launch {
+            sessionManager.selectedAiProviderFlow.collect { value -> _uiState.update { it.copy(selectedAiProvider = value) } }
         }
 
         viewModelScope.launch {
@@ -583,6 +613,14 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+
+    fun setOpenAiApiKey(value: String) = viewModelScope.launch { sessionManager.setOpenAiApiKey(value) }
+    fun setOpenAiModel(value: String) = viewModelScope.launch { sessionManager.setOpenAiModel(value) }
+    fun setAnthropicApiKey(value: String) = viewModelScope.launch { sessionManager.setAnthropicApiKey(value) }
+    fun setAnthropicModel(value: String) = viewModelScope.launch { sessionManager.setAnthropicModel(value) }
+    fun setGeminiApiKey(value: String) = viewModelScope.launch { sessionManager.setGeminiApiKey(value) }
+    fun setGeminiModel(value: String) = viewModelScope.launch { sessionManager.setGeminiModel(value) }
+    fun setSelectedAiProvider(value: String) = viewModelScope.launch { sessionManager.setSelectedAiProvider(value) }
     
     private fun loadSettings() {
         viewModelScope.launch {

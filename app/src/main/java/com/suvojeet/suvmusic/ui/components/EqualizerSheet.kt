@@ -133,6 +133,7 @@ fun EqualizerSheet(
     onVirtualizerChange: (Float) -> Unit = {},
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onAIEqualizerClick: () -> Unit = {},
     dominantColor: Color,
     initialEnabled: Boolean,
     initialBands: FloatArray,
@@ -267,6 +268,20 @@ fun EqualizerSheet(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.IconButton(
+                        onClick = {
+                            onDismiss()
+                            onAIEqualizerClick()
+                        },
+                        enabled = isEnabled
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.AutoAwesome,
+                            contentDescription = "AI Equalizer",
+                            tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.5f)
+                        )
+                    }
+
                     androidx.compose.material3.TextButton(
                         onClick = {
                             onReset()
