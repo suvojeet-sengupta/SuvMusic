@@ -123,6 +123,13 @@ class SpatialAudioProcessor @Inject constructor(
         )
     }
     
+    fun getSignalStats(): com.suvojeet.suvmusic.ai.SignalStats {
+        return com.suvojeet.suvmusic.ai.SignalStats(
+            peakLevel = nativeSpatialAudio.getPeakLevel(),
+            rmsLevel = nativeSpatialAudio.getRmsLevel()
+        )
+    }
+
     private fun checkActive() {
         if (!isSpatialEnabled && !isLimiterEnabled && currentPitch == 1.0f) {
             // All effects off

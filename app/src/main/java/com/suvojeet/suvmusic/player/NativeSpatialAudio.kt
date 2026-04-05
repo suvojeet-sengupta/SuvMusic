@@ -155,9 +155,16 @@ class NativeSpatialAudio @Inject constructor() {
             state.safeVirtualizer,
             state.isSpatialEnabled,
             state.isCrossfeedEnabled,
+            state.limiterThresholdDb ?: -0.1f,
+            state.limiterRatio ?: 4.0f,
+            state.limiterAttackMs ?: 5.0f,
+            state.limiterReleaseMs ?: 100.0f,
             state.safeLimiterMakeupGain
         )
     }
+
+    fun getPeakLevel(): Float = if (isLibraryLoaded) nGetPeakLevel() else 0f
+    fun getRmsLevel(): Float = if (isLibraryLoaded) nGetRmsLevel() else 0f
 
     private external fun nApplyAIState(
         eqEnabled: Boolean,
@@ -166,8 +173,15 @@ class NativeSpatialAudio @Inject constructor() {
         virtualizer: Float,
         spatialEnabled: Boolean,
         crossfeedEnabled: Boolean,
+        limiterThreshold: Float,
+        limiterRatio: Float,
+        limiterAttack: Float,
+        limiterRelease: Float,
         limiterGain: Float
     )
+
+    private external fun nGetPeakLevel(): Float
+    private external fun nGetRmsLevel(): Float
 
     private external fun nGetEqBand(index: Int): Float
     private external fun nIsEqEnabled(): Boolean
