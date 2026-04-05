@@ -1,11 +1,7 @@
 #include "ai_audio_processor.h"
-#include "limiter.h"
-#include "biquad.h"
+#include "audio_engine_components.h"
+#include "spatial_audio_bridge.h"
 #include <algorithm>
-
-// Extern declarations for existing engine instances from spatial_audio.cpp
-// Note: We'd ideally move these to a common header, but this works for now.
-#include "spatial_audio_bridge.h" 
 
 #include <cmath>
 #include <mutex>

@@ -16,6 +16,7 @@ public:
     
     void setParams(float thresholdDb, float ratio, float attackMs, float releaseMs, float makeupGainDb);
     void setEnabled(bool enabled);
+    bool isEnabled() const;
     void setBalance(float balance);
     void reset();
 
