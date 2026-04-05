@@ -218,96 +218,84 @@ class HomeViewModel @Inject constructor(
     }
     
     private fun loadData(forceRefresh: Boolean = false) {
-        // If a mood is selected, ignore standard loadData (unless we want to support refresh for mood)
-        // But logic in onMoodSelected handles deselecting.
         if (_uiState.value.selectedMood != null && !forceRefresh) return
 
         viewModelScope.launch {
             val source = sessionManager.getMusicSource()
-            _uiState.update { it.copy(currentSource = source) }
+            _uiState.update { it.copy(currentSource = source, isLoading = _uiState.value.homeSections.isEmpty()) }
             
-            // 1. Load cache immediately based on source
-            val cachedSections = if (source == MusicSource.JIOSAAVN) {
-                sessionManager.getCachedJioSaavnHomeSectionsSync()
-            } else {
-                sessionManager.getCachedHomeSectionsSync()
+            // 1. Reactive Cache Loading
+            // Optimization: Collect cache asynchronously to keep UI snappy
+            launch {
+                val cacheFlow = if (source == MusicSource.JIOSAAVN) {
+                    sessionManager.getCachedJioSaavnHomeSections()
+                } else {
+                    sessionManager.getCachedHomeSections()
+                }
+                
+                cacheFlow.collect { cachedSections ->
+                    if (cachedSections.isNotEmpty()) {
+                        _uiState.update { 
+                            it.copy(
+                                homeSections = cachedSections, 
+                                filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
+                                isLoading = false,
+                                error = null
+                            ) 
+                        }
+                    }
+                }
             }
             
-            // Display cache if available
-            if (cachedSections.isNotEmpty()) {
+            // 2. Throttled Fresh Data Fetching
+            val lastFetchTime = sessionManager.getLastHomeFetchTime(source)
+            val cooldown = 5 * 60 * 1000L // 5 minutes cooldown
+            val isCooldownActive = System.currentTimeMillis() - lastFetchTime < cooldown
+            
+            if (forceRefresh || !isCooldownActive || _uiState.value.homeSections.isEmpty()) {
+                fetchFreshData(source)
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    private suspend fun fetchFreshData(source: MusicSource) {
+        try {
+            _uiState.update { it.copy(isRefreshing = true) }
+            val sections = when (source) {
+                MusicSource.JIOSAAVN -> jioSaavnRepository.getHomeSections()
+                else -> youTubeRepository.getHomeSections()
+            }
+            
+            if (sections.isNotEmpty()) {
                 _uiState.update { 
                     it.copy(
-                        homeSections = cachedSections, 
-                        filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
+                        homeSections = sections,
+                        filteredSections = sections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
                         isLoading = false,
-                        isRefreshing = false, // Not explicitly refreshing unless we decide to fetch
+                        isRefreshing = false,
                         error = null
                     ) 
                 }
-            }
-            
-            // 2. Determine if we need to fetch fresh data
-            val lastFetchTime = sessionManager.getLastHomeFetchTime(source)
-            val currentTime = System.currentTimeMillis()
-            val timeSinceLastFetch = currentTime - lastFetchTime
-            val cacheExpired = timeSinceLastFetch > 30 * 60 * 1000 // 30 minutes
-            
-            val shouldFetch = forceRefresh || cachedSections.isEmpty() || cacheExpired
-            
-            // Show loading indicators
-            if (shouldFetch) {
-                 if (cachedSections.isNotEmpty()) {
-                     _uiState.update { it.copy(isRefreshing = true) }
-                 } else {
-                     _uiState.update { it.copy(isLoading = true, error = null) }
-                 }
-            } else {
-                // No need to fetch, we are done
-                return@launch
-            }
-
-            try {
-                // 3. Fetch fresh data based on source
-                val sections = when (source) {
-                    MusicSource.JIOSAAVN -> jioSaavnRepository.getHomeSections()
-                    else -> youTubeRepository.getHomeSections()
-                }
+                sessionManager.updateLastHomeFetchTime(source)
                 
-                // 4. Update cache and UI
-                if (sections.isNotEmpty()) {
-                    if (source == MusicSource.JIOSAAVN) {
-                        sessionManager.saveJioSaavnHomeCache(sections)
-                    } else {
-                        sessionManager.saveHomeCache(sections)
-                    }
-                    
-                    // Update timestamp on successful fetch
-                    sessionManager.updateLastHomeFetchTime(source)
-                    
-                    _uiState.update { 
-                        it.copy(
-                            homeSections = sections,
-                            filteredSections = sections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
-                            isLoading = false,
-                            isRefreshing = false,
-                            error = null
-                        )
-                    }
-                } else if (cachedSections.isEmpty()) {
-                     // Only show error if both cache and fresh fetch are empty
-                     throw Exception("No content available")
+                // Save to cache asynchronously
+                if (source == MusicSource.JIOSAAVN) {
+                    sessionManager.saveJioSaavnHomeCache(sections)
                 } else {
-                    // Fetch failed but we have cache, just stop refreshing
-                    _uiState.update { it.copy(isRefreshing = false) }
+                    sessionManager.saveHomeCache(sections)
                 }
-            } catch (e: Exception) {
-                _uiState.update { 
-                    it.copy(
-                        error = if (it.homeSections.isEmpty()) e.message ?: "Failed to load content" else null,
-                        isLoading = false,
-                        isRefreshing = false
-                    )
-                }
+            } else {
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
+            }
+        } catch (e: Exception) {
+            _uiState.update { 
+                it.copy(
+                    error = if (it.homeSections.isEmpty()) e.message ?: "Failed to load content" else null,
+                    isLoading = false,
+                    isRefreshing = false
+                ) 
             }
         }
     }
