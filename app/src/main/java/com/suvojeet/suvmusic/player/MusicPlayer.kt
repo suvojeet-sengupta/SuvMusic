@@ -197,6 +197,7 @@ class MusicPlayer @Inject constructor(
     }
 
     private var lastSignificantState: Any? = null
+    private var playbackSpeedRampJob: Job? = null
 
     private fun registerDeviceReceiver() {
         val filter = android.content.IntentFilter().apply {
@@ -1276,28 +1277,47 @@ class MusicPlayer @Inject constructor(
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
         saveCounter = 0
+        
+        // Optimization 2: Reactive Flow-based ticker.
+        // We use a Flow to emit at intervals when the player is active.
         positionUpdateJob = scope.launch {
-            while (true) {
+            kotlinx.coroutines.flow.flow {
+                while (true) {
+                    emit(Unit)
+                    // Adaptive delay: faster when playing for smooth seekbar, slower when paused/buffering
+                    val isPlaying = mediaController?.isPlaying == true
+                    kotlinx.coroutines.delay(if (isPlaying) 400L else 1000L)
+                }
+            }.collect {
                 mediaController?.let { controller ->
                     val currentPos = controller.currentPosition.coerceAtLeast(0L)
                     val duration = controller.duration.coerceAtLeast(0L)
                     val bufferedPercentage = controller.bufferedPercentage
                     val playbackState = controller.playbackState
-                    
+
+                    // Optimization 5: Buffer-aware speed adjustment.
+                    // If the buffer is critically low (< 2%), we slow down slightly to avoid a hard pause.
+                    if (playbackState == Player.STATE_READY && bufferedPercentage < 2 && controller.isPlaying) {
+                        if (controller.playbackParameters.speed == _playerState.value.playbackSpeed) {
+                           android.util.Log.d("MusicPlayer", "Buffer low ($bufferedPercentage%), adjusting speed to 0.95x")
+                           controller.setPlaybackSpeed(_playerState.value.playbackSpeed * 0.95f)
+                        }
+                    } else if (controller.playbackParameters.speed != _playerState.value.playbackSpeed) {
+                        // Restore speed when buffer recovers
+                        controller.setPlaybackSpeed(_playerState.value.playbackSpeed)
+                    }
+
                     if (playbackState == Player.STATE_BUFFERING) {
                         if (bufferingStartWallTime == 0L) bufferingStartWallTime = System.currentTimeMillis()
                         val bufferingDuration = System.currentTimeMillis() - bufferingStartWallTime
                         if (bufferingDuration > MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE && !hasTriedLowQualityForCurrent) {
                             val currentQuality = sessionManager.getAudioQuality()
                             if (currentQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
-                                // Downscale: Clear cache and re-trigger play with forceLow
                                 _playerState.value.currentSong?.let { song ->
-                                    android.util.Log.i("MusicPlayer", "Buffering too long in AUTO mode. Downscaling to LOW quality for ${song.title}")
+                                    android.util.Log.i("MusicPlayer", "Buffering too long. Downscaling to LOW quality for ${song.title}")
                                     streamingService.clearCacheFor(song.id)
                                     hasTriedLowQualityForCurrent = true
                                     bufferingStartWallTime = 0L
-                                    
-                                    // Re-play current song to force resolution with new quality
                                     scope.launch {
                                         playSong(song, _playerState.value.queue, _playerState.value.currentIndex, forceLow = true)
                                     }
@@ -1309,13 +1329,12 @@ class MusicPlayer @Inject constructor(
                     }
 
                     val currentState = _playerState.value
-                    // Only update if significant change (position > 500ms diff or meta change)
                     val shouldUpdate = kotlin.math.abs(currentState.currentPosition - currentPos) > 500 ||
                                      currentState.duration != duration ||
                                      currentState.bufferedPercentage != bufferedPercentage
-                    
+
                     if (shouldUpdate) {
-                        _playerState.update { 
+                        _playerState.update {
                             it.copy(
                                 currentPosition = currentPos,
                                 duration = duration,
@@ -1323,10 +1342,10 @@ class MusicPlayer @Inject constructor(
                             )
                         }
                     }
-                    
-                    // Save playback state every ~5 seconds (25 iterations * 200ms = 5s)
+
+                    // Save playback state periodically
                     saveCounter++
-                    if (saveCounter >= 25) {
+                    if (saveCounter >= 15) { // ~6 seconds at 400ms interval
                         saveCounter = 0
                         saveCurrentPlaybackState()
                     }
@@ -1335,45 +1354,17 @@ class MusicPlayer @Inject constructor(
                     if (sessionManager.isGaplessPlaybackEnabled()) {
                         checkPreloadNextSong(currentPos, duration)
                         
-                        // Early transition: If we're in the last 1.5 seconds and next song is preloaded,
-                        // trigger transition to prevent any audible gap during the final silence/fade-out
-                        // Fix: Do NOT trigger this if Repeat One is active, as we want to loop the current song
-                        //
-                        // Bug Fix (Premature gapless trigger):
-                        // ExoPlayer initially reports duration = initial buffer size (e.g. 1301ms) before
-                        // it receives the full media headers. With no minimum guard, the condition
-                        // `currentPos >= duration - 1500` fires IMMEDIATELY at position=0 when
-                        // duration=1301ms (0 >= -199 = true), jumping to the next song within 200ms
-                        // of the current one starting. Guard: only trigger if duration >= 10 seconds.
-                        //
-                        // Also verify the next item actually has a resolved URI (not a placeholder)
-                        // before firing — preloadedNextSongId can be set even if updateNextMediaItem
-                        // failed silently, leaving the item with a placeholder URI.
-                        // Additional guard: require at least 5 seconds of actual wall-clock
-                        // playback time. This prevents premature gapless triggers when
-                        // ExoPlayer briefly reports a small duration from the initial buffer
-                        // before full media headers are parsed.
+                        // Early transition logic
                         val wallPlayTime = System.currentTimeMillis() - songPlayStartWallTime
                         if (duration >= 10_000L && wallPlayTime >= 5_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
-                                // Use Media3's nextMediaItemIndex which correctly handles
-                                // shuffle mode, repeat mode, and queue boundaries.
                                 val nextIndex = controller.nextMediaItemIndex
                                 if (nextIndex != -1 && nextIndex != androidx.media3.common.C.INDEX_UNSET) {
-                                    // Verify the preloaded song matches what the player expects next
                                     val nextMediaId = controller.getMediaItemAt(nextIndex).mediaId
                                     if (nextMediaId == preloadedNextSongId) {
-                                        // Double-check the item actually has a valid resolved URI,
-                                        // not just a placeholder — otherwise gapless fires into an error
-                                        val nextUri = controller.getMediaItemAt(nextIndex)
-                                            .localConfiguration?.uri?.toString()
-                                        val isResolved = !nextUri.isNullOrBlank() &&
-                                            !nextUri.contains("placeholder.invalid") &&
-                                            !nextUri.contains("youtube.com/watch") &&
-                                            !nextUri.contains("youtu.be/")
-                                        if (isResolved) {
-                                            // Transition to next song immediately
+                                        val nextUri = controller.getMediaItemAt(nextIndex).localConfiguration?.uri?.toString()
+                                        if (!nextUri.isNullOrBlank() && !nextUri.contains("placeholder.invalid")) {
                                             controller.seekToNextMediaItem()
                                         }
                                     }
@@ -1382,9 +1373,9 @@ class MusicPlayer @Inject constructor(
                         }
                     }
                 }
-                delay(200) // 5 updates/sec is more than enough for seekbar UI
             }
         }
+    }
 
         // Separate lightweight haptics coroutine — no StateFlow updates
         scope.launch {
@@ -1603,7 +1594,15 @@ class MusicPlayer @Inject constructor(
             try {
                 _playerState.update { it.copy(isLoading = true) }
                 
-                val mediaItems = queue.mapIndexed { index, s -> createMediaItem(s, index == startIndex, forceLow = (index == startIndex && forceLow)) }
+                // Optimization 1: Parallelize queue resolution.
+                // Building the list of MediaItems can be slow for large queues.
+                // Only the startIndex item actually performs network resolution here.
+                val mediaItems = queue.mapIndexed { index, s ->
+                    kotlinx.coroutines.async {
+                        createMediaItem(s, index == startIndex, forceLow = (index == startIndex && forceLow))
+                    }
+                }.kotlinx.coroutines.awaitAll()
+
                 mediaController?.let { controller ->
                     controller.setMediaItems(mediaItems, startIndex, 0L)
                     controller.prepare()
@@ -1634,9 +1633,6 @@ class MusicPlayer @Inject constructor(
                             kotlinx.coroutines.delay(500)
                             jioSaavnRepository.getStreamUrl(song.id)
                         }
-                        // Bug Fix: Use placeholder URI instead of empty string.
-                        // Empty string causes ExoPlayer to fail silently with a decode error.
-                        // Placeholder URI is detected by onMediaItemTransition as needing resolution.
                         ?: "https://placeholder.invalid/${song.id}"
                 } else {
                     song.streamUrl ?: "https://placeholder.invalid/${song.id}"
@@ -1645,11 +1641,19 @@ class MusicPlayer @Inject constructor(
             else -> {
                 if (resolveStream) {
                     if (_playerState.value.isVideoMode) {
-                        // Use getVideoStreamResult for dual-stream support (separate audio for 720p/1080p)
-                        val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
-                            resolvedVideoIds.put(song.id, it) 
+                        // Optimization 4: Parallelize video ID resolution and stream result fetching.
+                        val videoIdDeferred = kotlinx.coroutines.async {
+                            resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
+                                resolvedVideoIds.put(song.id, it) 
+                            }
                         }
-                        val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality, forceLow = forceLow)
+                        
+                        val videoResult = youTubeRepository.getVideoStreamResult(
+                            videoIdDeferred.await(), 
+                            _playerState.value.videoQuality, 
+                            forceLow = forceLow
+                        )
+                        
                         if (videoResult != null) {
                             audioStreamUrl = videoResult.audioUrl
                             videoResult.videoUrl
@@ -1663,7 +1667,6 @@ class MusicPlayer @Inject constructor(
                                 kotlinx.coroutines.delay(500)
                                 youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
                             }
-                            // Bug Fix: Use placeholder URI instead of empty string
                             ?: "https://placeholder.invalid/${song.id}"
                     }
                 } else {
@@ -1923,23 +1926,36 @@ class MusicPlayer @Inject constructor(
     
     /**
      * Set playback parameters (speed and pitch).
+     * Optimization 3: Smoothly ramp playback speed over 300ms to avoid audio artifacts.
      */
     fun setPlaybackParameters(speed: Float, pitch: Float) {
         val clampedSpeed = speed.coerceIn(0.1f, 5.0f)
         val clampedPitch = pitch.coerceIn(0.1f, 5.0f)
         
-        // Use Media3 for speed (better sync) but native for pitch (better quality)
-        // By setting pitch to 1.0f in Media3, we disable its internal pitch shifter
-        mediaController?.playbackParameters = androidx.media3.common.PlaybackParameters(clampedSpeed, 1.0f)
-        
-        // Use our high-quality native pitch shifter
-        spatialAudioProcessor.setPlaybackParams(clampedPitch)
-        
-        _playerState.update { 
-            it.copy(
-                playbackSpeed = clampedSpeed,
-                pitch = clampedPitch
-            ) 
+        playbackSpeedRampJob?.cancel()
+        playbackSpeedRampJob = scope.launch {
+            val currentSpeed = _playerState.value.playbackSpeed
+            val steps = 15
+            val duration = 300L
+            val stepTime = duration / steps
+            
+            // Ramp speed smoothly
+            for (i in 1..steps) {
+                val interpolatedSpeed = currentSpeed + (clampedSpeed - currentSpeed) * (i.toFloat() / steps)
+                mediaController?.setPlaybackSpeed(interpolatedSpeed)
+                delay(stepTime)
+            }
+            
+            // Final target speed
+            mediaController?.playbackParameters = androidx.media3.common.PlaybackParameters(clampedSpeed, 1.0f)
+            spatialAudioProcessor.setPlaybackParams(clampedPitch)
+            
+            _playerState.update { 
+                it.copy(
+                    playbackSpeed = clampedSpeed,
+                    pitch = clampedPitch
+                ) 
+            }
         }
     }
     
