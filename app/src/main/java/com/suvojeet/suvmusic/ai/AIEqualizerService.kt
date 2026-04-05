@@ -70,8 +70,11 @@ class AIEqualizerService @Inject constructor(
 
             addLog("Analyzing current audio engine state...")
             val currentStatus = spatialAudioProcessor.getCurrentState()
+            
+            val stats = spatialAudioProcessor.getSignalStats()
+            addLog("Live Signal: Peak ${"%.2f".format(stats.peakLevel)}, RMS ${"%.2f".format(stats.rmsLevel)}")
 
-            addLog("Contacting AI for optimization strategy...")
+            addLog("Contacting AI for hardware-level tuning...")
             val result = client.getAudioEffectState(prompt, currentStatus, songContext)
             
             result.onSuccess { state ->

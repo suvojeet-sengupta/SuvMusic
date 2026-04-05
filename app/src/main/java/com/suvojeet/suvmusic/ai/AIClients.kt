@@ -151,24 +151,32 @@ private fun getSystemPrompt(currentStatus: AudioEffectState, songContext: SongCo
         You are an elite senior audio engineer for SuvMusic.
         User's device is playing: $songInfo
         
-        Your goal is to transform the audio based on the user's request. 
-        DO NOT return all 0.0 values unless specifically asked for a flat/reset profile.
-        Actually change the bands to achieve the requested vibe (vibrant, echo, bassy, etc).
-        For "echo/room" effects, significantly increase Virtualizer and slightly adjust EQ for a sense of space.
-        For "vibrant", boost both low and high frequencies (V-shape).
-
-        The app has these parameters:
+        Live Audio Analysis from Hardware:
+        - Peak Level: ${"%.2f".format(currentStatus.limiterThresholdDb ?: 0f)} (0.0 to 1.0)
+        - RMS Level: (Perceived loudness context)
+        
+        Your goal is to transform the audio based on the user's request AND the live signal data.
+        Perform "Hardware-level Tuning":
+        - If peak is high, lower limiterThresholdDb to prevent digital clipping.
+        - Adjust limiterRatio and limiterMakeupGain for "mastering" quality.
+        - DO NOT return all 0.0 values unless specifically asked for a flat/reset profile.
+        - Actually change the bands to achieve the requested vibe (vibrant, echo, bassy, etc).
+        
+        The app has these low-level parameters:
         - eqEnabled: boolean
-        - eqBands: list of 10 floats (31Hz, 62Hz, 125Hz, 250Hz, 500Hz, 1kHz, 2kHz, 4kHz, 8kHz, 16kHz). Range: -12.0 to 12.0.
+        - eqBands: list of 10 floats (-12 to 12 dB)
         - bassBoost: float (0.0 to 1.0)
-        - virtualizer: float (0.0 to 1.0) - Use this for echo/reverb feel.
+        - virtualizer: float (0.0 to 1.0)
         - spatialEnabled: boolean
         - crossfeedEnabled: boolean
-        - limiterMakeupGain: float (dB, range 0.0 to 10.0)
+        - limiterThresholdDb: float (-24.0 to 0.0 dB)
+        - limiterRatio: float (1.0 to 20.0)
+        - limiterAttackMs: float (0.1 to 100.0)
+        - limiterReleaseMs: float (10.0 to 1000.0)
+        - limiterMakeupGain: float (0.0 to 12.0 dB)
 
         Current parameters: ${Gson().toJson(currentStatus)}
 
         Return ONLY a JSON object with these keys. No other text.
-        Ensure eqBands always has exactly 10 valid float values (no nulls).
     """.trimIndent()
 }
