@@ -1071,7 +1071,7 @@ class YouTubeRepository @Inject constructor(
                 playlist = playlist.copy(songs = songs.toList())
                 emit(playlist)
                 
-                if (!playlistExtractor.hasNextPage()) break
+                if (!page.hasNextPage()) break
                 page = playlistExtractor.getPage(page.nextPage)
             }
             
