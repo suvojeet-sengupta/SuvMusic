@@ -13,9 +13,13 @@ class OpenAIClient(private val apiKey: String, private val model: String) : AICl
     private val client = OkHttpClient()
     private val gson = Gson()
 
-    override suspend fun getAudioEffectState(prompt: String, currentStatus: AudioEffectState): Result<AudioEffectState> = withContext(Dispatchers.IO) {
+    override suspend fun getAudioEffectState(
+        prompt: String, 
+        currentStatus: AudioEffectState,
+        songContext: SongContext?
+    ): Result<AudioEffectState> = withContext(Dispatchers.IO) {
         try {
-            val systemPrompt = getSystemPrompt(currentStatus)
+            val systemPrompt = getSystemPrompt(currentStatus, songContext)
             val json = JSONObject().apply {
                 put("model", model)
                 put("messages", com.google.gson.JsonArray().apply {
@@ -60,9 +64,13 @@ class GeminiClient(private val apiKey: String, private val model: String) : AICl
     private val client = OkHttpClient()
     private val gson = Gson()
 
-    override suspend fun getAudioEffectState(prompt: String, currentStatus: AudioEffectState): Result<AudioEffectState> = withContext(Dispatchers.IO) {
+    override suspend fun getAudioEffectState(
+        prompt: String, 
+        currentStatus: AudioEffectState,
+        songContext: SongContext?
+    ): Result<AudioEffectState> = withContext(Dispatchers.IO) {
         try {
-            val systemPrompt = getSystemPrompt(currentStatus)
+            val systemPrompt = getSystemPrompt(currentStatus, songContext)
             val requestBody = """
                 {
                   "contents": [{
@@ -96,9 +104,13 @@ class AnthropicClient(private val apiKey: String, private val model: String) : A
     private val client = OkHttpClient()
     private val gson = Gson()
 
-    override suspend fun getAudioEffectState(prompt: String, currentStatus: AudioEffectState): Result<AudioEffectState> = withContext(Dispatchers.IO) {
+    override suspend fun getAudioEffectState(
+        prompt: String, 
+        currentStatus: AudioEffectState,
+        songContext: SongContext?
+    ): Result<AudioEffectState> = withContext(Dispatchers.IO) {
         try {
-            val systemPrompt = getSystemPrompt(currentStatus)
+            val systemPrompt = getSystemPrompt(currentStatus, songContext)
             val requestBody = """
                 {
                     "model": "$model",
@@ -130,22 +142,33 @@ class AnthropicClient(private val apiKey: String, private val model: String) : A
     }
 }
 
-private fun getSystemPrompt(currentStatus: AudioEffectState): String {
+private fun getSystemPrompt(currentStatus: AudioEffectState, songContext: SongContext?): String {
+    val songInfo = songContext?.let {
+        "\nCurrently playing: ${it.title} by ${it.artist} (Source: ${it.source})"
+    } ?: "\nNo song metadata available."
+
     return """
-        You are an expert audio engineer for the SuvMusic app. 
-        Your task is to optimize the audio settings based on the user's natural language request.
-        The app has the following parameters:
+        You are an elite senior audio engineer for SuvMusic.
+        User's device is playing: $songInfo
+        
+        Your goal is to transform the audio based on the user's request. 
+        DO NOT return all 0.0 values unless specifically asked for a flat/reset profile.
+        Actually change the bands to achieve the requested vibe (vibrant, echo, bassy, etc).
+        For "echo/room" effects, significantly increase Virtualizer and slightly adjust EQ for a sense of space.
+        For "vibrant", boost both low and high frequencies (V-shape).
+
+        The app has these parameters:
         - eqEnabled: boolean
-        - eqBands: list of 10 floats (gains in dB for frequencies: 31Hz, 62Hz, 125Hz, 250Hz, 500Hz, 1kHz, 2kHz, 4kHz, 8kHz, 16kHz). Range: -12.0 to 12.0.
+        - eqBands: list of 10 floats (31Hz, 62Hz, 125Hz, 250Hz, 500Hz, 1kHz, 2kHz, 4kHz, 8kHz, 16kHz). Range: -12.0 to 12.0.
         - bassBoost: float (0.0 to 1.0)
-        - virtualizer: float (0.0 to 1.0)
+        - virtualizer: float (0.0 to 1.0) - Use this for echo/reverb feel.
         - spatialEnabled: boolean
         - crossfeedEnabled: boolean
-        - limiterMakeupGain: float (dB, range 0.0 to 20.0)
+        - limiterMakeupGain: float (dB, range 0.0 to 10.0)
 
-        Current status: ${Gson().toJson(currentStatus)}
+        Current parameters: ${Gson().toJson(currentStatus)}
 
-        Return ONLY a valid JSON object with the keys matching the parameter names above. Do not include any other text or explanation. 
-        Ensure all 10 bands are present in eqBands.
+        Return ONLY a JSON object with these keys. No other text.
+        Ensure eqBands always has exactly 10 values.
     """.trimIndent()
 }

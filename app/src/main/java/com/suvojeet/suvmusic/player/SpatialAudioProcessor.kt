@@ -103,6 +103,17 @@ class SpatialAudioProcessor @Inject constructor(
         nativeSpatialAudio.setPlaybackParams(pitch)
         checkActive()
     }
+
+    fun getCurrentState(): com.suvojeet.suvmusic.ai.AudioEffectState {
+        return com.suvojeet.suvmusic.ai.AudioEffectState(
+            eqEnabled = nativeSpatialAudio.isEqEnabled(),
+            eqBands = List(10) { nativeSpatialAudio.getEqBand(it) },
+            bassBoost = nativeSpatialAudio.getBassBoost(),
+            virtualizer = nativeSpatialAudio.getVirtualizer(),
+            spatialEnabled = isSpatialEnabled,
+            crossfeedEnabled = isCrossfeedEnabled
+        )
+    }
     
     private fun checkActive() {
         if (!isSpatialEnabled && !isLimiterEnabled && currentPitch == 1.0f) {
