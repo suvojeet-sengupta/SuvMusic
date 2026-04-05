@@ -76,11 +76,24 @@ class PlayerViewModel @Inject constructor(
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
     
-    // Stable player state that ignores frequent progress updates for UI optimization
-    val playbackInfo = musicPlayer.playerState.map { state ->
-        // Return a copy with progress fields reset to avoid triggering changes
-        state.copy(currentPosition = 0L, duration = 0L, bufferedPercentage = 0)
-    }.distinctUntilChanged()
+    // Stable player state that ignores frequent progress updates for UI optimization.
+    // Optimization: Use a custom comparator to avoid emissions when only progress/buffer changes.
+    val playbackInfo = musicPlayer.playerState.distinctUntilChanged { old, new ->
+        old.currentSong?.id == new.currentSong?.id &&
+        old.isPlaying == new.isPlaying &&
+        old.shuffleEnabled == new.shuffleEnabled &&
+        old.repeatMode == new.repeatMode &&
+        old.isLoading == new.isLoading &&
+        old.error == new.error &&
+        old.videoQuality == new.videoQuality &&
+        old.isVideoMode == new.isVideoMode &&
+        old.playbackSpeed == new.playbackSpeed &&
+        old.pitch == new.pitch
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = musicPlayer.playerState.value
+    )
     
     private val _lyricsState = MutableStateFlow<Lyrics?>(null)
     val lyricsState: StateFlow<Lyrics?> = _lyricsState.asStateFlow()
