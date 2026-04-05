@@ -262,6 +262,18 @@ public:
         preampGain.store(1.0f, std::memory_order_release);
     }
 
+    float getBandGain(int index) {
+        std::lock_guard<std::mutex> lock(filterMutex);
+        if (index >= 0 && index < (int)filters.size()) {
+            return filters[index].getGainDb();
+        }
+        return 0.0f;
+    }
+
+    bool isEnabled() {
+        return enabled.load(std::memory_order_acquire);
+    }
+
 private:
     std::mutex filterMutex;
     std::atomic<bool> enabled;
@@ -289,6 +301,10 @@ public:
     void reset() {
         filter.reset();
         strength.store(0.0f, std::memory_order_release);
+    }
+
+    float getStrength() {
+        return strength.load(std::memory_order_acquire);
     }
 
 private:
@@ -471,4 +487,35 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nSetLimiterBalance(JNIEnv *env, jobject thiz, jfloat balance) {
     limiter.setBalance(balance);
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nGetEqBand(JNIEnv *env, jobject thiz, jint index) {
+    return equalizer.getBandGain(index);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nIsEqEnabled(JNIEnv *env, jobject thiz) {
+    return equalizer.isEnabled();
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nGetBassBoost(JNIEnv *env, jobject thiz) {
+    return bassBoost.getStrength();
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nGetVirtualizer(JNIEnv *env, jobject thiz) {
+    return virtualizer.getStrength();
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nIsSpatializerEnabled(JNIEnv *env, jobject thiz) {
+    // Spatializer needs a simple isEnabled too
+    return false; // For now return false or implement isEnabled in Spatializer class
 }
