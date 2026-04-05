@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -113,11 +114,11 @@ class LibraryRepositoryImpl @Inject constructor(
                     addedAt = entity.addedAt
                 )
             }
-        }.kotlinx.coroutines.flow.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun getPlaylistSongCountFlow(playlistId: String): Flow<Int> {
-        return libraryDao.getPlaylistSongCountFlow(playlistId).kotlinx.coroutines.flow.flowOn(Dispatchers.IO)
+        return libraryDao.getPlaylistSongCountFlow(playlistId).flowOn(Dispatchers.IO)
     }
 
     override suspend fun isSongInPlaylist(playlistId: String, songId: String): Boolean = withContext(Dispatchers.IO) {
