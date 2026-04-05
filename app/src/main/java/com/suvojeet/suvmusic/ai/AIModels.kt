@@ -13,7 +13,11 @@ data class AudioEffectState(
     private val virtualizer: Float? = 0f,
     private val spatialEnabled: Boolean? = false,
     private val crossfeedEnabled: Boolean? = true,
-    private val limiterMakeupGain: Float? = 0f
+    private val limiterMakeupGain: Float? = 0f,
+    val limiterThresholdDb: Float? = -0.1f,
+    val limiterRatio: Float? = 4.0f,
+    val limiterAttackMs: Float? = 5.0f,
+    val limiterReleaseMs: Float? = 100.0f
 ) {
     val isEqEnabled get() = eqEnabled ?: true
     val safeEqBands: List<Float> get() = eqBands?.map { it ?: 0f } ?: List(10) { 0f }
@@ -23,6 +27,11 @@ data class AudioEffectState(
     val isCrossfeedEnabled get() = crossfeedEnabled ?: true
     val safeLimiterMakeupGain get() = limiterMakeupGain ?: 0f
 }
+
+data class SignalStats(
+    val peakLevel: Float,
+    val rmsLevel: Float
+)
 
 data class SongContext(
     val title: String,

@@ -7,6 +7,12 @@
 // Note: We'd ideally move these to a common header, but this works for now.
 #include "spatial_audio_bridge.h" 
 
+#include <cmath>
+#include <mutex>
+
+static AudioSignalStats g_latestStats = {0.0f, 0.0f};
+static std::mutex g_statsMutex;
+
 void AIAudioProcessor::applyState(const AIAudioState& state) {
     // 1. Apply EQ
     getEngineEqualizer().setEnabled(state.eqEnabled);
@@ -24,10 +30,17 @@ void AIAudioProcessor::applyState(const AIAudioState& state) {
     getEngineSpatializer().setEnabled(state.spatialEnabled);
 
     // 5. Apply Crossfeed
-    getEngineCrossfeed().setParams(state.crossfeedEnabled, 0.5f); // 0.5 default strength
+    getEngineCrossfeed().setParams(state.crossfeedEnabled, 0.5f);
 
-    // 6. Apply Limiter Makeup Gain
-    getEngineLimiter().setParams(-0.1f, 4.0f, 5.0f, 100.0f, state.limiterMakeupGain);
+    // 6. Apply Professional Limiter Tuning
+    getEngineLimiter().setEnabled(true);
+    getEngineLimiter().setParams(
+        state.limiterThresholdDb,
+        state.limiterRatio,
+        state.limiterAttackMs,
+        state.limiterReleaseMs,
+        state.limiterMakeupGain
+    );
 }
 
 AIAudioState AIAudioProcessor::getCurrentState() {
@@ -38,8 +51,41 @@ AIAudioState AIAudioProcessor::getCurrentState() {
     }
     state.bassBoost = getEngineBassBoost().getStrength();
     state.virtualizer = getEngineVirtualizer().getStrength();
-    state.spatialEnabled = false; // Spatializer lacks isEnabled getter currently
+    state.spatialEnabled = false; 
     state.crossfeedEnabled = true;
+    
+    // Default professional values if not set
+    state.limiterThresholdDb = -0.1f;
+    state.limiterRatio = 4.0f;
+    state.limiterAttackMs = 5.0f;
+    state.limiterReleaseMs = 100.0f;
     state.limiterMakeupGain = 0.0f;
+    
     return state;
+}
+
+void AIAudioProcessor::updateStats(const float* buffer, int numFrames, int numChannels) {
+    if (!buffer || numFrames <= 0) return;
+
+    float peak = 0.0f;
+    float sumSquares = 0.0f;
+    int totalSamples = numFrames * numChannels;
+
+    for (int i = 0; i < totalSamples; ++i) {
+        float absSample = std::abs(buffer[i]);
+        if (absSample > peak) peak = absSample;
+        sumSquares += buffer[i] * buffer[i];
+    }
+
+    float rms = std::sqrt(sumSquares / (float)totalSamples);
+
+    std::lock_guard<std::mutex> lock(g_statsMutex);
+    // Simple EMA (Exponential Moving Average) for smoothing
+    g_latestStats.peakLevel = g_latestStats.peakLevel * 0.9f + peak * 0.1f;
+    g_latestStats.rmsLevel = g_latestStats.rmsLevel * 0.9f + rms * 0.1f;
+}
+
+AudioSignalStats AIAudioProcessor::getLatestStats() {
+    std::lock_guard<std::mutex> lock(g_statsMutex);
+    return g_latestStats;
 }

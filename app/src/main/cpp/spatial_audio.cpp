@@ -371,7 +371,8 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nApplyAIState(JNIEnv *env, jobject thiz, 
     jboolean eqEnabled, jfloatArray eqBands, jfloat bassBoost, jfloat virtualizer, 
-    jboolean spatialEnabled, jboolean crossfeedEnabled, jfloat limiterGain) {
+    jboolean spatialEnabled, jboolean crossfeedEnabled, 
+    jfloat limiterThreshold, jfloat limiterRatio, jfloat limiterAttack, jfloat limiterRelease, jfloat limiterGain) {
     
     AIAudioState state;
     state.eqEnabled = eqEnabled;
@@ -379,6 +380,11 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nApplyAIState(JNIEnv *env, 
     state.virtualizer = virtualizer;
     state.spatialEnabled = spatialEnabled;
     state.crossfeedEnabled = crossfeedEnabled;
+    
+    state.limiterThresholdDb = limiterThreshold;
+    state.limiterRatio = limiterRatio;
+    state.limiterAttackMs = limiterAttack;
+    state.limiterReleaseMs = limiterRelease;
     state.limiterMakeupGain = limiterGain;
 
     jfloat* bands = env->GetFloatArrayElements(eqBands, nullptr);
@@ -388,6 +394,18 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nApplyAIState(JNIEnv *env, 
     env->ReleaseFloatArrayElements(eqBands, bands, JNI_ABORT);
 
     AIAudioProcessor::applyState(state);
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nGetPeakLevel(JNIEnv *env, jobject thiz) {
+    return AIAudioProcessor::getLatestStats().peakLevel;
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nGetRmsLevel(JNIEnv *env, jobject thiz) {
+    return AIAudioProcessor::getLatestStats().rmsLevel;
 }
 
 extern "C"
@@ -431,6 +449,9 @@ Java_com_suvojeet_suvmusic_player_NativeSpatialAudio_nProcessPcm16(JNIEnv *env, 
     pitchShifter.process(floatData, frameCount, channelCount);
     spatializer.process(floatData, frameCount, channelCount, azimuth, elevation, sampleRate);
     limiter.process(floatData, frameCount, channelCount, sampleRate);
+
+    // AI Analyzer - Direct signal feedback
+    AIAudioProcessor::updateStats(floatData, frameCount, channelCount);
 
     for (int i = 0; i < totalSamples; ++i) {
         float sample = std::max(-1.0f, std::min(1.0f, floatData[i]));
