@@ -49,9 +49,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideLocalAudioRepository(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        sessionManager: SessionManager
     ): LocalAudioRepository {
-        return LocalAudioRepository(context)
+        return LocalAudioRepository(context, sessionManager)
     }
     
     @Provides
