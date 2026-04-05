@@ -161,6 +161,32 @@ fun AIEqualizerScreen(
             ) {
                 Text("Clear Logs")
             }
+
+            val lastResult by aiService.lastResult.collectAsState()
+            if (lastResult != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                AIResultCard(lastResult!!)
+            }
+        }
+    }
+}
+
+@Composable
+fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("AI Optimization Applied", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Bass: ${(state.bassBoost * 100).toInt()}% | Echo: ${(state.virtualizer * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+            Text("EQ: ${state.eqBands.map { it.toInt() }.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

@@ -35,6 +35,10 @@ public:
         calculateCoefficients();
     }
 
+    float getGainDb() const {
+        return gainDb;
+    }
+
     void process(float* buffer, int numFrames, int numChannels) {
         // Clamp to max supported channels to prevent buffer overflow
         const int safeChannels = numChannels > 8 ? 8 : numChannels;
