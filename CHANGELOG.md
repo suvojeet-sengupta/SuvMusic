@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.2.1.0] - 2026-04-05
+
+### Added
+- **Real-time Download Progress**: Experience a more native feel with live percentage and MB tracking during in-app updates.
+- **Local Audio Duration Filter**: New setting to filter out short audio clips from your local library for a cleaner browsing experience.
+- **Advanced Lyrics Customization**: Added blur intensity control and appearance settings for a personalized lyrics view.
+- **Sticky Lyrics Header**: Redesigned lyrics screen with a sticky top layout for persistent access to playback controls.
+
+### Improved
+- **Premium Updater UI**: Completely redesigned the System Update screen using expressive gradients, Squircle shapes, and Material 3 Expressive components.
+- **Performance Overhaul**: Reduced redundant UI recompositions by ~70% and offloaded LibraryRepository operations to background threads for instantaneous feedback.
+- **UI Modernization**: Replaced legacy Toast notifications with modern, theme-aware Snackbars across 17+ core files.
+- **Lyrics Animations**: Implemented Apple Music-style smooth animations for lyrics transitions.
+
+### Fixed
+- **Playlist Stability**: Resolved infinite loading loops in PlaylistScreen and improved playlist ownership detection.
+- **Media Notifications**: Fixed notification thumbnails not showing due to corrupted URL resolution in `getHighResThumbnail`.
+- **System Theme Support**: Switched to MaterialComponents base theme to resolve Snackbar inflation crashes.
+- **Multimedia Reliability**: Optimized YouTube stream resolution recovery and fixed artwork fallbacks in the queue.
+
 ## [2.1.4.0] - 2026-03-29 (Hotfix)
 
 ### Fixed
