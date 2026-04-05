@@ -119,7 +119,40 @@ class LibraryViewModel @Inject constructor(
         observeLibraryPlaylists()
         observeImportService()
         observeLikedSongs()
+        observeDurationFilterSettings()
         schedulePeriodicSync()
+    }
+
+    private fun observeDurationFilterSettings() {
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                sessionManager.filterLocalByDurationEnabledFlow,
+                sessionManager.localDurationFilterThresholdFlow
+            ) { enabled, threshold ->
+                enabled to threshold
+            }.collect {
+                // Refresh local data when duration filter settings change
+                loadLocalData()
+            }
+        }
+    }
+
+    private fun loadLocalData() {
+        viewModelScope.launch {
+            try {
+                val local = localAudioRepository.getAllLocalSongs()
+                val localAlbums = localAudioRepository.getAllLocalAlbums()
+                val localArtists = localAudioRepository.getAllLocalArtists()
+                val localFolders = local.groupBy { it.customFolderPath ?: "Root" }
+                
+                _uiState.update { it.copy(
+                    localSongs = local,
+                    localAlbums = localAlbums,
+                    localArtists = localArtists,
+                    localFolders = localFolders
+                ) }
+            } catch (e: Exception) { }
+        }
     }
 
     private fun observeLikedSongs() {
@@ -204,17 +237,7 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 // Load local audio
-                val local = localAudioRepository.getAllLocalSongs()
-                val localAlbums = localAudioRepository.getAllLocalAlbums()
-                val localArtists = localAudioRepository.getAllLocalArtists()
-                val localFolders = local.groupBy { it.customFolderPath ?: "Root" }
-                
-                _uiState.update { it.copy(
-                    localSongs = local,
-                    localAlbums = localAlbums,
-                    localArtists = localArtists,
-                    localFolders = localFolders
-                ) }
+                loadLocalData()
 
                 // Liked songs are now observed via Flow, no need to fetch here manually
                 // But if it's the first run and empty, we might want to trigger a sync
