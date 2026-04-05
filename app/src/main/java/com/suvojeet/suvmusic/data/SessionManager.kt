@@ -212,6 +212,9 @@ class SessionManager @Inject constructor(
         private val PLAYLIST_SORT_TYPE_KEY = stringPreferencesKey("playlist_sort_type")
         private val PLAYLIST_SORT_ORDER_KEY = booleanPreferencesKey("playlist_sort_order")
         private val HOME_SECTIONS_VISIBILITY_KEY = stringSetPreferencesKey("home_sections_visibility")
+        
+        private val FILTER_LOCAL_BY_DURATION_ENABLED_KEY = booleanPreferencesKey("filter_local_by_duration_enabled")
+        private val LOCAL_DURATION_FILTER_THRESHOLD_KEY = intPreferencesKey("local_duration_filter_threshold")
 
         val DEFAULT_HOME_SECTIONS = setOf(
             "greeting",
@@ -1366,6 +1369,34 @@ class SessionManager @Inject constructor(
     suspend fun setIosLiquidGlassEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IOS_LIQUID_GLASS_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- Library Settings ---
+
+    suspend fun isFilterLocalByDurationEnabled(): Boolean =
+        context.dataStore.data.first()[FILTER_LOCAL_BY_DURATION_ENABLED_KEY] ?: false
+
+    val filterLocalByDurationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[FILTER_LOCAL_BY_DURATION_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setFilterLocalByDurationEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[FILTER_LOCAL_BY_DURATION_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun getLocalDurationFilterThreshold(): Int =
+        context.dataStore.data.first()[LOCAL_DURATION_FILTER_THRESHOLD_KEY] ?: 30
+
+    val localDurationFilterThresholdFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[LOCAL_DURATION_FILTER_THRESHOLD_KEY] ?: 30
+    }
+
+    suspend fun setLocalDurationFilterThreshold(seconds: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[LOCAL_DURATION_FILTER_THRESHOLD_KEY] = seconds
         }
     }
 
