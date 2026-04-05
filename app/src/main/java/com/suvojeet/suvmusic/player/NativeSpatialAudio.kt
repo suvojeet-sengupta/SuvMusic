@@ -146,6 +146,29 @@ class NativeSpatialAudio @Inject constructor() {
     fun getBassBoost(): Float = if (isLibraryLoaded) nGetBassBoost() else 0f
     fun getVirtualizer(): Float = if (isLibraryLoaded) nGetVirtualizer() else 0f
     
+    fun applyAIState(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
+        if (!isLibraryLoaded) return
+        nApplyAIState(
+            state.isEqEnabled,
+            state.safeEqBands.toFloatArray(),
+            state.safeBassBoost,
+            state.safeVirtualizer,
+            state.isSpatialEnabled,
+            state.isCrossfeedEnabled,
+            state.safeLimiterMakeupGain
+        )
+    }
+
+    private external fun nApplyAIState(
+        eqEnabled: Boolean,
+        eqBands: FloatArray,
+        bassBoost: Float,
+        virtualizer: Float,
+        spatialEnabled: Boolean,
+        crossfeedEnabled: Boolean,
+        limiterGain: Float
+    )
+
     private external fun nGetEqBand(index: Int): Float
     private external fun nIsEqEnabled(): Boolean
     private external fun nGetBassBoost(): Float

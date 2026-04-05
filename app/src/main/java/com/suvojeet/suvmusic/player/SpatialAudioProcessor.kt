@@ -104,6 +104,14 @@ class SpatialAudioProcessor @Inject constructor(
         checkActive()
     }
 
+    fun applyAIState(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
+        nativeSpatialAudio.applyAIState(state)
+        // Sync local flags
+        isSpatialEnabled = state.isSpatialEnabled
+        isCrossfeedEnabled = state.isCrossfeedEnabled
+        checkActive()
+    }
+
     fun getCurrentState(): com.suvojeet.suvmusic.ai.AudioEffectState {
         return com.suvojeet.suvmusic.ai.AudioEffectState(
             eqEnabled = nativeSpatialAudio.isEqEnabled(),
