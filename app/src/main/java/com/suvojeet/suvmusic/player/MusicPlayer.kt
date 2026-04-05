@@ -31,6 +31,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -1375,7 +1378,6 @@ class MusicPlayer @Inject constructor(
                 }
             }
         }
-    }
 
         // Separate lightweight haptics coroutine — no StateFlow updates
         scope.launch {
@@ -1597,11 +1599,13 @@ class MusicPlayer @Inject constructor(
                 // Optimization 1: Parallelize queue resolution.
                 // Building the list of MediaItems can be slow for large queues.
                 // Only the startIndex item actually performs network resolution here.
-                val mediaItems = queue.mapIndexed { index, s ->
-                    kotlinx.coroutines.async {
-                        createMediaItem(s, index == startIndex, forceLow = (index == startIndex && forceLow))
-                    }
-                }.kotlinx.coroutines.awaitAll()
+                val mediaItems = coroutineScope {
+                    queue.mapIndexed { index, s ->
+                        async {
+                            createMediaItem(s, index == startIndex, forceLow = (index == startIndex && forceLow))
+                        }
+                    }.awaitAll()
+                }
 
                 mediaController?.let { controller ->
                     controller.setMediaItems(mediaItems, startIndex, 0L)
@@ -1642,17 +1646,19 @@ class MusicPlayer @Inject constructor(
                 if (resolveStream) {
                     if (_playerState.value.isVideoMode) {
                         // Optimization 4: Parallelize video ID resolution and stream result fetching.
-                        val videoIdDeferred = kotlinx.coroutines.async {
-                            resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
-                                resolvedVideoIds.put(song.id, it) 
+                        val videoResult = coroutineScope {
+                            val videoIdDeferred = async {
+                                resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
+                                    resolvedVideoIds.put(song.id, it) 
+                                }
                             }
+                            
+                            youTubeRepository.getVideoStreamResult(
+                                videoIdDeferred.await(), 
+                                _playerState.value.videoQuality, 
+                                forceLow = forceLow
+                            )
                         }
-                        
-                        val videoResult = youTubeRepository.getVideoStreamResult(
-                            videoIdDeferred.await(), 
-                            _playerState.value.videoQuality, 
-                            forceLow = forceLow
-                        )
                         
                         if (videoResult != null) {
                             audioStreamUrl = videoResult.audioUrl
