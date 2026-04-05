@@ -39,6 +39,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -175,6 +176,52 @@ fun MiscScreen(
                         checked = uiState.keepScreenOn,
                         onCheckedChange = { viewModel.setKeepScreenOn(it) }
                     )
+                    
+                    HorizontalDivider()
+
+                    MiscSwitchItem(
+                        icon = Icons.Default.Notes,
+                        title = "Filter local audio by duration",
+                        subtitle = "Hide short audio files from your library",
+                        checked = uiState.filterLocalByDurationEnabled,
+                        onCheckedChange = { viewModel.setFilterLocalByDurationEnabled(it) }
+                    )
+
+                    if (uiState.filterLocalByDurationEnabled) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Minimum Duration",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    text = if (uiState.localDurationFilterThreshold < 60) 
+                                        "${uiState.localDurationFilterThreshold}s"
+                                    else 
+                                        "${uiState.localDurationFilterThreshold / 60}m ${uiState.localDurationFilterThreshold % 60}s",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Slider(
+                                value = uiState.localDurationFilterThreshold.toFloat(),
+                                onValueChange = { viewModel.setLocalDurationFilterThreshold(it.toInt()) },
+                                valueRange = 0f..300f,
+                                steps = 59
+                            )
+                        }
+                    }
                     
                     HorizontalDivider()
                     

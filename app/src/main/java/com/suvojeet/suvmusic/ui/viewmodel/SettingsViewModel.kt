@@ -132,6 +132,9 @@ data class SettingsUiState(
     val downloadLocation: String? = null,
     val loggingEnabled: Boolean = false,
     val isBugReportingSessionActive: Boolean = false,
+    // Library
+    val filterLocalByDurationEnabled: Boolean = false,
+    val localDurationFilterThreshold: Int = 30, // seconds
     // Updater
     val currentVersion: String = "",
     val updateChannel: UpdateChannel = UpdateChannel.STABLE
@@ -561,6 +564,18 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            sessionManager.filterLocalByDurationEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(filterLocalByDurationEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.localDurationFilterThresholdFlow.collect { threshold ->
+                _uiState.update { it.copy(localDurationFilterThreshold = threshold) }
+            }
+        }
+
         // Refresh account info if logged in
         viewModelScope.launch {
             if (sessionManager.isLoggedIn()) {
@@ -646,6 +661,8 @@ class SettingsViewModel @Inject constructor(
             val homeSectionsVisibility = sessionManager.getHomeSectionsVisibility()
             val downloadLocation = sessionManager.getDownloadLocation()
             val loggingEnabled = sessionManager.isLoggingEnabled()
+            val filterLocalByDurationEnabled = sessionManager.isFilterLocalByDurationEnabled()
+            val localDurationFilterThreshold = sessionManager.getLocalDurationFilterThreshold()
 
 
             _uiState.update { it.copy(
@@ -728,7 +745,9 @@ class SettingsViewModel @Inject constructor(
                     playerStyle = playerStyle,
                     homeSectionsVisibility = homeSectionsVisibility,
                     downloadLocation = downloadLocation,
-                    loggingEnabled = loggingEnabled
+                    loggingEnabled = loggingEnabled,
+                    filterLocalByDurationEnabled = filterLocalByDurationEnabled,
+                    localDurationFilterThreshold = localDurationFilterThreshold
                 )
             }
         }
@@ -1391,6 +1410,20 @@ class SettingsViewModel @Inject constructor(
             sessionManager.setLoggingEnabled(enabled)
             _uiState.update { it.copy(loggingEnabled = enabled) }
             com.suvojeet.suvmusic.util.AppLog.init(context, enabled)
+        }
+    }
+
+    fun setFilterLocalByDurationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setFilterLocalByDurationEnabled(enabled)
+            _uiState.update { it.copy(filterLocalByDurationEnabled = enabled) }
+        }
+    }
+
+    fun setLocalDurationFilterThreshold(seconds: Int) {
+        viewModelScope.launch {
+            sessionManager.setLocalDurationFilterThreshold(seconds)
+            _uiState.update { it.copy(localDurationFilterThreshold = seconds) }
         }
     }
 
