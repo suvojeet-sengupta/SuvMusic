@@ -2,6 +2,8 @@ package com.suvojeet.suvmusic.data.repository.youtube.internal
 
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.YouTubeAuthUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -25,8 +27,8 @@ class YouTubeApiClient @Inject constructor(
      * @param hl Host language (e.g., "en", "hi")
      * @param gl Geolocation (e.g., "US", "IN")
      */
-    suspend fun fetchInternalApi(endpoint: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
-        val cookies = sessionManager.getCookies() ?: return ""
+    suspend fun fetchInternalApi(endpoint: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
+        val cookies = sessionManager.getCookies() ?: return@withContext ""
         val isBrowse = !endpoint.contains("/")
         
         val url = if (isBrowse) {
@@ -64,8 +66,10 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
-        return try {
-            okHttpClient.newCall(request).execute().body.string()
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                response.body.string()
+            }
         } catch (e: Exception) {
             ""
         }
@@ -74,8 +78,8 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch continuation data for paginated results.
      */
-    suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
-        val cookies = sessionManager.getCookies() ?: return ""
+    suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
+        val cookies = sessionManager.getCookies() ?: return@withContext ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
         val jsonBody = """
@@ -102,8 +106,10 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
-        return try {
-            okHttpClient.newCall(request).execute().body.string()
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                response.body.string()
+            }
         } catch (e: Exception) {
             ""
         }

@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -1082,7 +1083,7 @@ class YouTubeRepository @Inject constructor(
             val cachedPlaylist = getCachedPlaylist(playlistId)
             if (cachedPlaylist != null) emit(cachedPlaylist)
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * Fetch auto-generated mix playlists (Mixed For You, Replay Mix, Discover Mix, Supermix).
