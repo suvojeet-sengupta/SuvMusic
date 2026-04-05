@@ -267,6 +267,8 @@ fun PlaylistScreen(
                         onDownload = { viewModel.downloadPlaylist(playlist) },
                         onShare = { sharePlaylist(playlist) },
                         onMoreClick = { showMediaMenu = true },
+                        isLoadingMore = uiState.isLoadingMore,
+                        totalSongCount = uiState.totalSongCount,
                         contentColor = contentColor,
                         secondaryContentColor = secondaryContentColor,
                         isDarkTheme = isDarkTheme
@@ -622,6 +624,8 @@ private fun PlaylistHeader(
     onDownload: () -> Unit,
     onShare: () -> Unit,
     onMoreClick: () -> Unit,
+    isLoadingMore: Boolean = false,
+    totalSongCount: Int? = null,
     contentColor: Color,
     secondaryContentColor: Color,
     isDarkTheme: Boolean
@@ -674,14 +678,36 @@ private fun PlaylistHeader(
         
         Spacer(modifier = Modifier.height(4.dp))
         
-        // Author - only show if available
-        if (playlist.author.isNotBlank()) {
-            Text(
-                text = playlist.author,
-                style = MaterialTheme.typography.bodyMedium,
-                color = secondaryContentColor,
-                textAlign = TextAlign.Center
-            )
+        // Staged Loading Progress
+        if (isLoadingMore) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 4.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Loading more songs... (${playlist.songs.size}${totalSongCount?.let { " / $it" } ?: ""})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        } else {
+            // Author - only show if available
+            if (playlist.author.isNotBlank()) {
+                Text(
+                    text = playlist.author,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = secondaryContentColor,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
         
         // Sort and Info Row
