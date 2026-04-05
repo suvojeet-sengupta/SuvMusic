@@ -120,6 +120,14 @@ class SessionManager @Inject constructor(
         private val NAV_BAR_ALPHA_KEY = floatPreferencesKey("nav_bar_alpha")
         private val NAV_BAR_BLUR_KEY = floatPreferencesKey("nav_bar_blur")
         private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
+
+        private val OPENAI_API_KEY = stringPreferencesKey("openai_api_key")
+        private val OPENAI_MODEL_KEY = stringPreferencesKey("openai_model")
+        private val ANTHROPIC_API_KEY = stringPreferencesKey("anthropic_api_key")
+        private val ANTHROPIC_MODEL_KEY = stringPreferencesKey("anthropic_model")
+        private val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
+        private val GEMINI_MODEL_KEY = stringPreferencesKey("gemini_model")
+        private val SELECTED_AI_PROVIDER_KEY = stringPreferencesKey("selected_ai_provider")
         
         private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
         private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
@@ -799,6 +807,22 @@ class SessionManager @Inject constructor(
     val doubleTapSeekSecondsFlow: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
     }
+
+    val openaiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_API_KEY] ?: "" }
+    val openaiModelFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_MODEL_KEY] ?: "gpt-4o" }
+    val anthropicApiKeyFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_API_KEY] ?: "" }
+    val anthropicModelFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_MODEL_KEY] ?: "claude-3-5-sonnet-20240620" }
+    val geminiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_API_KEY] ?: "" }
+    val geminiModelFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_MODEL_KEY] ?: "gemini-1.5-pro" }
+    val selectedAiProviderFlow: Flow<String> = context.dataStore.data.map { it[SELECTED_AI_PROVIDER_KEY] ?: "GEMINI" }
+
+    suspend fun setOpenAiApiKey(apiKey: String) = context.dataStore.edit { it[OPENAI_API_KEY] = apiKey }
+    suspend fun setOpenAiModel(model: String) = context.dataStore.edit { it[OPENAI_MODEL_KEY] = model }
+    suspend fun setAnthropicApiKey(apiKey: String) = context.dataStore.edit { it[ANTHROPIC_API_KEY] = apiKey }
+    suspend fun setAnthropicModel(model: String) = context.dataStore.edit { it[ANTHROPIC_MODEL_KEY] = model }
+    suspend fun setGeminiApiKey(apiKey: String) = context.dataStore.edit { it[GEMINI_API_KEY] = apiKey }
+    suspend fun setGeminiModel(model: String) = context.dataStore.edit { it[GEMINI_MODEL_KEY] = model }
+    suspend fun setSelectedAiProvider(provider: String) = context.dataStore.edit { it[SELECTED_AI_PROVIDER_KEY] = provider }
     
     suspend fun setDoubleTapSeekSeconds(seconds: Int) {
         context.dataStore.edit { preferences ->

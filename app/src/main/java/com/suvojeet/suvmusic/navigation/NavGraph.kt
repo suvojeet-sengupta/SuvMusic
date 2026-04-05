@@ -386,6 +386,7 @@ fun NavGraph(
                 onLastFmClick = { navController.navigate(Destination.LastFmLogin) },
                 onSponsorBlockClick = { navController.navigate(Destination.SponsorBlockSettings) },
                 onDiscordClick = { navController.navigate(Destination.DiscordSettings) },
+                onAISettingsClick = { navController.navigate(Destination.AISettings) },
                 onUpdaterClick = { navController.navigate(Destination.Updater) }
             )
         }
@@ -503,6 +504,21 @@ fun NavGraph(
 
         composable<Destination.Credits> {
             com.suvojeet.suvmusic.ui.screens.CreditsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable<Destination.AIEqualizer> {
+            val aiService = hiltViewModel<com.suvojeet.suvmusic.ui.viewmodel.AIEqualizerViewModel>().aiService
+            com.suvojeet.suvmusic.ui.screens.AIEqualizerScreen(
+                onBackClick = { navController.popBackStack() },
+                onSettingsClick = { navController.navigate(Destination.AISettings) },
+                aiService = aiService
+            )
+        }
+
+        composable<Destination.AISettings> {
+            com.suvojeet.suvmusic.ui.screens.AISettingsScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }

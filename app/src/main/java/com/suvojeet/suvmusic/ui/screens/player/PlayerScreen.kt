@@ -189,7 +189,8 @@ data class PlayerScreenActions(
     val onSelectAllRelated: () -> Unit = {},
     val onClearRelatedSelection: () -> Unit = {},
     val onAddRelatedToQueue: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {},
-    val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {}
+    val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {},
+    val onShowAIEqualizer: () -> Unit = {}
 )
 
 
@@ -705,8 +706,10 @@ fun BoxScope.OverlaysContent(
             onPreampChange = { playerViewModel.setEqPreamp(it) }, 
             onBassBoostChange = { playerViewModel.setBassBoost(it) }, 
             onVirtualizerChange = { playerViewModel.setVirtualizer(it) }, 
-            onReset = { playerViewModel.resetEqBands() }, 
-            initialEnabled = eqEnabled, 
+            onReset = { playerViewModel.resetEqBands() },
+            onAIEqualizerClick = actions.onShowAIEqualizer,
+            initialEnabled = eqEnabled,
+ 
             initialBands = eqBands, 
             initialPreamp = eqPreamp, 
             initialBassBoost = bassBoost, 
