@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiOff

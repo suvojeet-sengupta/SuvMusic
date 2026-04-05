@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -276,7 +278,7 @@ fun EqualizerSheet(
                         enabled = isEnabled
                     ) {
                         androidx.compose.material3.Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.AutoAwesome,
+                            imageVector = Icons.Default.AutoAwesome,
                             contentDescription = "AI Equalizer",
                             tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.5f)
                         )
