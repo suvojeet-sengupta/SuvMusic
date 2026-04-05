@@ -28,6 +28,8 @@ data class PlaylistUiState(
     val sortOrder: SortOrder = SortOrder.ASCENDING,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val totalSongCount: Int? = null,
     val error: String? = null,
     val isEditable: Boolean = false,
     val isRenaming: Boolean = false,
@@ -274,16 +276,36 @@ class PlaylistViewModel @Inject constructor(
                     youTubeRepository.getPlaylist(playlistId)
                 }
             } else {
-                // In YouTube mode, prioritize YouTube
+                // In YouTube mode, use getPlaylistFlow for staged loading
                 try {
-                    youTubeRepository.getPlaylist(playlistId)
+                    youTubeRepository.getPlaylistFlow(playlistId, autoSave = true).collect { stagedPlaylist ->
+                        val finalPlaylist = stagedPlaylist.copy(
+                            title = if (stagedPlaylist.title == "Unknown Playlist" && initialName != null) initialName else stagedPlaylist.title,
+                            thumbnailUrl = initialThumbnail ?: stagedPlaylist.thumbnailUrl,
+                            author = stagedPlaylist.author.takeIf { it.isNotBlank() } ?: ""
+                        )
+                        
+                        _uiState.update { 
+                            it.copy(
+                                playlist = finalPlaylist,
+                                originalSongs = finalPlaylist.songs,
+                                totalSongCount = finalPlaylist.totalSongCount,
+                                isLoading = false,
+                                isLoadingMore = finalPlaylist.totalSongCount != null && finalPlaylist.songs.size < finalPlaylist.totalSongCount!!
+                            )
+                        }
+                        applySort()
+                    }
+                    // Re-check editability now that we have author info
+                    checkEditable()
+                    return // Collected all, exit method
                 } catch (e: Exception) {
-                    // Fallback to JioSaavn if not found in YouTube (e.g. user clicked a Jio playlist)
+                    // Fallback to JioSaavn if YouTube fails
                     jioSaavnRepository.getPlaylist(playlistId) ?: throw e
                 }
             }
             
-            // Merge with initial data
+            // Merge with initial data (for one-shot loads like JioSaavn or Local)
             val finalPlaylist = playlist.copy(
                 title = if (playlist.title == "Unknown Playlist" && initialName != null) initialName else playlist.title,
                 thumbnailUrl = initialThumbnail ?: playlist.thumbnailUrl,
