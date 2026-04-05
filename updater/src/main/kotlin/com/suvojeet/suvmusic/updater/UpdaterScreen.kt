@@ -47,13 +47,14 @@ fun UpdaterScreen(
     val changelog by viewModel.changelog.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val lastUpdated by viewModel.lastUpdated.collectAsStateWithLifecycle()
+    val downloadState by viewModel.downloadState.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Updater", fontWeight = FontWeight.Bold) },
+                title = { Text("System Update", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     Box(
                         modifier = Modifier
@@ -62,6 +63,11 @@ fun UpdaterScreen(
                             .padding(8.dp)
                     ) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.checkForUpdate(currentVersionCode) }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -83,6 +89,7 @@ fun UpdaterScreen(
                 StatusCard(
                     currentVersionName = currentVersionName,
                     updateState = updateState,
+                    downloadState = downloadState,
                     lastUpdated = lastUpdated,
                     onCheckUpdate = { viewModel.checkForUpdate(currentVersionCode) },
                     onDownloadUpdate = { info -> viewModel.downloadAndInstallUpdate(info) },
@@ -92,13 +99,32 @@ fun UpdaterScreen(
 
             // Changelog Title
             item {
-                Text(
-                    text = "Release Notes",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "History & Release Notes",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    if (changelog != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                text = "${changelog!!.releases.size} versions",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
 
             // Changelog Items
@@ -140,6 +166,7 @@ fun UpdaterScreen(
 fun StatusCard(
     currentVersionName: String,
     updateState: UpdateState,
+    downloadState: DownloadState,
     lastUpdated: Long?,
     onCheckUpdate: () -> Unit,
     onDownloadUpdate: (UpdateInfo) -> Unit,
@@ -160,15 +187,22 @@ fun StatusCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(80.dp)
                     .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.secondaryContainer
+                            )
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.SystemUpdate,
                     contentDescription = null,
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -194,105 +228,166 @@ fun StatusCard(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            when (updateState) {
-                is UpdateState.Idle -> {
-                    Text(
-                        text = "Everything is up to date",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = onCheckUpdate,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = SquircleShape
-                    ) {
-                        Text("Check for Updates", fontWeight = FontWeight.Bold)
-                    }
-                }
-                is UpdateState.Checking -> {
-                    PulseLoadingIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Checking for updates...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                is UpdateState.UpdateAvailable -> {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "New version ${updateState.info.versionName} is available!",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = SquircleShape
-                        ) {
-                            Text("Later", fontWeight = FontWeight.Bold)
-                        }
+            if (downloadState is DownloadState.Downloading) {
+                DownloadProgressView(downloadState)
+            } else {
+                when (updateState) {
+                    is UpdateState.Idle -> {
+                        Text(
+                            text = "Everything is up to date",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
                         Button(
-                            onClick = { onDownloadUpdate(updateState.info) },
-                            modifier = Modifier.weight(1f).height(56.dp),
+                            onClick = onCheckUpdate,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = SquircleShape
                         ) {
-                            Text("Download", fontWeight = FontWeight.Bold)
+                            Text("Check for Updates", fontWeight = FontWeight.Bold)
                         }
                     }
-                }
-                is UpdateState.NoUpdate -> {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF4CAF50).copy(alpha = 0.1f))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("You're using the latest version", color = Color(0xFF4CAF50), fontWeight = FontWeight.Medium)
+                    is UpdateState.Checking -> {
+                        PulseLoadingIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Checking for updates...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth().height(56.dp), shape = SquircleShape) {
-                        Text("Check Again", fontWeight = FontWeight.Bold)
+                    is UpdateState.UpdateAvailable -> {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        "New version ${updateState.info.versionName} is available!",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                if (updateState.info.size.isNotEmpty()) {
+                                    Text(
+                                        text = "Size: ${updateState.info.size}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                        modifier = Modifier.padding(start = 36.dp, top = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = SquircleShape
+                            ) {
+                                Text("Later", fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = { onDownloadUpdate(updateState.info) },
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = SquircleShape
+                            ) {
+                                Text("Download", fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
-                }
-                is UpdateState.Error -> {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(updateState.message, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium)
+                    is UpdateState.NoUpdate -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF4CAF50).copy(alpha = 0.1f))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("You're using the latest version", color = Color(0xFF4CAF50), fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth().height(56.dp), shape = SquircleShape) {
+                            Text("Check Again", fontWeight = FontWeight.Bold)
+                        }
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth().height(56.dp), shape = SquircleShape) {
-                        Text("Try Again", fontWeight = FontWeight.Bold)
+                    is UpdateState.Error -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(updateState.message, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth().height(56.dp), shape = SquircleShape) {
+                            Text("Try Again", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun DownloadProgressView(state: DownloadState.Downloading) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = "Downloading...",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "${(state.progress * 100).toInt()}%",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        LinearProgressIndicator(
+            progress = { state.progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .clip(CircleShape),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        val downloadedMb = String.format("%.1f", state.bytesDownloaded / (1024f * 1024f))
+        val totalMb = String.format("%.1f", state.totalBytes / (1024f * 1024f))
+        
+        Text(
+            text = "$downloadedMb MB / $totalMb MB",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
     }
 }
 
@@ -312,45 +407,45 @@ fun ChangelogItem(release: Release) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "v${release.versionName}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = (-0.5).sp
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
+                Column {
+                    Text(
+                        text = "v${release.versionName}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = (-0.5).sp
+                    )
                     Text(
                         text = release.date,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Medium
                     )
                 }
-            }
-            
-            if (release.isMajorUpdate) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        "MAJOR UPDATE",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                
+                if (release.isMajorUpdate) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            "MAJOR",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
             
+            // Format description for better readability
+            val formattedDescription = release.description.split("\n").map { line ->
+                if (line.trim().startsWith("•")) line else "• $line"
+            }.joinToString("\n")
+
             Text(
                 text = release.description,
                 style = MaterialTheme.typography.bodyLarge,

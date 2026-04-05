@@ -1,6 +1,7 @@
 {
-  "versionName": "2.1.4.0",
-  "versionCode": 22,
-  "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases/download/v2.1.4.0/SuvMusic-v2.1.4.0.apk",
-  "forceUpdate": false
+  "versionName": "2.2.1.0",
+  "versionCode": 24,
+  "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases/download/v2.2.1.0/SuvMusic-v2.2.1.0.apk",
+  "forceUpdate": false,
+  "size": "28.5 MB"
 }
