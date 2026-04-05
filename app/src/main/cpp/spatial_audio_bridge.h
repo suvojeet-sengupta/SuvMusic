@@ -1,17 +1,7 @@
 #ifndef SPATIAL_AUDIO_BRIDGE_H
 #define SPATIAL_AUDIO_BRIDGE_H
 
-// Forward declarations of classes if needed, or include headers
-#include "limiter.h"
-#include "biquad.h"
-
-// Define interfaces to access the static engine components
-class ParametricEQ;
-class BassBoost;
-class Virtualizer;
-class Spatializer;
-class Crossfeed;
-class Limiter;
+#include "audio_engine_components.h"
 
 ParametricEQ& getEngineEqualizer();
 BassBoost& getEngineBassBoost();
