@@ -11,6 +11,8 @@ import com.suvojeet.suvmusic.core.model.LibraryItemType
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -21,7 +23,7 @@ class LibraryRepositoryImpl @Inject constructor(
     private val libraryDao: LibraryDao
 ) : LibraryRepository {
 
-    override suspend fun savePlaylist(playlist: Playlist) {
+    override suspend fun savePlaylist(playlist: Playlist) = withContext(Dispatchers.IO) {
         val entity = LibraryEntity(
             id = playlist.id,
             title = playlist.title,
@@ -36,7 +38,7 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>) {
+    override suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>) = withContext(Dispatchers.IO) {
         val currentTime = System.currentTimeMillis()
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
@@ -57,7 +59,7 @@ class LibraryRepositoryImpl @Inject constructor(
         libraryDao.replacePlaylistSongs(playlistId, entities)
     }
 
-    override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) {
+    override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) = withContext(Dispatchers.IO) {
         val currentTime = System.currentTimeMillis()
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
@@ -78,8 +80,8 @@ class LibraryRepositoryImpl @Inject constructor(
         libraryDao.insertPlaylistSongs(entities)
     }
 
-    override suspend fun getCachedPlaylistSongs(playlistId: String): List<Song> {
-        return libraryDao.getPlaylistSongs(playlistId).map { entity ->
+    override suspend fun getCachedPlaylistSongs(playlistId: String): List<Song> = withContext(Dispatchers.IO) {
+        return@withContext libraryDao.getPlaylistSongs(playlistId).map { entity ->
             Song(
                 id = entity.songId,
                 title = entity.title,
@@ -111,26 +113,26 @@ class LibraryRepositoryImpl @Inject constructor(
                     addedAt = entity.addedAt
                 )
             }
-        }
+        }.kotlinx.coroutines.flow.flowOn(Dispatchers.IO)
     }
 
     override fun getPlaylistSongCountFlow(playlistId: String): Flow<Int> {
-        return libraryDao.getPlaylistSongCountFlow(playlistId)
+        return libraryDao.getPlaylistSongCountFlow(playlistId).kotlinx.coroutines.flow.flowOn(Dispatchers.IO)
     }
 
-    override suspend fun isSongInPlaylist(playlistId: String, songId: String): Boolean {
-        return libraryDao.isSongInPlaylist(playlistId, songId)
+    override suspend fun isSongInPlaylist(playlistId: String, songId: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext libraryDao.isSongInPlaylist(playlistId, songId)
     }
 
-    override suspend fun updatePlaylistThumbnail(playlistId: String, thumbnailUrl: String?) {
+    override suspend fun updatePlaylistThumbnail(playlistId: String, thumbnailUrl: String?) = withContext(Dispatchers.IO) {
         libraryDao.updatePlaylistThumbnail(playlistId, thumbnailUrl)
     }
 
-    override suspend fun updatePlaylistName(playlistId: String, name: String) {
+    override suspend fun updatePlaylistName(playlistId: String, name: String) = withContext(Dispatchers.IO) {
         libraryDao.updatePlaylistName(playlistId, name)
     }
 
-    override suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>) {
+    override suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>) = withContext(Dispatchers.IO) {
         val currentTime = System.currentTimeMillis()
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
