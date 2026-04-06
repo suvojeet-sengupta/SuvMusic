@@ -87,13 +87,8 @@ data class AIPromptHistory(
         fun fromJson(json: String): AIPromptHistory {
             return try {
                 val type = object : TypeToken<AIPromptHistory>() {}.type
-                val result = Gson().fromJson(json, type)
-                // Validate that entries are properly typed
-                if (result != null) {
-                    result
-                } else {
-                    AIPromptHistory()
-                }
+                val result: AIPromptHistory = Gson().fromJson(json, type)
+                result
             } catch (e: Exception) {
                 // Return default state if deserialization fails (e.g., ClassCastException)
                 AIPromptHistory()
@@ -115,12 +110,8 @@ data class SongAISettings(
         fun fromJson(json: String): SongAISettings? {
             return try {
                 val type = object : TypeToken<SongAISettings>() {}.type
-                val result = Gson().fromJson(json, type)
-                if (result != null) {
-                    result
-                } else {
-                    null
-                }
+                val result: SongAISettings = Gson().fromJson(json, type)
+                result
             } catch (e: Exception) {
                 // Return null if deserialization fails
                 null
