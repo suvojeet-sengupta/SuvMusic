@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.suvojeet.suvmusic.ai.ChatProxyModels
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
@@ -192,30 +193,95 @@ fun ChatProxyConfigSection(
     model: String,
     onModelChange: (String) -> Unit
 ) {
-    var localModel by remember(model) { mutableStateOf(model) }
+    val models = remember { ChatProxyModels.withRandomOption() }
+    var expanded by remember { mutableStateOf(false) }
+
+    // Ensure localModel is valid (in case old saved value is no longer in list)
+    var localModel by remember(model) {
+        mutableStateOf(if (model in models || model.isEmpty()) model else models[0])
+    }
 
     Column {
         Text("Chat Proxy Configuration", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = localModel,
-            onValueChange = {
-                localModel = it
-                onModelChange(it)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Model Name") },
-            placeholder = { Text("e.g., gpt-5") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp)
-        )
+        Text("Model", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(4.dp))
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = ChatProxyModels.displayName(localModel),
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                shape = RoundedCornerShape(12.dp),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                models.forEach { modelKey ->
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (modelKey == ChatProxyModels.RANDOM) {
+                                    Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text(ChatProxyModels.displayName(modelKey))
+                            }
+                        },
+                        onClick = {
+                            localModel = modelKey
+                            onModelChange(modelKey)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "Uses Chat Proxy API (codexapi.workers.dev). No API key required.",
+            if (localModel == ChatProxyModels.RANDOM)
+                "Randomly picks a model each request. Auto-fallback if one fails."
+            else
+                "Uses Chat Proxy API. Auto-fallback to other models if this one fails.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Show available models count
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            )
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    "${ChatProxyModels.ALL.size} models available",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "If selected model fails, the next request will auto-fallback to another model.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
