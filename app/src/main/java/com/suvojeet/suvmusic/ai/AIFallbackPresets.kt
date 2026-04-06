@@ -170,7 +170,7 @@ object AIFallbackPresets {
     fun toAudioEffectState(preset: FallbackPreset): AudioEffectState {
         return AudioEffectState(
             eqEnabled = true,
-            eqBands = preset.eqBands.toList(),
+            eqBands = preset.eqBands,
             bassBoost = preset.bassBoost,
             virtualizer = preset.virtualizer,
             spatialEnabled = preset.spatialEnabled,
