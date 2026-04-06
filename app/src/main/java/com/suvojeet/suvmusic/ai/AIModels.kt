@@ -6,7 +6,8 @@ import com.google.gson.annotations.SerializedName
 enum class AIProvider {
     OPENAI,
     ANTHROPIC,
-    GEMINI
+    GEMINI,
+    CHAT_PROXY
 }
 
 data class AudioEffectState(

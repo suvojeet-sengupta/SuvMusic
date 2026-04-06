@@ -150,7 +150,7 @@ class AIEqualizerService @Inject constructor(
         apiKey: String,
         model: String
     ) {
-        if (apiKey.isBlank()) {
+        if (provider != AIProvider.CHAT_PROXY && apiKey.isBlank()) {
             addLog("Error: API Key is missing for ${provider.name}")
             return
         }
@@ -181,6 +181,7 @@ class AIEqualizerService @Inject constructor(
                 AIProvider.OPENAI -> OpenAIClient(apiKey, model)
                 AIProvider.ANTHROPIC -> AnthropicClient(apiKey, model)
                 AIProvider.GEMINI -> GeminiClient(apiKey, model)
+                AIProvider.CHAT_PROXY -> ChatProxyClient(model)
             }
 
             addLog("Analyzing current audio engine state...")
