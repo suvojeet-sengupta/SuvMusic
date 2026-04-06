@@ -88,7 +88,9 @@ fun ClassicPlayerStyle(
     sleepTimerRemainingMs: Long? = null,
     currentProgress: Float = 0f,
     currentPosition: Long = 0L,
-    currentDuration: Long = 0L
+    currentDuration: Long = 0L,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     if (useWideLayout) {
         ClassicLandscapeContent(
@@ -97,7 +99,7 @@ fun ClassicPlayerStyle(
             onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
             onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, player, isFullScreen,
             onSetFullScreen, isSwitchingMode, sleepTimerOption, sleepTimerRemainingMs,
-            currentProgress, currentPosition, currentDuration
+            currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus
         )
     } else {
         ClassicPortraitContent(
@@ -107,7 +109,7 @@ fun ClassicPlayerStyle(
             onShowRelated, onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
             onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
-            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration
+            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus
         )
     }
 }
@@ -147,7 +149,9 @@ private fun ClassicPortraitContent(
     sleepTimerRemainingMs: Long? = null,
     currentProgress: Float = 0f,
     currentPosition: Long = 0L,
-    currentDuration: Long = 0L
+    currentDuration: Long = 0L,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
@@ -233,7 +237,9 @@ private fun ClassicPortraitContent(
                 onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
                 dominantColors = dominantColors, isLoading = combinedLoading, compact = isShort,
                 sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption,
-                isClassic = true
+                isClassic = true,
+                isAIEnabled = isAIEnabled,
+                aiStatus = aiStatus
             )
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
@@ -288,7 +294,9 @@ private fun ClassicLandscapeContent(
     sleepTimerRemainingMs: Long? = null,
     currentProgress: Float = 0f,
     currentPosition: Long = 0L,
-    currentDuration: Long = 0L
+    currentDuration: Long = 0L,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
@@ -317,7 +325,9 @@ private fun ClassicLandscapeContent(
                 onDislikeClick = actions.onToggleDislike, onMoreClick = onShowActions, onArtistClick = actions.onArtistClick, onAlbumClick = actions.onAlbumClick,
                 dominantColors = dominantColors, isLoading = combinedLoading,
                 sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption,
-                isClassic = true
+                isClassic = true,
+                isAIEnabled = isAIEnabled,
+                aiStatus = aiStatus
             )
             Spacer(modifier = Modifier.height(16.dp))
             
