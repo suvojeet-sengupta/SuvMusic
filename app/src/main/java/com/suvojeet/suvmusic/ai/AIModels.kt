@@ -43,8 +43,13 @@ data class AudioEffectState(
 
     companion object {
         fun fromJson(json: String): AudioEffectState {
-            val type = object : TypeToken<AudioEffectState>() {}.type
-            return Gson().fromJson(json, type)
+            return try {
+                val type = object : TypeToken<AudioEffectState>() {}.type
+                Gson().fromJson(json, type)
+            } catch (e: Exception) {
+                // Return default state if deserialization fails
+                AudioEffectState()
+            }
         }
     }
 }
@@ -82,8 +87,15 @@ data class AIPromptHistory(
         fun fromJson(json: String): AIPromptHistory {
             return try {
                 val type = object : TypeToken<AIPromptHistory>() {}.type
-                Gson().fromJson(json, type)
+                val result = Gson().fromJson(json, type)
+                // Validate that entries are properly typed
+                if (result != null) {
+                    result
+                } else {
+                    AIPromptHistory()
+                }
             } catch (e: Exception) {
+                // Return default state if deserialization fails (e.g., ClassCastException)
                 AIPromptHistory()
             }
         }
@@ -100,9 +112,19 @@ data class SongAISettings(
     }
 
     companion object {
-        fun fromJson(json: String): SongAISettings {
-            val type = object : TypeToken<SongAISettings>() {}.type
-            return Gson().fromJson(json, type)
+        fun fromJson(json: String): SongAISettings? {
+            return try {
+                val type = object : TypeToken<SongAISettings>() {}.type
+                val result = Gson().fromJson(json, type)
+                if (result != null) {
+                    result
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                // Return null if deserialization fails
+                null
+            }
         }
     }
 }
