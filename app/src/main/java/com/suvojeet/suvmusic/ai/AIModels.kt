@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ai
 
+import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 
 enum class AIProvider {
@@ -28,11 +29,77 @@ data class AudioEffectState(
     val isSpatialEnabled get() = spatialEnabled ?: false
     val isCrossfeedEnabled get() = crossfeedEnabled ?: true
     val safeLimiterMakeupGain get() = limiterMakeupGain ?: 0f
-    
+
     val limiterThresholdDb get() = _limiterThresholdDb ?: -0.1f
     val limiterRatio get() = _limiterRatio ?: 4.0f
     val limiterAttackMs get() = _limiterAttackMs ?: 5.0f
     val limiterReleaseMs get() = _limiterReleaseMs ?: 100.0f
+
+    fun toJson(): String {
+        return Gson().toJson(this)
+    }
+
+    companion object {
+        fun fromJson(json: String): AudioEffectState {
+            return Gson().fromJson(json, AudioEffectState::class.java)
+        }
+    }
+}
+
+data class PromptHistoryEntry(
+    val prompt: String,
+    val timestamp: Long,
+    val songId: String?,
+    val songTitle: String?
+)
+
+data class AIPromptHistory(
+    val entries: List<PromptHistoryEntry> = emptyList(),
+    val maxEntries: Int = 20
+) {
+    fun addEntry(prompt: String, songId: String?, songTitle: String?): AIPromptHistory {
+        val newEntry = PromptHistoryEntry(prompt, System.currentTimeMillis(), songId, songTitle)
+        val updatedEntries = listOf(newEntry) + entries.filter { it.prompt != prompt }.take(maxEntries - 1)
+        return copy(entries = updatedEntries)
+    }
+
+    fun removeEntry(index: Int): AIPromptHistory {
+        return copy(entries = entries.filterIndexed { i, _ -> i != index })
+    }
+
+    fun clear(): AIPromptHistory {
+        return copy(entries = emptyList())
+    }
+
+    fun toJson(): String {
+        return Gson().toJson(this)
+    }
+
+    companion object {
+        fun fromJson(json: String): AIPromptHistory {
+            return try {
+                Gson().fromJson(json, AIPromptHistory::class.java)
+            } catch (e: Exception) {
+                AIPromptHistory()
+            }
+        }
+    }
+}
+
+data class SongAISettings(
+    val audioEffectState: AudioEffectState,
+    val prompt: String,
+    val timestamp: Long
+) {
+    fun toJson(): String {
+        return Gson().toJson(this)
+    }
+
+    companion object {
+        fun fromJson(json: String): SongAISettings {
+            return Gson().fromJson(json, SongAISettings::class.java)
+        }
+    }
 }
 
 data class SignalStats(
@@ -49,7 +116,7 @@ data class SongContext(
 
 interface AIClient {
     suspend fun getAudioEffectState(
-        prompt: String, 
+        prompt: String,
         currentStatus: AudioEffectState,
         songContext: SongContext? = null
     ): Result<AudioEffectState>

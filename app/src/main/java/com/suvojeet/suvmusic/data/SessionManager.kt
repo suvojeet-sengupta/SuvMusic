@@ -128,7 +128,12 @@ class SessionManager @Inject constructor(
         private val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
         private val GEMINI_MODEL_KEY = stringPreferencesKey("gemini_model")
         private val SELECTED_AI_PROVIDER_KEY = stringPreferencesKey("selected_ai_provider")
-        
+
+        // AI EQ Persistence
+        private val AI_PROMPT_HISTORY_KEY = stringPreferencesKey("ai_prompt_history")
+        // Per-song AI settings keys (dynamic)
+        private const val AI_SONG_SETTINGS_PREFIX = "ai_song_settings_"
+
         private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
         private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
         private val ENABLE_KUGOU_KEY = booleanPreferencesKey("enable_kugou")
@@ -823,7 +828,50 @@ class SessionManager @Inject constructor(
     suspend fun setGeminiApiKey(apiKey: String) = context.dataStore.edit { it[GEMINI_API_KEY] = apiKey }
     suspend fun setGeminiModel(model: String) = context.dataStore.edit { it[GEMINI_MODEL_KEY] = model }
     suspend fun setSelectedAiProvider(provider: String) = context.dataStore.edit { it[SELECTED_AI_PROVIDER_KEY] = provider }
-    
+
+    // AI EQ Persistence Methods
+    suspend fun getAIPromptHistory(): com.suvojeet.suvmusic.ai.AIPromptHistory {
+        return context.dataStore.data.first()[AI_PROMPT_HISTORY_KEY]?.let {
+            com.suvojeet.suvmusic.ai.AIPromptHistory.fromJson(it)
+        } ?: com.suvojeet.suvmusic.ai.AIPromptHistory()
+    }
+
+    suspend fun saveAIPromptHistory(prompt: String, songId: String?, songTitle: String?) {
+        context.dataStore.edit { preferences ->
+            val history = preferences[AI_PROMPT_HISTORY_KEY]?.let {
+                com.suvojeet.suvmusic.ai.AIPromptHistory.fromJson(it)
+            } ?: com.suvojeet.suvmusic.ai.AIPromptHistory()
+            preferences[AI_PROMPT_HISTORY_KEY] = history.addEntry(prompt, songId, songTitle).toJson()
+        }
+    }
+
+    suspend fun clearAIPromptHistory() {
+        context.dataStore.edit { preferences ->
+            preferences[AI_PROMPT_HISTORY_KEY] = com.suvojeet.suvmusic.ai.AIPromptHistory().toJson()
+        }
+    }
+
+    suspend fun saveSongAISettings(songId: String, settings: com.suvojeet.suvmusic.ai.SongAISettings) {
+        val key = stringPreferencesKey("${AI_SONG_SETTINGS_PREFIX}$songId")
+        context.dataStore.edit { preferences ->
+            preferences[key] = settings.toJson()
+        }
+    }
+
+    suspend fun getSongAISettings(songId: String): com.suvojeet.suvmusic.ai.SongAISettings? {
+        val key = stringPreferencesKey("${AI_SONG_SETTINGS_PREFIX}$songId")
+        return context.dataStore.data.first()[key]?.let {
+            com.suvojeet.suvmusic.ai.SongAISettings.fromJson(it)
+        }
+    }
+
+    suspend fun clearSongAISettings(songId: String) {
+        val key = stringPreferencesKey("${AI_SONG_SETTINGS_PREFIX}$songId")
+        context.dataStore.edit { preferences ->
+            preferences.remove(key)
+        }
+    }
+
     suspend fun setDoubleTapSeekSeconds(seconds: Int) {
         context.dataStore.edit { preferences ->
             preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] = seconds
