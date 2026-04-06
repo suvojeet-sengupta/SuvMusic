@@ -129,6 +129,7 @@ class SessionManager @Inject constructor(
         private val GEMINI_MODEL_KEY = stringPreferencesKey("gemini_model")
         private val CHAT_PROXY_MODEL_KEY = stringPreferencesKey("chat_proxy_model")
         private val SELECTED_AI_PROVIDER_KEY = stringPreferencesKey("selected_ai_provider")
+        private val AUTO_AI_ENABLED_KEY = booleanPreferencesKey("auto_ai_enabled")
 
         // AI EQ Persistence
         private val AI_PROMPT_HISTORY_KEY = stringPreferencesKey("ai_prompt_history")
@@ -831,6 +832,9 @@ class SessionManager @Inject constructor(
     suspend fun setGeminiModel(model: String) = context.dataStore.edit { it[GEMINI_MODEL_KEY] = model }
     suspend fun setChatProxyModel(model: String) = context.dataStore.edit { it[CHAT_PROXY_MODEL_KEY] = model }
     suspend fun setSelectedAiProvider(provider: String) = context.dataStore.edit { it[SELECTED_AI_PROVIDER_KEY] = provider }
+
+    suspend fun isAutoAIEnabled(): Boolean = context.dataStore.data.first()[AUTO_AI_ENABLED_KEY] ?: false
+    suspend fun setAutoAIEnabled(enabled: Boolean) = context.dataStore.edit { it[AUTO_AI_ENABLED_KEY] = enabled }
 
     // AI EQ Persistence Methods
     suspend fun getAIPromptHistory(): com.suvojeet.suvmusic.ai.AIPromptHistory {
