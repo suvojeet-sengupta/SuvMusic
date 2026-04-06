@@ -1,6 +1,5 @@
 package com.suvojeet.suvmusic.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.ai.AIEqualizerService
 import com.suvojeet.suvmusic.ai.AIProvider
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -137,24 +137,22 @@ fun AIEqualizerScreen(
                 shape = RoundedCornerShape(16.dp),
                 trailingIcon = {
                     if (isProcessing) {
-                        Box(
-                            modifier = Modifier.size(40.dp),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.size(48.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Animated loading dots
                             (0 until 3).forEach { index ->
                                 val dotSize = animateFloatAsState(
                                     targetValue = if (loadingPhase == index) 8f else 4f,
                                     animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
                                 )
-                                Canvas(modifier = Modifier.size(40.dp)) {
-                                    val offset = (index - 1) * 12f
-                                    drawCircle(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        radius = dotSize.value / 2,
-                                        center = androidx.compose.ui.geometry.Offset(20f + offset, 20f)
-                                    )
-                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(dotSize.value.dp)
+                                        .padding(horizontal = 2.dp)
+                                        .background(MaterialTheme.colorScheme.primary, shape = androidx.compose.foundation.shape.CircleShape)
+                                )
                             }
                         }
                     } else {
