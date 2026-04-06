@@ -18,6 +18,8 @@ class AIEqualizerService @Inject constructor(
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val sessionManager: SessionManager
 ) {
+    private val serviceScope = CoroutineScope(Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+
     private val _logs = MutableStateFlow<List<String>>(emptyList())
     val logs = _logs.asStateFlow()
 
@@ -55,12 +57,21 @@ class AIEqualizerService @Inject constructor(
     private var currentSongId: String? = null
 
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        serviceScope.launch {
+            // Restore persistent state
             _promptHistory.value = sessionManager.getAIPromptHistory()
             _isAutoModeEnabled.value = sessionManager.isAutoAIEnabled()
+            
+            val savedStateJson = sessionManager.getPersistedAIState()
+            if (savedStateJson != null) {
+                val restoredState = AudioEffectState.fromJson(savedStateJson)
+                _lastResult.value = restoredState
+                aiState = restoredState
+            }
         }
+        
         // Listen for song changes to clear A/B compare state or auto-apply AI
-        CoroutineScope(Dispatchers.Main).launch {
+        serviceScope.launch {
             musicPlayer.playerState.filterNotNull().collect { state ->
                 val newSongId = state.currentSong?.id
                 if (newSongId != currentSongId && newSongId != null) {
@@ -81,11 +92,11 @@ class AIEqualizerService @Inject constructor(
 
     fun setAutoModeEnabled(enabled: Boolean) {
         _isAutoModeEnabled.value = enabled
-        CoroutineScope(Dispatchers.IO).launch {
+        serviceScope.launch(Dispatchers.IO) {
             sessionManager.setAutoAIEnabled(enabled)
         }
         if (enabled && currentSongId != null) {
-            CoroutineScope(Dispatchers.Main).launch {
+            serviceScope.launch {
                 autoProcessCurrentSong()
             }
         }
@@ -342,6 +353,12 @@ class AIEqualizerService @Inject constructor(
                 _validationWarnings.value = validationResult.warnings
                 aiState = state // Save for A/B compare
                 _lastResult.value = state
+                
+                // Persist the state for reopening the UI later
+                serviceScope.launch(Dispatchers.IO) {
+                    sessionManager.savePersistedAIState(state.toJson())
+                }
+
                 addLog("Optimization complete. New parameters calculated:")
                 addLog(" EQ: ${if(state.isEqEnabled) "Enabled" else "Disabled"}")
                 addLog(" Bands (dB): ${state.safeEqBands.map { "%.1f".format(it) }.joinToString(", ")}")

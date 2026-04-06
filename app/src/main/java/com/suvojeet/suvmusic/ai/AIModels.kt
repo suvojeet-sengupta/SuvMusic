@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
 
+import com.google.gson.annotations.Expose
+
 enum class AIProvider {
     OPENAI,
     ANTHROPIC,
@@ -11,21 +13,25 @@ enum class AIProvider {
     CHAT_PROXY
 }
 
+/**
+ * Robust data class for Audio Effects.
+ * Annotated for ProGuard/Gson safety.
+ */
 data class AudioEffectState(
-    @SerializedName("eqEnabled") private val eqEnabled: Boolean? = true,
-    @SerializedName("eqBands") private val eqBands: List<Float?>? = null,
-    @SerializedName("bassBoost") private val bassBoost: Float? = 0f,
-    @SerializedName("virtualizer") private val virtualizer: Float? = 0f,
-    @SerializedName("spatialEnabled") private val spatialEnabled: Boolean? = false,
-    @SerializedName("crossfeedEnabled") private val crossfeedEnabled: Boolean? = true,
-    @SerializedName("limiterMakeupGain") private val limiterMakeupGain: Float? = 0f,
-    @SerializedName("limiterThresholdDb") private val _limiterThresholdDb: Float? = -0.1f,
-    @SerializedName("limiterRatio") private val _limiterRatio: Float? = 4.0f,
-    @SerializedName("limiterAttackMs") private val _limiterAttackMs: Float? = 5.0f,
-    @SerializedName("limiterReleaseMs") private val _limiterReleaseMs: Float? = 100.0f
+    @SerializedName("eqEnabled") @Expose val eqEnabled: Boolean? = true,
+    @SerializedName("eqBands") @Expose val eqBands: FloatArray? = null,
+    @SerializedName("bassBoost") @Expose val bassBoost: Float? = 0f,
+    @SerializedName("virtualizer") @Expose val virtualizer: Float? = 0f,
+    @SerializedName("spatialEnabled") @Expose val spatialEnabled: Boolean? = false,
+    @SerializedName("crossfeedEnabled") @Expose val crossfeedEnabled: Boolean? = true,
+    @SerializedName("limiterMakeupGain") @Expose val limiterMakeupGain: Float? = 0f,
+    @SerializedName("limiterThresholdDb") @Expose val _limiterThresholdDb: Float? = -0.1f,
+    @SerializedName("limiterRatio") @Expose val _limiterRatio: Float? = 4.0f,
+    @SerializedName("limiterAttackMs") @Expose val _limiterAttackMs: Float? = 5.0f,
+    @SerializedName("limiterReleaseMs") @Expose val _limiterReleaseMs: Float? = 100.0f
 ) {
     val isEqEnabled get() = eqEnabled ?: true
-    val safeEqBands: List<Float> get() = (0 until 10).map { eqBands?.getOrNull(it) ?: 0f }
+    val safeEqBands: List<Float> get() = eqBands?.toList() ?: List(10) { 0f }
     val safeBassBoost get() = bassBoost ?: 0f
     val safeVirtualizer get() = virtualizer ?: 0f
     val isSpatialEnabled get() = spatialEnabled ?: false
@@ -41,13 +47,31 @@ data class AudioEffectState(
         return Gson().toJson(this)
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as AudioEffectState
+        if (eqEnabled != other.eqEnabled) return false
+        if (eqBands != null) {
+            if (other.eqBands == null) return false
+            if (!eqBands.contentEquals(other.eqBands)) return false
+        } else if (other.eqBands != null) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = eqEnabled?.hashCode() ?: 0
+        result = 31 * result + (eqBands?.contentHashCode() ?: 0)
+        return result
+    }
+
     companion object {
         fun fromJson(json: String): AudioEffectState {
             return try {
-                val type = object : TypeToken<AudioEffectState>() {}.type
-                Gson().fromJson(json, type)
+                Gson().fromJson(json, AudioEffectState::class.java) ?: AudioEffectState()
             } catch (e: Exception) {
-                // Return default state if deserialization fails
+                // If it fails with LinkedTreeMap cast error, it might be due to generic erasure
+                // but for a concrete class like AudioEffectState, this is rare.
                 AudioEffectState()
             }
         }
