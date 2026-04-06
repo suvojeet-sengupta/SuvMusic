@@ -2,8 +2,11 @@ package com.suvojeet.suvmusic.ai
 
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,8 +39,7 @@ class AIEqualizerService @Inject constructor(
     val promptHistory = _promptHistory.asStateFlow()
 
     init {
-        // Load prompt history on init
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             _promptHistory.value = sessionManager.getAIPromptHistory()
         }
     }
