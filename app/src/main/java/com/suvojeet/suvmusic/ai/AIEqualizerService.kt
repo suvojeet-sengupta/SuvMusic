@@ -5,7 +5,9 @@ import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,6 +27,9 @@ class AIEqualizerService @Inject constructor(
     private val _lastResult = MutableStateFlow<AudioEffectState?>(null)
     val lastResult = _lastResult.asStateFlow()
 
+    private val _validationWarnings = MutableStateFlow<List<String>>(emptyList())
+    val validationWarnings: StateFlow<List<String>> = _validationWarnings.asStateFlow()
+
     private var stateBeforeAI: AudioEffectState? = null
     private var currentPrompt: String? = null
 
@@ -38,9 +43,22 @@ class AIEqualizerService @Inject constructor(
     private val _promptHistory = MutableStateFlow(AIPromptHistory())
     val promptHistory = _promptHistory.asStateFlow()
 
+    // Track current song ID to detect song changes
+    private var currentSongId: String? = null
+
     init {
         CoroutineScope(Dispatchers.IO).launch {
             _promptHistory.value = sessionManager.getAIPromptHistory()
+        }
+        // Listen for song changes to clear A/B compare state
+        CoroutineScope(Dispatchers.Main).launch {
+            musicPlayer.playerState.filterNotNull().collect { state ->
+                val newSongId = state.currentSong?.id
+                if (newSongId != currentSongId) {
+                    currentSongId = newSongId
+                    clearABCompareState()
+                }
+            }
         }
     }
 
@@ -99,6 +117,30 @@ class AIEqualizerService @Inject constructor(
         _isABCompareActive.value = false
         aiState = null
         originalState = null
+    }
+
+    /**
+     * Clears all A/B compare related state.
+     * Called when song changes or user navigates away.
+     */
+    private fun clearABCompareState() {
+        aiState = null
+        originalState = null
+        stateBeforeAI = null
+        _isABCompareActive.value = false
+        _validationWarnings.value = emptyList()
+        addLog("AI compare state cleared (song change)")
+    }
+
+    /**
+     * Call this when navigating away from the AI Equalizer screen
+     * to prevent memory leaks.
+     */
+    fun cleanup() {
+        clearABCompareState()
+        currentPrompt = null
+        _lastResult.value = null
+        _logs.value = emptyList()
     }
 
     suspend fun loadPromptHistory() {
@@ -200,7 +242,22 @@ class AIEqualizerService @Inject constructor(
             addLog("Contacting AI for hardware-level tuning...")
             val result = client.getAudioEffectState(prompt, currentStatus, songContext)
 
-            result.onSuccess { state ->
+            result.onSuccess { rawState ->
+                // === IMPROVEMENT #1: Validate and sanitize AI response ===
+                val validationResult = AudioEffectStateValidator.validate(rawState)
+                val state = validationResult.sanitizedState
+
+                if (validationResult.warnings.isNotEmpty()) {
+                    addLog("Validation: ${validationResult.warnings.size} adjustment(s) made")
+                    validationResult.warnings.take(3).forEach { warning ->
+                        addLog("  ⚠ $warning")
+                    }
+                    if (validationResult.warnings.size > 3) {
+                        addLog("  ... and ${validationResult.warnings.size - 3} more")
+                    }
+                }
+
+                _validationWarnings.value = validationResult.warnings
                 aiState = state // Save for A/B compare
                 _lastResult.value = state
                 addLog("Optimization complete. New parameters calculated:")
@@ -213,17 +270,57 @@ class AIEqualizerService @Inject constructor(
 
                 applySettings(state)
                 addLog("SUCCESS: All parameters pushed to the native audio engine.")
-                
+
                 // Save to history and persistence
                 savePromptToHistory(prompt)
                 if (currentSong != null) {
                     saveCurrentAISettings(prompt)
                 }
             }.onFailure { error ->
-                addLog("AI REJECTED: ${error.message}")
+                addLog("AI API FAILED: ${error.message}")
+
+                // === IMPROVEMENT #2: Fallback to local presets ===
+                addLog("Attempting local preset matching as fallback...")
+                val fallbackPreset = AIFallbackPresets.findForPrompt(prompt)
+
+                if (fallbackPreset != null) {
+                    val fallbackState = fallbackPreset.toAudioEffectState()
+                    aiState = fallbackState
+                    _lastResult.value = fallbackState
+                    addLog("FALLBACK: Applied '${fallbackPreset.name}' preset locally")
+                    addLog(" Bands (dB): ${fallbackState.safeEqBands.map { "%.1f".format(it) }.joinToString(", ")}")
+                    addLog(" Bass Boost: ${"%.2f".format(fallbackState.safeBassBoost)}")
+                    addLog(" Virtualizer: ${"%.2f".format(fallbackState.safeVirtualizer)}")
+
+                    applySettings(fallbackState)
+                    addLog("SUCCESS: Fallback preset applied to native audio engine.")
+
+                    savePromptToHistory(prompt)
+                    if (currentSong != null) {
+                        saveCurrentAISettings(prompt)
+                    }
+                } else {
+                    addLog("FALLBACK: No matching preset found for: \"$prompt\"")
+                    addLog("Tip: Try keywords like 'bass', 'treble', 'vocals', 'rock', 'jazz', etc.")
+                }
             }
         } catch (e: Exception) {
             addLog("SYSTEM FAILURE: ${e.message}")
+
+            // Fallback for system-level failures too
+            addLog("Attempting local preset matching as fallback...")
+            val fallbackPreset = AIFallbackPresets.findForPrompt(prompt)
+
+            if (fallbackPreset != null) {
+                val fallbackState = fallbackPreset.toAudioEffectState()
+                aiState = fallbackState
+                _lastResult.value = fallbackState
+                addLog("FALLBACK: Applied '${fallbackPreset.name}' preset locally")
+                applySettings(fallbackState)
+                addLog("SUCCESS: Fallback preset applied to native audio engine.")
+            } else {
+                addLog("FALLBACK: No matching preset found for: \"$prompt\"")
+            }
         } finally {
             _isProcessing.value = false
         }
