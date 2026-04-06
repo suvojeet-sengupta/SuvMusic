@@ -115,7 +115,7 @@ class SpatialAudioProcessor @Inject constructor(
     fun getCurrentState(): com.suvojeet.suvmusic.ai.AudioEffectState {
         return com.suvojeet.suvmusic.ai.AudioEffectState(
             eqEnabled = nativeSpatialAudio.isEqEnabled(),
-            eqBands = List(10) { nativeSpatialAudio.getEqBand(it) },
+            eqBands = FloatArray(10) { nativeSpatialAudio.getEqBand(it) },
             bassBoost = nativeSpatialAudio.getBassBoost(),
             virtualizer = nativeSpatialAudio.getVirtualizer(),
             spatialEnabled = isSpatialEnabled,
