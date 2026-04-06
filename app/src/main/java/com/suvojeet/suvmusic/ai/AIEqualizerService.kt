@@ -39,6 +39,10 @@ class AIEqualizerService @Inject constructor(
     private var aiState: AudioEffectState? = null
     private var originalState: AudioEffectState? = null
 
+    // Auto AI Mode state
+    private val _isAutoModeEnabled = MutableStateFlow(false)
+    val isAutoModeEnabled = _isAutoModeEnabled.asStateFlow()
+
     // Prompt history
     private val _promptHistory = MutableStateFlow(AIPromptHistory())
     val promptHistory = _promptHistory.asStateFlow()
@@ -49,17 +53,66 @@ class AIEqualizerService @Inject constructor(
     init {
         CoroutineScope(Dispatchers.IO).launch {
             _promptHistory.value = sessionManager.getAIPromptHistory()
+            _isAutoModeEnabled.value = sessionManager.isAutoAIEnabled()
         }
-        // Listen for song changes to clear A/B compare state
+        // Listen for song changes to clear A/B compare state or auto-apply AI
         CoroutineScope(Dispatchers.Main).launch {
             musicPlayer.playerState.filterNotNull().collect { state ->
                 val newSongId = state.currentSong?.id
-                if (newSongId != currentSongId) {
+                if (newSongId != currentSongId && newSongId != null) {
+                    val oldId = currentSongId
                     currentSongId = newSongId
-                    clearABCompareState()
+                    
+                    if (oldId != null) {
+                        clearABCompareState()
+                    }
+
+                    if (_isAutoModeEnabled.value) {
+                        autoProcessCurrentSong()
+                    }
                 }
             }
         }
+    }
+
+    fun setAutoModeEnabled(enabled: Boolean) {
+        _isAutoModeEnabled.value = enabled
+        CoroutineScope(Dispatchers.IO).launch {
+            sessionManager.setAutoAIEnabled(enabled)
+        }
+        if (enabled && currentSongId != null) {
+            CoroutineScope(Dispatchers.Main).launch {
+                autoProcessCurrentSong()
+            }
+        }
+    }
+
+    private suspend fun autoProcessCurrentSong() {
+        val currentSong = musicPlayer.playerState.value.currentSong ?: return
+        
+        addLog("AUTO: Song change detected - \"${currentSong.title}\"")
+        
+        // 1. Check if we already have saved AI settings for this song
+        if (checkAndAutoApplyAIForSong(currentSong.id)) {
+            addLog("AUTO: Applied previously saved AI profile")
+            return
+        }
+
+        // 2. If not, generate new AI profile based on genre/metadata
+        addLog("AUTO: Generating intelligent profile for \"${currentSong.artist}\"...")
+        
+        val autoPrompt = "Analyze this song: '${currentSong.title}' by '${currentSong.artist}'. " +
+                "Provide a professional audio engineer's EQ and DSP setup that best fits its genre and characteristics. " +
+                "Optimize for clarity, depth, and appropriate energy."
+
+        // Use a default reliable provider/model for auto mode
+        // In a real app, these would come from settings
+        processPrompt(
+            prompt = autoPrompt,
+            provider = AIProvider.CHAT_PROXY,
+            apiKey = "",
+            model = "gpt-4o-mini" // Fast and reliable for auto-tuning
+        )
     }
 
     fun addLog(message: String) {

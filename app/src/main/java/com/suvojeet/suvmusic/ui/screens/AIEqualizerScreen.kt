@@ -55,30 +55,19 @@ fun AIEqualizerScreen(
     val logs by aiService.logs.collectAsState()
     val isProcessing by aiService.isProcessing.collectAsState()
     val isABCompareActive by aiService.isABCompareActive.collectAsState()
+    val isAutoModeEnabled by aiService.isAutoModeEnabled.collectAsState()
     val promptHistory by aiService.promptHistory.collectAsState()
     val validationWarnings by aiService.validationWarnings.collectAsState()
+    
     var prompt by remember { mutableStateOf("") }
     var showHistory by remember { mutableStateOf(false) }
-    var showSaveDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    val context = LocalContext.current
 
     // Cleanup on navigation away
     DisposableEffect(Unit) {
         onDispose {
             aiService.cleanup()
-        }
-    }
-
-    // Loading animation state
-    var loadingPhase by remember { mutableStateOf(0) }
-    LaunchedEffect(isProcessing) {
-        if (isProcessing) {
-            while (isProcessing) {
-                loadingPhase = (loadingPhase + 1) % 3
-                delay(800)
-            }
         }
     }
 
@@ -98,7 +87,16 @@ fun AIEqualizerScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("AI Equalizer", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Column {
+                        Text("Neural Equalizer", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                        Text(
+                            text = if (isAutoModeEnabled) "Auto-Tuning Active" else "Manual Mode",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isAutoModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -128,11 +126,22 @@ fun AIEqualizerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
+            // Auto Mode Toggle Card
+            AutoModeToggleCard(
+                isEnabled = isAutoModeEnabled,
+                onToggle = { aiService.setAutoModeEnabled(it) }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Prompt Input Section
             Text(
-                "Describe how you want your music to sound:",
-                style = MaterialTheme.typography.titleMedium,
+                "Sound Architecture Prompt",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -140,29 +149,20 @@ fun AIEqualizerScreen(
                 value = prompt,
                 onValueChange = { prompt = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("e.g., 'More bass and clear vocals for jazz'") },
+                placeholder = { Text("e.g., 'Make it feel like a live stadium concert'") },
                 maxLines = 3,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                ),
                 trailingIcon = {
                     if (isProcessing) {
-                        Row(
-                            modifier = Modifier.size(48.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            (0 until 3).forEach { index ->
-                                val dotSize = animateFloatAsState(
-                                    targetValue = if (loadingPhase == index) 8f else 4f,
-                                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .size(dotSize.value.dp)
-                                        .padding(horizontal = 2.dp)
-                                        .background(MaterialTheme.colorScheme.primary, shape = androidx.compose.foundation.shape.CircleShape)
-                                )
-                            }
-                        }
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     } else {
                         IconButton(
                             onClick = {
@@ -176,7 +176,7 @@ fun AIEqualizerScreen(
                                     val apiKey = when (provider) {
                                         AIProvider.OPENAI -> uiState.openaiApiKey
                                         AIProvider.ANTHROPIC -> uiState.anthropicApiKey
-                                        else -> "" // Chat Proxy and Gemini don't need API key
+                                        else -> "" 
                                     }
                                     val model = when (provider) {
                                         AIProvider.OPENAI -> uiState.openaiModel
@@ -187,20 +187,21 @@ fun AIEqualizerScreen(
                                     aiService.processPrompt(prompt, provider, apiKey, model)
                                 }
                             },
-                            enabled = prompt.isNotBlank()
+                            enabled = prompt.isNotBlank() && !isAutoModeEnabled
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = "Send")
+                            Icon(Icons.Default.Send, contentDescription = "Process")
                         }
                     }
                 }
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
+            // Neural Terminal
             Text(
-                "AI Internal Status",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                "Neural Processing Link",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
             )
 
@@ -209,185 +210,249 @@ fun AIEqualizerScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                color = Color.Black,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1A1A1A))
             ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp)
-                ) {
-                    items(logs) { log ->
-                        Text(
-                            text = "> $log",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                lineHeight = 18.sp
-                            ),
-                            modifier = Modifier.padding(bottom = 4.dp),
-                            color = if (log.startsWith("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                        )
+                Box {
+                    // CRT Scanline Effect (Visual only)
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val scanlineCount = size.height.toInt() / 4
+                        for (i in 0 until scanlineCount) {
+                            drawLine(
+                                color = Color.White.copy(alpha = 0.03f),
+                                start = androidx.compose.ui.geometry.Offset(0f, i * 4f),
+                                end = androidx.compose.ui.geometry.Offset(size.width, i * 4f),
+                                strokeWidth = 1f
+                            )
+                        }
+                    }
+
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp)
+                    ) {
+                        items(logs) { log ->
+                            val color = when {
+                                log.startsWith("Error") || log.contains("FAILED") -> Color(0xFFFF5252)
+                                log.startsWith("SUCCESS") -> Color(0xFF69F0AE)
+                                log.startsWith("AUTO") -> Color(0xFF40C4FF)
+                                log.startsWith("Validation") -> Color(0xFFFFD740)
+                                else -> Color(0xFFE0E0E0)
+                            }
+                            
+                            Row(modifier = Modifier.padding(bottom = 4.dp)) {
+                                Text(
+                                    text = "[SYS] ",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        color = Color.DarkGray
+                                    )
+                                )
+                                Text(
+                                    text = log,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        lineHeight = 16.sp
+                                    ),
+                                    color = color
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Clear logs overlay
+                    if (logs.isNotEmpty()) {
+                        IconButton(
+                            onClick = { aiService.clearLogs() },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Clear", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
-            }
-            
-            Button(
-                onClick = { aiService.clearLogs() },
-                modifier = Modifier.align(Alignment.End),
-                colors = ButtonDefaults.textButtonColors()
-            ) {
-                Text("Clear Logs")
             }
 
             val lastResult by aiService.lastResult.collectAsState()
             if (lastResult != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Validation Warnings Banner (if any)
-                if (validationWarnings.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    "Values Adjusted for Safety",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            validationWarnings.take(3).forEach { warning ->
-                                Text(
-                                    "• $warning",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1
-                                )
-                            }
-                            if (validationWarnings.size > 3) {
-                                Text(
-                                    "+ ${validationWarnings.size - 3} more adjustments",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                // A/B Compare Banner
-                if (isABCompareActive) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Compare,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        "A/B Compare Active",
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                    Text(
-                                        "Showing ORIGINAL settings",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                                    )
-                                }
-                            }
-                            IconButton(onClick = { aiService.toggleABCompare() }) {
-                                Icon(
-                                    Icons.Default.Clear,
-                                    contentDescription = "Disable Compare",
-                                    tint = MaterialTheme.colorScheme.tertiary
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                
+                // Optimized Result Card
                 AIResultCard(lastResult!!)
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 // Action buttons row
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Revert button
-                    Button(
+                    OutlinedButton(
                         onClick = { aiService.revertAIChanges() },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        )
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text("Revert")
                     }
                     
-                    // Save button
                     Button(
                         onClick = { 
                             scope.launch {
-                                aiService.saveCurrentAISettings(prompt.ifBlank { "Manual AI Application" })
+                                aiService.saveCurrentAISettings(prompt.ifBlank { "Neural Optimized" })
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Save")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Save Profile")
                     }
                 }
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
+
+    // Prompt History Modal (unchanged but mentioned for context)
+    if (showHistory) {
+        AlertDialog(
+            onDismissRequest = { showHistory = false },
+            title = { Text("Neural History", fontWeight = FontWeight.Bold) },
+            text = {
+                if (promptHistory.entries.isEmpty()) {
+                    Text("Empty repository")
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                        itemsIndexed(promptHistory.entries) { _, entry ->
+                            PromptHistoryItem(entry = entry, onClick = { prompt = entry.prompt; showHistory = false }, onDelete = {})
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showHistory = false }) { Text("Close") } }
+        )
+    }
+}
+
+@Composable
+fun AutoModeToggleCard(isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isEnabled) 
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, 
+            if (isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else Color.Transparent
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(
+                            if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Auto Neural Link", fontWeight = FontWeight.Bold)
+                    Text(
+                        "Automatically tune each song",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Current Architecture", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF69F0AE), modifier = Modifier.size(16.dp))
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Micro-Visualizer for EQ
+            Row(
+                modifier = Modifier.fillMaxWidth().height(40.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                state.safeEqBands.forEach { band ->
+                    val heightFactor = (band + 12f) / 24f
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(heightFactor.coerceIn(0.1f, 1f))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ParameterTag("Bass", "${(state.safeBassBoost * 100).toInt()}%")
+                ParameterTag("Echo", "${(state.safeVirtualizer * 100).toInt()}%")
+                ParameterTag("Spatial", if(state.isSpatialEnabled) "ON" else "OFF")
+                ParameterTag("Limiter", "${state.safeLimiterMakeupGain.toInt()}dB")
+            }
+        }
+    }
+}
+
+@Composable
+fun ParameterTag(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
+    }
+}
 
     // Prompt History Modal
     if (showHistory) {
