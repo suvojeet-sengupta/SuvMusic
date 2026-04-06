@@ -167,19 +167,19 @@ object AIFallbackPresets {
     /**
      * Converts a [FallbackPreset] to an [AudioEffectState].
      */
-    fun FallbackPreset.toAudioEffectState(): AudioEffectState {
+    fun toAudioEffectState(preset: FallbackPreset): AudioEffectState {
         return AudioEffectState(
             eqEnabled = true,
-            eqBands = eqBands.toList(),
-            bassBoost = bassBoost,
-            virtualizer = virtualizer,
-            spatialEnabled = spatialEnabled,
-            crossfeedEnabled = crossfeedEnabled,
-            limiterMakeupGain = limiterMakeupGain,
-            limiterThresholdDb = limiterThresholdDb,
-            limiterRatio = limiterRatio,
-            limiterAttackMs = 5f,
-            limiterReleaseMs = 100f
+            eqBands = preset.eqBands.toList(),
+            bassBoost = preset.bassBoost,
+            virtualizer = preset.virtualizer,
+            spatialEnabled = preset.spatialEnabled,
+            crossfeedEnabled = preset.crossfeedEnabled,
+            limiterMakeupGain = preset.limiterMakeupGain,
+            _limiterThresholdDb = preset.limiterThresholdDb,
+            _limiterRatio = preset.limiterRatio,
+            _limiterAttackMs = 5f,
+            _limiterReleaseMs = 100f
         )
     }
 }

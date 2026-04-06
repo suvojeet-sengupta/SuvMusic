@@ -112,10 +112,10 @@ object AudioEffectStateValidator {
             spatialEnabled = state.isSpatialEnabled,
             crossfeedEnabled = state.isCrossfeedEnabled,
             limiterMakeupGain = sanitizedMakeup,
-            limiterThresholdDb = sanitizedThreshold,
-            limiterRatio = sanitizedRatio,
-            limiterAttackMs = sanitizedAttack,
-            limiterReleaseMs = sanitizedRelease
+            _limiterThresholdDb = sanitizedThreshold,
+            _limiterRatio = sanitizedRatio,
+            _limiterAttackMs = sanitizedAttack,
+            _limiterReleaseMs = sanitizedRelease
         )
 
         return ValidationResult(
