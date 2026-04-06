@@ -105,7 +105,7 @@ class AnthropicClient(private val apiKey: String, private val model: String) : A
     private val gson = Gson()
 
     override suspend fun getAudioEffectState(
-        prompt: String, 
+        prompt: String,
         currentStatus: AudioEffectState,
         songContext: SongContext?
     ): Result<AudioEffectState> = withContext(Dispatchers.IO) {
@@ -135,6 +135,52 @@ class AnthropicClient(private val apiKey: String, private val model: String) : A
                 val jsonResponse = JSONObject(body)
                 val content = jsonResponse.getJSONArray("content").getJSONObject(0).getString("text")
                 Result.success(gson.fromJson(content, AudioEffectState::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
+
+class ChatProxyClient(private val model: String) : AIClient {
+    private val client = OkHttpClient()
+    private val gson = Gson()
+    private val baseUrl = "https://chatbot.codexapi.workers.dev/"
+
+    override suspend fun getAudioEffectState(
+        prompt: String,
+        currentStatus: AudioEffectState,
+        songContext: SongContext?
+    ): Result<AudioEffectState> = withContext(Dispatchers.IO) {
+        try {
+            val systemPrompt = getSystemPrompt(currentStatus, songContext)
+            val fullPrompt = "$systemPrompt\n\nUser request: $prompt"
+            val encodedPrompt = java.net.URLEncoder.encode(fullPrompt, "UTF-8")
+            val encodedModel = java.net.URLEncoder.encode(model, "UTF-8")
+            val url = "$baseUrl?prompt=$encodedPrompt&model=$encodedModel"
+
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(Exception("Chat Proxy error: ${response.code} ${response.message}"))
+                val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
+                val jsonResponse = JSONObject(body)
+                if (jsonResponse.has("error")) {
+                    return@withContext Result.failure(Exception("Chat Proxy error: ${jsonResponse.getString("error")}"))
+                }
+                val answer = jsonResponse.getString("answer")
+                // Extract JSON from answer (might have markdown or extra text)
+                val jsonStart = answer.indexOf("{")
+                val jsonEnd = answer.lastIndexOf("}")
+                if (jsonStart != -1 && jsonEnd != -1) {
+                    val jsonContent = answer.substring(jsonStart, jsonEnd + 1)
+                    Result.success(gson.fromJson(jsonContent, AudioEffectState::class.java))
+                } else {
+                    Result.failure(Exception("Invalid response format from Chat Proxy"))
+                }
             }
         } catch (e: Exception) {
             Result.failure(e)
