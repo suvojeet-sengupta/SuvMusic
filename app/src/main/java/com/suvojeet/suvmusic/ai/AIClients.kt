@@ -322,7 +322,7 @@ private fun getSystemPrompt(currentStatus: AudioEffectState, songContext: SongCo
         - limiterReleaseMs: float (10.0 to 1000.0)
         - limiterMakeupGain: float (0.0 to 12.0 dB)
 
-        Current parameters: ${Gson().toJson(currentStatus)}
+        Current parameters: ${currentStatus.toJson()}
 
         Return ONLY a JSON object with these keys. No other text.
     """.trimIndent()

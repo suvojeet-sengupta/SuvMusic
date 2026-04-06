@@ -138,7 +138,7 @@ object AudioEffectStateValidator {
 
         val sanitizedState = AudioEffectState(
             eqEnabled = state.isEqEnabled,
-            eqBands = rawBands,
+            eqBands = rawBands.toFloatArray(),
             bassBoost = sanitizedBass,
             virtualizer = sanitizedVirt,
             spatialEnabled = state.isSpatialEnabled,
