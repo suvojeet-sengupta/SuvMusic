@@ -162,16 +162,18 @@ fun AIEqualizerScreen(
                                     val provider = when (uiState.selectedAiProvider) {
                                         "OPENAI" -> AIProvider.OPENAI
                                         "ANTHROPIC" -> AIProvider.ANTHROPIC
+                                        "CHAT_PROXY" -> AIProvider.CHAT_PROXY
                                         else -> AIProvider.GEMINI
                                     }
                                     val apiKey = when (provider) {
                                         AIProvider.OPENAI -> uiState.openaiApiKey
                                         AIProvider.ANTHROPIC -> uiState.anthropicApiKey
-                                        AIProvider.GEMINI -> uiState.geminiApiKey
+                                        else -> "" // Chat Proxy and Gemini don't need API key
                                     }
                                     val model = when (provider) {
                                         AIProvider.OPENAI -> uiState.openaiModel
                                         AIProvider.ANTHROPIC -> uiState.anthropicModel
+                                        AIProvider.CHAT_PROXY -> uiState.chatProxyModel
                                         AIProvider.GEMINI -> uiState.geminiModel
                                     }
                                     aiService.processPrompt(prompt, provider, apiKey, model)

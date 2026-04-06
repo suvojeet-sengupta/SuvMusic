@@ -66,6 +66,10 @@ fun AISettingsScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
                     Column {
+                        AIProviderItem("Chat Proxy", "Free, no API key required", uiState.selectedAiProvider == "CHAT_PROXY") {
+                            viewModel.setSelectedAiProvider("CHAT_PROXY")
+                        }
+                        M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         AIProviderItem("Gemini", "Google's powerful model", uiState.selectedAiProvider == "GEMINI") {
                             viewModel.setSelectedAiProvider("GEMINI")
                         }
@@ -85,6 +89,10 @@ fun AISettingsScreen(
 
             item {
                 when (uiState.selectedAiProvider) {
+                    "CHAT_PROXY" -> ChatProxyConfigSection(
+                        model = uiState.chatProxyModel,
+                        onModelChange = { viewModel.setChatProxyModel(it) }
+                    )
                     "GEMINI" -> APIConfigSection(
                         title = "Gemini Configuration",
                         apiKey = uiState.geminiApiKey,
@@ -173,6 +181,39 @@ fun APIConfigSection(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             "Go to the provider's dashboard to get your API key.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun ChatProxyConfigSection(
+    model: String,
+    onModelChange: (String) -> Unit
+) {
+    var localModel by remember(model) { mutableStateOf(model) }
+
+    Column {
+        Text("Chat Proxy Configuration", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = localModel,
+            onValueChange = {
+                localModel = it
+                onModelChange(it)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Model Name") },
+            placeholder = { Text("e.g., gpt-5") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Uses Chat Proxy API (codexapi.workers.dev). No API key required.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
