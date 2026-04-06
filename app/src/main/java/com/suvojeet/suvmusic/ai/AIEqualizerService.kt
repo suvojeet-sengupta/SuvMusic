@@ -284,11 +284,11 @@ class AIEqualizerService @Inject constructor(
                 val fallbackPreset = AIFallbackPresets.findForPrompt(prompt)
 
                 if (fallbackPreset != null) {
-                    val fallbackState = fallbackPreset.toAudioEffectState()
+                    val fallbackState = AIFallbackPresets.toAudioEffectState(fallbackPreset)
                     aiState = fallbackState
                     _lastResult.value = fallbackState
                     addLog("FALLBACK: Applied '${fallbackPreset.name}' preset locally")
-                    addLog(" Bands (dB): ${fallbackState.safeEqBands.map { "%.1f".format(it) }.joinToString(", ")}")
+                    addLog(" Bands (dB): ${fallbackState.safeEqBands.joinToString(", ") { "%.1f".format(it) }}")
                     addLog(" Bass Boost: ${"%.2f".format(fallbackState.safeBassBoost)}")
                     addLog(" Virtualizer: ${"%.2f".format(fallbackState.safeVirtualizer)}")
 
@@ -312,7 +312,7 @@ class AIEqualizerService @Inject constructor(
             val fallbackPreset = AIFallbackPresets.findForPrompt(prompt)
 
             if (fallbackPreset != null) {
-                val fallbackState = fallbackPreset.toAudioEffectState()
+                val fallbackState = AIFallbackPresets.toAudioEffectState(fallbackPreset)
                 aiState = fallbackState
                 _lastResult.value = fallbackState
                 addLog("FALLBACK: Applied '${fallbackPreset.name}' preset locally")
