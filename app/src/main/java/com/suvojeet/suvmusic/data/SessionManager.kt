@@ -127,6 +127,7 @@ class SessionManager @Inject constructor(
         private val ANTHROPIC_MODEL_KEY = stringPreferencesKey("anthropic_model")
         private val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
         private val GEMINI_MODEL_KEY = stringPreferencesKey("gemini_model")
+        private val CHAT_PROXY_MODEL_KEY = stringPreferencesKey("chat_proxy_model")
         private val SELECTED_AI_PROVIDER_KEY = stringPreferencesKey("selected_ai_provider")
 
         // AI EQ Persistence
@@ -819,7 +820,8 @@ class SessionManager @Inject constructor(
     val anthropicModelFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_MODEL_KEY] ?: "claude-3-5-sonnet-20240620" }
     val geminiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_API_KEY] ?: "" }
     val geminiModelFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_MODEL_KEY] ?: "gemini-1.5-pro" }
-    val selectedAiProviderFlow: Flow<String> = context.dataStore.data.map { it[SELECTED_AI_PROVIDER_KEY] ?: "GEMINI" }
+    val chatProxyModelFlow: Flow<String> = context.dataStore.data.map { it[CHAT_PROXY_MODEL_KEY] ?: "gpt-5" }
+    val selectedAiProviderFlow: Flow<String> = context.dataStore.data.map { it[SELECTED_AI_PROVIDER_KEY] ?: "CHAT_PROXY" }
 
     suspend fun setOpenAiApiKey(apiKey: String) = context.dataStore.edit { it[OPENAI_API_KEY] = apiKey }
     suspend fun setOpenAiModel(model: String) = context.dataStore.edit { it[OPENAI_MODEL_KEY] = model }
@@ -827,6 +829,7 @@ class SessionManager @Inject constructor(
     suspend fun setAnthropicModel(model: String) = context.dataStore.edit { it[ANTHROPIC_MODEL_KEY] = model }
     suspend fun setGeminiApiKey(apiKey: String) = context.dataStore.edit { it[GEMINI_API_KEY] = apiKey }
     suspend fun setGeminiModel(model: String) = context.dataStore.edit { it[GEMINI_MODEL_KEY] = model }
+    suspend fun setChatProxyModel(model: String) = context.dataStore.edit { it[CHAT_PROXY_MODEL_KEY] = model }
     suspend fun setSelectedAiProvider(provider: String) = context.dataStore.edit { it[SELECTED_AI_PROVIDER_KEY] = provider }
 
     // AI EQ Persistence Methods

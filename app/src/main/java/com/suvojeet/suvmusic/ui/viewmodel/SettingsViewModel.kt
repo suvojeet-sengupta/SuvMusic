@@ -104,7 +104,8 @@ data class SettingsUiState(
     val anthropicModel: String = "claude-3-5-sonnet-20240620",
     val geminiApiKey: String = "",
     val geminiModel: String = "gemini-1.5-pro",
-    val selectedAiProvider: String = "GEMINI",
+    val chatProxyModel: String = "gpt-5",
+    val selectedAiProvider: String = "CHAT_PROXY",
     // Content Preferences
     val preferredLanguages: Set<String> = emptySet(),
     val youtubeHistorySyncEnabled: Boolean = false,
@@ -323,6 +324,9 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             sessionManager.geminiModelFlow.collect { value -> _uiState.update { it.copy(geminiModel = value) } }
+        }
+        viewModelScope.launch {
+            sessionManager.chatProxyModelFlow.collect { value -> _uiState.update { it.copy(chatProxyModel = value) } }
         }
         viewModelScope.launch {
             sessionManager.selectedAiProviderFlow.collect { value -> _uiState.update { it.copy(selectedAiProvider = value) } }
@@ -620,6 +624,7 @@ class SettingsViewModel @Inject constructor(
     fun setAnthropicModel(value: String) = viewModelScope.launch { sessionManager.setAnthropicModel(value) }
     fun setGeminiApiKey(value: String) = viewModelScope.launch { sessionManager.setGeminiApiKey(value) }
     fun setGeminiModel(value: String) = viewModelScope.launch { sessionManager.setGeminiModel(value) }
+    fun setChatProxyModel(value: String) = viewModelScope.launch { sessionManager.setChatProxyModel(value) }
     fun setSelectedAiProvider(value: String) = viewModelScope.launch { sessionManager.setSelectedAiProvider(value) }
     
     private fun loadSettings() {
