@@ -223,7 +223,20 @@ class AIEqualizerService @Inject constructor(
                 AIProvider.OPENAI -> OpenAIClient(apiKey, model)
                 AIProvider.ANTHROPIC -> AnthropicClient(apiKey, model)
                 AIProvider.GEMINI -> GeminiClient(apiKey, model)
-                AIProvider.CHAT_PROXY -> ChatProxyClient(model)
+                AIProvider.CHAT_PROXY -> {
+                    // Build fallback list: exclude current model, shuffle remaining
+                    val resolved = ChatProxyModels.resolve(model)
+                    val fallbacks = ChatProxyModels.ALL
+                        .filter { it != resolved }
+                        .shuffled()
+                        .take(2) // Try 2 fallbacks after primary fails
+
+                    if (model == ChatProxyModels.RANDOM) {
+                        addLog("Random model selected: $resolved")
+                        addLog("Fallback models ready: ${fallbacks.joinToString(", ")}")
+                    }
+                    ChatProxyClient(model, fallbacks)
+                }
             }
 
             addLog("Analyzing current audio engine state...")
