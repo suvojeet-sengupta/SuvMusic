@@ -43,6 +43,10 @@ class AIEqualizerService @Inject constructor(
     private val _isAutoModeEnabled = MutableStateFlow(false)
     val isAutoModeEnabled = _isAutoModeEnabled.asStateFlow()
 
+    // Granular status for Auto Mode UI
+    private val _autoStatus = MutableStateFlow<String?>(null)
+    val autoStatus = _autoStatus.asStateFlow()
+
     // Prompt history
     private val _promptHistory = MutableStateFlow(AIPromptHistory())
     val promptHistory = _promptHistory.asStateFlow()
@@ -90,15 +94,21 @@ class AIEqualizerService @Inject constructor(
     private suspend fun autoProcessCurrentSong() {
         val currentSong = musicPlayer.playerState.value.currentSong ?: return
         
+        _autoStatus.value = "Analyzing \"${currentSong.title}\"..."
         addLog("AUTO: Song change detected - \"${currentSong.title}\"")
+        delay(500)
         
         // 1. Check if we already have saved AI settings for this song
         if (checkAndAutoApplyAIForSong(currentSong.id)) {
+            _autoStatus.value = "Profile Restored"
             addLog("AUTO: Applied previously saved AI profile")
+            delay(1500)
+            _autoStatus.value = null
             return
         }
 
         // 2. If not, generate new AI profile based on genre/metadata
+        _autoStatus.value = "Generating Intelligent Profile..."
         addLog("AUTO: Generating intelligent profile for \"${currentSong.artist}\"...")
         
         val autoPrompt = "Analyze this song: '${currentSong.title}' by '${currentSong.artist}'. " +
@@ -113,6 +123,12 @@ class AIEqualizerService @Inject constructor(
             apiKey = "",
             model = "gpt-4o-mini" // Fast and reliable for auto-tuning
         )
+        
+        if (_lastResult.value != null) {
+            _autoStatus.value = "Neural Link Established"
+            delay(2000)
+        }
+        _autoStatus.value = null
     }
 
     fun addLog(message: String) {

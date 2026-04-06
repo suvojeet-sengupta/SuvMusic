@@ -76,7 +76,9 @@ fun SongInfoSection(
     sleepTimerRemainingMs: Long? = null,
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     showMoreButton: Boolean = true,
-    isClassic: Boolean = false
+    isClassic: Boolean = false,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
 
@@ -123,6 +125,7 @@ fun SongInfoSection(
                                         )
                                     }
                                 }
+                                
                                 Text(
                                     text = song?.title ?: "No song playing",
                                     style = if (compact) {
@@ -140,8 +143,39 @@ fun SongInfoSection(
                                     maxLines = 1,
                                     modifier = Modifier.basicMarquee(
                                         iterations = Int.MAX_VALUE
-                                    )
+                                    ).weight(1f, fill = false)
                                 )
+
+                                // AI EQ Indicator Badge
+                                if (isAIEnabled) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        color = dominantColors.accent.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = androidx.compose.foundation.BorderStroke(0.5.dp, dominantColors.accent.copy(alpha = 0.3f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.AutoAwesome,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(12.dp),
+                                                tint = dominantColors.accent
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                "AI",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 9.sp
+                                                ),
+                                                color = dominantColors.accent
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -239,6 +273,47 @@ fun SongInfoSection(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+                }
+            }
+            
+            // AI Processing Status Indicator
+            androidx.compose.animation.AnimatedVisibility(
+                visible = aiStatus != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "aiPulse")
+                    val alpha by infiniteTransition.animateFloat(
+                        initialValue = 0.4f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "aiPulseAlpha"
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(dominantColors.accent.copy(alpha = alpha))
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = aiStatus ?: "",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp
+                        ),
+                        color = dominantColors.accent,
+                        modifier = Modifier.graphicsLayer { this.alpha = alpha }
+                    )
                 }
             }
             
