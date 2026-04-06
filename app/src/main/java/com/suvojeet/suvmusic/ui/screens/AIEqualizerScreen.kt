@@ -53,6 +53,7 @@ fun AIEqualizerScreen(
     val isABCompareActive by aiService.isABCompareActive.collectAsState()
     val isAutoModeEnabled by aiService.isAutoModeEnabled.collectAsState()
     val promptHistory by aiService.promptHistory.collectAsState()
+    val autoStatus by aiService.autoStatus.collectAsState()
     
     var prompt by remember { mutableStateOf("") }
     var showHistory by remember { mutableStateOf(false) }
@@ -252,6 +253,51 @@ fun AIEqualizerScreen(
                                         lineHeight = 16.sp
                                     ),
                                     color = color
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Neural Link Overlay (Active when Auto Mode is processing)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = autoStatus != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
+                    ) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val infiniteTransition = rememberInfiniteTransition(label = "terminalPulse")
+                                val glowAlpha by infiniteTransition.animateFloat(
+                                    initialValue = 0.3f,
+                                    targetValue = 1f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(800, easing = LinearEasing),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = "glowAlpha"
+                                )
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = glowAlpha), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = autoStatus ?: "",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }

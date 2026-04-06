@@ -149,7 +149,9 @@ data class PlayerScreenState(
     val selectedLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
     val enabledLyricsProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
     val sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
-    val sleepTimerRemainingMs: Long? = null
+    val sleepTimerRemainingMs: Long? = null,
+    val isAIEnabled: Boolean = false,
+    val aiStatus: String? = null
 )
 
 /**
@@ -244,6 +246,9 @@ fun PlayerScreen(
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = PlayerStyle.YT_MUSIC)
     
+    val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle(initialValue = false)
+    val aiAutoStatus by playerViewModel.aiAutoStatus.collectAsStateWithLifecycle(initialValue = null)
+
     val pendingIntent by playerViewModel.pendingIntent.collectAsStateWithLifecycle()
     val deleteLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -447,7 +452,9 @@ fun PlayerScreen(
                                 sleepTimerRemainingMs = state.sleepTimerRemainingMs,
                                 currentProgress = currentProgress,
                                 currentPosition = currentPosition,
-                                currentDuration = currentDuration
+                                currentDuration = currentDuration,
+                                isAIEnabled = isAIAutoModeEnabled,
+                                aiStatus = aiAutoStatus
                             )
                         }
                         PlayerStyle.CLASSIC -> {
@@ -474,7 +481,9 @@ fun PlayerScreen(
                                 sleepTimerRemainingMs = state.sleepTimerRemainingMs,
                                 currentProgress = currentProgress,
                                 currentPosition = currentPosition,
-                                currentDuration = currentDuration
+                                currentDuration = currentDuration,
+                                isAIEnabled = isAIAutoModeEnabled,
+                                aiStatus = aiAutoStatus
                             )
                         }
                     }

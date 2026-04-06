@@ -71,10 +71,16 @@ class PlayerViewModel @Inject constructor(
     private val discordManager: DiscordManager,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
     private val spatialAudioProcessor: com.suvojeet.suvmusic.player.SpatialAudioProcessor,
+    val aiEqualizerService: com.suvojeet.suvmusic.ai.AIEqualizerService,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     
     val playerState: StateFlow<PlayerState> = musicPlayer.playerState
+
+    // AI EQ Status for Player UI
+    val isAIAutoModeEnabled = aiEqualizerService.isAutoModeEnabled
+    val aiAutoStatus = aiEqualizerService.autoStatus
+    val lastAIResult = aiEqualizerService.lastResult
     
     // Stable player state that ignores frequent progress updates for UI optimization.
     // Optimization: Use a custom comparator to avoid emissions when only progress/buffer changes.
