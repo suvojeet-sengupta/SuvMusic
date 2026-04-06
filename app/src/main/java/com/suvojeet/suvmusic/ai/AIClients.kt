@@ -228,7 +228,7 @@ class ChatProxyClient(
         val resolvedModel = ChatProxyModels.resolve(model)
         val candidates = listOf(resolvedModel) + (fallbackModels?.map { ChatProxyModels.resolve(it) } ?: emptyList())
 
-        var lastError: Exception? = null
+        var lastError: Throwable? = null
 
         for (candidate in candidates) {
             try {
