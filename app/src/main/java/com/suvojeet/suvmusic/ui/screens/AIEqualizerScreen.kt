@@ -1,13 +1,13 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.material.icons.Icons
@@ -29,19 +29,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.ai.AIEqualizerService
 import com.suvojeet.suvmusic.ai.AIProvider
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +53,6 @@ fun AIEqualizerScreen(
     val isABCompareActive by aiService.isABCompareActive.collectAsState()
     val isAutoModeEnabled by aiService.isAutoModeEnabled.collectAsState()
     val promptHistory by aiService.promptHistory.collectAsState()
-    val validationWarnings by aiService.validationWarnings.collectAsState()
     
     var prompt by remember { mutableStateOf("") }
     var showHistory by remember { mutableStateOf(false) }
@@ -316,24 +311,61 @@ fun AIEqualizerScreen(
         }
     }
 
-    // Prompt History Modal (unchanged but mentioned for context)
+    // Prompt History Modal
     if (showHistory) {
         AlertDialog(
             onDismissRequest = { showHistory = false },
-            title = { Text("Neural History", fontWeight = FontWeight.Bold) },
-            text = {
-                if (promptHistory.entries.isEmpty()) {
-                    Text("Empty repository")
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                        itemsIndexed(promptHistory.entries) { _, entry ->
-                            PromptHistoryItem(entry = entry, onClick = { prompt = entry.prompt; showHistory = false }, onDelete = {})
-                            Spacer(modifier = Modifier.height(8.dp))
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Neural History", fontWeight = FontWeight.Bold)
+                    if (promptHistory.entries.isNotEmpty()) {
+                        TextButton(onClick = { 
+                            scope.launch { aiService.clearPromptHistory() }
+                        }) {
+                            Text("Clear All")
                         }
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showHistory = false }) { Text("Close") } }
+            text = {
+                if (promptHistory.entries.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No history yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 400.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(promptHistory.entries) { _, entry ->
+                            PromptHistoryItem(
+                                entry = entry,
+                                onClick = {
+                                    prompt = entry.prompt
+                                    showHistory = false
+                                },
+                                onDelete = {
+                                    // Individual delete could be implemented
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showHistory = false }) {
+                    Text("Close")
+                }
+            }
         )
     }
 }
@@ -454,95 +486,6 @@ fun ParameterTag(label: String, value: String) {
     }
 }
 
-    // Prompt History Modal
-    if (showHistory) {
-        AlertDialog(
-            onDismissRequest = { showHistory = false },
-            title = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Prompt History", fontWeight = FontWeight.Bold)
-                    if (promptHistory.entries.isNotEmpty()) {
-                        TextButton(onClick = { 
-                            scope.launch { aiService.clearPromptHistory() }
-                        }) {
-                            Text("Clear All")
-                        }
-                    }
-                }
-            },
-            text = {
-                if (promptHistory.entries.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No prompt history yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 400.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(promptHistory.entries) { index, entry ->
-                            PromptHistoryItem(
-                                entry = entry,
-                                onClick = {
-                                    prompt = entry.prompt
-                                    showHistory = false
-                                },
-                                onDelete = {
-                                    // Could implement individual delete here
-                                }
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showHistory = false }) {
-                    Text("Close")
-                }
-            }
-        )
-    }
-}
-
-@Composable
-fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("AI Optimization Applied", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Explicitly handle unboxing to avoid NullPointerException on primitive conversion
-            val bassVal = (state.safeBassBoost * 100).toInt()
-            val echoVal = (state.safeVirtualizer * 100).toInt()
-            val eqBandsString = try {
-                state.safeEqBands.joinToString(", ") { it.toInt().toString() }
-            } catch (e: Exception) {
-                "0, 0, 0, 0, 0, 0, 0, 0, 0, 0"
-            }
-
-            Text("Bass: $bassVal% | Echo: $echoVal%", style = MaterialTheme.typography.bodySmall)
-            Text("EQ: $eqBandsString", style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
 @Composable
 fun PromptHistoryItem(
     entry: com.suvojeet.suvmusic.ai.PromptHistoryEntry,
@@ -555,7 +498,7 @@ fun PromptHistoryItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         )
@@ -569,7 +512,8 @@ fun PromptHistoryItem(
                 text = entry.prompt,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(6.dp))
             Row(
