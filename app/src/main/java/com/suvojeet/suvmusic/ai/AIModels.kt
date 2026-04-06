@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.ai
 
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.google.gson.reflect.TypeToken
 
 enum class AIProvider {
     OPENAI,
@@ -42,7 +43,8 @@ data class AudioEffectState(
 
     companion object {
         fun fromJson(json: String): AudioEffectState {
-            return Gson().fromJson(json, AudioEffectState::class.java)
+            val type = object : TypeToken<AudioEffectState>() {}.type
+            return Gson().fromJson(json, type)
         }
     }
 }
@@ -79,7 +81,8 @@ data class AIPromptHistory(
     companion object {
         fun fromJson(json: String): AIPromptHistory {
             return try {
-                Gson().fromJson(json, AIPromptHistory::class.java)
+                val type = object : TypeToken<AIPromptHistory>() {}.type
+                Gson().fromJson(json, type)
             } catch (e: Exception) {
                 AIPromptHistory()
             }
@@ -98,7 +101,8 @@ data class SongAISettings(
 
     companion object {
         fun fromJson(json: String): SongAISettings {
-            return Gson().fromJson(json, SongAISettings::class.java)
+            val type = object : TypeToken<SongAISettings>() {}.type
+            return Gson().fromJson(json, type)
         }
     }
 }
