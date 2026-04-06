@@ -185,8 +185,18 @@ fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
                 Text("AI Optimization Applied", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Bass: ${(state.safeBassBoost * 100).toInt()}% | Echo: ${(state.safeVirtualizer * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
-            Text("EQ: ${state.safeEqBands.map { it.toInt() }.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+            
+            // Explicitly handle unboxing to avoid NullPointerException on primitive conversion
+            val bassVal = (state.safeBassBoost * 100).toInt()
+            val echoVal = (state.safeVirtualizer * 100).toInt()
+            val eqBandsString = try {
+                state.safeEqBands.joinToString(", ") { it.toInt().toString() }
+            } catch (e: Exception) {
+                "0, 0, 0, 0, 0, 0, 0, 0, 0, 0"
+            }
+
+            Text("Bass: $bassVal% | Echo: $echoVal%", style = MaterialTheme.typography.bodySmall)
+            Text("EQ: $eqBandsString", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

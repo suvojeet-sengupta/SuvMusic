@@ -155,10 +155,10 @@ class NativeSpatialAudio @Inject constructor() {
             state.safeVirtualizer,
             state.isSpatialEnabled,
             state.isCrossfeedEnabled,
-            state.limiterThresholdDb ?: -0.1f,
-            state.limiterRatio ?: 4.0f,
-            state.limiterAttackMs ?: 5.0f,
-            state.limiterReleaseMs ?: 100.0f,
+            state.limiterThresholdDb,
+            state.limiterRatio,
+            state.limiterAttackMs,
+            state.limiterReleaseMs,
             state.safeLimiterMakeupGain
         )
     }
