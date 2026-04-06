@@ -56,12 +56,20 @@ fun AIEqualizerScreen(
     val isProcessing by aiService.isProcessing.collectAsState()
     val isABCompareActive by aiService.isABCompareActive.collectAsState()
     val promptHistory by aiService.promptHistory.collectAsState()
+    val validationWarnings by aiService.validationWarnings.collectAsState()
     var prompt by remember { mutableStateOf("") }
     var showHistory by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val context = LocalContext.current
+
+    // Cleanup on navigation away
+    DisposableEffect(Unit) {
+        onDispose {
+            aiService.cleanup()
+        }
+    }
 
     // Loading animation state
     var loadingPhase by remember { mutableStateOf(0) }
@@ -235,7 +243,57 @@ fun AIEqualizerScreen(
             val lastResult by aiService.lastResult.collectAsState()
             if (lastResult != null) {
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
+                // Validation Warnings Banner (if any)
+                if (validationWarnings.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Values Adjusted for Safety",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            validationWarnings.take(3).forEach { warning ->
+                                Text(
+                                    "• $warning",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1
+                                )
+                            }
+                            if (validationWarnings.size > 3) {
+                                Text(
+                                    "+ ${validationWarnings.size - 3} more adjustments",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 // A/B Compare Banner
                 if (isABCompareActive) {
                     Card(
