@@ -61,11 +61,9 @@ fun AIEqualizerScreen(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    // Cleanup on navigation away
-    DisposableEffect(Unit) {
-        onDispose {
-            aiService.cleanup()
-        }
+    // Load prompt history on enter
+    LaunchedEffect(Unit) {
+        aiService.loadPromptHistory()
     }
 
     // Auto-scroll logs
@@ -73,11 +71,6 @@ fun AIEqualizerScreen(
         if (logs.isNotEmpty()) {
             listState.animateScrollToItem(logs.size - 1)
         }
-    }
-
-    // Load prompt history on enter
-    LaunchedEffect(Unit) {
-        aiService.loadPromptHistory()
     }
 
     Scaffold(
