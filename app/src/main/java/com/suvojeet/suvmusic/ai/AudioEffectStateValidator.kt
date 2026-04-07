@@ -110,14 +110,14 @@ object AudioEffectStateValidator {
         val sanitizedVirt = clamp(state.safeVirtualizer, VIRTUALIZER_MIN, VIRTUALIZER_MAX)
         
         // 6. Limiter Logic (Professional Tuning)
-        val rawThreshold = state.limiterThresholdDb
+        val rawThreshold = state.safeLimiterThresholdDb
         val sanitizedThreshold = clamp(rawThreshold, LIMITER_THRESHOLD_MIN, LIMITER_THRESHOLD_MAX)
 
-        val rawRatio = state.limiterRatio
+        val rawRatio = state.safeLimiterRatio
         val sanitizedRatio = clamp(rawRatio, LIMITER_RATIO_MIN, LIMITER_RATIO_MAX)
 
-        var sanitizedAttack = clamp(state.limiterAttackMs, LIMITER_ATTACK_MIN, LIMITER_ATTACK_MAX)
-        var sanitizedRelease = clamp(state.limiterReleaseMs, LIMITER_RELEASE_MIN, LIMITER_RELEASE_MAX)
+        var sanitizedAttack = clamp(state.safeLimiterAttackMs, LIMITER_ATTACK_MIN, LIMITER_ATTACK_MAX)
+        var sanitizedRelease = clamp(state.safeLimiterReleaseMs, LIMITER_RELEASE_MIN, LIMITER_RELEASE_MAX)
 
         // Ensure release is at least 10x attack for transparency
         if (sanitizedRelease < sanitizedAttack * 10f) {
@@ -138,16 +138,16 @@ object AudioEffectStateValidator {
 
         val sanitizedState = AudioEffectState(
             eqEnabled = state.isEqEnabled,
-            eqBands = rawBands.toFloatArray(),
+            eqBands = rawBands,
             bassBoost = sanitizedBass,
             virtualizer = sanitizedVirt,
             spatialEnabled = state.isSpatialEnabled,
             crossfeedEnabled = state.isCrossfeedEnabled,
             limiterMakeupGain = sanitizedMakeup,
-            _limiterThresholdDb = sanitizedThreshold,
-            _limiterRatio = sanitizedRatio,
-            _limiterAttackMs = sanitizedAttack,
-            _limiterReleaseMs = sanitizedRelease
+            limiterThresholdDb = sanitizedThreshold,
+            limiterRatio = sanitizedRatio,
+            limiterAttackMs = sanitizedAttack,
+            limiterReleaseMs = sanitizedRelease
         )
 
         return ValidationResult(
