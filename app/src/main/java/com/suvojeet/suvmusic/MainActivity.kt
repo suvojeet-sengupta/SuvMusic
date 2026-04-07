@@ -949,7 +949,12 @@ fun SuvMusicApp(
                     },
                     onShowAIEqualizer = {
                         playerViewModel.collapsePlayer()
-                        navController.navigate(Destination.AIEqualizer)
+                        if (navController.currentDestination?.hasRoute<Destination.AIEqualizer>() != true) {
+                            navController.navigate(Destination.AIEqualizer) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     }
                 )
 
