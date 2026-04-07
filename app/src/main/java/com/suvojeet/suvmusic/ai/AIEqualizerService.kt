@@ -150,6 +150,12 @@ class AIEqualizerService @Inject constructor(
     fun clearLogs() {
         _logs.value = emptyList()
         _lastResult.value = null
+        aiState = null
+        originalState = null
+        _isABCompareActive.value = false
+        serviceScope.launch(Dispatchers.IO) {
+            sessionManager.savePersistedAIState(null)
+        }
     }
 
     fun revertAIChanges() {
@@ -162,6 +168,11 @@ class AIEqualizerService @Inject constructor(
             aiState = null
             originalState = null
             _isABCompareActive.value = false
+            
+            // Clear persisted state when reverting
+            serviceScope.launch(Dispatchers.IO) {
+                sessionManager.savePersistedAIState(null)
+            }
         } ?: run {
             addLog("Notice: No AI changes to revert")
         }

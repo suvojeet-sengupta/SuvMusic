@@ -838,7 +838,13 @@ class SessionManager @Inject constructor(
     suspend fun setAutoAIEnabled(enabled: Boolean) = context.dataStore.edit { it[AUTO_AI_ENABLED_KEY] = enabled }
 
     suspend fun getPersistedAIState(): String? = context.dataStore.data.first()[PERSISTED_AI_STATE_KEY]
-    suspend fun savePersistedAIState(json: String) = context.dataStore.edit { it[PERSISTED_AI_STATE_KEY] = json }
+    suspend fun savePersistedAIState(json: String?) = context.dataStore.edit { preferences ->
+        if (json == null) {
+            preferences.remove(PERSISTED_AI_STATE_KEY)
+        } else {
+            preferences[PERSISTED_AI_STATE_KEY] = json
+        }
+    }
 
     // AI EQ Persistence Methods
     suspend fun getAIPromptHistory(): com.suvojeet.suvmusic.ai.AIPromptHistory {
